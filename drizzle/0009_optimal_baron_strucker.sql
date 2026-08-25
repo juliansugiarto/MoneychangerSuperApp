@@ -1,0 +1,1 @@
+ALTER TABLE `operational_settings` ADD `eddCashDailyThresholdIdr` decimal(24,2) DEFAULT '100000000.00' NOT NULL;

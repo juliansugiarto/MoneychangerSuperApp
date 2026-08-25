@@ -1,0 +1,1 @@
+ALTER TABLE `exchange_transactions` ADD `quoteUnitSnapshot` decimal(18,6) NOT NULL;

@@ -1,0 +1,29 @@
+# Project TODO
+
+- [x] Memeriksa basis kode, komponen, skema data, dan dokumentasi pembelajaran IBV yang relevan.
+- [x] Menginventarisasi seluruh fitur SIPUKA yang dapat diakses secara baca-saja dengan akun yang diberikan, tanpa mengubah data sumber.
+- [x] Mendokumentasikan peta fitur SIPUKA, kesesuaian dengan IBV, kesenjangan, dan prioritas implementasi.
+- [x] Mengimplementasikan replika modul SIPUKA prioritas pada proyek IBV dengan kontrol akses dan validasi yang sesuai.
+- [x] Menambahkan atau memperbarui pengujian unit untuk perilaku modul replika.
+- [x] Memverifikasi tampilan dan alur utama, memperbarui dokumentasi implementasi, serta menyimpan versi terpublikasi.
+- [x] Membuat halaman Monitoring Operasional dengan filter periode, pemisahan BNS/BNB, metrik, tren, dan keadaan kosong dari data transaksi IBV yang nyata.
+- [x] Menambahkan menu khusus Monitoring pada DashboardLayout dan rute terlindungi untuk Controller.
+- [x] Menambahkan helper metrik monitoring deterministik beserta pengujian unit skenario kosong, agregasi arah transaksi, dan rasio review.
+- [x] Menambahkan loading state yang jelas pada halaman Monitoring Operasional agar metrik/grafik tidak menampilkan angka nol semu saat query masih memuat.
+- [x] Menambahkan error/unavailable state pada halaman Monitoring Operasional untuk kegagalan `reports.transactions`, termasuk opsi retry yang tidak melakukan perubahan data.
+- [x] Memastikan keadaan kosong Monitoring hanya ditampilkan setelah query berhasil dengan hasil kosong, bukan saat loading atau error.
+- [x] Mencatat hasil verifikasi rute, navigasi, serta keadaan loading/error/empty Monitoring pada dokumentasi implementasi.
+- [x] Menyimpan checkpoint terpublikasi setelah seluruh perubahan final tervalidasi.
+- [x] Mengaudit halaman, komponen, rute, dan kontrak data aktif untuk menetapkan batas pembangunan ulang tanpa merusak alur operasional yang sudah tervalidasi.
+- [x] Mendefinisikan ulang sistem desain, token, tipografi, motion, dan struktur navigasi dengan prinsip UX emil-design-eng.
+- [x] Membangun ulang front office agar tabel seluruh kurs aktif selalu terlihat secara transparan, dengan keadaan loading, error, dan tidak tersedianya kurs.
+- [x] Membangun ulang halaman publik pendukung untuk estimasi kebutuhan dan kontak layanan tanpa menyembunyikan tabel kurs utama.
+- [x] Membangun ulang DashboardLayout serta halaman beranda back office mengikuti pola kerja SIPUKA dengan worklist, ringkasan risiko, aksi cepat, dan navigasi berbasis peran.
+- [x] Memastikan modul back office aktif tetap mudah diakses melalui menu terstruktur tanpa memalsukan fungsi multi-cabang atau pelaporan regulator.
+- [x] Menambahkan atau memperbarui pengujian unit, memverifikasi tampilan desktop/mobile, dan menyimpan checkpoint terpublikasi pembangunan ulang.
+- [x] Memverifikasi peta rute aplikasi untuk setiap item menu back office dan memperbaiki rute yang belum terdaftar atau tidak menunjuk modul aktif.
+- [x] Menambahkan smoke test untuk memastikan seluruh path navigasi utama back office tetap tersedia bagi peran yang berwenang.
+- [x] Menguji visibilitas item navigasi dan minimumRole agar setiap peran hanya melihat tujuan yang menjadi kewenangannya.
+- [x] Menguji bahwa setiap tujuan sidebar terhubung ke halaman yang benar dengan minimumRole yang sesuai.
+- [x] Menguji pemetaan setiap path sidebar terhadap komponen halaman operasional spesifik beserta minimumRole yang tepat.
+- [x] Menyimpan checkpoint terpublikasi baru setelah pembangunan ulang front office dan back office selesai diverifikasi.

@@ -1,0 +1,54 @@
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { trpc } from "@/lib/trpc";
+import { calculateOperationalReadiness } from "@shared/operationalReadiness";
+import { getRegulatoryReportingReadiness } from "@shared/regulatoryActionQueue";
+import { ArrowRight, CheckCircle2, CircleAlert, ClipboardCheck, FileLock2, FileText, Landmark, RefreshCcw, ShieldCheck, WalletCards } from "lucide-react";
+import { useLocation } from "wouter";
+
+function goTo(path: string, setLocation: (path: string) => void) { setLocation(path); }
+
+export default function OperationalReadiness() {
+  const [, setLocation] = useLocation();
+  const dashboard = trpc.dashboard.overview.useQuery();
+  const checklist = trpc.dailyChecklist.today.useQuery();
+  const comparison = trpc.rates.comparison.useQuery();
+  const acknowledgements = trpc.directorAcknowledgements.list.useQuery();
+  const regulatoryPackages = trpc.regulatoryReports.list.useQuery();
+  const isLoading = dashboard.isLoading || checklist.isLoading || comparison.isLoading || acknowledgements.isLoading || regulatoryPackages.isLoading;
+  const refresh = () => void Promise.all([dashboard.refetch(), checklist.refetch(), comparison.refetch(), acknowledgements.refetch(), regulatoryPackages.refetch()]);
+
+  const activeRateRows = (comparison.data ?? []).filter((row) => row.outlet.midpointPerUnit !== null);
+  const referenceRows = (comparison.data ?? []).filter((row) => Boolean(row.bi || row.jisdor || row.market));
+  const directorOpen = (acknowledgements.data ?? []).filter((item) => !item.acknowledgedAt).length;
+  const reportingReadiness = getRegulatoryReportingReadiness(regulatoryPackages.data ?? [], regulatoryPackages.isError);
+  const reportingReady = reportingReadiness.ready;
+  const readiness = calculateOperationalReadiness({ openingChecks: checklist.data?.openingChecks, closingChecks: checklist.data?.closingChecks, closingCompletedAt: checklist.data?.closingCompletedAt, cashBalanceCount: dashboard.data?.cashBalances.length ?? 0, activeRateCount: activeRateRows.length, referenceRateCount: referenceRows.length, pendingReviewCount: dashboard.data?.pendingReview.length ?? 0, varianceCount: dashboard.data?.variances.length ?? 0, directorOpenCount: directorOpen });
+  const { openingReady, closingReady, cashReady, rateReady, pendingReviews, oversightReady, readyCount } = readiness; const totalReady = readyCount + (reportingReady ? 1 : 0);
+
+  const controls = [
+    { label: "Kurs & referensi", detail: comparison.isError ? "Status referensi belum tersedia. Perbarui atau buka perbandingan kurs." : rateReady ? `${activeRateRows.length} kurs aktif dengan pembanding tersedia.` : "Aktifkan kurs melalui proposal dan pastikan pembanding tercatat.", ready: rateReady, loading: comparison.isLoading, unavailable: comparison.isError, icon: Landmark, action: "Tinjau kurs", path: "/operasional/perbandingan-kurs" },
+    { label: "Kas pembukaan", detail: dashboard.isError ? "Status kas belum tersedia. Buka Kas & Persediaan untuk pemeriksaan." : cashReady ? `${dashboard.data?.cashBalances.length ?? 0} mata uang memiliki saldo tercatat.` : "Belum ada saldo kas yang tercatat untuk outlet.", ready: cashReady, loading: dashboard.isLoading, unavailable: dashboard.isError, icon: WalletCards, action: "Buka kas", path: "/operasional/stock" },
+    { label: "Checklist pembukaan", detail: checklist.isError ? "Status checklist belum tersedia. Buka checklist dan coba perbarui." : openingReady ? "Langkah kesiapan outlet telah lengkap." : "Lengkapi modal kerja, alat, dan pencatatan kas awal.", ready: openingReady, loading: checklist.isLoading, unavailable: checklist.isError, icon: ClipboardCheck, action: "Buka checklist", path: "/operasional/checklist" },
+    { label: "Pengawasan", detail: dashboard.isError || acknowledgements.isError ? "Status pengawasan belum tersedia. Buka Monitoring untuk pemeriksaan." : oversightReady ? "Tidak ada review transaksi, varians, atau laporan Direksi terbuka." : `${pendingReviews} review/varians dan ${directorOpen} laporan Direksi perlu ditindaklanjuti.`, ready: oversightReady, loading: dashboard.isLoading || acknowledgements.isLoading, unavailable: dashboard.isError || acknowledgements.isError, icon: ShieldCheck, action: "Buka pengawasan", path: "/operasional/monitoring" },
+    { label: "Arsip penutupan", detail: checklist.isError ? "Status arsip belum tersedia. Buka checklist dan coba perbarui." : closingReady ? "Ringkasan penutupan sudah dapat dicetak atau disimpan PDF." : "Arsip tersedia setelah checklist penutupan benar-benar selesai.", ready: closingReady, loading: checklist.isLoading, unavailable: checklist.isError, icon: FileText, action: "Buka penutupan", path: "/operasional/checklist" },
+    { label: "Paket pelaporan", detail: reportingReadiness.detail, ready: reportingReady, loading: regulatoryPackages.isLoading, unavailable: reportingReadiness.unavailable, icon: FileLock2, action: "Buka pelaporan", path: "/operasional/pelaporan-regulator" },
+  ];
+
+  return <div className="mx-auto max-w-7xl space-y-6">
+    <section className="relative overflow-hidden rounded-[1.5rem] bg-[#192a48] px-6 py-7 text-white shadow-[0_18px_45px_rgba(23,40,71,0.16)] sm:px-8"><div className="public-grid absolute inset-0 opacity-40" /><div className="absolute -right-14 -top-20 size-64 rounded-full bg-[#d7ec75]/12 blur-3xl" /><div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-bold tracking-[0.16em] text-[#d7ec75] uppercase">Pusat kesiapan operasional</p><h1 className="mt-2 font-display text-3xl tracking-tight">Lihat yang siap. Tangani yang belum.</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-[#d3deef]">Ringkasan baca-saja untuk Supervisor. Status ini membantu menentukan prioritas kerja; keputusan kurs, persetujuan, penutupan, dan pelaporan tetap dilakukan pada modul berwenang.</p></div><div className="flex items-center gap-3"><Badge className={totalReady === controls.length ? "bg-emerald-300 text-emerald-950 hover:bg-emerald-300" : "bg-amber-200 text-amber-950 hover:bg-amber-200"}>{totalReady}/{controls.length} KONTROL SIAP</Badge><Button variant="outline" disabled={isLoading} onClick={refresh} className="border-white/15 bg-white/[0.08] text-white hover:bg-white/15 hover:text-white"><RefreshCcw className={isLoading ? "mr-2 size-4 animate-spin" : "mr-2 size-4"} />Perbarui</Button></div></div></section>
+
+    {dashboard.data?.isDataUnavailable || controls.some((control) => control.unavailable) ? <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900"><CircleAlert className="mt-0.5 size-4 shrink-0" />Sebagian status belum tersedia. Tidak ada data yang diubah; gunakan tindakan pada kartu terkait atau perbarui beberapa saat lagi.</div> : null}
+
+    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">{controls.map((control) => <StatusCard key={control.label} {...control} onClick={() => goTo(control.path, setLocation)} />)}</section>
+
+    <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]"><Card className="border-[#dce6f0]"><CardHeader><CardTitle className="font-display text-xl text-[#18395f]">Urutan tindakan yang disarankan</CardTitle><CardDescription>Mulai dari kontrol yang belum siap. Gunakan halaman tujuan untuk mencatat atau menyetujui tindakan, bukan dari pusat ringkasan ini.</CardDescription></CardHeader><CardContent><div className="space-y-3">{controls.filter((control) => !control.ready).length ? controls.filter((control) => !control.ready).map((control) => <button key={control.label} onClick={() => goTo(control.path, setLocation)} className="group flex w-full items-center gap-3 rounded-xl border border-[#e3eaf2] bg-[#fbfcfe] p-4 text-left transition-colors hover:border-[#bcd0e3] hover:bg-white"><span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><CircleAlert className="size-4" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-bold text-[#314864]">{control.label}</span><span className="mt-1 block text-xs leading-5 text-[#708198]">{control.detail}</span></span><ArrowRight className="size-4 text-[#5f7cc8]" /></button>) : <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-5"><CheckCircle2 className="size-5 text-emerald-600" /><p className="mt-3 text-sm font-bold text-[#315b42]">Kontrol utama siap.</p><p className="mt-1 text-xs leading-5 text-[#517464]">Tetap pantau perubahan kurs, transaksi terflag, dan pencatatan penutupan sepanjang hari.</p></div>}</div></CardContent></Card>
+      <Card className="border-[#dce6f0]"><CardHeader><CardTitle className="font-display text-xl text-[#18395f]">Jalur cepat latihan</CardTitle><CardDescription>Latih perhitungan bon, guncangan kurs, kas, dan kelayakan arsip tanpa data produksi.</CardDescription></CardHeader><CardContent><div className="rounded-xl bg-[#f5f8fc] p-4"><p className="text-sm font-bold text-[#35516e]">Simulasi aman tetap terpisah</p><p className="mt-2 text-xs leading-5 text-[#687c92]">Hasil latihan tidak membuat nomor bon, nasabah, saldo kas, stock opname, laporan, atau arsip resmi.</p><Button className="mt-4 bg-[#183f70] text-white hover:bg-[#12345d]" onClick={() => goTo("/operasional/simulasi", setLocation)}>Buka simulasi aman <ArrowRight className="ml-2 size-4" /></Button></div></CardContent></Card></section>
+  </div>;
+}
+
+function StatusCard({ label, detail, ready, unavailable, icon: Icon, action, onClick, loading }: { label: string; detail: string; ready: boolean; unavailable: boolean; icon: typeof Landmark; action: string; onClick: () => void; loading: boolean }) {
+  const good = ready && !unavailable;
+  return <Card className={good ? "border-emerald-150 bg-emerald-50/25" : "border-amber-150 bg-amber-50/35"}><CardContent className="p-4"><div className="flex items-start justify-between gap-3"><span className={good ? "flex size-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700" : "flex size-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700"}><Icon className="size-4" /></span><Badge className={good ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" : "bg-amber-100 text-amber-700 hover:bg-amber-100"}>{unavailable ? "PERLU PERIKSA" : good ? "SIAP" : "PERLU TINDAKAN"}</Badge></div><p className="mt-5 text-sm font-bold text-[#314864]">{label}</p><p className="mt-2 min-h-12 text-xs leading-5 text-[#718198]">{loading ? "Memuat status…" : detail}</p><button disabled={loading} onClick={onClick} className="press-scale mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-[#4564ba] disabled:opacity-50">{action}<ArrowRight className="size-3.5" /></button></CardContent></Card>;
+}

@@ -1,0 +1,2 @@
+ALTER TABLE `rate_sync_configurations` MODIFY COLUMN `cronExpression` varchar(80) NOT NULL DEFAULT '0 30 3 * * 1-5';--> statement-breakpoint
+CREATE INDEX `rate_sync_task_uid_idx` ON `rate_sync_configurations` (`scheduleCronTaskUid`);

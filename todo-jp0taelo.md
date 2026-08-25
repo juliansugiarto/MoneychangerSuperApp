@@ -1,0 +1,122 @@
+# Project TODO
+
+- [x] Telaah proyek referensi, hasil riset, dan dokumen kepatuhan yang tersedia.
+- [x] Tetapkan struktur aplikasi, peran pengguna, dan alur kerja harian yang mudah dipahami.
+- [x] Pastikan dashboard dan navigasi memisahkan pekerjaan Kasir, Supervisor, Kepatuhan, dan Admin secara jelas.
+- [x] Sederhanakan alur transaksi jual/beli valuta, identifikasi pelanggan, serta bukti transaksi.
+- [x] Lengkapi kontrol operasional untuk rate, kas/stok, pembukaan-penutupan hari, dan rekonsiliasi.
+- [x] Lengkapi ruang kepatuhan untuk APUPPT, daftar pemeriksaan audit, pengaduan konsumen, dan jejak audit.
+- [x] Verifikasi perizinan, akses berbasis peran, validasi data, serta pengalaman layar desktop dan seluler.
+- [x] Tulis atau perbarui pengujian otomatis dan jalankan pemeriksaan kualitas aplikasi.
+- [x] Simpan versi produksi aplikasi dan siapkan ringkasan penggunaan untuk pengguna operasional.
+- [x] Tambahkan pengakuan Direksi untuk setiap laporan/kejadian yang telah disetujui Supervisor tanpa menghambat transaksi yang telah disetujui.
+- [x] Tambahkan checklist buka dan tutup outlet sesuai SOP, termasuk kesiapan alat, modal/kas awal, opname, rekonsiliasi, dan serah-terima.
+- [x] Rancang dan implementasikan impor Excel yang tervalidasi, dengan form input sederhana tetap tersedia untuk operasional harian.
+- [x] Tambahkan tata kelola kurs multi-sumber untuk JISDOR, referensi BI, VIP, dan sumber yang sah, tanpa mengaktifkan kurs outlet secara otomatis.
+- [x] Tambahkan peringatan perubahan kurs mendadak beserta alasan dan persetujuan eksplisit saat kurs outlet diubah.
+- [x] Jalankan ulang sinkronisasi dan buktikan observasi JISDOR tersimpan serta tampil pada panel referensi multi-sumber.
+- [x] Wajibkan alasan dan konfirmasi eksplisit saat aktivasi kurs outlet, lalu uji kontrak backend serta antarmukanya.
+- [x] Tambahkan penyederhanaan konkret pada layar transaksi/KYC/bukti transaksi dan verifikasi alur utama.
+- [x] Dokumentasikan verifikasi responsif untuk tampilan publik dan layout kerja operasional.
+- [x] Simpan checkpoint produksi dan siapkan ringkasan go-live untuk pengguna operasional.
+- [x] Verifikasi tampilan entri JISDOR pada panel referensi multi-sumber setelah sinkronisasi berhasil.
+- [x] Verifikasi alur antarmuka aktivasi kurs yang kini mewajibkan alasan dan konfirmasi eksplisit.
+- [x] Verifikasi rute panduan transaksi/KYC/bon setelah penyederhanaan langkah kasir diterapkan.
+- [x] Verifikasi tampilan seluler untuk minimal satu halaman back-office operasional.
+- [x] Tambahkan onboarding hari pertama untuk pencatatan saldo kas awal dan pengajuan kurs outlet awal.
+- [x] Tambahkan alur penyiapan akun produksi untuk peran Staff, Supervisor/Admin, Controller, dan Shareholder.
+- [x] Tambahkan mode simulasi terisolasi untuk bon dan penutupan outlet tanpa mengubah saldo atau laporan operasional nyata.
+- [x] Tambahkan pengujian akses, isolasi data, dan validasi alur go-live baru.
+- [x] Simpan checkpoint produksi dan perbarui panduan penggunaan fitur go-live baru.
+- [x] Tambahkan arsip PDF siap cetak untuk bon transaksi dan ringkasan penutupan outlet tanpa menyimpan data uji sebagai data produksi.
+- [x] Tambahkan dashboard selisih kurs outlet terhadap BI, JISDOR, dan pembanding pasar yang menjelaskan basis pembanding serta waktu observasi.
+- [x] Tinjau dan tambahkan perbaikan use case operasional yang berdampak langsung pada pengendalian, keterbacaan, atau pencegahan kesalahan.
+- [x] Tambahkan pengujian regresi untuk ekspor arsip, perbandingan kurs, dan skenario kegagalan yang relevan.
+- [x] Perjelas provisioning awal Shareholder dan Controller pada wizard go-live tanpa membuka delegasi tidak sah untuk peran tata kelola.
+- [x] Tambahkan arsip cetak/PDF yang nyata untuk bon transaksi operasional dan ringkasan penutupan outlet.
+- [x] Tambahkan pengujian regresi yang membuktikan kontrol arsip tersedia serta tidak mencampur data simulasi dengan arsip produksi.
+- [x] Perjelas provisioning awal Shareholder dan Controller pada wizard go-live tanpa membuka delegasi tidak sah untuk peran tata kelola.
+- [x] Tambahkan arsip cetak/PDF yang nyata untuk bon transaksi operasional dan ringkasan penutupan outlet.
+- [x] Tambahkan pengujian regresi yang membuktikan kontrol arsip tersedia serta tidak mencampur data simulasi dengan arsip produksi.
+- [x] Tambahkan view cetak/PDF khusus ringkasan penutupan outlet yang memuat checklist, stock opname, dan status rekonsiliasi nyata.
+- [x] Tambahkan pengujian fungsional yang membuktikan simulasi tidak menghasilkan atau muncul dalam bon, laporan, maupun arsip produksi.
+- [x] Tambahkan uji integrasi yang memanggil route simulasi lalu membuktikan daftar bon, laporan transaksi, dan arsip produksi tidak memuat hasil simulasi.
+- [x] Tambahkan uji integrasi yang memverifikasi jalur arsip cetak produksi tetap tidak memuat hasil simulasi setelah route simulasi dipanggil.
+- [x] Jalankan regresi penuh setelah uji isolasi arsip produksi dan simpan checkpoint produksi terbaru.
+- [x] Jalankan regresi penuh setelah uji isolasi simulasi lengkap dan simpan checkpoint produksi terbaru.
+- [x] Simpan checkpoint produksi terbaru setelah seluruh pelengkapan arsip dan isolasi simulasi diverifikasi.
+- [x] Inventarisasi semua use case yang dapat disimulasikan tanpa penulisan data produksi.
+- [x] Tambahkan rangkaian simulasi aman untuk quote transaksi, guncangan kurs, penutupan/kesesuaian kas, serta arsip cetak.
+- [x] Tambahkan pusat kesiapan operasional untuk status kurs, kas, checklist, antrian pengawasan, dan arsip harian.
+- [x] Tambahkan pengujian isolasi data serta regresi lintas modul untuk simulasi baru dan indikator kesiapan.
+- [x] Simpan checkpoint produksi dan ringkasan hasil simulasi lintas fitur.
+- [x] Verifikasi keselarasan fungsi aplikasi dengan SIPUKA Bank Indonesia dan dokumentasikan gap yang relevan.
+- [x] Petakan data transaksi, kurs, kas, KYC, dan audit ke struktur pelaporan regulator yang telah dikonfirmasi perusahaan.
+- [x] Rancang modul paket pelaporan dengan validasi, maker-checker, audit trail, dan ekspor yang belum melakukan pengiriman otomatis.
+- [x] Verifikasi sumber publik kanal, format, jadwal, dan otorisasi pelaporan BI; integrasi pengiriman/otomasi tetap dinonaktifkan sampai PT IBV memperoleh ketentuan serta kredensial resmi.
+- [x] Ambil dan dokumentasikan sumber regulator resmi serta batas format pelaporan yang tersedia secara publik.
+- [x] Bangun Pusat Pelaporan Regulator untuk LKU, kesiapan laporan keuangan, dan laporan insidental berbasis data aktual.
+- [x] Tambahkan validasi, period lock, approval manual, jejak audit, serta ekspor paket tanpa pengiriman regulator otomatis.
+- [x] Uji pemisahan data live, penolakan data simulasi, otorisasi, ekspor, dan alur antarmuka pelaporan.
+- [x] Simpan rilis Pusat Pelaporan Regulator beserta dokumentasi batas penggunaannya.
+- [x] Audit penggunaan fitur, status data aktual, dan celah kontrol yang paling berdampak bagi operasional harian.
+- [x] Tambahkan kontrol penggunaan bernilai tinggi yang aman tanpa mengotomatisasi keputusan atau pengiriman regulator.
+- [x] Jalankan simulasi A–Z untuk transaksi, kurs, kas, checklist, pengawasan, arsip, dan paket pelaporan.
+- [x] Jalankan regresi penuh serta verifikasi penggunaan antarmuka desktop dan seluler setelah penguatan kontrol.
+- [x] Simpan rilis tervalidasi dan dokumentasikan hasil audit penggunaan serta batas sistem.
+- [x] Audit struktur laporan laba rugi, neraca, dan parameter LTKT/LTKM yang tersedia untuk kesiapan impor terkendali.
+- [x] Tambahkan impor workbook XLSX/XLS snapshot keuangan dengan parsing B0002/B0003/B0004, validasi, periode, sumber tersimpan, jejak audit, dan tanpa mengubah transaksi operasional.
+- [x] Tambahkan daftar laporan insidental berbasis bukti, status kerja, dan persetujuan manual tanpa pengiriman regulator otomatis.
+- [x] Uji otorisasi, parsing workbook, validasi, isolasi data, dan kontrak alur laporan keuangan serta insidental; rute antarmuka desktop/seluler terlindungi telah diperiksa.
+- [x] Simpan rilis tervalidasi serta dokumentasi batas penggunaan pelaporan lanjutan.
+- [x] Verifikasi workbook keuangan aktual dan tetapkan batas walkthrough agar tidak membuat snapshot, paket, atau status produksi.
+- [x] Jalankan simulasi impor serta pemeriksaan snapshot keuangan aktual dalam memori/latihan.
+- [x] Simulasikan transisi Controller–Shareholder, maker-checker, dan ekspor latihan tanpa penulisan data produksi.
+- [x] Buktikan tabel snapshot, paket regulator, dan register insidental produksi tidak berubah setelah walkthrough.
+- [x] Dokumentasikan hasil walkthrough Controller–Shareholder dan batas penggunaan latihan.
+- [x] Audit hambatan penggunaan impor workbook terpisah dan langkah persetujuan Controller–Shareholder pasca-walkthrough.
+- [x] Tambahkan bantuan pemetaan/pemeriksaan tiga workbook aktual yang membuat tiga form lebih mudah disiapkan tanpa menyimpan berkas, snapshot, paket, atau data produksi.
+- [x] Tambahkan panduan tindakan per peran untuk impor, pemeriksaan, persetujuan, dan ekspor manual.
+- [x] Uji regresi parser, workflow, isolasi data, dan antarmuka penguatan lanjutan.
+- [x] Simpan rilis tervalidasi dan perbarui dokumentasi batas penggunaan.
+- [x] Audit struktur template B0002/B0003/B0004 serta sumber status paket pelaporan yang perlu ditindaklanjuti.
+- [x] Tambahkan template workbook B0002/B0003/B0004 yang dapat diunduh tanpa data keuangan contoh.
+- [x] Tambahkan indikator pengingat paket draf/siap diperiksa pada Pusat Pelaporan Regulator tanpa notifikasi atau pengiriman eksternal otomatis.
+- [x] Jalankan simulasi template, validasi parser, workflow paket, isolasi data, dan regresi antarmuka.
+- [x] Lakukan walkthrough visual terautentikasi Controller/Shareholder untuk tombol unduh template dan indikator paket pada sesi penggunaan pertama.
+- [x] Tambahkan status paket pelaporan draf/siap diperiksa pada Pusat Kesiapan Operasional untuk Controller.
+- [x] Uji regresi indikator kesiapan paket pelaporan dan isolasi data pelaporan dari operasi harian.
+- [x] Simpan rilis tervalidasi dan dokumentasikan batas penggunaan template serta pengingat manual.
+- [x] Hilangkan peringatan deprecation saat logout internal tanpa mengubah keamanan atau masa berlaku sesi.
+- [x] Audit status paket, skema, dan kontrak review untuk komentar pengembalian serta tenggat manual.
+- [x] Tambahkan pengembalian paket oleh Shareholder dengan catatan wajib dan jejak audit tanpa pengiriman eksternal.
+- [x] Tambahkan tenggat manual dan indikator prioritas paket tanpa notifikasi terjadwal atau pengubahan status otomatis.
+- [x] Uji otorisasi, maker-checker, pengembalian, tenggat, isolasi data, dan alur antarmuka.
+- [x] Simpan rilis tervalidasi dan dokumentasikan batas review/pengingat manual terbaru.
+- [x] Tambahkan indikator prioritas eksplisit untuk tenggat paket: terlambat, hari ini, atau mendatang tanpa perubahan status otomatis.
+- [x] Lakukan walkthrough browser pada kartu paket latihan yang terisolasi untuk memverifikasi kontrol pengembalian dan tenggat tanpa menulis data produksi permanen.
+- [x] Simpan checkpoint rilis review paket, prioritas tenggat, dan kartu latihan nonpersisten setelah regresi penuh tervalidasi.
+- [x] Audit data proyek aktual yang aman dipakai sebagai bahan simulasi tanpa menyalin angka sensitif ke aplikasi publik.
+- [x] Susun dan jalankan walkthrough satu hari terisolasi untuk Staff, Supervisor, Controller, Shareholder, dan Direksi.
+- [x] Verifikasi seluruh guardrail simulasi dan tidak ada penulisan transaksi, kas, pelaporan, atau audit produksi.
+- [x] Jalankan regresi penuh serta dokumentasikan hasil simulasi tanpa memuat angka keuangan sensitif.
+- [x] Simpan checkpoint simulasi satu hari tervalidasi.
+- [x] Verifikasi audit log dua jam terakhir dan perbarui dokumen simulasi bila tidak ada penulisan produksi.
+- [x] Audit final konfigurasi operasional, akses peran, guardrail produksi, dan kondisi data sebelum hari penggunaan.
+- [x] Perbaiki temuan kesiapan yang aman tanpa mengubah data produksi atau mengotomatisasi kurs maupun regulator.
+- [x] Susun Buku Panduan Penggunaan Website A–Z untuk Staff, Supervisor, Controller/Direksi, dan Shareholder.
+- [x] Jalankan walkthrough akhir lintas peran, verifikasi browser, serta regresi penuh sebelum rilis operasional.
+- [x] Simpan checkpoint final dan dokumentasikan tindakan wajib sebelum penggunaan hari pertama.
+- [x] Perbaiki kegagalan pembuatan atau pembacaan checklist harian yang terdeteksi pada audit runtime tanpa membuat data operasional uji permanen.
+- [x] Remediasi dependensi produksi berisiko tinggi atau kritis yang memiliki patch aman tanpa merusak kompatibilitas aplikasi.
+- [x] Dokumentasikan risiko residual SheetJS dan batas penggunaan impor workbook tepercaya pada panduan operasional final.
+- [x] Evaluasi serta hapus atau perbarui rantai dependensi residual yang tidak dipakai, terutama streamdown/Mermaid, lalu audit ulang.
+- [x] Dokumentasikan tiap temuan high residual yang belum memiliki patch pemasok dan tetapkan guard produksi yang dapat diverifikasi.
+- [x] Ulangi walkthrough autentikasi final untuk Staff, Admin/Controller, dan Shareholder setelah pembaruan keamanan terakhir.
+- [x] Simpan checkpoint final pasca-walkthrough dan dokumentasi rilis setelah seluruh verifikasi terakhir selesai.
+- [x] Selidiki dan perbaiki penolakan kredensial pada halaman login, lalu verifikasi autentikasi aman bagi akun operasional.
+- [x] Tambahkan bagian manajemen pengguna pada dashboard Shareholder untuk membuat dan mengelola akun Admin serta Staff dengan kontrol akses yang jelas.
+- [x] Siapkan satu paket ZIP terstruktur berisi salinan proyek yang dapat diaudit, panduan operasional PDF, use case, skema database, inventaris berkas, dan instruksi pengembangan lanjutan.
+- [x] Audit dan perkuat instruksi Claude Code untuk perubahan serta penambahan fitur masa depan, termasuk guardrail, verifikasi, dan alur rilis.
+- [x] Buat dan verifikasi PDF komprehensif untuk Buku Panduan Penggunaan serta Skenario Use Case Proyek.
+- [x] Rakit ulang satu ZIP handoff berisi source bersih, dua PDF, dokumentasi, inventaris, checksum, dan bukti validasi.

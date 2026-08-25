@@ -1,0 +1,125 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1786587767477,
+      "tag": "0000_sleepy_shadowcat",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1786591704041,
+      "tag": "0001_blushing_magdalene",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1786591907223,
+      "tag": "0002_warm_proteus",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1786593120287,
+      "tag": "0003_condemned_toro",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1786598386498,
+      "tag": "0004_large_joseph",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1786599906707,
+      "tag": "0005_magenta_jocasta",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1786602111439,
+      "tag": "0006_adorable_kronos",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1786603792342,
+      "tag": "0007_typical_unicorn",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1786604690577,
+      "tag": "0008_cool_silvermane",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1786610699193,
+      "tag": "0009_optimal_baron_strucker",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1786622126093,
+      "tag": "0010_serious_logan",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1786623499485,
+      "tag": "0011_jittery_bullseye",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1787569262023,
+      "tag": "0012_overjoyed_speed_demon",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1787577113272,
+      "tag": "0013_omniscient_songbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "5",
+      "when": 1787584570377,
+      "tag": "0014_jazzy_psylocke",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "5",
+      "when": 1787585079697,
+      "tag": "0015_boring_hobgoblin",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "5",
+      "when": 1787588993338,
+      "tag": "0016_wealthy_machine_man",
+      "breakpoints": true
+    }
+  ]
+}

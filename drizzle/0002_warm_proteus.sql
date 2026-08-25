@@ -1,0 +1,2 @@
+ALTER TABLE `operational_rates` ADD `quoteUnit` decimal(18,6) DEFAULT '1.000000' NOT NULL;--> statement-breakpoint
+ALTER TABLE `rate_reference_snapshots` ADD `quoteUnit` decimal(18,6) DEFAULT '1.000000' NOT NULL;

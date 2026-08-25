@@ -1,0 +1,11 @@
+{
+  "task_kind": "markdown-to-pdf",
+  "output": "pdf",
+  "signals": [],
+  "hard_constraints": ["Bahasa Indonesia", "panduan operasional internal", "memuat tabel dan checklist"],
+  "content_features": {
+    "code_blocks": 0,
+    "defined_terms": 12,
+    "portrait_images": 0
+  }
+}

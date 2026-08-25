@@ -1,0 +1,67 @@
+# Skema Database Proyek
+
+**Sumber otoritatif skema:** `drizzle/schema.ts`.  
+**Platform:** MySQL/TiDB melalui Drizzle ORM.  
+**Prinsip:** simpan data transaksi dan kontrol dalam tipe presisi desimal, pertahankan jejak perubahan penting, dan pisahkan data demo/historis dari alur produksi.
+
+> Dokumen ini adalah peta teknis. Skema aplikasi memakai relasi logis lewat kolom ID dan indeks; perubahan struktur harus dibuat di `drizzle/schema.ts`, menghasilkan migrasi, lalu diterapkan secara terkontrol pada database yang benar.
+
+## Domain Entitas
+
+| Domain | Tabel | Tanggung jawab |
+|---|---|---|
+| Identitas dan akses | `users` | Username, hash sandi, peran, status akun, versi sesi, dan kewajiban ganti sandi. |
+| Mata uang dan kurs | `currencies`, `rate_reference_snapshots`, `operational_rates`, `market_rate_observations`, `rate_volatility_alerts`, `rate_sync_configurations`, `rate_sync_runs` | Mata uang, referensi, kurs outlet berstatus, observasi pasar, alarm, dan riwayat sinkronisasi. |
+| Nasabah dan bon | `customers`, `exchange_transactions`, `operational_documents`, `transaction_review_actions` | KYC, snapshot bon, dokumen S3, serta keputusan review yang tidak ditimpa. |
+| Kas dan outlet | `cash_balances`, `cash_balance_movements`, `stock_opnames`, `daily_operational_checklists` | Saldo per mata uang, mutasi, opname fisik, dan checklist harian. |
+| Konfigurasi dan layanan | `operational_settings`, `service_requests`, `public_announcements`, `consumer_complaints` | Ambang pengawasan, permintaan layanan, pengumuman, dan keluhan. |
+| Audit dan pengawasan | `audit_logs`, `director_acknowledgements` | Jejak perubahan serta tugas Direksi mengetahui. |
+| Pelaporan internal | `regulatory_report_packages`, `financial_statement_snapshots`, `regulatory_incident_reports` | Paket manual, snapshot B0002/B0003/B0004, dan register insidental. |
+
+## Relasi Operasional Utama
+
+```mermaid
+erDiagram
+  USERS ||--o{ EXCHANGE_TRANSACTIONS : "mencatat atau meninjau"
+  CUSTOMERS ||--o{ EXCHANGE_TRANSACTIONS : "menjadi nasabah"
+  CURRENCIES ||--o{ OPERATIONAL_RATES : "memiliki kurs"
+  OPERATIONAL_RATES ||--o{ EXCHANGE_TRANSACTIONS : "dipakai bon"
+  CURRENCIES ||--|| CASH_BALANCES : "memiliki saldo"
+  CASH_BALANCES ||--o{ CASH_BALANCE_MOVEMENTS : "memiliki mutasi"
+  EXCHANGE_TRANSACTIONS ||--o{ TRANSACTION_REVIEW_ACTIONS : "memiliki keputusan"
+  EXCHANGE_TRANSACTIONS ||--o{ OPERATIONAL_DOCUMENTS : "didukung dokumen"
+  USERS ||--o{ AUDIT_LOGS : "melakukan tindakan"
+  USERS ||--o{ REGULATORY_REPORT_PACKAGES : "membuat atau memeriksa"
+```
+
+## Kontrol Data Penting
+
+| Kontrol | Implementasi skema | Konsekuensi operasi |
+|---|---|---|
+| Presisi uang | `decimal(24, 6)` untuk valuta/rate, `decimal(24, 2)` untuk Rupiah bon | Jangan mengonversi nilai uang menjadi `float`. |
+| Snapshot bon | Nilai kurs dan KYC disalin ke `exchange_transactions` | Riwayat bon tetap dapat dibaca bila profil/kurs berubah. |
+| Data latihan | Flag `isDemo` pada transaksi, nasabah, kurs, dan opname | Query produksi wajib mengecualikan data demo. |
+| Data historis | Flag `isHistorical` dan `historicalSourceKey` | Catatan impor tidak dapat dipakai sebagai transaksi hidup. |
+| Dokumen | Hanya metadata dan `storageKey` di `operational_documents` | Bytes dokumen berada di object storage, bukan kolom database. |
+| Audit | `audit_logs` memakai before/after state JSON | Jangan menghapus bukti untuk memperbaiki tampilan. |
+| Sesi | `sessionVersion` pada `users` | Reset sandi, perubahan peran/status mencabut sesi lama. |
+
+## Status Workflow Utama
+
+| Objek | Status yang tersedia | Catatan |
+|---|---|---|
+| Bon | `DRAFT`, `PENDING_REVIEW`, `APPROVED`, `COMPLETED`, `RETURNED`, `CANCELLED` | Hanya bon hidup `COMPLETED` dipakai LKU internal. |
+| Stock opname | `OPEN`, `SUBMITTED`, `RECONCILED`, `VARIANCE` | Varians harus terlihat untuk review. |
+| Paket pelaporan | `DRAFT`, `PREPARED`, `RETURNED`, `APPROVED`, `EXPORTED` | `EXPORTED` bukan bukti pengiriman regulator. |
+| Insidental | `DRAFT`, `PREPARED`, `APPROVED`, `EXPORTED` | Kewajiban lapor tetap keputusan manusia. |
+| Keluhan | `OPEN`, `IN_REVIEW`, `RESOLVED`, `ESCALATED_LAPS_BI` | Hasil penyelesaian perlu narasi dan penanggung jawab. |
+
+## Prosedur Perubahan Skema
+
+1. Ubah `drizzle/schema.ts` dan perbarui/ tulis test yang relevan.
+2. Jalankan generator migrasi sesuai konfigurasi proyek, lalu **baca** SQL migrasi sebelum menerapkannya.
+3. Terapkan migrasi hanya sekali pada lingkungan yang benar, setelah backup dan pemeriksaan dependensi.
+4. Verifikasi tabel/indeks baru dengan query baca-saja.
+5. Jalankan `pnpm test`, `pnpm check`, dan `pnpm build` sebelum rilis.
+
+Jangan menjatuhkan tabel, menghapus audit, atau mengubah tipe nominal pada lingkungan produksi tanpa rencana rollback dan persetujuan perusahaan.

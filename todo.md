@@ -1,0 +1,109 @@
+# Project TODO
+
+- [x] Menelaah master prompt proyek dan kwitansi sebagai sumber identitas serta kebutuhan awal.
+- [x] Menetapkan desain MVP, arsitektur sesuai scaffold, dan keputusan yang memerlukan konfirmasi.
+- [x] Menyelesaikan fondasi antarmuka internal dengan navigasi dan akses rute yang benar-benar role-aware untuk TELLER, SUPERVISOR, DIRECTOR, dan ADMIN.
+- [x] Memperluas model peran pengguna menjadi TELLER, SUPERVISOR, DIRECTOR, dan ADMIN beserta helper otorisasi endpoint.
+- [x] Membuat skema database dan migrasi untuk mata uang, kurs bersejarah, customer KYC/CDD, transaksi, pengaturan, review flag, approval, saldo kas, stock opname, dan audit log.
+- [x] Membangun prosedur backend tervalidasi untuk master mata uang, kurs, customer, pengaturan threshold, dan audit log.
+- [x] Membangun perekaman transaksi BUY/SELL dengan nominal presisi, snapshot kurs immutable, lifecycle status, pembatalan beralasan, dan audit log.
+- [x] Membangun workflow review/approval dan pembaruan saldo kas yang atomik untuk transaksi yang disetujui.
+- [x] Membangun modul stock opname harian dan rekonsiliasi saldo per mata uang.
+- [x] Membangun dashboard operasional serta laporan transaksi dan stock opname yang dapat dicetak.
+- [x] Menulis serta menjalankan pengujian Vitest untuk otorisasi, validasi, snapshot kurs, review threshold, dan integritas alur transaksi.
+- [x] Memverifikasi UI pada desktop dan seluler.
+- [x] Menyimpan checkpoint implementasi pertama.
+- [x] Menjaga aplikasi sebagai back-office staf saja tanpa akun atau portal login nasabah.
+- [x] Menentukan sumber kurs referensi live, frekuensi pembaruan, serta proses persetujuan kurs operasional sebelum rate dipakai transaksi.
+- [x] Menerapkan pembaruan kurs referensi secara terjadwal dengan riwayat sumber, waktu pembaruan, status kegagalan, dan audit log.
+- [x] Menambahkan helper role frontend/backend yang konsisten agar visibilitas menu, prosedur, dan area operasional dibatasi sesuai kewenangan.
+- [x] Menggunakan kurs transaksi harian Bank Indonesia sebagai sumber referensi kurs awal dan menerapkan alur proposal–persetujuan sebelum kurs operasional aktif.
+- [x] Setelah versi dipublikasikan, membuat dan mengaktifkan Heartbeat harian untuk callback sinkronisasi BI pada jam operasional yang disetujui.
+- [x] Membuat jadwal Heartbeat hari kerja pukul 10.30 WIB untuk sinkronisasi kurs referensi BI yang terautentikasi.
+- [x] Mendiagnosis dan memperbaiki alur sinkronisasi sehingga snapshot kurs BI terlihat di halaman Kurs beserta status, waktu, dan kesalahan yang dapat ditindaklanjuti.
+- [x] Menambahkan aksi proposal kurs operasional massal dari seluruh snapshot BI terbaru tanpa perlu memasukkan mata uang satu per satu.
+- [x] Menampilkan kurs operasional aktif hari ini secara publik pada halaman depan dengan waktu efektif dan penafian yang tepat.
+- [x] Menambahkan mode data demo terisolasi, hanya dapat dipicu ADMIN, dengan penanda jelas serta kemampuan pembersihan tanpa menyentuh data operasional nyata.
+- [x] Menambahkan panduan use case harian dari sinkronisasi BI hingga transaksi, approval, cash balance, opname, dan laporan.
+- [x] Memperketat callback BI agar hanya Heartbeat yang task UID-nya tersimpan pada konfigurasi dapat menjalankan sinkronisasi.
+- [x] Memperbaiki query `operational_settings` yang gagal pada halaman laporan dan memverifikasi halaman dimuat oleh Controller; ADMIN dibatasi sesuai matriks peran.
+- [x] Memperbaiki query transaksi yang gagal saat halaman Nasabah & KYC dimuat dan memverifikasi halaman dapat dimuat oleh ADMIN.
+- [x] Menyusun matriks use case V1 yang mencakup akses empat peran, mata uang, kurs BI, KYC/CDD, transaksi, review, kas, opname, laporan, dan audit.
+- [x] Membuat fixture data uji terisolasi beserta mekanisme pembersihan yang tidak pernah menyentuh data operasional pengguna.
+- [x] Menulis pengujian use case end-to-end pada level layanan untuk lifecycle transaksi normal, transaksi flagged, approval, cancellation, saldo kas, dan stock opname.
+- [x] Menulis pengujian regresi untuk hak akses setiap peran serta kegagalan koneksi database sementara pada seluruh query baca kritis.
+- [x] Menjalankan matriks use case V1, mencatat hasilnya, memperbaiki akar masalah yang ditemukan, dan melakukan regresi penuh sebelum uji penerimaan pengguna.
+- [x] Menambahkan serta menjalankan uji regresi fallback ambang review untuk kegagalan database sementara.
+- [x] Meneliti situs money changer pembanding untuk pola informasi, kejelasan kepercayaan, dan arah desain halaman publik.
+- [x] Membangun halaman publik Company Information dan How It Works yang responsif, informatif, serta terhubung jelas ke akses staf.
+- [x] Menerapkan motion modern yang aksesibel—transisi ringan, reveal saat scroll, dan kedalaman visual—tanpa parallax berlebihan atau gerakan yang mengganggu.
+- [x] Memetakan setiap query baca kritis UI operasional ke uji sukses dan uji gangguan database sementara, lalu memperbarui laporan validasi dengan cakupannya.
+- [x] Menangani kegagalan resolusi sumber BI dengan status yang dapat ditindaklanjuti, tanpa menyamarkan kegagalan sebagai kurs live.
+- [x] Memperbaiki struktur dashboard desktop agar sidebar tidak menutupi area konten operasional.
+- [x] Menambahkan penanda struktural isDemo pada data demo dan menyembunyikannya dari seluruh alur operasional live secara default.
+- [x] Mencegah kurs, nasabah, dan transaksi demo dipilih atau diproses dalam transaksi live serta menambahkan regresi isolasinya.
+- [x] Menambahkan regresi layanan untuk penolakan customer, kurs, dan transaksi berpenanda demo pada mutasi operasional live.
+- [x] Menambahkan regresi query untuk memastikan daftar transaksi serta laporan live tidak mengembalikan record demo.
+- [x] Memperbaiki kegagalan query antrean review pada halaman Kurs saat koneksi database sementara tidak tersedia.
+- [x] Memperbaiki penanganan kegagalan mutasi Kurs agar tindakan pengguna tidak hanya berakhir sebagai pesan fetch failed.
+- [x] Menambahkan regresi ketahanan antrean review dan memverifikasi halaman Kurs menggunakan sesi ADMIN.
+- [x] Mengganti autentikasi Google/Manus OAuth dengan login akun internal berbasis username dan kata sandi yang disimpan aman.
+- [x] Memigrasikan peran menjadi SHAREHOLDER, CONTROLLER, ADMIN, dan STAFF dengan hak akses minimum yang eksplisit.
+- [x] Menambahkan administrasi akun sehingga SHAREHOLDER dan CONTROLLER dapat memberi atau mencabut kewenangan ADMIN serta STAFF.
+- [x] Menyediakan proses bootstrap aman untuk akun SHAREHOLDER pertama tanpa menyimpan kata sandi awal di kode atau migrasi.
+- [x] Menambahkan pengujian login, sesi, perubahan peran, dan larangan eskalasi kewenangan.
+- [x] Memastikan akun baru yang wajib mengganti kata sandi tidak dapat memakai halaman operasional sebelum kata sandinya diperbarui.
+- [x] Menyediakan akun uji empat peran dengan kata sandi sementara hanya pada lingkungan pengembangan dan menolaknya pada domain publik.
+- [x] Menambahkan regresi yang memastikan kredensial uji tidak pernah diprovisikan saat NODE_ENV production.
+- [x] Menginventarisasi serta menelaah seluruh file proyek sebagai sumber kebijakan, data historis, dan aturan operasional.
+- [x] Memetakan data transaksi, kas, dan laporan historis ke skema aplikasi beserta daftar validasi dan pengecualian impor.
+- [x] Mengimpor data historis yang lulus validasi secara idempoten dan mencatat rekonsiliasi hasil impor.
+- [x] Menjalankan use case berbasis data historis untuk kurs, transaksi, review, kas, opname, dan laporan sebelum rilis.
+- [x] Menambahkan penanda dan tampilan data historis agar transaksi ledger lama terpisah dari transaksi live, kas live, KYC aktif, dan kurs operasional aktif.
+- [x] Menambahkan kunci sumber impor idempoten serta rekonsiliasi jumlah dan total Rupiah per operasi maupun mata uang.
+- [x] Menyediakan tampilan pengawasan khusus untuk transaksi impor historis tanpa mencampurkannya ke transaksi dan laporan live.
+- [x] Menambahkan register pengaduan konsumen dengan identitas pelapor, referensi transaksi, lampiran pendukung, kategori, tindak lanjut, status penyelesaian, dan audit.
+- [x] Menambahkan pengujian lifecycle pengaduan agar hanya Admin ke atas yang dapat menyelesaikan atau mengeskalasi pengaduan.
+- [x] Menambahkan indikator review EDD yang dapat dikonfigurasi untuk transaksi tunai harian setara Rp100 juta, sebagai pemicu telaah manusia dan bukan keputusan kepatuhan otomatis.
+- [x] Menambahkan checklist pembukaan dan penutupan operasional dari SOP pada dashboard, termasuk kesiapan kas serta status stock opname.
+- [x] Melengkapi provisioning akun uji internal yang terisolasi untuk verifikasi sesi empat peran tanpa melemahkan kebijakan kata sandi produksi.
+- [x] Menambahkan tes otorisasi pengaduan yang membuktikan STAFF ditolak untuk penyelesaian atau eskalasi, sementara Admin ke atas diizinkan.
+- [x] Menambahkan rekonsiliasi historis independen yang membandingkan jumlah dan total Rupiah per operasi serta mata uang dengan file staging sumber.
+- [x] Memastikan seluruh prosedur Admin, Controller, dan Shareholder juga memblokir sesi yang masih wajib mengganti kata sandi.
+- [x] Menambahkan penanda akun uji khusus pengembangan dan menolak autentikasinya secara eksplisit pada lingkungan produksi.
+- [x] Memprovisikan akun uji Controller, Admin, dan Staff hanya pada pengembangan untuk validasi antarmuka berbasis peran.
+- [x] Mengembalikan penolakan kredensial login sebagai respons autentikasi yang benar, bukan kesalahan server internal.
+- [x] Menyembunyikan akun berpenanda pengembangan dari daftar administrasi pengguna pada proses produksi.
+- [x] Menyediakan rahasia sesi acak khusus pengembangan ketika JWT_SECRET preview tidak tersedia, sambil mempertahankan kegagalan aman pada produksi.
+- [x] Menyelaraskan ulang hash akun uji pada startup pengembangan agar selalu sesuai dengan rahasia pengujian yang dikonfigurasi.
+- [x] Memisahkan kredensial akun uji browser dari rahasia lingkungan yang telah diprovisikan agar validasi lokal dapat menggunakan sandi awal yang disetujui pengguna tanpa memengaruhi produksi.
+- [x] Mengunci sandi awal `123456` hanya pada akun DEVELOPMENT_TEST di pengembangan, dengan penolakan eksplisit untuk akun tersebut pada produksi.
+- [x] Menambahkan regresi stock opname historis yang membuktikan record arsip tidak muncul pada daftar live dan tidak dapat membuka, mengirim, atau direkonsiliasi sebagai opname operasional.
+- [x] Menonaktifkan alur pembuatan snapshot demo USD yang bermasalah dengan menghapus akses demo dari halaman Kurs dan router operasional.
+- [x] Menghapus data demo yang mungkin terbentuk dan menonaktifkan alur data demo dari halaman operasional.
+- [x] Menginventarisasi seluruh file proyek untuk menormalisasi daftar nasabah serta transaksi buku besar asli tahun 2025 hingga saat ini.
+- [x] Memetakan dan mengimpor data asli nasabah serta buku besar secara idempoten dengan rekonsiliasi jumlah dan nilai per periode, mata uang, dan jenis transaksi.
+- [x] Memverifikasi data impor tidak bercampur dengan kas, kurs, transaksi, review, dan laporan operasional live.
+- [x] Memperbaiki regresi bootstrap login Shareholder yang ditemukan pada pemeriksaan penuh setelah penghapusan alur demo.
+- [x] Menegaskan kontrak bootstrap Shareholder bahwa kredensial lingkungan hanya dipakai untuk akun pertama dan tidak pernah mereset akun yang sudah ada.
+- [x] Menambahkan regresi terisolasi untuk akun Shareholder baru yang dapat login serta akun Shareholder yang sudah ada yang tetap idempoten tanpa melemahkan assertion login.
+- [x] Menambahkan rekonsiliasi historis per periode transaksi untuk melengkapi verifikasi per operasi dan mata uang sebelum rilis impor data asli.
+- [x] Menelaah bon jual, bon beli, formulir KTP, dan formulir underlying yang diunggah untuk memetakan field serta layout transaksi cetak.
+- [x] Menambahkan penyimpanan dokumen aman untuk foto KTP nasabah dan formulir underlying transaksi dengan kontrol akses berbasis peran.
+- [x] Mengganti pemilihan nasabah pada Draft Transaksi menjadi pencarian autocomplete yang aman dan tetap mendukung pembuatan nasabah baru.
+- [x] Mendesain ulang Draft Transaksi sebagai bon/nota jual-beli yang lengkap, dapat dicetak, dan sesuai field formulir sumber.
+- [x] Memperbaiki ringkasan kas agar langsung diperbarui setelah saldo kas atau mutasi disimpan.
+- [x] Memperbaiki kegagalan fetch Stock Opname dengan fallback aman, bahasa yang jelas, dan alur stok awal–stok akhir yang mudah diikuti.
+- [x] Menyederhanakan istilah menu dan menambahkan panduan operasional harian untuk pembukaan, transaksi, pengelolaan kas, dan penutupan toko.
+- [x] Menambahkan pencatatan kas pembukaan per mata uang yang teraudit agar stok awal dapat ditetapkan sebelum transaksi dan stock opname penutupan.
+- [x] Menetapkan kunci idempoten kas pembukaan berbasis tanggal bisnis Jakarta dalam format stabil serta mengujinya secara presisi.
+- [x] Memulihkan provisioning akun ADMIN pengembangan untuk validasi antarmuka tanpa mengubah kredensial akun produksi.
+- [x] Memperbaiki ketahanan sesi internal pada preview dan mengarahkan sesi kedaluwarsa ke halaman login internal.
+- [x] Memperluas autocomplete nasabah agar mencari nama, CIF, dan nomor identitas secara konsisten dengan petunjuk input.
+- [x] Menyediakan jalur pembuatan nasabah baru dari Draft Transaksi tanpa menghilangkan validasi KYC wajib.
+- [x] Melengkapi data serta cetak bon dengan alamat, kontak, sumber dana, pihak kuasa, dan pernyataan sesuai peta field formulir perusahaan.
+- [x] Memperbaiki dan menguji pencarian nomor identitas nasabah pada autocomplete Draft Transaksi.
+- [x] Mengaudit penggunaan JWT_SECRET pada login internal dan memastikan tidak ada fallback rahasia yang lemah atau kebocoran ke klien.
+- [x] Memperkuat validasi konfigurasi JWT runtime serta menambah regresi untuk penolakan token dengan kunci atau klaim yang tidak valid.
+- [x] Memvalidasi login Shareholder pada website setelah JWT_SECRET runtime digunakan untuk sesi internal.
+- [x] Menambahkan regresi JWT yang membuktikan sesi internal ditolak bila audience, issuer, atau subject token tidak sesuai kontrak back-office.
