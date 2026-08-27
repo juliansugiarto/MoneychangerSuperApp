@@ -10,7 +10,7 @@ import {
 } from "../drizzle/schema";
 import { getDb } from "./db";
 import { recordMarketRateObservation, retryTransientDatabaseRead } from "./operations";
-import { sdk } from "./_core/sdk";
+import { ENV } from "./_core/env";
 
 export const BI_TRANSACTION_RATES_URL = "https://www.bi.go.id/en/statistik/informasi-kurs/transaksi-bi/default.aspx";
 export const BI_JISDOR_URL = "https://www.bi.go.id/en/statistik/informasi-kurs/jisdor/default.aspx";
@@ -273,14 +273,17 @@ export async function getRateSyncStatus() {
 
 export async function handleScheduledBiRateSync(req: Request, res: Response) {
   try {
-    const user = await sdk.authenticateRequest(req);
-    if (!user.isCron || !user.taskUid) return res.status(403).json({ error: "cron-only" });
+    if (!ENV.cronSecret) return res.status(503).json({ error: "cron-secret-not-configured" });
+    const providedSecret = req.header("x-cron-secret");
+    if (!providedSecret || providedSecret !== ENV.cronSecret) {
+      return res.status(403).json({ error: "cron-only" });
+    }
     const db = await getDb();
     if (!db) throw new Error("Database tidak tersedia untuk validasi jadwal sinkronisasi kurs.");
     const configuration = (await db.select().from(rateSyncConfigurations)
-      .where(eq(rateSyncConfigurations.scheduleCronTaskUid, user.taskUid)).limit(1))[0];
-    if (!configuration) return res.json({ ok: true, skipped: "orphan" });
-    if (!isExpectedBiRateSyncTask(user.taskUid, configuration.scheduleCronTaskUid, configuration.enabled)) {
+      .where(eq(rateSyncConfigurations.source, BI_SOURCE)).limit(1))[0];
+    if (!configuration) return res.json({ ok: true, skipped: "no-configuration" });
+    if (!configuration.enabled) {
       return res.status(403).json({ error: "scheduled-sync-disabled" });
     }
     const result = await syncBiReferenceRates("SCHEDULED");

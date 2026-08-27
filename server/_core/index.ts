@@ -3,7 +3,6 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerStorageProxy } from "./storageProxy";
 import { ensureDevelopmentTestAccounts, ensureInitialShareholder } from "../internalAuth";
 import { authenticateInternalRequest } from "../internalAuth";
 import { decodeOperationalDocumentData, getOperationalDocumentDownloadUrl, uploadOperationalDocument } from "../documentOperations";
@@ -39,7 +38,6 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  registerStorageProxy(app);
   if (await ensureInitialShareholder()) console.log("[Auth] Initial Shareholder account provisioned.");
   if (await ensureDevelopmentTestAccounts()) console.log("[Auth] Development-only test accounts provisioned.");
   app.post("/api/scheduled/bi-rate-sync", handleScheduledBiRateSync);
