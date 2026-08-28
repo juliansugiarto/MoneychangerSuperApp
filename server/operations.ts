@@ -486,7 +486,8 @@ export type CustomerInput = {
   phoneNumber: string;
   identityType: "KTP" | "PASSPORT" | "OTHER";
   identityNumber: string;
-  identityExpiryDate: Date;
+  /** Kosong/undefined berarti identitas berlaku seumur hidup (mis. eKTP). */
+  identityExpiryDate?: Date;
   placeOfBirth: string;
   dateOfBirth: Date;
   address: string;
@@ -501,6 +502,23 @@ export async function listCustomers() {
   return retryTransientDatabaseRead(async () => {
     const db = await databaseOrThrow();
     return db.select().from(customers).where(and(eq(customers.isDemo, false), eq(customers.isHistorical, false))).orderBy(desc(customers.updatedAt));
+  });
+}
+
+/** Menyarankan nomor CIF berikutnya mengikuti pola `CIF-<urutan>` dari nasabah aktif tersimpan. Staf tetap dapat mengganti nilai ini secara manual sebelum disimpan. */
+export async function getNextCifNumber() {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const rows = await db.select({ cifNumber: customers.cifNumber }).from(customers).where(and(eq(customers.isDemo, false), eq(customers.isHistorical, false)));
+    let maxSequence = 0;
+    let padWidth = 6;
+    for (const row of rows) {
+      const match = row.cifNumber.match(/^CIF-(\d+)$/i);
+      if (!match) continue;
+      const sequence = Number.parseInt(match[1], 10);
+      if (sequence > maxSequence) { maxSequence = sequence; padWidth = match[1].length; }
+    }
+    return `CIF-${String(maxSequence + 1).padStart(padWidth, "0")}`;
   });
 }
 
@@ -543,7 +561,7 @@ export async function createCustomer(input: CustomerInput, actorUserId: number) 
     phoneNumber: input.phoneNumber.trim(),
     identityType: input.identityType,
     identityNumber: input.identityNumber.trim().toUpperCase(),
-    identityExpiryDate: input.identityExpiryDate,
+    identityExpiryDate: input.identityExpiryDate ?? null,
     placeOfBirth: input.placeOfBirth.trim(),
     dateOfBirth: input.dateOfBirth,
     address: input.address.trim(),

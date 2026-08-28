@@ -19,6 +19,7 @@ import {
   createRegulatoryLkuDraft,
   createCustomer,
   getDailyOperationalChecklist,
+  getNextCifNumber,
   createTransaction,
   getAuditLog,
   getHistoricalTransactionReport,
@@ -104,7 +105,7 @@ export const customerInput = z.object({
   phoneNumber: z.string().trim().min(6).max(40),
   identityType: z.enum(["KTP", "PASSPORT", "OTHER"]),
   identityNumber: z.string().trim().min(3).max(80),
-  identityExpiryDate: z.coerce.date(),
+  identityExpiryDate: z.coerce.date().optional(),
   placeOfBirth: z.string().trim().min(2).max(120),
   dateOfBirth: z.coerce.date(),
   address: z.string().trim().min(8),
@@ -231,6 +232,7 @@ export const appRouter = router({
 
   customers: router({
     list: staffProcedure.query(() => listCustomers()),
+    nextCif: staffProcedure.query(() => getNextCifNumber()),
     search: staffProcedure.input(z.object({ query: z.string().trim().max(200), limit: z.number().int().min(1).max(30).default(12) })).query(({ input }) => searchCustomers(input.query, input.limit)),
     create: staffProcedure.input(customerInput).mutation(({ input, ctx }) => createCustomer(input, ctx.user.id)),
     import: controllerProcedure.input(z.object({ rows: z.array(customerInput).min(1).max(300) })).mutation(({ input, ctx }) => importCustomers(input.rows, ctx.user.id)),

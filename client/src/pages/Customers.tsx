@@ -2,13 +2,14 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { ShieldCheck, Upload, UserPlus, UsersRound } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
@@ -36,20 +37,30 @@ export default function Customers() {
   const [, setLocation] = useLocation();
   const utils = trpc.useUtils();
   const { data: customers, isLoading } = trpc.customers.list.useQuery(undefined, { enabled: Boolean(user) });
+  const { data: nextCif } = trpc.customers.nextCif.useQuery(undefined, { enabled: Boolean(user) });
   const [form, setForm] = useState(initialForm);
   const [ktpFile, setKtpFile] = useState<File | null>(null);
+  const [identityNeverExpires, setIdentityNeverExpires] = useState(false);
+
+  // Isi otomatis nomor CIF berikutnya selama staf belum mengetik nilai sendiri.
+  useEffect(() => {
+    if (nextCif && !form.cifNumber) setForm((current) => (current.cifNumber ? current : { ...current, cifNumber: nextCif }));
+  }, [nextCif]);
+
   const createCustomer = trpc.customers.create.useMutation({
     onSuccess: async (customer) => {
       try {
         if (ktpFile) {
           const response = await fetch("/api/operational-documents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ documentType: "KTP_PHOTO", customerId: customer.id, originalFileName: ktpFile.name, mimeType: ktpFile.type, byteSize: ktpFile.size, dataBase64: await fileToBase64(ktpFile) }) });
-          const body = await response.json(); if (!response.ok) throw new Error(body.message ?? "Foto KTP gagal diunggah.");
+          const body = await response.json(); if (!response.ok) throw new Error(body.message ?? "Dokumen KTP gagal diunggah.");
         }
         toast.success("Profil nasabah dan data KYC berhasil dibuat.");
-      } catch (error) { toast.error(error instanceof Error ? error.message : "Profil tersimpan, tetapi foto KTP gagal diunggah."); }
+      } catch (error) { toast.error(error instanceof Error ? error.message : "Profil tersimpan, tetapi dokumen KTP gagal diunggah."); }
       setForm(initialForm);
       setKtpFile(null);
+      setIdentityNeverExpires(false);
       utils.customers.list.invalidate();
+      utils.customers.nextCif.invalidate();
       const returnTo = new URLSearchParams(window.location.search).get("returnTo");
       if (returnTo === "/operasional/transaksi") {
         sessionStorage.setItem("iv:transactionCustomer", JSON.stringify(customer));
@@ -61,7 +72,11 @@ export default function Customers() {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    createCustomer.mutate({ ...form, identityExpiryDate: new Date(`${form.identityExpiryDate}T00:00:00`), dateOfBirth: new Date(`${form.dateOfBirth}T00:00:00`) });
+    createCustomer.mutate({
+      ...form,
+      identityExpiryDate: identityNeverExpires ? undefined : new Date(`${form.identityExpiryDate}T00:00:00`),
+      dateOfBirth: new Date(`${form.dateOfBirth}T00:00:00`),
+    });
   };
 
   return (
@@ -84,7 +99,7 @@ export default function Customers() {
           <CardContent>
             <form className="space-y-4" onSubmit={submit}>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Nomor CIF" required><Input value={form.cifNumber} onChange={(event) => setForm({ ...form, cifNumber: event.target.value })} placeholder="CIF-000001" /></Field>
+                <Field label="Nomor CIF" required><Input value={form.cifNumber} onChange={(event) => setForm({ ...form, cifNumber: event.target.value })} placeholder="CIF-000001" /><p className="mt-1 text-xs text-[#94a7bb]">Terisi otomatis mengikuti nomor nasabah terakhir; boleh diubah bila perlu.</p></Field>
                 <Field label="Nama lengkap" required><Input value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} placeholder="Sesuai identitas" /></Field>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -97,7 +112,13 @@ export default function Customers() {
                 <Field label="Tempat lahir" required><Input value={form.placeOfBirth} onChange={(event) => setForm({ ...form, placeOfBirth: event.target.value })} placeholder="Kota / kabupaten" /></Field>
                 <Field label="Tanggal lahir" required><Input type="date" value={form.dateOfBirth} onChange={(event) => setForm({ ...form, dateOfBirth: event.target.value })} /></Field>
               </div>
-              <Field label="Masa berlaku identitas" required><Input type="date" value={form.identityExpiryDate} onChange={(event) => setForm({ ...form, identityExpiryDate: event.target.value })} /></Field>
+              <Field label="Masa berlaku identitas" required={!identityNeverExpires}>
+                <Input type="date" value={form.identityExpiryDate} disabled={identityNeverExpires} required={!identityNeverExpires} onChange={(event) => setForm({ ...form, identityExpiryDate: event.target.value })} />
+                <label className="mt-2 flex items-center gap-2 text-xs text-[#476278]">
+                  <Checkbox checked={identityNeverExpires} onCheckedChange={(checked) => { const value = checked === true; setIdentityNeverExpires(value); if (value) setForm((current) => ({ ...current, identityExpiryDate: "" })); }} />
+                  Berlaku seumur hidup (eKTP)
+                </label>
+              </Field>
               <Field label="Alamat" required><Textarea value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} rows={3} placeholder="Alamat domisili sesuai dokumen pendukung" /></Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Nomor HP" required><Input type="tel" value={form.phoneNumber} onChange={(event) => setForm({ ...form, phoneNumber: event.target.value })} placeholder="08xx atau +62" /></Field>
@@ -109,7 +130,7 @@ export default function Customers() {
               <Field label="Sumber dana" required><Textarea value={form.sourceOfFunds} onChange={(event) => setForm({ ...form, sourceOfFunds: event.target.value })} rows={2} /></Field>
               <Field label="Tujuan transaksi" required><Textarea value={form.transactionPurpose} onChange={(event) => setForm({ ...form, transactionPurpose: event.target.value })} rows={2} /></Field>
               <Field label="Catatan risiko"><Textarea value={form.riskNotes} onChange={(event) => setForm({ ...form, riskNotes: event.target.value })} rows={2} /></Field>
-              <Field label="Foto KTP (unggah bila tersedia)"><Input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setKtpFile(event.target.files?.[0] ?? null)} /><p className="mt-1 text-xs text-[#64748b]"><Upload className="mr-1 inline size-3" />JPG, PNG, atau WEBP; maksimum 8 MB. File disimpan privat dan hanya dapat diakses petugas berwenang.</p></Field>
+              <Field label="Dokumen KTP (unggah bila tersedia)"><Input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => setKtpFile(event.target.files?.[0] ?? null)} /><p className="mt-1 text-xs text-[#64748b]"><Upload className="mr-1 inline size-3" />JPG, PNG, WEBP, atau PDF; maksimum 8 MB. File disimpan privat dan hanya dapat diakses petugas berwenang.</p></Field>
               <Button type="submit" disabled={createCustomer.isPending} className="press-scale w-full bg-[#183f70] text-white hover:bg-[#12345d]">{createCustomer.isPending ? "Menyimpan…" : "Simpan profil KYC"}</Button>
             </form>
           </CardContent>
