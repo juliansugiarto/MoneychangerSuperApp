@@ -27,7 +27,8 @@ export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
     { label: "Bon Transaksi", path: "/operasional/transaksi", minimumRole: "STAFF" },
     { label: "Simulasi Aman", path: "/operasional/simulasi", minimumRole: "STAFF" },
     { label: "Permintaan Layanan", path: "/operasional/layanan", minimumRole: "STAFF" },
-    { label: "Nasabah", path: "/operasional/nasabah", minimumRole: "STAFF" },
+    { label: "Nasabah Baru", path: "/operasional/nasabah", minimumRole: "STAFF" },
+    { label: "Daftar Nasabah", path: "/operasional/nasabah/daftar", minimumRole: "STAFF" },
   ] },
   { label: "Kontrol Outlet", items: [
     { label: "Buka & Tutup Outlet", path: "/operasional/checklist", minimumRole: "STAFF" },

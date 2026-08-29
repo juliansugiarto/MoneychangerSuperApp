@@ -58,7 +58,8 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 | Layanan & Transaksi | Bon Transaksi | Membuat dan menuntaskan transaksi beli/jual valuta. | Staff |
 | Layanan & Transaksi | Simulasi Aman | Latihan bon, guncangan kurs, penutupan, dan arsip tanpa penulisan produksi. | Staff |
 | Layanan & Transaksi | Permintaan Layanan | Mencatat serta menindaklanjuti kebutuhan layanan. | Staff |
-| Layanan & Transaksi | Nasabah | Menambah, mencari, dan memperbarui data nasabah sesuai dokumen. | Staff |
+| Layanan & Transaksi | Nasabah Baru | Menambahkan data nasabah baru sesuai dokumen, termasuk Beneficial Owner, status PEP, dan pencocokan DTTOT/PPSPM. | Staff |
+| Layanan & Transaksi | Daftar Nasabah | Mencari dan meninjau seluruh profil nasabah; ekspor data (tanpa dokumen KTP) ke CSV. | Staff |
 | Kontrol Outlet | Buka & Tutup Outlet | Checklist pembukaan, penutupan, catatan serah-terima, dan arsip PDF penutupan. | Staff |
 | Kontrol Outlet | Kurs Operasional | Memantau, menyiapkan, dan mengaktifkan kurs secara manual dengan alasan. | Admin |
 | Kontrol Outlet | Bandingkan Kurs | Membandingkan kurs outlet dengan referensi yang tersedia. | Admin |
@@ -93,10 +94,14 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 
 ### 5.3 Layanan Nasabah dan KYC — Staff
 
-1. Cari nasabah di menu **Nasabah** sebelum membuat data baru untuk menghindari duplikasi.
-2. Tambahkan data berdasarkan dokumen yang diperiksa. Gunakan kolom yang tersedia, bukan catatan bebas, untuk informasi identitas.
-3. Jika data belum lengkap atau terdapat indikator risiko, ikuti instruksi sistem dan kebijakan perusahaan sebelum melanjutkan transaksi.
-4. Gunakan **Permintaan Layanan** bila kebutuhan nasabah belum menjadi transaksi, agar pelayanan dapat ditindaklanjuti tanpa menciptakan bon palsu.
+1. Cari nasabah di menu **Daftar Nasabah** (ketik nama atau NIK/nomor identitas, hasil langsung tersaring) sebelum membuat data baru untuk menghindari duplikasi.
+2. Bila belum ada, tambahkan melalui **Nasabah Baru**. Nomor CIF terisi otomatis mengikuti nomor terakhir (boleh diganti manual). Tandai "Berlaku seumur hidup" untuk identitas eKTP. Dokumen KTP dapat diunggah dalam bentuk JPG/PNG/WEBP/PDF. Gunakan kolom yang tersedia, bukan catatan bebas, untuk informasi identitas.
+3. Isi kolom **Beneficial Owner** bila nasabah bertindak atas nama pihak lain (mis. supir yang disuruh atasannya bertransaksi) — sistem akan membuat atau menautkan profil terpisah untuk pemilik manfaat sebenarnya.
+4. Isi kolom **status PEP** (bukan PEP / nasabah adalah PEP / nasabah berhubungan dengan PEP) beserta keterangannya bila relevan.
+5. Bila nama nasabah cocok dengan **Daftar DTTOT/PPSPM**, centang kolom tersebut dan isi catatan pencocokan. Profil otomatis berstatus RESTRICTED dan risiko TINGGI, dan wajib dilaporkan sebagai LTKM ke PPATK **secara manual** sesuai prosedur resmi — aplikasi ini tidak mengirim laporan otomatis ke regulator mana pun.
+6. Jika data belum lengkap atau terdapat indikator risiko, ikuti instruksi sistem dan kebijakan perusahaan sebelum melanjutkan transaksi.
+7. Gunakan **Permintaan Layanan** bila kebutuhan nasabah belum menjadi transaksi, agar pelayanan dapat ditindaklanjuti tanpa menciptakan bon palsu.
+8. Gunakan tombol **Ekspor CSV** di Daftar Nasabah untuk keperluan pelaporan internal ringan; ekspor ini tidak menyertakan berkas dokumen KTP.
 
 ### 5.4 Membuat Bon Transaksi — Staff
 

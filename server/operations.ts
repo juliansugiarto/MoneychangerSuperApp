@@ -480,6 +480,16 @@ export async function setCurrencyActive(input: { currencyId: number; active: boo
   return { ...existing, active: input.active };
 }
 
+export type BeneficialOwnerInput = {
+  fullName: string;
+  identityType: "KTP" | "PASSPORT" | "OTHER";
+  identityNumber: string;
+  phoneNumber?: string;
+  address: string;
+  occupation?: string;
+  relationshipToCustomer: string;
+};
+
 export type CustomerInput = {
   cifNumber: string;
   fullName: string;
@@ -496,6 +506,14 @@ export type CustomerInput = {
   transactionPurpose: string;
   riskLevel?: "LOW" | "MEDIUM" | "HIGH";
   riskNotes?: string;
+  /** Nasabah ini hanya bertindak atas nama pihak lain; identitas pemilik manfaat sebenarnya wajib disertakan. */
+  hasBeneficialOwner?: boolean;
+  beneficialOwner?: BeneficialOwnerInput;
+  pepStatus?: "NONE" | "SELF" | "RELATED";
+  pepDetails?: string;
+  /** Kecocokan dengan DTTOT/PPSPM; bila true, wajib dilaporkan LTKM ke PPATK secara manual sesuai prosedur resmi. */
+  dttotPpsdmMatch?: boolean;
+  dttotPpsdmNotes?: string;
 };
 
 export async function listCustomers() {
@@ -509,17 +527,22 @@ export async function listCustomers() {
 export async function getNextCifNumber() {
   return retryTransientDatabaseRead(async () => {
     const db = await databaseOrThrow();
-    const rows = await db.select({ cifNumber: customers.cifNumber }).from(customers).where(and(eq(customers.isDemo, false), eq(customers.isHistorical, false)));
-    let maxSequence = 0;
-    let padWidth = 6;
-    for (const row of rows) {
-      const match = row.cifNumber.match(/^CIF-(\d+)$/i);
-      if (!match) continue;
-      const sequence = Number.parseInt(match[1], 10);
-      if (sequence > maxSequence) { maxSequence = sequence; padWidth = match[1].length; }
-    }
-    return `CIF-${String(maxSequence + 1).padStart(padWidth, "0")}`;
+    return computeNextCifNumber(db);
   });
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function computeNextCifNumber(db: any) {
+  const rows = await db.select({ cifNumber: customers.cifNumber }).from(customers).where(and(eq(customers.isDemo, false), eq(customers.isHistorical, false)));
+  let maxSequence = 0;
+  let padWidth = 6;
+  for (const row of rows) {
+    const match = row.cifNumber.match(/^CIF-(\d+)$/i);
+    if (!match) continue;
+    const sequence = Number.parseInt(match[1], 10);
+    if (sequence > maxSequence) { maxSequence = sequence; padWidth = match[1].length; }
+  }
+  return `CIF-${String(maxSequence + 1).padStart(padWidth, "0")}`;
 }
 
 export async function searchCustomers(query: string, limit = 20) {
@@ -554,27 +577,76 @@ export async function searchCustomers(query: string, limit = 20) {
 }
 
 export async function createCustomer(input: CustomerInput, actorUserId: number) {
+  if (input.hasBeneficialOwner && !input.beneficialOwner) throw new Error("Data pemilik manfaat (beneficial owner) wajib diisi.");
+  if (input.pepStatus && input.pepStatus !== "NONE" && !input.pepDetails?.trim()) throw new Error("Keterangan PEP wajib diisi.");
+  if (input.dttotPpsdmMatch && !input.dttotPpsdmNotes?.trim()) throw new Error("Catatan kecocokan DTTOT/PPSPM wajib diisi.");
+  const cifNumber = input.cifNumber.trim().toUpperCase();
+  const identityType = input.identityType;
+  const identityNumber = input.identityNumber.trim().toUpperCase();
+  if (input.hasBeneficialOwner && input.beneficialOwner && input.beneficialOwner.identityType === identityType && input.beneficialOwner.identityNumber.trim().toUpperCase() === identityNumber) {
+    throw new Error("Pemilik manfaat (beneficial owner) tidak boleh sama dengan nasabah itu sendiri.");
+  }
+  const isHighRisk = Boolean(input.dttotPpsdmMatch);
   const db = await databaseOrThrow();
-  await db.insert(customers).values({
-    cifNumber: input.cifNumber.trim().toUpperCase(),
-    fullName: input.fullName.trim(),
-    phoneNumber: input.phoneNumber.trim(),
-    identityType: input.identityType,
-    identityNumber: input.identityNumber.trim().toUpperCase(),
-    identityExpiryDate: input.identityExpiryDate ?? null,
-    placeOfBirth: input.placeOfBirth.trim(),
-    dateOfBirth: input.dateOfBirth,
-    address: input.address.trim(),
-    occupation: input.occupation.trim(),
-    sourceOfFunds: input.sourceOfFunds.trim(),
-    transactionPurpose: input.transactionPurpose.trim(),
-    riskLevel: input.riskLevel ?? "LOW",
-    riskNotes: input.riskNotes?.trim() || null,
-    createdByUserId: actorUserId,
+  const created = await db.transaction(async (tx) => {
+    await tx.insert(customers).values({
+      cifNumber,
+      fullName: input.fullName.trim(),
+      phoneNumber: input.phoneNumber.trim(),
+      identityType,
+      identityNumber,
+      identityExpiryDate: input.identityExpiryDate ?? null,
+      placeOfBirth: input.placeOfBirth.trim(),
+      dateOfBirth: input.dateOfBirth,
+      address: input.address.trim(),
+      occupation: input.occupation.trim(),
+      sourceOfFunds: input.sourceOfFunds.trim(),
+      transactionPurpose: input.transactionPurpose.trim(),
+      hasBeneficialOwner: input.hasBeneficialOwner ?? false,
+      pepStatus: input.pepStatus ?? "NONE",
+      pepDetails: input.pepStatus && input.pepStatus !== "NONE" ? input.pepDetails?.trim() || null : null,
+      dttotPpsdmMatch: isHighRisk,
+      dttotPpsdmNotes: isHighRisk ? input.dttotPpsdmNotes?.trim() || null : null,
+      riskLevel: isHighRisk ? "HIGH" : (input.riskLevel ?? "LOW"),
+      profileStatus: isHighRisk ? "RESTRICTED" : "ACTIVE",
+      riskNotes: input.riskNotes?.trim() || null,
+      createdByUserId: actorUserId,
+    });
+    const [row] = await tx.select().from(customers).where(eq(customers.cifNumber, cifNumber)).limit(1);
+    if (!row) throw new Error("Data nasabah tidak dapat dibuat.");
+
+    if (input.hasBeneficialOwner && input.beneficialOwner) {
+      const bo = input.beneficialOwner;
+      const boIdentityNumber = bo.identityNumber.trim().toUpperCase();
+      const [existingBo] = await tx.select().from(customers).where(and(eq(customers.identityType, bo.identityType), eq(customers.identityNumber, boIdentityNumber))).limit(1);
+      let beneficialOwnerCustomerId: number;
+      if (existingBo) {
+        beneficialOwnerCustomerId = existingBo.id;
+      } else {
+        const boCif = await computeNextCifNumber(tx);
+        await tx.insert(customers).values({
+          cifNumber: boCif,
+          fullName: bo.fullName.trim(),
+          phoneNumber: bo.phoneNumber?.trim() || "-",
+          identityType: bo.identityType,
+          identityNumber: boIdentityNumber,
+          address: bo.address.trim(),
+          occupation: bo.occupation?.trim() || null,
+          sourceOfFunds: `Pemilik manfaat (beneficial owner) dari nasabah ${row.cifNumber} — ${row.fullName}.`,
+          transactionPurpose: "Profil KYC pemilik manfaat (beneficial owner); dibuat otomatis dari pendaftaran nasabah terkait.",
+          riskNotes: `Beneficial owner untuk CIF ${row.cifNumber} (${row.fullName}). Hubungan: ${bo.relationshipToCustomer.trim()}.`,
+          createdByUserId: actorUserId,
+        });
+        const [insertedBo] = await tx.select().from(customers).where(eq(customers.cifNumber, boCif)).limit(1);
+        if (!insertedBo) throw new Error("Profil pemilik manfaat (beneficial owner) tidak dapat dibuat.");
+        beneficialOwnerCustomerId = insertedBo.id;
+      }
+      await tx.update(customers).set({ beneficialOwnerCustomerId }).where(eq(customers.id, row.id));
+      row.beneficialOwnerCustomerId = beneficialOwnerCustomerId;
+    }
+    return row;
   });
-  const created = (await db.select().from(customers).where(eq(customers.cifNumber, input.cifNumber.trim().toUpperCase())).limit(1))[0];
-  if (!created) throw new Error("Data nasabah tidak dapat dibuat.");
-  await writeAudit({ actorUserId, action: "CUSTOMER_CREATED", entityType: "customer", entityId: String(created.id), afterState: { cifNumber: created.cifNumber, fullName: created.fullName, riskLevel: created.riskLevel, profileStatus: created.profileStatus } });
+  await writeAudit({ actorUserId, action: "CUSTOMER_CREATED", entityType: "customer", entityId: String(created.id), afterState: { cifNumber: created.cifNumber, fullName: created.fullName, riskLevel: created.riskLevel, profileStatus: created.profileStatus, hasBeneficialOwner: created.hasBeneficialOwner, pepStatus: created.pepStatus, dttotPpsdmMatch: created.dttotPpsdmMatch } });
   return created;
 }
 

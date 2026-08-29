@@ -105,6 +105,16 @@ export const customers = mysqlTable("customers", {
   occupation: varchar("occupation", { length: 160 }),
   sourceOfFunds: text("sourceOfFunds"),
   transactionPurpose: text("transactionPurpose"),
+  /** Nasabah ini hanya bertindak atas nama pihak lain (mis. supir disuruh bos); identitas pemilik manfaat sebenarnya wajib dicatat terpisah. */
+  hasBeneficialOwner: boolean("hasBeneficialOwner").default(false).notNull(),
+  /** Referensi ke baris customers lain yang menyimpan identitas lengkap pemilik manfaat. */
+  beneficialOwnerCustomerId: int("beneficialOwnerCustomerId"),
+  pepStatus: mysqlEnum("pepStatus", ["NONE", "SELF", "RELATED"]).default("NONE").notNull(),
+  /** Wajib diisi ketika pepStatus bukan NONE: jabatan/nama pejabat dan jenis hubungan bila RELATED. */
+  pepDetails: text("pepDetails"),
+  /** Kecocokan dengan Daftar Terduga Teroris dan Organisasi Teroris / Daftar Pendanaan Proliferasi Senjata Pemusnah Massal. */
+  dttotPpsdmMatch: boolean("dttotPpsdmMatch").default(false).notNull(),
+  dttotPpsdmNotes: text("dttotPpsdmNotes"),
   profileStatus: mysqlEnum("profileStatus", ["ACTIVE", "RESTRICTED", "INACTIVE"]).default("ACTIVE").notNull(),
   riskLevel: mysqlEnum("riskLevel", ["LOW", "MEDIUM", "HIGH"]).default("LOW").notNull(),
   riskNotes: text("riskNotes"),
@@ -121,6 +131,7 @@ export const customers = mysqlTable("customers", {
   uniqueIndex("customers_identity_uq").on(table.identityType, table.identityNumber),
   index("customers_live_status_idx").on(table.isDemo, table.isHistorical, table.profileStatus),
   index("customers_profile_status_idx").on(table.profileStatus),
+  index("customers_beneficial_owner_idx").on(table.beneficialOwnerCustomerId),
 ]);
 
 export const exchangeTransactions = mysqlTable("exchange_transactions", {

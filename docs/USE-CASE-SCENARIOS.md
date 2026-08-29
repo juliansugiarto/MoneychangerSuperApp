@@ -69,7 +69,15 @@ Setiap use case menjelaskan tujuan pekerjaan, peran yang berwenang, kondisi sebe
 | Pemicu | Nasabah baru datang atau informasi nasabah perlu diperbarui melalui dasar dokumen yang sah. |
 | Bukti | Profil nasabah, perubahan data yang dapat ditelusuri, dan status workflow yang berlaku. |
 
-**Alur utama.** Staff lebih dahulu mencari nasabah pada menu **Nasabah**. Jika profil sudah ada, Staff meninjau informasi yang relevan dan memperbarui hanya berdasarkan dokumen yang sah. Jika tidak ada, Staff membuat profil baru melalui kolom terstruktur sistem. Informasi yang diperlukan untuk proses berikutnya harus tetap berada pada kolom yang disediakan.
+**Alur utama.** Staff lebih dahulu mencari nasabah pada menu **Nasabah > Daftar Nasabah** (pencarian langsung mengetik berdasarkan nama, NIK/nomor identitas, atau CIF). Jika profil sudah ada, Staff meninjau informasi yang relevan dan memperbarui hanya berdasarkan dokumen yang sah. Jika tidak ada, Staff membuat profil baru melalui menu **Nasabah > Nasabah Baru** menggunakan kolom terstruktur sistem. Nomor CIF terisi otomatis mengikuti nomor nasabah terakhir (dapat diubah manual bila perlu); masa berlaku identitas dapat ditandai "Berlaku seumur hidup" untuk eKTP; dokumen KTP dapat diunggah dalam bentuk JPG/PNG/WEBP/PDF. Informasi yang diperlukan untuk proses berikutnya harus tetap berada pada kolom yang disediakan.
+
+**Beneficial Owner (BO).** Bila nasabah bertransaksi atas nama pihak lain (mis. supir yang disuruh atasannya), Staff mencentang kolom Beneficial Owner dan mengisi identitas lengkap pemilik manfaat sebenarnya. Sistem membuat atau menautkan profil nasabah terpisah untuk pemilik manfaat tersebut; keduanya tercatat dan tertaut.
+
+**PEP (Politically Exposed Person).** Staff menetapkan status: bukan PEP, nasabah sendiri adalah PEP, atau nasabah memiliki hubungan dengan PEP (mis. sepupu pejabat). Keterangan jabatan/hubungan wajib diisi bila status bukan "bukan PEP".
+
+**DTTOT/PPSPM.** Bila nama nasabah cocok dengan Daftar Terduga Teroris dan Organisasi Teroris / Daftar Pendanaan Proliferasi Senjata Pemusnah Massal, Staff mencentang kolom ini beserta catatan pencocokan. Sistem otomatis menandai profil berstatus RESTRICTED dan risiko TINGGI (memicu tinjauan wajib pada transaksi berikutnya), dan aplikasi menampilkan peringatan bahwa Staff **wajib melaporkan LTKM ke PPATK secara manual** — aplikasi ini tidak mengirim laporan otomatis ke regulator mana pun.
+
+**Ekspor data.** Menu **Daftar Nasabah** menyediakan ekspor CSV atas data yang sedang ditampilkan (hasil pencarian atau seluruh daftar), tanpa menyertakan berkas dokumen KTP.
 
 **Pengecualian dan eskalasi.** Bila bukti identitas belum memadai, terdapat indikator risiko, atau ditemukan dugaan duplikasi, Staff menghentikan pembuatan/kelanjutan proses sesuai SOP dan mengeskalasi ke Supervisor. Staff tidak membuat profil contoh, tidak memakai profil orang lain, dan tidak menulis nomor identitas pada kolom catatan umum.
 

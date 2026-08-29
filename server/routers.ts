@@ -99,6 +99,15 @@ function assertWorkforceAccount(user: Awaited<ReturnType<typeof getInternalUserB
   if (!user || !user.username || (user.role !== "ADMIN" && user.role !== "STAFF")) throw new Error("Hanya akun Admin atau Staff yang dapat dikelola melalui delegasi kewenangan.");
   return user;
 }
+export const beneficialOwnerInput = z.object({
+  fullName: z.string().trim().min(3).max(200),
+  identityType: z.enum(["KTP", "PASSPORT", "OTHER"]),
+  identityNumber: z.string().trim().min(3).max(80),
+  phoneNumber: z.string().trim().max(40).optional(),
+  address: z.string().trim().min(8),
+  occupation: z.string().trim().max(160).optional(),
+  relationshipToCustomer: z.string().trim().min(2).max(200),
+});
 export const customerInput = z.object({
   cifNumber: z.string().trim().min(3).max(40),
   fullName: z.string().trim().min(3).max(200),
@@ -114,6 +123,22 @@ export const customerInput = z.object({
   transactionPurpose: z.string().trim().min(3).max(1000),
   riskLevel: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
   riskNotes: z.string().trim().max(1000).optional(),
+  hasBeneficialOwner: z.boolean().optional(),
+  beneficialOwner: beneficialOwnerInput.optional(),
+  pepStatus: z.enum(["NONE", "SELF", "RELATED"]).optional(),
+  pepDetails: z.string().trim().max(1000).optional(),
+  dttotPpsdmMatch: z.boolean().optional(),
+  dttotPpsdmNotes: z.string().trim().max(1000).optional(),
+}).superRefine((value, ctx) => {
+  if (value.hasBeneficialOwner && !value.beneficialOwner) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Data pemilik manfaat (beneficial owner) wajib diisi.", path: ["beneficialOwner"] });
+  }
+  if (value.pepStatus && value.pepStatus !== "NONE" && !value.pepDetails?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Keterangan PEP wajib diisi.", path: ["pepDetails"] });
+  }
+  if (value.dttotPpsdmMatch && !value.dttotPpsdmNotes?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Catatan kecocokan DTTOT/PPSPM wajib diisi.", path: ["dttotPpsdmNotes"] });
+  }
 });
 
 export const appRouter = router({

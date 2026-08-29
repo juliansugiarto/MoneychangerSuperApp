@@ -8,6 +8,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import OperationsDashboard from "./pages/OperationsDashboard";
 import Customers from "./pages/Customers";
+import CustomerList from "./pages/CustomerList";
 import Rates from "./pages/Rates";
 import GuidedTransactions from "./pages/GuidedTransactions";
 import StockOpname from "./pages/StockOpname";
@@ -51,6 +52,7 @@ function Router() {
       <Route path="/operasional/kurs"><OperationsRoute minimumRole="ADMIN" page={<Rates />} /></Route>
       <Route path="/operasional/perbandingan-kurs"><OperationsRoute minimumRole="ADMIN" page={<RateComparison />} /></Route>
       <Route path="/operasional/nasabah"><OperationsRoute page={<Customers />} /></Route>
+      <Route path="/operasional/nasabah/daftar"><OperationsRoute page={<CustomerList />} /></Route>
       <Route path="/operasional/pengaduan"><OperationsRoute page={<ConsumerComplaints />} /></Route>
       <Route path="/operasional/layanan"><OperationsRoute page={<ServiceDesk />} /></Route>
       <Route path="/operasional/stock"><OperationsRoute page={<StockOpname />} /></Route>
