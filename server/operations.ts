@@ -6,6 +6,7 @@ import {
   auditLogs,
   cashBalanceMovements,
   cashBalances,
+  cashDenominationEntries,
   consumerComplaints,
   currencies,
   customers,
@@ -959,6 +960,9 @@ export type CreateTransactionInput = {
   customerId: number;
   operationalRateId: number;
   foreignAmount: string;
+  /** Agreed price with the customer, if it differs from the active operational rate (rounding/negotiation). Never used to activate or approve rates. */
+  negotiatedRate?: string;
+  dealNotes?: string;
   paymentMethod: "CASH" | "BANK_TRANSFER" | "OTHER";
   paymentReference?: string;
   transactionPurposeSnapshot?: string;
@@ -1019,7 +1023,14 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   if (rateRow.rate.isDemo || rateRow.rate.isHistorical) throw new Error("Kurs demo atau historis tidak dapat digunakan pada transaksi operasional.");
 
   const selectedRate = input.operation === "BUY" ? rateRow.rate.buyRate : rateRow.rate.sellRate;
-  const { rateSnapshot, quoteUnitSnapshot } = captureRateSnapshot(selectedRate, rateRow.rate.quoteUnit);
+  const { rateSnapshot: referenceRateSnapshot, quoteUnitSnapshot } = captureRateSnapshot(selectedRate, rateRow.rate.quoteUnit);
+  // The reference rate is always captured above for audit. If the teller entered an agreed/negotiated price, that price — not the reference — is what actually applies to this deal.
+  let rateSnapshot = referenceRateSnapshot;
+  if (input.negotiatedRate !== undefined && input.negotiatedRate.trim() !== "") {
+    const negotiated = nonNegativeOrZeroDecimal(input.negotiatedRate, "Harga sepakat");
+    if (negotiated.lte(0)) throw new Error("Harga sepakat harus lebih besar dari nol.");
+    rateSnapshot = negotiated.toFixed(6);
+  }
   const rupiahAmount = calculateRupiahAmount(input.foreignAmount, rateSnapshot, quoteUnitSnapshot);
   const usdRate = (await db.select({ rate: operationalRates }).from(operationalRates)
     .innerJoin(currencies, eq(operationalRates.currencyId, currencies.id))
@@ -1053,6 +1064,8 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     foreignAmount: new Decimal(input.foreignAmount).toFixed(6),
     rateSnapshot,
     quoteUnitSnapshot,
+    referenceRateSnapshot,
+    dealNotes: input.dealNotes?.trim() || null,
     rupiahAmount,
     paymentMethod: input.paymentMethod,
     paymentReference: input.paymentReference?.trim() || null,
@@ -1152,6 +1165,24 @@ export function jakartaBusinessDate(date = new Date()) {
   return new Date(Date.UTC(Number(value("year")), Number(value("month")) - 1, Number(value("day"))));
 }
 
+export type DenominationEntryInput = { value: string; quantity: number };
+
+/** Validates a denomination breakdown against the declared total and returns rows ready to insert. Throws if it doesn't reconcile, so a movement can never be saved with a breakdown that doesn't add up. */
+function reconcileDenominations(entries: DenominationEntryInput[], expectedTotal: Decimal) {
+  if (!entries.length) return [];
+  let sum = new Decimal(0);
+  const rows = entries.map((entry) => {
+    const value = nonNegativeOrZeroDecimal(entry.value, "Nilai pecahan");
+    if (value.lte(0)) throw new Error("Nilai pecahan harus lebih besar dari nol.");
+    if (!Number.isInteger(entry.quantity) || entry.quantity <= 0) throw new Error("Jumlah lembar/keping tiap pecahan harus bilangan bulat positif.");
+    const subtotal = value.times(entry.quantity);
+    sum = sum.plus(subtotal);
+    return { denominationValue: value.toFixed(6), quantity: entry.quantity, subtotal: subtotal.toFixed(6) };
+  });
+  if (!sum.eq(expectedTotal)) throw new Error(`Rincian pecahan (${sum.toFixed(2)}) tidak sama dengan jumlah kas yang dimasukkan (${expectedTotal.toFixed(2)}). Perbaiki rincian sebelum menyimpan.`);
+  return rows;
+}
+
 export function openingCashMovementReason(currencyCode: string, businessDate = jakartaBusinessDate()) {
   return `OPENING_CASH_${businessDate.toISOString().slice(0, 10)}_${currencyCode.trim().toUpperCase()}`;
 }
@@ -1247,8 +1278,9 @@ export async function listCashBalances() {
 }
 
 /** Records the declared morning float as an immutable, auditable adjustment before the daily count begins. */
-export async function recordOpeningCash(input: { currencyId: number; openingAmount: string; notes?: string }, actor: { id: number; role: StaffRole }) {
+export async function recordOpeningCash(input: { currencyId: number; openingAmount: string; notes?: string; denominations?: DenominationEntryInput[] }, actor: { id: number; role: StaffRole }) {
   const declaredAmount = nonNegativeOrZeroDecimal(input.openingAmount, "Kas pembukaan");
+  const denominationRows = reconcileDenominations(input.denominations ?? [], declaredAmount);
   const db = await databaseOrThrow();
   return db.transaction(async (tx) => {
     const currency = (await tx.select().from(currencies).where(and(eq(currencies.id, input.currencyId), eq(currencies.active, true))).limit(1))[0];
@@ -1263,9 +1295,45 @@ export async function recordOpeningCash(input: { currencyId: number; openingAmou
     const before = new Decimal(String(balance.availableAmount));
     const adjustment = new Decimal(calculateOpeningCashAdjustment(before.toFixed(6), declaredAmount.toFixed(6)));
     await tx.update(cashBalances).set({ availableAmount: declaredAmount.toFixed(6) }).where(eq(cashBalances.id, balance.id));
-    await tx.insert(cashBalanceMovements).values({ cashBalanceId: balance.id, direction: "ADJUSTMENT", amount: adjustment.toFixed(6), reason, createdByUserId: actor.id });
-    await writeAudit({ actorUserId: actor.id, action: "OPENING_CASH_RECORDED", entityType: "cash_balance", entityId: String(balance.id), beforeState: { availableAmount: before.toFixed(6) }, afterState: { availableAmount: declaredAmount.toFixed(6), currency: currency.code }, reason: input.notes?.trim() || null, metadata: { movementReason: reason, adjustment: adjustment.toFixed(6) } });
+    const [movement] = await tx.insert(cashBalanceMovements).values({ cashBalanceId: balance.id, direction: "ADJUSTMENT", amount: adjustment.toFixed(6), reason, category: "OPENING", createdByUserId: actor.id }).$returningId();
+    if (denominationRows.length && movement) {
+      await tx.insert(cashDenominationEntries).values(denominationRows.map((row) => ({ ...row, cashBalanceMovementId: movement.id })));
+    }
+    await writeAudit({ actorUserId: actor.id, action: "OPENING_CASH_RECORDED", entityType: "cash_balance", entityId: String(balance.id), beforeState: { availableAmount: before.toFixed(6) }, afterState: { availableAmount: declaredAmount.toFixed(6), currency: currency.code }, reason: input.notes?.trim() || null, metadata: { movementReason: reason, adjustment: adjustment.toFixed(6), denominationCount: denominationRows.length } });
     return { balanceId: balance.id, currencyCode: currency.code, beforeAmount: before.toFixed(6), openingAmount: declaredAmount.toFixed(6) };
+  });
+}
+
+/** Off-hours cash movements that aren't part of the normal transaction flow — owner safe deposits/withdrawals, or a sale made outside business hours. Always requires a note and always writes an audit trail so it shows up correctly in the daily stock report. */
+export async function recordCashAdjustment(
+  input: { currencyId: number; category: "SAFE_DEPOSIT" | "SAFE_WITHDRAWAL" | "OFF_HOURS_SALE" | "OTHER"; amount: string; notes: string; denominations?: DenominationEntryInput[] },
+  actor: { id: number; role: StaffRole },
+) {
+  const amount = nonNegativeOrZeroDecimal(input.amount, "Jumlah penyesuaian");
+  if (amount.lte(0)) throw new Error("Jumlah penyesuaian harus lebih besar dari nol.");
+  const notes = input.notes.trim();
+  if (notes.length < 5) throw new Error("Catatan penyesuaian wajib diisi (minimal 5 karakter) untuk jejak audit.");
+  const denominationRows = reconcileDenominations(input.denominations ?? [], amount);
+  // Deposits into the safe and off-hours sales both remove cash from the counter; a withdrawal from the safe adds it back.
+  const direction: "IN" | "OUT" = input.category === "SAFE_WITHDRAWAL" ? "IN" : "OUT";
+  const db = await databaseOrThrow();
+  return db.transaction(async (tx) => {
+    const currency = (await tx.select().from(currencies).where(and(eq(currencies.id, input.currencyId), eq(currencies.active, true))).limit(1))[0];
+    if (!currency) throw new Error("Mata uang aktif tidak ditemukan.");
+    await tx.execute(sql`SELECT ${cashBalances.id} FROM ${cashBalances} WHERE ${cashBalances.currencyId} = ${input.currencyId} FOR UPDATE`);
+    const balance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, input.currencyId)).limit(1))[0];
+    if (!balance) throw new Error("Saldo kas belum ada. Catat kas awal terlebih dahulu.");
+    const before = new Decimal(String(balance.availableAmount));
+    if (direction === "OUT" && before.lt(amount)) throw new Error("Jumlah penyesuaian melebihi saldo kas yang tersedia.");
+    const after = direction === "OUT" ? before.minus(amount) : before.plus(amount);
+    await tx.update(cashBalances).set({ availableAmount: after.toFixed(6) }).where(eq(cashBalances.id, balance.id));
+    const reason = `${input.category}_${Date.now()}_${currency.code}`;
+    const [movement] = await tx.insert(cashBalanceMovements).values({ cashBalanceId: balance.id, direction, amount: amount.toFixed(6), reason: `${input.category}: ${notes}`.slice(0, 255), category: input.category, createdByUserId: actor.id }).$returningId();
+    if (denominationRows.length && movement) {
+      await tx.insert(cashDenominationEntries).values(denominationRows.map((row) => ({ ...row, cashBalanceMovementId: movement.id })));
+    }
+    await writeAudit({ actorUserId: actor.id, action: "CASH_ADJUSTMENT_RECORDED", entityType: "cash_balance", entityId: String(balance.id), beforeState: { availableAmount: before.toFixed(6) }, afterState: { availableAmount: after.toFixed(6), currency: currency.code }, reason: notes, metadata: { category: input.category, direction, amount: amount.toFixed(6), denominationCount: denominationRows.length } });
+    return { balanceId: balance.id, currencyCode: currency.code, beforeAmount: before.toFixed(6), afterAmount: after.toFixed(6), direction, category: input.category };
   });
 }
 

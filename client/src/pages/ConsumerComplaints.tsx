@@ -28,9 +28,9 @@ const statusLabel: Record<string, string> = { OPEN: "Diterima", IN_REVIEW: "Dite
 const categoryLabel: Record<string, string> = { CASH_COUNT: "Nominal / kas", BOARD_RATE: "Papan kurs", STAFF_SERVICE: "Layanan staf", OTHER: "Lainnya" };
 
 function statusClass(status: string) {
-  if (status === "RESOLVED") return "bg-emerald-100 text-emerald-700 hover:bg-emerald-100";
-  if (status === "ESCALATED_LAPS_BI") return "bg-rose-100 text-rose-700 hover:bg-rose-100";
-  if (status === "IN_REVIEW") return "bg-amber-100 text-amber-700 hover:bg-amber-100";
+  if (status === "RESOLVED") return "status-approved";
+  if (status === "ESCALATED_LAPS_BI") return "status-rejected";
+  if (status === "IN_REVIEW") return "status-pending";
   return "bg-sky-100 text-sky-700 hover:bg-sky-100";
 }
 

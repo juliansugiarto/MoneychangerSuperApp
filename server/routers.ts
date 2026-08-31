@@ -51,6 +51,7 @@ import {
   listStockOpnames,
   openStockOpname,
   recordOpeningCash,
+  recordCashAdjustment,
   proposeOperationalRate,
   proposeLatestReferenceRates,
   recordMarketRateObservation,
@@ -282,6 +283,9 @@ export const appRouter = router({
       customerId: z.number().int().positive(),
       operationalRateId: z.number().int().positive(),
       foreignAmount: decimalString,
+      /** Optional agreed price with the customer (rounded/negotiated). When omitted, the active operational rate is used as-is, unchanged from prior behavior. */
+      negotiatedRate: decimalString.optional(),
+      dealNotes: z.string().trim().max(255).optional(),
       paymentMethod: z.enum(["CASH", "BANK_TRANSFER", "OTHER"]),
       paymentReference: z.string().trim().max(160).optional(),
       transactionPurposeSnapshot: z.string().trim().min(3).max(1000).optional(),
@@ -322,7 +326,8 @@ export const appRouter = router({
 
   cash: router({
     balances: staffProcedure.query(() => listCashBalances()),
-    recordOpening: staffProcedure.input(z.object({ currencyId: z.number().int().positive(), openingAmount: decimalString, notes: z.string().trim().max(500).optional() })).mutation(({ input, ctx }) => recordOpeningCash(input, ctx.user)),
+    recordOpening: staffProcedure.input(z.object({ currencyId: z.number().int().positive(), openingAmount: decimalString, notes: z.string().trim().max(500).optional(), denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).max(50).optional() })).mutation(({ input, ctx }) => recordOpeningCash(input, ctx.user)),
+    recordAdjustment: controllerProcedure.input(z.object({ currencyId: z.number().int().positive(), category: z.enum(["SAFE_DEPOSIT", "SAFE_WITHDRAWAL", "OFF_HOURS_SALE", "OTHER"]), amount: decimalString, notes: z.string().trim().min(5).max(500), denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).max(50).optional() })).mutation(({ input, ctx }) => recordCashAdjustment(input, ctx.user)),
   }),
 
   stockOpname: router({

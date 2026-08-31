@@ -43,6 +43,7 @@
 }
 
 :root {
+  --ease-out-expo: cubic-bezier(0.23, 1, 0.32, 1);
   --primary: oklch(0.3 0.06 259);
   --primary-foreground: oklch(0.99 0.006 95);
   --secondary: oklch(0.95 0.012 254);
@@ -183,14 +184,21 @@
   .ink-panel { background: #182947; color: #f9fbff; }
   .table-number { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
   .subtle-grid { background-image: radial-gradient(circle at 1px 1px, rgb(58 75 110 / 11%) 1px, transparent 0); background-size: 18px 18px; }
-  .interactive-lift { transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1), border-color 180ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 180ms cubic-bezier(0.23, 1, 0.32, 1); }
+  .interactive-lift { transition: transform 180ms var(--ease-out-expo), border-color 180ms var(--ease-out-expo), box-shadow 180ms var(--ease-out-expo); }
   .interactive-lift:hover { transform: translateY(-2px); }
 
-  .landing-orb { animation: drift 12s cubic-bezier(0.23, 1, 0.32, 1) infinite alternate; }
-  .landing-orb-delayed { animation: drift 16s cubic-bezier(0.23, 1, 0.32, 1) -5s infinite alternate-reverse; }
+  /* Satu bahasa warna status yang dipakai di seluruh halaman back office — jangan pilih warna status baru per halaman. */
+  .status-approved { @apply bg-emerald-50 text-emerald-700 border border-emerald-200; }
+  .status-pending { @apply bg-amber-50 text-amber-700 border border-amber-200; }
+  .status-rejected { @apply bg-rose-50 text-rose-700 border border-rose-200; }
+  .status-inactive { @apply bg-slate-100 text-slate-600 border border-slate-200; }
+  .status-exported { @apply bg-indigo-50 text-indigo-700 border border-indigo-200; }
+
+  .landing-orb { animation: drift 12s var(--ease-out-expo) infinite alternate; }
+  .landing-orb-delayed { animation: drift 16s var(--ease-out-expo) -5s infinite alternate-reverse; }
 
   .press-scale {
-    transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 180ms cubic-bezier(0.23, 1, 0.32, 1);
+    transition: transform 160ms var(--ease-out-expo), box-shadow 180ms var(--ease-out-expo);
   }
 
   .press-scale:active {
@@ -220,9 +228,15 @@
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  *, *::before, *::after {
+  *:not(.animate-spin):not([role="status"]):not([role="status"] *) {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+  *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  *, *::before, *::after {
     transition-duration: 0.01ms !important;
   }
 }

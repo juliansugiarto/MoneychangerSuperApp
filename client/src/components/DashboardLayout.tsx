@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { ArrowLeftRight, BadgeDollarSign, BookOpenCheck, ChartNoAxesCombined, ClipboardCheck, FileSearch, Gauge, Landmark, LayoutDashboard, LogOut, MessageSquareWarning, MessagesSquare, ShieldCheck, ShieldQuestion, UsersRound } from "lucide-react";
+import { ArrowLeftRight, BadgeDollarSign, BookOpenCheck, ChartNoAxesCombined, ClipboardCheck, ClipboardList, FileSearch, Gauge, Landmark, LayoutDashboard, LogOut, MessageSquareWarning, MessagesSquare, ShieldCheck, ShieldQuestion, UsersRound } from "lucide-react";
 import { backOfficeNavigationGroups, isRoleAllowed, roleRank, type BackOfficeRole } from "@shared/backOfficeNavigation";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 
@@ -17,6 +17,7 @@ const navigationIcons: Record<string, typeof LayoutDashboard> = {
   "/operasional/simulasi": ShieldQuestion,
   "/operasional/layanan": MessagesSquare,
   "/operasional/nasabah": UsersRound,
+  "/operasional/nasabah/daftar": ClipboardList,
   "/operasional/kurs": BadgeDollarSign,
   "/operasional/perbandingan-kurs": ChartNoAxesCombined,
   "/operasional/stock": ClipboardCheck,
@@ -30,7 +31,7 @@ const navigationIcons: Record<string, typeof LayoutDashboard> = {
   "/operasional/impor-nasabah": FileSearch,
 };
 
-const navigationGroups = backOfficeNavigationGroups.map((group) => ({ ...group, items: group.items.map((item) => ({ ...item, icon: navigationIcons[item.path] })) }));
+const navigationGroups = backOfficeNavigationGroups.map((group) => ({ ...group, items: group.items.map((item) => ({ ...item, icon: navigationIcons[item.path] ?? LayoutDashboard })) }));
 
 const pageTitles: Record<string, { eyebrow: string; title: string }> = {
   "/operasional": { eyebrow: "Ringkasan kerja", title: "Hari ini" },
@@ -41,6 +42,7 @@ const pageTitles: Record<string, { eyebrow: string; title: string }> = {
   "/operasional/simulasi": { eyebrow: "Layanan & transaksi", title: "Simulasi aman" },
   "/operasional/layanan": { eyebrow: "Layanan & transaksi", title: "Permintaan layanan" },
   "/operasional/nasabah": { eyebrow: "Layanan & transaksi", title: "Data nasabah" },
+  "/operasional/nasabah/daftar": { eyebrow: "Layanan & transaksi", title: "Daftar nasabah" },
   "/operasional/kurs": { eyebrow: "Kontrol outlet", title: "Kurs operasional" },
   "/operasional/perbandingan-kurs": { eyebrow: "Kontrol outlet", title: "Bandingkan kurs" },
   "/operasional/stock": { eyebrow: "Kontrol outlet", title: "Kas & persediaan" },

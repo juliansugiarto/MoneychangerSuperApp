@@ -144,10 +144,14 @@ export const exchangeTransactions = mysqlTable("exchange_transactions", {
   currencyId: int("currencyId").notNull(),
   operationalRateId: int("operationalRateId").notNull(),
   foreignAmount: decimal("foreignAmount", { precision: 24, scale: 6 }).notNull(),
-  /** Immutable numerical snapshot copied from the selected operational rate. */
+  /** Immutable numerical snapshot copied from the selected operational rate. This is the price actually applied to the deal — it may equal the reference rate below, or be a negotiated/rounded price the teller entered. */
   rateSnapshot: decimal("rateSnapshot", { precision: 24, scale: 6 }).notNull(),
   /** Immutable quote unit copied with the rate snapshot, e.g. 100 for JPY. */
   quoteUnitSnapshot: decimal("quoteUnitSnapshot", { precision: 18, scale: 6 }).notNull(),
+  /** The official active operational rate at the moment of the deal, kept for audit even when the teller negotiated a different rateSnapshot. Never used to activate or approve rates — reference only. */
+  referenceRateSnapshot: decimal("referenceRateSnapshot", { precision: 24, scale: 6 }),
+  /** Optional note explaining why the applied rate differs from the reference rate (e.g. rounding, negotiation). */
+  dealNotes: varchar("dealNotes", { length: 255 }),
   /** Immutable full-precision result in Rupiah, retained as decimal rather than float. */
   rupiahAmount: decimal("rupiahAmount", { precision: 24, scale: 2 }).notNull(),
   paymentMethod: mysqlEnum("paymentMethod", ["CASH", "BANK_TRANSFER", "OTHER"]).notNull(),
@@ -244,11 +248,27 @@ export const cashBalanceMovements = mysqlTable("cash_balance_movements", {
   direction: mysqlEnum("direction", ["IN", "OUT", "ADJUSTMENT"]).notNull(),
   amount: decimal("amount", { precision: 24, scale: 6 }).notNull(),
   reason: varchar("reason", { length: 255 }).notNull(),
+  /** Classifies why the movement exists, mainly for BI stock reporting; TRANSACTION rows keep the prior default behavior. */
+  category: mysqlEnum("category", ["OPENING", "TRANSACTION", "SAFE_DEPOSIT", "SAFE_WITHDRAWAL", "OFF_HOURS_SALE", "OTHER"]).default("OTHER").notNull(),
   createdByUserId: int("createdByUserId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("cash_balance_transaction_movement_uq").on(table.transactionId),
   index("cash_balance_movements_balance_idx").on(table.cashBalanceId, table.createdAt),
+]);
+
+/** Physical denomination breakdown attached to a cash movement (opening, off-hours adjustment, etc.), so the sum always reconciles to the movement amount for BI stock reporting. */
+export const cashDenominationEntries = mysqlTable("cash_denomination_entries", {
+  id: int("id").autoincrement().primaryKey(),
+  cashBalanceMovementId: int("cashBalanceMovementId").notNull(),
+  /** Face value of one note/coin, e.g. 100000.000000 for a Rp100.000 bill. */
+  denominationValue: decimal("denominationValue", { precision: 24, scale: 6 }).notNull(),
+  quantity: int("quantity").notNull(),
+  /** denominationValue * quantity, stored redundantly to make reconciliation queries cheap. */
+  subtotal: decimal("subtotal", { precision: 24, scale: 6 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("cash_denomination_entries_movement_idx").on(table.cashBalanceMovementId),
 ]);
 
 export const stockOpnames = mysqlTable("stock_opnames", {

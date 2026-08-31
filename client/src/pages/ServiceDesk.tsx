@@ -15,7 +15,7 @@ type NextStatus = "MENUNGGU_VERIFIKASI" | "KURS_DIKONFIRMASI" | "SIAP_DILAYANI" 
 type ServiceRequestRow = { request: { id: number; requestNumber: string; requesterName: string; contactChannel: string; contactValue: string; currencyId: number; operation: "BUY" | "SELL"; foreignAmount: string; status: string; staffNotes: string | null; createdAt: Date }; currency: { code: string } };
 type ActiveRateRow = { rate: { id: number; effectiveAt: Date }; currency: { id: number } };
 const statusLabel: Record<string, string> = { BARU: "Baru", MENUNGGU_VERIFIKASI: "Ditelaah", KURS_DIKONFIRMASI: "Kurs dikonfirmasi", SIAP_DILAYANI: "Siap dilayani", KEDALUWARSA: "Kedaluwarsa", DIBATALKAN: "Dibatalkan" };
-const statusTone: Record<string, string> = { BARU: "bg-sky-100 text-sky-800", MENUNGGU_VERIFIKASI: "bg-amber-100 text-amber-900", KURS_DIKONFIRMASI: "bg-violet-100 text-violet-800", SIAP_DILAYANI: "bg-emerald-100 text-emerald-800", KEDALUWARSA: "bg-slate-200 text-slate-700", DIBATALKAN: "bg-rose-100 text-rose-800" };
+const statusTone: Record<string, string> = { BARU: "bg-sky-50 text-sky-700 border border-sky-200", MENUNGGU_VERIFIKASI: "status-pending", KURS_DIKONFIRMASI: "bg-violet-50 text-violet-700 border border-violet-200", SIAP_DILAYANI: "status-approved", KEDALUWARSA: "status-inactive", DIBATALKAN: "status-rejected" };
 const allowed: Record<string, NextStatus[]> = { BARU: ["MENUNGGU_VERIFIKASI", "DIBATALKAN"], MENUNGGU_VERIFIKASI: ["KURS_DIKONFIRMASI", "DIBATALKAN"], KURS_DIKONFIRMASI: ["SIAP_DILAYANI", "KEDALUWARSA", "DIBATALKAN"], SIAP_DILAYANI: ["KEDALUWARSA", "DIBATALKAN"], KEDALUWARSA: [], DIBATALKAN: [] };
 
 export default function ServiceDesk() {
