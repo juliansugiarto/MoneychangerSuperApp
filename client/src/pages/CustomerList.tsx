@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { Download, Search, UserPlus, UsersRound } from "lucide-react";
@@ -32,6 +33,7 @@ export default function CustomerList() {
   const [, setLocation] = useLocation();
   const [search, setSearch] = useState("");
   const { data: customers, isLoading, isError } = trpc.customers.list.useQuery(undefined, { enabled: Boolean(user) });
+  const [selectedCustomer, setSelectedCustomer] = useState<NonNullable<typeof customers>[number] | null>(null);
 
   const nameById = useMemo(() => new Map((customers ?? []).map((customer) => [customer.id, customer.fullName])), [customers]);
 
@@ -68,7 +70,7 @@ export default function CustomerList() {
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-bold tracking-[0.16em] text-[#5c8f53] uppercase"><UsersRound className="size-4" /> KYC / CDD</div>
           <h1 className="font-display text-3xl font-semibold tracking-tight text-[#18395f]">Daftar nasabah</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#64748b]">Cari berdasarkan nama, NIK/nomor identitas, atau nomor CIF. Ekspor data ini kapan saja tanpa dokumen KTP.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#475569]">Cari berdasarkan nama, NIK/nomor identitas, atau nomor CIF. Ekspor data ini kapan saja tanpa dokumen KTP.</p>
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">
           <Badge variant="outline" className="w-fit border-[#cfe2d6] bg-[#f5fbf5] px-3 py-1.5 text-[#3c6f48]">{customers?.length ?? 0} profil tersimpan</Badge>
@@ -86,13 +88,13 @@ export default function CustomerList() {
             <Button variant="outline" size="sm" onClick={exportCsv} disabled={!filtered.length}><Download className="mr-1.5 size-3.5" />Ekspor CSV ({filtered.length})</Button>
           </div>
           <div className="relative mt-3">
-            <Search className="absolute top-2.5 left-3 size-4 text-slate-400" />
+            <Search className="absolute top-2.5 left-3 size-4 text-slate-600" />
             <Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Ketik nama atau NIK/nomor identitas…" />
           </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <p className="text-sm text-[#64748b]">Memuat profil…</p>
+            <p className="text-sm text-[#475569]">Memuat profil…</p>
           ) : isError ? (
             <p className="text-sm text-rose-600">Gagal memuat daftar nasabah. Muat ulang halaman ini.</p>
           ) : filtered.length ? (
@@ -112,11 +114,11 @@ export default function CustomerList() {
                 </thead>
                 <tbody className="divide-y divide-[#edf0f5]">
                   {filtered.map((customer) => (
-                    <tr key={customer.id} className="align-top hover:bg-[#f9fbff]">
+                    <tr key={customer.id} className="cursor-pointer align-top hover:bg-[#f9fbff]" onClick={() => setSelectedCustomer(customer)}>
                       <td className="px-3 py-3 font-semibold whitespace-nowrap text-[#18395f]">{customer.cifNumber}</td>
                       <td className="px-3 py-3 font-medium text-[#18395f]">{customer.fullName}</td>
-                      <td className="px-3 py-3 text-xs text-[#64748b] whitespace-nowrap">{customer.identityType} · {customer.identityNumber}</td>
-                      <td className="px-3 py-3 text-xs whitespace-nowrap text-[#64748b]">{customer.phoneNumber ?? "—"}</td>
+                      <td className="px-3 py-3 text-xs text-[#475569] whitespace-nowrap">{customer.identityType} · {customer.identityNumber}</td>
+                      <td className="px-3 py-3 text-xs whitespace-nowrap text-[#475569]">{customer.phoneNumber ?? "—"}</td>
                       <td className="px-3 py-3"><Badge className={statusBadgeClass(customer.profileStatus)}>{customer.profileStatus}</Badge></td>
                       <td className="px-3 py-3"><Badge className={riskBadgeClass(customer.riskLevel)}>{customer.riskLevel}</Badge></td>
                       <td className="px-3 py-3">
@@ -127,19 +129,58 @@ export default function CustomerList() {
                           {!customer.hasBeneficialOwner && customer.pepStatus === "NONE" && !customer.dttotPpsdmMatch ? <span className="text-xs text-[#94a7bb]">—</span> : null}
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-xs whitespace-nowrap text-[#64748b]">{formatDate(customer.createdAt)}</td>
+                      <td className="px-3 py-3 text-xs whitespace-nowrap text-[#475569]">{formatDate(customer.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-[#cbd9e7] bg-[#f8fbfe] px-5 py-10 text-center text-sm leading-6 text-[#64748b]">
+            <div className="rounded-2xl border border-dashed border-[#cbd9e7] bg-[#f8fbfe] px-5 py-10 text-center text-sm leading-6 text-[#475569]">
               {search ? "Tidak ada nasabah yang cocok dengan pencarian." : "Belum ada profil nasabah. Tambahkan profil KYC pertama."}
             </div>
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={Boolean(selectedCustomer)} onOpenChange={(open) => { if (!open) setSelectedCustomer(null); }}>
+        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+          {selectedCustomer ? <>
+            <DialogHeader>
+              <div className="flex flex-wrap items-center gap-2">
+                <DialogTitle className="font-display text-xl text-[#18395f]">{selectedCustomer.fullName}</DialogTitle>
+                <Badge className={statusBadgeClass(selectedCustomer.profileStatus)}>{selectedCustomer.profileStatus}</Badge>
+                <Badge className={riskBadgeClass(selectedCustomer.riskLevel)}>{selectedCustomer.riskLevel}</Badge>
+              </div>
+              <DialogDescription>CIF {selectedCustomer.cifNumber} · Dibuat {formatDate(selectedCustomer.createdAt)}</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+              <DetailField label="Jenis identitas" value={selectedCustomer.identityType} />
+              <DetailField label="Nomor identitas" value={selectedCustomer.identityNumber} />
+              <DetailField label="Berlaku hingga" value={selectedCustomer.identityExpiryDate ? formatDate(selectedCustomer.identityExpiryDate) : "Seumur hidup"} />
+              <DetailField label="Telepon" value={selectedCustomer.phoneNumber ?? "—"} />
+              <DetailField label="Tempat, tanggal lahir" value={`${selectedCustomer.placeOfBirth ?? "—"}${selectedCustomer.dateOfBirth ? `, ${formatDate(selectedCustomer.dateOfBirth)}` : ""}`} />
+              <DetailField label="Pekerjaan" value={selectedCustomer.occupation ?? "—"} />
+              <DetailField label="Alamat" value={selectedCustomer.address} full />
+              <DetailField label="Sumber dana" value={selectedCustomer.sourceOfFunds ?? "—"} />
+              <DetailField label="Tujuan transaksi" value={selectedCustomer.transactionPurpose ?? "—"} />
+              <DetailField label="Catatan risiko" value={selectedCustomer.riskNotes ?? "—"} full />
+              <DetailField label="Beneficial owner" value={selectedCustomer.hasBeneficialOwner ? (selectedCustomer.beneficialOwnerCustomerId ? (nameById.get(selectedCustomer.beneficialOwnerCustomerId) ?? `#${selectedCustomer.beneficialOwnerCustomerId}`) : "Ya") : "Tidak"} />
+              <DetailField label="Status PEP" value={selectedCustomer.pepStatus === "SELF" ? "Nasabah adalah PEP" : selectedCustomer.pepStatus === "RELATED" ? "Berhubungan dengan PEP" : "Bukan PEP"} />
+              {selectedCustomer.pepDetails ? <DetailField label="Keterangan PEP" value={selectedCustomer.pepDetails} full /> : null}
+              <DetailField label="Cocok DTTOT/PPSPM" value={selectedCustomer.dttotPpsdmMatch ? "Ya" : "Tidak"} />
+              {selectedCustomer.dttotPpsdmNotes ? <DetailField label="Catatan DTTOT/PPSPM" value={selectedCustomer.dttotPpsdmNotes} full /> : null}
+            </div>
+          </> : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+
+function DetailField({ label, value, full = false }: { label: string; value: string; full?: boolean }) {
+  return <div className={full ? "sm:col-span-2" : undefined}>
+    <p className="text-[11px] font-bold tracking-[0.1em] text-[#68758c] uppercase">{label}</p>
+    <p className="mt-0.5 text-sm text-[#18395f]">{value}</p>
+  </div>;
 }

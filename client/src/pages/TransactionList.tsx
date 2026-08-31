@@ -18,7 +18,16 @@ export default function TransactionList() {
   const { data: transactions, isLoading } = trpc.transactions.list.useQuery(undefined, { enabled: Boolean(user) });
   const [listTab, setListTab] = useState<"ALL" | "SELL" | "BUY">("ALL");
 
-  const submit = trpc.transactions.submit.useMutation({ onSuccess: () => { utils.transactions.list.invalidate(); toast.success("Transaksi dikirim ke alur persetujuan."); }, onError: (error) => toast.error(error.message) });
+  const submit = trpc.transactions.submit.useMutation({
+    onSuccess: (result) => {
+      utils.transactions.list.invalidate();
+      utils.cash.balances.invalidate();
+      utils.cash.denominationBalances.invalidate();
+      // No review needed: submit auto-completes, so cash/stok are already updated by the time this resolves.
+      toast.success(result.status === "COMPLETED" ? "Transaksi selesai — kas dan stok pecahan sudah diperbarui." : "Transaksi dikirim ke alur persetujuan.");
+    },
+    onError: (error) => toast.error(error.message),
+  });
   const cancel = trpc.transactions.cancel.useMutation({ onSuccess: () => utils.transactions.list.invalidate(), onError: (error) => toast.error(error.message) });
   const complete = trpc.transactions.complete.useMutation({ onSuccess: () => { utils.transactions.list.invalidate(); utils.cash.balances.invalidate(); utils.cash.denominationBalances.invalidate(); toast.success("Transaksi selesai — saldo dan stok pecahan sudah diperbarui."); }, onError: (error) => toast.error(error.message) });
 
@@ -66,11 +75,11 @@ export default function TransactionList() {
     <header>
       <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-[#5c8f53]"><ClipboardList className="size-4" /> Kasir valuta</p>
       <h1 className="mt-2 font-display text-3xl font-semibold text-[#18395f]">Daftar transaksi</h1>
-      <p className="mt-2 max-w-2xl text-sm text-[#64748b]">Pisahkan riwayat transaksi jual dan beli, ekspor detail untuk pelaporan internal, atau cetak ulang kwitansi.</p>
+      <p className="mt-2 max-w-2xl text-sm text-[#475569]">Pisahkan riwayat transaksi jual dan beli, ekspor detail untuk pelaporan internal, atau cetak ulang kwitansi.</p>
     </header>
 
     <Card className="border-[#dce6f0]">
-      <CardHeader><CardTitle className="text-[#18395f]">Riwayat dan status transaksi</CardTitle><CardDescription>Draft dengan underlying hanya dapat dikirim setelah file tersimpan. Status "Disetujui" belum mengubah saldo kas — tekan <strong>Selesaikan</strong> agar kas dan stok pecahan benar-benar terpotong/bertambah. Gunakan tombol cetak untuk membuka kwitansi.</CardDescription></CardHeader>
+      <CardHeader><CardTitle className="text-[#18395f]">Riwayat dan status transaksi</CardTitle><CardDescription>Draft dengan underlying hanya dapat dikirim setelah file tersimpan. Kas dan stok pecahan sudah terpotong/bertambah otomatis begitu transaksi disetujui. Tombol <strong>Selesaikan</strong> hanya muncul untuk transaksi yang tertahan di status "Disetujui" (mis. karena stok sempat kurang) dan perlu diposting ulang secara manual. Gunakan tombol cetak untuk membuka kwitansi.</CardDescription></CardHeader>
       <CardContent>
         <Tabs value={listTab} onValueChange={(value) => setListTab(value as typeof listTab)}>
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -79,8 +88,8 @@ export default function TransactionList() {
           </div>
           <TabsContent value={listTab} className="mt-3">
             <div className="space-y-3">
-              {isLoading ? <p className="text-sm text-slate-500">Memuat transaksi…</p> : null}
-              {!isLoading && !listRows.length ? <div className="rounded-2xl border border-dashed border-[#cbd9e7] bg-[#f8fbfe] px-5 py-10 text-center text-sm leading-6 text-[#64748b]">Belum ada transaksi. Buat transaksi baru dari menu <strong>Buat Transaksi</strong>.</div> : null}
+              {isLoading ? <p className="text-sm text-slate-600">Memuat transaksi…</p> : null}
+              {!isLoading && !listRows.length ? <div className="rounded-2xl border border-dashed border-[#cbd9e7] bg-[#f8fbfe] px-5 py-10 text-center text-sm leading-6 text-[#475569]">Belum ada transaksi. Buat transaksi baru dari menu <strong>Buat Transaksi</strong>.</div> : null}
               {listRows.map((row) => {
                 const { transaction, customer, lines } = row;
                 const currencySummary = lines.map(({ line, currency }) => `${String(line.foreignAmount)} ${currency.code}`).join(" + ");
@@ -88,7 +97,7 @@ export default function TransactionList() {
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
                       <b className="text-[#18395f]">{transaction.receiptNumber ? `No. ${transaction.receiptNumber}` : transaction.transactionNumber}</b>
-                      <p className="text-xs text-slate-500">{customer.fullName} · {transaction.operation === "BUY" ? "Transaksi beli" : "Transaksi jual"} · {currencySummary || "Belum ada baris mata uang"}</p>
+                      <p className="text-xs text-slate-600">{customer.fullName} · {transaction.operation === "BUY" ? "Transaksi beli" : "Transaksi jual"} · {currencySummary || "Belum ada baris mata uang"}</p>
                     </div>
                     <Badge className={transactionStatusClass[transaction.status] ?? "status-inactive"}>{transactionStatusLabel[transaction.status] ?? transaction.status}</Badge>
                   </div>

@@ -62,7 +62,7 @@ describe("isolasi struktural data demo", () => {
     await expect(operations.cancelTransaction(30, "uji", actor)).rejects.toThrow("Transaksi demo");
 
     getDbMock.mockResolvedValueOnce(databaseWithSelectResults([{ ...demoTransaction, status: "PENDING_REVIEW" }]));
-    await expect(operations.recordReviewAction({ transactionId: 30, action: "APPROVED", notes: "uji" }, 8)).rejects.toThrow("Transaksi demo");
+    await expect(operations.recordReviewAction({ transactionId: 30, action: "APPROVED", notes: "uji" }, { id: 8, role: "ADMIN" })).rejects.toThrow("Transaksi demo");
 
     getDbMock.mockResolvedValueOnce(databaseWithSelectResults([{ ...demoTransaction, status: "APPROVED" }]));
     await expect(operations.completeTransaction(30, actor)).rejects.toThrow("Transaksi demo");

@@ -64,10 +64,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 | Kontrol Outlet | Buka & Tutup Outlet | Checklist pembukaan, penutupan, catatan serah-terima, dan arsip PDF penutupan. | Staff |
 | Kontrol Outlet | Kurs Operasional | Memantau, menyiapkan, dan mengaktifkan kurs secara manual dengan alasan. | Admin |
 | Kontrol Outlet | Bandingkan Kurs | Membandingkan kurs outlet dengan referensi yang tersedia. | Admin |
-| Kontrol Outlet | Kas Awal | Mencatat kas fisik pembukaan per mata uang, wajib dengan rincian pecahan. | Staff |
-| Kontrol Outlet | Stok Saat Ini | Melihat saldo dan stok pecahan berjalan per mata uang (termasuk Rupiah). | Staff |
-| Kontrol Outlet | Stock Opname | Buka hitungan, kirim hasil hitung fisik saat tutup, dan rekonsiliasi selisih. | Staff |
-| Kontrol Outlet | Penyesuaian Brankas | Setor/ambil brankas dan penjualan luar jam kerja, wajib dengan rincian pecahan. | Controller |
+| Kontrol Outlet | Kas & Persediaan | Satu halaman dengan tab Kas Awal / Stok Saat Ini / Stock Opname / Penyesuaian Brankas (Controller); pindah tab tanpa ganti halaman. | Staff |
 | Kontrol Outlet | Keluhan Nasabah | Register, investigasi, hasil, dan eskalasi pengaduan konsumen. | Staff |
 | Pengawasan | Kesiapan Operasional | Kontrol harian Controller, termasuk status Paket Pelaporan. | Controller |
 | Pengawasan | Direksi Mengetahui | Daftar informasi pengawasan yang perlu diakui Direksi. | Controller |
@@ -119,7 +116,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 7. Bila transaksi dilakukan oleh **pihak kuasa/wakil** (termasuk pemilik manfaat/BO), pilih nasabah tersebut dari pencarian nasabah terdaftar — bukan mengetik nama/identitas bebas. Bila BO nasabah utama sudah terdaftar sebagai nasabah, sistem otomatis menyarankan nasabah tersebut untuk dikonfirmasi. Bila pihak kuasa/wakil belum terdaftar, daftarkan dulu sebagai nasabah (data KYC lengkap) sebelum melanjutkan bon.
 8. Periksa kembali total keseluruhan bon sebelum menyimpan.
 9. Bila sistem menandai transaksi untuk review, jangan mencari jalan pintas. Simpan sesuai workflow dan beri Supervisor informasi yang diperlukan.
-10. Buka **Daftar Transaksi** untuk melihat riwayat per jenis (tab Semua/Jual/Beli). Bon berstatus "Disetujui" **belum memotong/menambah kas dan stok pecahan** — tekan tombol **Selesaikan** agar benar-benar terposting. Cetak kwitansi (mengikuti format kertas resmi PT Ibukota Valasindo, termasuk teks aturan wajib di bagian bawah), cetak ulang, atau **Ekspor CSV** detail bon per jenis transaksi juga tersedia di halaman ini.
+10. Buka **Daftar Transaksi** untuk melihat riwayat per jenis (tab Semua/Jual/Beli). Begitu bon disetujui (baik otomatis untuk bon berisiko rendah maupun oleh Supervisor untuk bon yang di-flag), kas dan stok pecahan **langsung terposting** — tidak perlu langkah konfirmasi tambahan. Tombol **Selesaikan** hanya muncul bila sebuah bon tertahan di status "Disetujui" (mis. stok sempat kurang saat posting otomatis) dan perlu diposting ulang secara manual. Cetak kwitansi (mengikuti format kertas resmi PT Ibukota Valasindo, termasuk teks aturan wajib di bagian bawah), cetak ulang, atau **Ekspor CSV** detail bon per jenis transaksi juga tersedia di halaman ini.
 11. Jangan memasukkan transaksi latihan di halaman ini. Gunakan **Simulasi Aman** untuk berlatih.
 
 ### 5.5 Review Transaksi Terflag — Admin/Supervisor
@@ -131,12 +128,12 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 
 ### 5.6 Kas, Persediaan, dan Stock Opname — Staff dan Supervisor
 
-Menu ini terbagi menjadi empat halaman terpisah: **Kas Awal**, **Stok Saat Ini**, **Stock Opname**, dan **Penyesuaian Brankas** (Controller).
+Menu ini adalah **satu halaman** ("Kas & Persediaan") dengan tab di dalamnya — **Kas Awal**, **Stok Saat Ini**, **Stock Opname**, dan **Penyesuaian Brankas** (khusus Controller ke atas). Pindah tab tidak berpindah halaman; setiap tab tetap menampilkan konteksnya secara penuh.
 
-1. Buka **Kas Awal** terlebih dahulu, **termasuk rincian pecahan** (wajib) — ini stok fisik awal per pecahan yang jadi acuan sistem sepanjang hari. Cari mata uang lewat kotak pencarian, **termasuk IDR** untuk modal kerja Rupiah (dibutuhkan agar bon beli bisa diselesaikan — sistem menolak bon beli bila modal Rupiah tidak cukup) — tidak dibatasi ke mata uang yang sudah disinkronkan otomatis.
-2. Selama hari berjalan, kas dan stok pecahan **kedua sisi** (valuta asing dan Rupiah untuk pembayaran tunai) bergerak otomatis setiap kali bon **diselesaikan** (bukan hanya dibuat/dikirim/disetujui) — lihat langkah "Selesaikan" di Daftar Transaksi (§5.4). Jangan melakukan pembukuan paralel tanpa rekonsiliasi. Buka **Stok Saat Ini** untuk melihat angka sistem berjalan per pecahan; **cek fisik hanya perlu dilakukan sekali saat mau tutup**, bukan sepanjang hari.
-3. Setor/ambil dari brankas atau penjualan luar jam kerja dicatat lewat **Penyesuaian Brankas** — rincian pecahan wajib diisi di sini juga.
-4. Menjelang tutup, masuk ke **Stock Opname**, masukkan hitungan fisik per mata uang (bandingkan dengan rincian pecahan di Stok Saat Ini), lalu kirim hasil hitung.
+1. Buka tab **Kas Awal** terlebih dahulu, **termasuk rincian pecahan** (wajib) — ini stok fisik awal per pecahan yang jadi acuan sistem sepanjang hari. Cari mata uang lewat kotak pencarian, **termasuk IDR** untuk modal kerja Rupiah (dibutuhkan agar bon beli bisa diselesaikan — sistem menolak bon beli bila modal Rupiah tidak cukup) — tidak dibatasi ke mata uang yang sudah disinkronkan otomatis. Nilai pecahan dipilih dari daftar pecahan asli mata uang tersebut (bukan diketik bebas), supaya angka seperti "IDR 131.250.000, 1 lembar" tidak mungkin masuk sebagai pecahan.
+2. Selama hari berjalan, kas dan stok pecahan **kedua sisi** (valuta asing dan Rupiah untuk pembayaran tunai) bergerak otomatis begitu bon **disetujui** — posting kas/stok sekarang langsung terjadi saat persetujuan, tidak perlu tombol "Selesaikan" terpisah lagi (lihat §5.4). Jangan melakukan pembukuan paralel tanpa rekonsiliasi. Buka tab **Stok Saat Ini** untuk melihat angka sistem berjalan per pecahan; **cek fisik hanya perlu dilakukan sekali saat mau tutup**, bukan sepanjang hari.
+3. Setor/ambil dari brankas atau penjualan luar jam kerja dicatat lewat tab **Penyesuaian Brankas** — rincian pecahan wajib diisi di sini juga.
+4. Menjelang tutup, buka tab **Stock Opname**, masukkan hitungan fisik per mata uang (bandingkan dengan rincian pecahan di tab Stok Saat Ini), lalu kirim hasil hitung.
 5. Telaah varians yang tampil. Varians memerlukan peninjauan Supervisor; Direksi harus memperoleh informasi pengawasan sesuai workflow.
 6. Jangan menyembunyikan selisih dengan mengubah angka fisik agar sama dengan sistem.
 

@@ -2,9 +2,11 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CurrencyPicker, PickedCurrency } from "@/components/CurrencyPicker";
+import { DenominationValueInput } from "@/components/DenominationValueInput";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatPlainAmount } from "@/lib/money";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeftRight, Banknote, CircleDollarSign, FileText, Plus, Printer, Search, Trash2, Upload, UserPlus } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -150,7 +152,7 @@ export default function TransactionCreate() {
     <header>
       <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-[#5c8f53]"><ArrowLeftRight className="size-4" /> Kasir valuta</p>
       <h1 className="mt-2 font-display text-3xl font-semibold text-[#18395f]">Buat transaksi jual atau beli</h1>
-      <p className="mt-2 max-w-2xl text-sm text-[#64748b]">Isi nomor kwitansi fisik, nasabah, dan satu atau lebih baris mata uang. Kirim sesuai alur persetujuan setelah draft tersimpan.</p>
+      <p className="mt-2 max-w-2xl text-sm text-[#475569]">Isi nomor kwitansi fisik, nasabah, dan satu atau lebih baris mata uang. Kirim sesuai alur persetujuan setelah draft tersimpan.</p>
     </header>
 
     {lastBon ? <Card className="border-emerald-200 bg-emerald-50"><CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
@@ -171,10 +173,10 @@ export default function TransactionCreate() {
           </div>
           <div className="relative">
             <Label>Cari nasabah</Label>
-            <div className="relative mt-1"><Search className="absolute left-3 top-2.5 size-4 text-slate-400" /><Input required className="pl-9" value={search} onChange={(e) => { setSearch(e.target.value); setCustomer(null); }} placeholder="Ketik nama, CIF, atau nomor identitas" /></div>
+            <div className="relative mt-1"><Search className="absolute left-3 top-2.5 size-4 text-slate-600" /><Input required className="pl-9" value={search} onChange={(e) => { setSearch(e.target.value); setCustomer(null); }} placeholder="Ketik nama, CIF, atau nomor identitas" /></div>
             {search.length >= 2 && !customer ? <div className="absolute z-20 mt-1 max-h-52 w-full overflow-auto rounded-xl border bg-white p-1 shadow-lg">
-              {customers?.length ? customers.map((c) => <button className="block w-full rounded-lg px-3 py-2 text-left hover:bg-slate-50" type="button" key={c.id} onClick={() => { setCustomer(c); setSearch(c.fullName); setPurpose(c.transactionPurpose); }}><b className="text-[#18395f]">{c.fullName}</b><span className="ml-2 text-xs text-slate-500">{c.cifNumber} · {c.identityNumber}</span></button>)
-                : <div className="p-3 text-sm text-slate-500"><p>Nasabah belum ditemukan.</p><Button className="mt-2" type="button" size="sm" variant="outline" onClick={() => setLocation("/operasional/nasabah?returnTo=/operasional/transaksi")}><UserPlus className="mr-1 size-3" />Buat profil KYC baru</Button></div>}
+              {customers?.length ? customers.map((c) => <button className="block w-full rounded-lg px-3 py-2 text-left hover:bg-slate-50" type="button" key={c.id} onClick={() => { setCustomer(c); setSearch(c.fullName); setPurpose(c.transactionPurpose); }}><b className="text-[#18395f]">{c.fullName}</b><span className="ml-2 text-xs text-slate-600">{c.cifNumber} · {c.identityNumber}</span></button>)
+                : <div className="p-3 text-sm text-slate-600"><p>Nasabah belum ditemukan.</p><Button className="mt-2" type="button" size="sm" variant="outline" onClick={() => setLocation("/operasional/nasabah?returnTo=/operasional/transaksi")}><UserPlus className="mr-1 size-3" />Buat profil KYC baru</Button></div>}
             </div> : null}
             {customer ? <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">Dipilih: {customer.fullName} · {customer.cifNumber}</p> : null}
           </div>
@@ -194,23 +196,23 @@ export default function TransactionCreate() {
                 {line.currency ? <p className="mt-1 flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800"><span>Dipilih: {line.currency.code} — {line.currency.name}</span><button type="button" className="font-semibold text-emerald-900 underline" onClick={() => updateLine(index, { currency: null })}>Ganti</button></p>
                   : <div className="mt-1"><CurrencyPicker onSelect={(currency) => updateLine(index, { currency })} /></div>}
               </div>
-              {reference ? <p className="mt-2 text-xs text-slate-500">Kurs referensi hari ini (pembanding saja): {operation === "BUY" ? String(reference.rate.buyRate) : String(reference.rate.sellRate)} IDR per {String(reference.rate.quoteUnit)} {reference.currency.code}.</p> : null}
+              {reference ? <p className="mt-2 text-xs text-slate-600">Kurs referensi hari ini (pembanding saja): {operation === "BUY" ? String(reference.rate.buyRate) : String(reference.rate.sellRate)} IDR per {String(reference.rate.quoteUnit)} {reference.currency.code}.</p> : null}
 
               <div className="mt-3 rounded-lg border border-[#cbd9e7] bg-white p-3">
                 <div className="flex items-center justify-between"><Label className="text-xs font-semibold text-[#18395f]">Rincian pecahan (wajib — tiap pecahan punya harga sendiri)</Label><Button type="button" size="sm" variant="outline" className="h-7 border-[#bcd2e5] text-xs text-[#183f70]" onClick={() => addDenominationRow(index)}><Plus className="mr-1 size-3" />Tambah pecahan</Button></div>
-                {line.denominations.map((row, denomIndex) => <div key={denomIndex} className="mt-2 grid grid-cols-[1fr_90px_1fr_auto] gap-2">
-                  <Input required inputMode="decimal" value={row.value} onChange={(e) => updateDenominationRow(index, denomIndex, "value", e.target.value)} placeholder="Nilai pecahan, mis. 100" />
+                {line.denominations.map((row, denomIndex) => <div key={denomIndex} className="mt-2 grid grid-cols-[1fr_90px_1fr_auto] items-start gap-2">
+                  <DenominationValueInput currencyCode={line.currency?.code} value={row.value} onChange={(value) => updateDenominationRow(index, denomIndex, "value", value)} />
                   <Input required inputMode="numeric" value={row.quantity} onChange={(e) => updateDenominationRow(index, denomIndex, "quantity", e.target.value)} placeholder="Lembar" />
                   <Input required inputMode="decimal" value={row.rate} onChange={(e) => updateDenominationRow(index, denomIndex, "rate", e.target.value)} placeholder="Harga pecahan ini" />
                   <Button type="button" size="sm" variant="ghost" className="text-rose-600" disabled={line.denominations.length === 1} onClick={() => removeDenominationRow(index, denomIndex)}>Hapus</Button>
                 </div>)}
-                <p className="mt-2 text-xs text-[#64748b]">Contoh: 1000 USD dengan pecahan 100×5 harga 17800, pecahan 50×5 harga 17500, pecahan 10×25 harga 17000 — tambahkan tiga baris pecahan seperti itu.</p>
+                <p className="mt-2 text-xs text-[#475569]">Contoh: 1000 USD dengan pecahan 100×5 harga 17800, pecahan 50×5 harga 17500, pecahan 10×25 harga 17000 — tambahkan tiga baris pecahan seperti itu.</p>
               </div>
-              {lineForeignTotal(line) > 0 ? <p className="mt-2 text-xs font-semibold text-[#18395f]">Total baris ini: {lineForeignTotal(line).toLocaleString("id-ID")} {line.currency?.code ?? ""} · Rp {lineRupiahTotal(line).toLocaleString("id-ID")}</p> : null}
+              {lineForeignTotal(line) > 0 ? <p className="mt-2 text-xs font-semibold text-[#18395f]">Total baris ini: {formatPlainAmount(lineForeignTotal(line))} {line.currency?.code ?? ""} · Rp {formatPlainAmount(lineRupiahTotal(line))}</p> : null}
             </div>;
           })}
           <Button type="button" variant="outline" className="w-full border-dashed border-[#8fb08a] text-[#3d7139]" onClick={addLine}><Plus className="mr-2 size-4" />Tambah baris mata uang</Button>
-          <div className="rounded-xl bg-[#18395f] px-4 py-3 text-right text-white"><span className="text-xs uppercase tracking-wide text-white/70">Total keseluruhan transaksi</span><p className="font-display text-xl font-semibold">Rp {totalRupiah.toLocaleString("id-ID")}</p></div>
+          <div className="rounded-xl bg-[#18395f] px-4 py-3 text-right text-white"><span className="text-xs uppercase tracking-wide text-white/70">Total keseluruhan transaksi</span><p className="font-display text-xl font-semibold">Rp {formatPlainAmount(totalRupiah)}</p></div>
         </CardContent>
       </Card>
 
@@ -223,23 +225,23 @@ export default function TransactionCreate() {
           </div>
           {paymentMethod === "CASH" ? <div className="rounded-xl border border-[#cbd9e7] bg-[#f8fbfe] p-3">
             <div className="flex items-center justify-between"><Label className="text-xs font-semibold text-[#18395f]">Rincian pecahan Rupiah yang diterima/dibayarkan (wajib)</Label><Button type="button" size="sm" variant="outline" className="h-7 border-[#bcd2e5] text-xs text-[#183f70]" onClick={addPaymentDenominationRow}><Plus className="mr-1 size-3" />Tambah pecahan</Button></div>
-            <p className="mt-1 text-xs text-slate-500">Uang tunai yang benar-benar berpindah — bertambah/berkurang otomatis di stok pecahan Rupiah saat bon ini diselesaikan.</p>
-            {paymentDenominations.map((row, index) => <div key={index} className="mt-2 grid grid-cols-[1fr_100px_auto] gap-2">
-              <Input required inputMode="decimal" value={row.value} onChange={(e) => updatePaymentDenominationRow(index, "value", e.target.value)} placeholder="Nilai pecahan, mis. 100000" />
+            <p className="mt-1 text-xs text-slate-600">Uang tunai yang benar-benar berpindah — bertambah/berkurang otomatis di stok pecahan Rupiah saat bon ini diselesaikan.</p>
+            {paymentDenominations.map((row, index) => <div key={index} className="mt-2 grid grid-cols-[1fr_100px_auto] items-start gap-2">
+              <DenominationValueInput currencyCode="IDR" value={row.value} onChange={(value) => updatePaymentDenominationRow(index, "value", value)} />
               <Input required inputMode="numeric" value={row.quantity} onChange={(e) => updatePaymentDenominationRow(index, "quantity", e.target.value)} placeholder="Lembar" />
               <Button type="button" size="sm" variant="ghost" className="text-rose-600" disabled={paymentDenominations.length === 1} onClick={() => removePaymentDenominationRow(index)}>Hapus</Button>
             </div>)}
-            <p className={`mt-2 text-xs ${paymentDenominationMismatch ? "font-semibold text-rose-600" : "text-[#64748b]"}`}>Total rincian: Rp {paymentDenominationTotal.toLocaleString("id-ID")} {paymentDenominationMismatch ? `— belum sama dengan total transaksi (Rp ${totalRupiah.toLocaleString("id-ID")})` : ""}</p>
+            <p className={`mt-2 text-xs ${paymentDenominationMismatch ? "font-semibold text-rose-600" : "text-[#475569]"}`}>Total rincian: Rp {formatPlainAmount(paymentDenominationTotal)} {paymentDenominationMismatch ? `— belum sama dengan total transaksi (Rp ${formatPlainAmount(totalRupiah)})` : ""}</p>
           </div> : null}
           <div><Label>Tujuan transaksi</Label><Input className="mt-1" required value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Contoh: perjalanan atau pendidikan" /></div>
           <div><Label>Bertindak sebagai</Label><Select value={customerActingAs} onValueChange={(value) => setCustomerActingAs(value as "SELF" | "REPRESENTATIVE")}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="SELF">Nasabah sendiri</SelectItem><SelectItem value="REPRESENTATIVE">Pihak kuasa / wakil</SelectItem></SelectContent></Select></div>
           {customerActingAs === "REPRESENTATIVE" ? <div className="relative rounded-xl border p-3">
             <Label>Cari nasabah pihak kuasa / wakil</Label>
-            <p className="mt-1 text-xs text-slate-500">Pihak kuasa/wakil (termasuk pemilik manfaat/BO) wajib sudah terdaftar sebagai nasabah dengan data lengkap sebelum dipilih di sini.</p>
-            <div className="relative mt-2"><Search className="absolute left-3 top-2.5 size-4 text-slate-400" /><Input required className="pl-9" value={repSearch} onChange={(e) => { setRepSearch(e.target.value); setRepresentativeCustomer(null); }} placeholder="Ketik nama, CIF, atau nomor identitas" /></div>
+            <p className="mt-1 text-xs text-slate-600">Pihak kuasa/wakil (termasuk pemilik manfaat/BO) wajib sudah terdaftar sebagai nasabah dengan data lengkap sebelum dipilih di sini.</p>
+            <div className="relative mt-2"><Search className="absolute left-3 top-2.5 size-4 text-slate-600" /><Input required className="pl-9" value={repSearch} onChange={(e) => { setRepSearch(e.target.value); setRepresentativeCustomer(null); }} placeholder="Ketik nama, CIF, atau nomor identitas" /></div>
             {repSearch.length >= 2 && !representativeCustomer ? <div className="absolute z-20 mt-1 max-h-52 w-[calc(100%-1.5rem)] overflow-auto rounded-xl border bg-white p-1 shadow-lg">
-              {representativeCandidates?.length ? representativeCandidates.map((c) => <button className="block w-full rounded-lg px-3 py-2 text-left hover:bg-slate-50" type="button" key={c.id} onClick={() => { setRepresentativeCustomer(c); setRepSearch(c.fullName); }}><b className="text-[#18395f]">{c.fullName}</b><span className="ml-2 text-xs text-slate-500">{c.cifNumber} · {c.identityNumber}</span></button>)
-                : <div className="p-3 text-sm text-slate-500"><p>Nasabah pihak kuasa/wakil belum ditemukan.</p><Button className="mt-2" type="button" size="sm" variant="outline" onClick={() => setLocation("/operasional/nasabah?returnTo=/operasional/transaksi")}><UserPlus className="mr-1 size-3" />Daftarkan sebagai nasabah baru</Button></div>}
+              {representativeCandidates?.length ? representativeCandidates.map((c) => <button className="block w-full rounded-lg px-3 py-2 text-left hover:bg-slate-50" type="button" key={c.id} onClick={() => { setRepresentativeCustomer(c); setRepSearch(c.fullName); }}><b className="text-[#18395f]">{c.fullName}</b><span className="ml-2 text-xs text-slate-600">{c.cifNumber} · {c.identityNumber}</span></button>)
+                : <div className="p-3 text-sm text-slate-600"><p>Nasabah pihak kuasa/wakil belum ditemukan.</p><Button className="mt-2" type="button" size="sm" variant="outline" onClick={() => setLocation("/operasional/nasabah?returnTo=/operasional/transaksi")}><UserPlus className="mr-1 size-3" />Daftarkan sebagai nasabah baru</Button></div>}
             </div> : null}
             {representativeCustomer ? <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">Dipilih: {representativeCustomer.fullName} · {representativeCustomer.cifNumber} · {representativeCustomer.identityNumber}</p> : null}
           </div> : null}
@@ -254,7 +256,7 @@ export default function TransactionCreate() {
             <div><Label>Referensi dokumen</Label><Input className="mt-1" required value={underlyingReference} onChange={(e) => setUnderlyingReference(e.target.value)} placeholder="No. invoice / surat / dokumen" /></div>
             <div><Label>Catatan verifikasi</Label><Input className="mt-1" value={underlyingNotes} onChange={(e) => setUnderlyingNotes(e.target.value)} placeholder="Keterangan pemeriksaan staf" /></div>
             <div><Label>File underlying</Label><Input className="mt-1" required type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setUnderlyingFile(e.target.files?.[0] ?? null)} /></div>
-            <p className="text-xs text-slate-500"><Upload className="mr-1 inline size-3" />JPG, PNG, WEBP, PDF; maksimal 8 MB.</p>
+            <p className="text-xs text-slate-600"><Upload className="mr-1 inline size-3" />JPG, PNG, WEBP, PDF; maksimal 8 MB.</p>
           </div> : null}
         </CardContent>
       </Card>

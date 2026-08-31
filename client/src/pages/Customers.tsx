@@ -122,7 +122,7 @@ export default function Customers() {
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-bold tracking-[0.16em] text-[#5c8f53] uppercase"><ShieldCheck className="size-4" /> KYC / CDD</div>
           <h1 className="font-display text-3xl font-semibold tracking-tight text-[#18395f]">Tambah nasabah baru</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#64748b]">Simpan data identifikasi, pemilik manfaat, status PEP, dan pencocokan DTTOT/PPSPM sebelum nasabah digunakan pada transaksi valuta.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#475569]">Simpan data identifikasi, pemilik manfaat, status PEP, dan pencocokan DTTOT/PPSPM sebelum nasabah digunakan pada transaksi valuta.</p>
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">
           <Badge variant="outline" className="w-fit border-[#cfe2d6] bg-[#f5fbf5] px-3 py-1.5 text-[#3c6f48]">{customers?.length ?? 0} profil tersimpan</Badge>
@@ -169,14 +169,14 @@ export default function Customers() {
             <Field label="Sumber dana" required><Textarea value={form.sourceOfFunds} onChange={(event) => setForm({ ...form, sourceOfFunds: event.target.value })} rows={2} /></Field>
             <Field label="Tujuan transaksi" required><Textarea value={form.transactionPurpose} onChange={(event) => setForm({ ...form, transactionPurpose: event.target.value })} rows={2} /></Field>
             <Field label="Catatan risiko"><Textarea value={form.riskNotes} onChange={(event) => setForm({ ...form, riskNotes: event.target.value })} rows={2} /></Field>
-            <Field label="Dokumen KTP (unggah bila tersedia)"><Input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => setKtpFile(event.target.files?.[0] ?? null)} /><p className="mt-1 text-xs text-[#64748b]"><Upload className="mr-1 inline size-3" />JPG, PNG, WEBP, atau PDF; maksimum 8 MB. File disimpan privat dan hanya dapat diakses petugas berwenang.</p></Field>
+            <Field label="Dokumen KTP (unggah bila tersedia)"><Input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => setKtpFile(event.target.files?.[0] ?? null)} /><p className="mt-1 text-xs text-[#475569]"><Upload className="mr-1 inline size-3" />JPG, PNG, WEBP, atau PDF; maksimum 8 MB. File disimpan privat dan hanya dapat diakses petugas berwenang.</p></Field>
 
             <div className="rounded-2xl border border-[#e2eaf2] bg-[#fbfdff] p-4">
               <label className="flex items-start gap-3 text-sm">
                 <Checkbox className="mt-0.5" checked={hasBeneficialOwner} onCheckedChange={(checked) => setHasBeneficialOwner(checked === true)} />
                 <span>
                   <b className="text-[#18395f]">Nasabah bertindak atas nama pihak lain (Beneficial Owner)</b>
-                  <br /><small className="text-[#64748b]">Contoh: bos menyuruh supirnya bertransaksi valas — beneficial owner-nya adalah bosnya. Identitas pemilik manfaat wajib dicatat sebagai profil nasabah terpisah.</small>
+                  <br /><small className="text-[#475569]">Contoh: bos menyuruh supirnya bertransaksi valas — beneficial owner-nya adalah bosnya. Identitas pemilik manfaat wajib dicatat sebagai profil nasabah terpisah.</small>
                 </span>
               </label>
               {hasBeneficialOwner ? (
@@ -226,7 +226,7 @@ export default function Customers() {
                 <Checkbox className="mt-0.5" checked={dttotMatch} onCheckedChange={(checked) => setDttotMatch(checked === true)} />
                 <span>
                   <b className={dttotMatch ? "text-rose-700" : "text-[#18395f]"}>Nama nasabah cocok dengan Daftar DTTOT/PPSPM</b>
-                  <br /><small className={dttotMatch ? "text-rose-700" : "text-[#64748b]"}>Daftar Terduga Teroris dan Organisasi Teroris / Daftar Pendanaan Proliferasi Senjata Pemusnah Massal.</small>
+                  <br /><small className={dttotMatch ? "text-rose-700" : "text-[#475569]"}>Daftar Terduga Teroris dan Organisasi Teroris / Daftar Pendanaan Proliferasi Senjata Pemusnah Massal.</small>
                 </span>
               </label>
               {dttotMatch ? (

@@ -15,7 +15,7 @@ export default function NotFound() {
           </div>
           <p className="mt-6 font-display text-5xl font-bold tracking-tight text-[#18395f]">404</p>
           <h1 className="mt-2 font-display text-xl font-semibold text-[#18395f]">Halaman tidak ditemukan</h1>
-          <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#64748b]">
+          <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#475569]">
             Halaman yang kamu tuju mungkin sudah dipindahkan, tidak tersedia untuk peran akunmu, atau alamatnya keliru diketik.
           </p>
           <Button onClick={() => setLocation("/operasional")} className="press-scale mt-8 bg-[#183f70] text-white hover:bg-[#12345d]">

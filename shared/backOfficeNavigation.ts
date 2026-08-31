@@ -35,10 +35,7 @@ export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
     { label: "Buka & Tutup Outlet", path: "/operasional/checklist", minimumRole: "STAFF" },
     { label: "Kurs Operasional", path: "/operasional/kurs", minimumRole: "ADMIN" },
     { label: "Bandingkan Kurs", path: "/operasional/perbandingan-kurs", minimumRole: "ADMIN" },
-    { label: "Kas Awal", path: "/operasional/stock/kas-awal", minimumRole: "STAFF" },
-    { label: "Stok Saat Ini", path: "/operasional/stock/saat-ini", minimumRole: "STAFF" },
-    { label: "Stock Opname", path: "/operasional/stock/opname", minimumRole: "STAFF" },
-    { label: "Penyesuaian Brankas", path: "/operasional/stock/penyesuaian", minimumRole: "CONTROLLER" },
+    { label: "Kas & Persediaan", path: "/operasional/stock", minimumRole: "STAFF" },
     { label: "Keluhan Nasabah", path: "/operasional/pengaduan", minimumRole: "STAFF" },
   ] },
   { label: "Pengawasan", items: [

@@ -323,7 +323,7 @@ export const appRouter = router({
     })).mutation(({ input, ctx }) => createTransaction(input, ctx.user.id)),
     submit: staffProcedure.input(z.object({ transactionId: z.number().int().positive() })).mutation(({ input, ctx }) => submitTransaction(input.transactionId, ctx.user)),
     cancel: staffProcedure.input(z.object({ transactionId: z.number().int().positive(), reason: z.string().trim().min(5).max(1000) })).mutation(({ input, ctx }) => cancelTransaction(input.transactionId, input.reason, ctx.user)),
-    review: adminProcedure.input(z.object({ transactionId: z.number().int().positive(), action: z.enum(["APPROVED", "RETURNED", "ESCALATED"]), notes: z.string().trim().min(3).max(1000) })).mutation(({ input, ctx }) => recordReviewAction(input, ctx.user.id)),
+    review: adminProcedure.input(z.object({ transactionId: z.number().int().positive(), action: z.enum(["APPROVED", "RETURNED", "ESCALATED"]), notes: z.string().trim().min(3).max(1000) })).mutation(({ input, ctx }) => recordReviewAction(input, ctx.user)),
     complete: staffProcedure.input(z.object({ transactionId: z.number().int().positive() })).mutation(({ input, ctx }) => completeTransaction(input.transactionId, ctx.user)),
   }),
 

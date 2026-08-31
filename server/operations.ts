@@ -33,6 +33,15 @@ import {
   type StaffRole,
 } from "../drizzle/schema";
 import { getDb } from "./db";
+import { knownDenominationsFor } from "../shared/currencyDenominations";
+
+/** Rejects a denomination value that doesn't match a real banknote/coin for this currency (when we have a curated list — see shared/currencyDenominations.ts). Never trust the client alone here: this is exactly the check that stops a typo like "IDR 131250000 × 1 lembar" from being recorded as if it were a real note. */
+function assertKnownDenomination(value: Decimal, currencyCode: string | undefined, label: string) {
+  const known = knownDenominationsFor(currencyCode);
+  if (!known) return;
+  const matches = known.some((denomination) => value.eq(denomination));
+  if (!matches) throw new Error(`Nilai pecahan ${value.toFixed(0)} bukan pecahan ${currencyCode} yang dikenal pada ${label}. Pecahan yang berlaku: ${known.join(", ")}.`);
+}
 
 Decimal.set({ precision: 40, rounding: Decimal.ROUND_HALF_UP });
 const DEFAULT_REVIEW_THRESHOLD_USD = "10000.00";
@@ -1156,7 +1165,7 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     const currency = currencyById.get(line.currencyId);
     if (!currency || !currency.active) throw new Error(`Mata uang pada baris ${index + 1} tidak ditemukan atau tidak aktif.`);
     const quoteUnit = nonNegativeDecimal(line.quoteUnit ?? "1", `Satuan kuotasi baris ${index + 1}`);
-    const { rows: denominationRows, totalForeign, totalRupiah } = reconcilePricedDenominations(line.denominations, quoteUnit, `baris ${index + 1}`);
+    const { rows: denominationRows, totalForeign, totalRupiah } = reconcilePricedDenominations(line.denominations, quoteUnit, `baris ${index + 1}`, currency.code);
     // agreedRate on the line is a derived weighted average across its (possibly differently-priced)
     // denomination rows — informational only; the authoritative price lives on each denomination row.
     // reconcilePricedDenominations guarantees at least one row with value>0 and rate>0, so totalForeign>0.
@@ -1190,7 +1199,7 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   let paymentCurrencyId: number | null = null;
   if (input.paymentMethod === "CASH") {
     if (!input.paymentDenominations?.length) throw new Error("Rincian pecahan Rupiah yang diterima/dibayarkan wajib diisi untuk pembayaran tunai.");
-    paymentDenominationRows = reconcileDenominations(input.paymentDenominations, new Decimal(rupiahAmount));
+    paymentDenominationRows = reconcileDenominations(input.paymentDenominations, new Decimal(rupiahAmount), "IDR");
     const idrCurrency = await ensureCurrency({ code: "IDR", name: "Rupiah Indonesia" });
     paymentCurrencyId = idrCurrency.id;
     if (input.operation === "BUY") {
@@ -1296,6 +1305,11 @@ export async function submitTransaction(transactionId: number, actor: { id: numb
   const next = submissionTransition(transaction.status as "DRAFT" | "RETURNED", transaction.requiresReview);
   await db.update(exchangeTransactions).set(next).where(eq(exchangeTransactions.id, transactionId));
   await writeAudit({ actorUserId: actor.id, action: "TRANSACTION_SUBMITTED", entityType: "exchange_transaction", entityId: String(transactionId), beforeState: { status: transaction.status }, afterState: next });
+  if (next.status === "APPROVED") {
+    // Low-risk bon: no human review required, so the physical exchange is already final by the time this
+    // is recorded — post cash/stock immediately instead of waiting on a separate manual "Selesaikan" click.
+    return completeTransaction(transactionId, actor);
+  }
   return { ...transaction, ...next };
 }
 
@@ -1312,7 +1326,7 @@ export async function cancelTransaction(transactionId: number, reason: string, a
   return { ...transaction, status: "CANCELLED" as const, cancelledByUserId: actor.id, cancelledAt, cancellationReason: reason };
 }
 
-export async function recordReviewAction(input: { transactionId: number; action: "APPROVED" | "RETURNED" | "ESCALATED"; notes: string }, reviewerUserId: number) {
+export async function recordReviewAction(input: { transactionId: number; action: "APPROVED" | "RETURNED" | "ESCALATED"; notes: string }, actor: { id: number; role: StaffRole }) {
   const db = await databaseOrThrow();
   const transaction = (await db.select().from(exchangeTransactions).where(and(eq(exchangeTransactions.id, input.transactionId), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false))).limit(1))[0];
   if (!transaction || transaction.status !== "PENDING_REVIEW") throw new Error("Hanya transaksi PENDING_REVIEW yang dapat ditinjau.");
@@ -1324,10 +1338,10 @@ export async function recordReviewAction(input: { transactionId: number; action:
       ? { status: "RETURNED" as const, reviewStatus: "NEEDS_REVIEW" as const }
       : { status: "PENDING_REVIEW" as const, reviewStatus: "ESCALATED" as const };
   const result = await db.transaction(async (tx) => {
-    await tx.update(exchangeTransactions).set({ ...next, reviewedByUserId: reviewerUserId, reviewedAt, reviewerNotes: input.notes }).where(eq(exchangeTransactions.id, input.transactionId));
-    await tx.insert(transactionReviewActions).values({ transactionId: input.transactionId, action: input.action, reviewerUserId, notes: input.notes });
-    await tx.insert(auditLogs).values({ actorUserId: reviewerUserId, action: `TRANSACTION_REVIEW_${input.action}`, entityType: "exchange_transaction", entityId: String(input.transactionId), beforeState: { status: transaction.status, reviewStatus: transaction.reviewStatus }, afterState: { ...next, reviewedAt }, reason: input.notes });
-    return { ...transaction, ...next, reviewedByUserId: reviewerUserId, reviewedAt, reviewerNotes: input.notes };
+    await tx.update(exchangeTransactions).set({ ...next, reviewedByUserId: actor.id, reviewedAt, reviewerNotes: input.notes }).where(eq(exchangeTransactions.id, input.transactionId));
+    await tx.insert(transactionReviewActions).values({ transactionId: input.transactionId, action: input.action, reviewerUserId: actor.id, notes: input.notes });
+    await tx.insert(auditLogs).values({ actorUserId: actor.id, action: `TRANSACTION_REVIEW_${input.action}`, entityType: "exchange_transaction", entityId: String(input.transactionId), beforeState: { status: transaction.status, reviewStatus: transaction.reviewStatus }, afterState: { ...next, reviewedAt }, reason: input.notes });
+    return { ...transaction, ...next, reviewedByUserId: actor.id, reviewedAt, reviewerNotes: input.notes };
   });
   if (input.action === "APPROVED") {
     await createDirectorKnowledgeItem({
@@ -1336,8 +1350,11 @@ export async function recordReviewAction(input: { transactionId: number; action:
       entityId: String(input.transactionId),
       title: `Transaksi ${transaction.transactionNumber} disetujui Supervisor`,
       detail: `Transaksi ter-flag telah disetujui oleh Supervisor. Catatan keputusan: ${input.notes}`,
-      createdByUserId: reviewerUserId,
+      createdByUserId: actor.id,
     });
+    // Supervisor approval is the final human sign-off for a flagged bon — post cash/stock immediately,
+    // same as the auto-approved path, instead of requiring a separate manual "Selesaikan" click.
+    return completeTransaction(input.transactionId, actor);
   }
   return result;
 }
@@ -1352,13 +1369,14 @@ export function jakartaBusinessDate(date = new Date()) {
 
 export type DenominationEntryInput = { value: string; quantity: number };
 
-/** Validates a denomination breakdown against the declared total and returns rows ready to insert. Throws if it doesn't reconcile, so a movement can never be saved with a breakdown that doesn't add up. */
-function reconcileDenominations(entries: DenominationEntryInput[], expectedTotal: Decimal) {
+/** Validates a denomination breakdown against the declared total and returns rows ready to insert. Throws if it doesn't reconcile, so a movement can never be saved with a breakdown that doesn't add up. currencyCode is optional only for call sites that predate per-currency validation being wired through everywhere — new callers should always pass it. */
+function reconcileDenominations(entries: DenominationEntryInput[], expectedTotal: Decimal, currencyCode?: string) {
   if (!entries.length) return [];
   let sum = new Decimal(0);
   const rows = entries.map((entry) => {
     const value = nonNegativeOrZeroDecimal(entry.value, "Nilai pecahan");
     if (value.lte(0)) throw new Error("Nilai pecahan harus lebih besar dari nol.");
+    assertKnownDenomination(value, currencyCode, "rincian pecahan");
     if (!Number.isInteger(entry.quantity) || entry.quantity <= 0) throw new Error("Jumlah lembar/keping tiap pecahan harus bilangan bulat positif.");
     const subtotal = value.times(entry.quantity);
     sum = sum.plus(subtotal);
@@ -1413,13 +1431,14 @@ export type PricedDenominationInput = { value: string; quantity: number; rate: s
  * (cash movements only), there is no separate "declared total" to reconcile against; the line's
  * foreign/rupiah totals are simply the sum of these rows. Requires at least one row.
  */
-function reconcilePricedDenominations(entries: PricedDenominationInput[], quoteUnit: Decimal, lineLabel: string) {
+function reconcilePricedDenominations(entries: PricedDenominationInput[], quoteUnit: Decimal, lineLabel: string, currencyCode: string) {
   if (!entries.length) throw new Error(`Rincian pecahan wajib diisi minimal satu baris pada ${lineLabel}.`);
   let totalForeign = new Decimal(0);
   let totalRupiah = new Decimal(0);
   const rows = entries.map((entry) => {
     const value = nonNegativeOrZeroDecimal(entry.value, "Nilai pecahan");
     if (value.lte(0)) throw new Error(`Nilai pecahan pada ${lineLabel} harus lebih besar dari nol.`);
+    assertKnownDenomination(value, currencyCode, lineLabel);
     if (!Number.isInteger(entry.quantity) || entry.quantity <= 0) throw new Error(`Jumlah lembar/keping tiap pecahan pada ${lineLabel} harus bilangan bulat positif.`);
     const rate = nonNegativeDecimal(entry.rate, "Harga pecahan");
     if (rate.lte(0)) throw new Error(`Harga pecahan pada ${lineLabel} harus lebih besar dari nol.`);
@@ -1596,8 +1615,9 @@ export async function listCashDenominationBalances() {
 export async function recordOpeningCash(input: { currencyId: number; openingAmount: string; notes?: string; denominations: DenominationEntryInput[] }, actor: { id: number; role: StaffRole }) {
   const declaredAmount = nonNegativeOrZeroDecimal(input.openingAmount, "Kas pembukaan");
   if (!input.denominations?.length) throw new Error("Rincian pecahan wajib diisi untuk kas awal — stok pecahan sistem dimulai dari sini.");
-  const denominationRows = reconcileDenominations(input.denominations, declaredAmount);
   const db = await databaseOrThrow();
+  const currencyForValidation = (await db.select({ code: currencies.code }).from(currencies).where(eq(currencies.id, input.currencyId)).limit(1))[0];
+  const denominationRows = reconcileDenominations(input.denominations, declaredAmount, currencyForValidation?.code);
   return db.transaction(async (tx) => {
     const currency = (await tx.select().from(currencies).where(and(eq(currencies.id, input.currencyId), eq(currencies.active, true))).limit(1))[0];
     if (!currency) throw new Error("Mata uang aktif tidak ditemukan.");
@@ -1631,10 +1651,11 @@ export async function recordCashAdjustment(
   const notes = input.notes.trim();
   if (notes.length < 5) throw new Error("Catatan penyesuaian wajib diisi (minimal 5 karakter) untuk jejak audit.");
   if (!input.denominations?.length) throw new Error("Rincian pecahan wajib diisi untuk penyesuaian kas/brankas.");
-  const denominationRows = reconcileDenominations(input.denominations, amount);
   // Deposits into the safe and off-hours sales both remove cash from the counter; a withdrawal from the safe adds it back.
   const direction: "IN" | "OUT" = input.category === "SAFE_WITHDRAWAL" ? "IN" : "OUT";
   const db = await databaseOrThrow();
+  const currencyForValidation = (await db.select({ code: currencies.code }).from(currencies).where(eq(currencies.id, input.currencyId)).limit(1))[0];
+  const denominationRows = reconcileDenominations(input.denominations, amount, currencyForValidation?.code);
   return db.transaction(async (tx) => {
     const currency = (await tx.select().from(currencies).where(and(eq(currencies.id, input.currencyId), eq(currencies.active, true))).limit(1))[0];
     if (!currency) throw new Error("Mata uang aktif tidak ditemukan.");

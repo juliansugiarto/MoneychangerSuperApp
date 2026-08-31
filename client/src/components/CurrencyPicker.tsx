@@ -37,10 +37,10 @@ export function CurrencyPicker({ onSelect, placeholder = "Ketik kode atau nama m
   };
 
   return <div className="relative">
-    <div className="relative"><Search className="absolute left-3 top-2.5 size-4 text-slate-400" /><Input className="pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={placeholder} /></div>
+    <div className="relative"><Search className="absolute left-3 top-2.5 size-4 text-slate-600" /><Input className="pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={placeholder} /></div>
     {query.trim().length >= 1 ? <div className="absolute z-30 mt-1 max-h-52 w-full overflow-auto rounded-xl border bg-white p-1 shadow-lg">
-      {matches.length ? matches.map((currency) => <button key={currency.code} type="button" disabled={ensure.isPending} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-slate-50 disabled:opacity-50" onClick={() => pick(currency)}><b className="text-[#18395f]">{currency.code}</b><span className="ml-2 text-xs text-slate-500">{currency.name}</span></button>)
-        : <div className="p-3 text-sm text-slate-500">Mata uang tidak ditemukan. Coba kode ISO 4217, mis. "GBP".</div>}
+      {matches.length ? matches.map((currency) => <button key={currency.code} type="button" disabled={ensure.isPending} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-slate-50 disabled:opacity-50" onClick={() => pick(currency)}><b className="text-[#18395f]">{currency.code}</b><span className="ml-2 text-xs text-slate-600">{currency.name}</span></button>)
+        : <div className="p-3 text-sm text-slate-600">Mata uang tidak ditemukan. Coba kode ISO 4217, mis. "GBP".</div>}
     </div> : null}
   </div>;
 }

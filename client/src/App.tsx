@@ -12,10 +12,7 @@ import CustomerList from "./pages/CustomerList";
 import Rates from "./pages/Rates";
 import GuidedTransactions from "./pages/GuidedTransactions";
 import TransactionList from "./pages/TransactionList";
-import CashOpening from "./pages/CashOpening";
-import CashCurrentStock from "./pages/CashCurrentStock";
-import StockOpnameCount from "./pages/StockOpnameCount";
-import CashAdjustment from "./pages/CashAdjustment";
+import StockControl from "./pages/StockControl";
 import Reports from "./pages/Reports";
 import AuditLog from "./pages/AuditLog";
 import Login from "./pages/Login";
@@ -60,12 +57,12 @@ function Router() {
       <Route path="/operasional/nasabah/daftar"><OperationsRoute page={<CustomerList />} /></Route>
       <Route path="/operasional/pengaduan"><OperationsRoute page={<ConsumerComplaints />} /></Route>
       <Route path="/operasional/layanan"><OperationsRoute page={<ServiceDesk />} /></Route>
-      <Route path="/operasional/stock"><OperationsRoute page={<CashOpening />} /></Route>
-      <Route path="/operasional/stock/kas-awal"><OperationsRoute page={<CashOpening />} /></Route>
-      <Route path="/operasional/stock/saat-ini"><OperationsRoute page={<CashCurrentStock />} /></Route>
-      <Route path="/operasional/stock/opname"><OperationsRoute page={<StockOpnameCount />} /></Route>
-      <Route path="/operasional/stock-opname"><OperationsRoute page={<StockOpnameCount />} /></Route>
-      <Route path="/operasional/stock/penyesuaian"><OperationsRoute minimumRole="CONTROLLER" page={<CashAdjustment />} /></Route>
+      <Route path="/operasional/stock"><OperationsRoute page={<StockControl />} /></Route>
+      <Route path="/operasional/stock/kas-awal"><OperationsRoute page={<StockControl />} /></Route>
+      <Route path="/operasional/stock/saat-ini"><OperationsRoute page={<StockControl />} /></Route>
+      <Route path="/operasional/stock/opname"><OperationsRoute page={<StockControl />} /></Route>
+      <Route path="/operasional/stock-opname"><OperationsRoute page={<StockControl />} /></Route>
+      <Route path="/operasional/stock/penyesuaian"><OperationsRoute page={<StockControl />} /></Route>
       <Route path="/operasional/laporan"><OperationsRoute minimumRole="CONTROLLER" page={<Reports />} /></Route>
       <Route path="/operasional/pelaporan-regulator"><OperationsRoute minimumRole="CONTROLLER" page={<RegulatoryReporting />} /></Route>
       <Route path="/operasional/audit"><OperationsRoute minimumRole="CONTROLLER" page={<AuditLog />} /></Route>
