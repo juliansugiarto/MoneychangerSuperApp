@@ -6,6 +6,7 @@ import {
   auditLogs,
   cashBalanceMovements,
   cashBalances,
+  cashDenominationBalances,
   cashDenominationEntries,
   consumerComplaints,
   currencies,
@@ -1163,6 +1164,39 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   });
   const rupiahAmount = preparedLines.reduce((sum, line) => sum.plus(line.rupiahAmount), new Decimal(0)).toFixed(2);
 
+  // A SELL bon hands out foreign currency we're supposed to already be holding — never let it draft
+  // against stock we don't have. Only COMPLETED buys/adjustments count (that's when cash actually moved),
+  // so a same-day buy-then-sell works as long as the buy was completed first.
+  if (input.operation === "SELL") {
+    const sellCurrencyIds = Array.from(new Set(preparedLines.map((line) => line.currencyId)));
+    const balances = await db.select().from(cashBalances).where(inArray(cashBalances.currencyId, sellCurrencyIds));
+    const balanceByCurrency = new Map(balances.map((row) => [row.currencyId, new Decimal(String(row.availableAmount))]));
+    const requiredByCurrency = new Map<number, Decimal>();
+    for (const line of preparedLines) requiredByCurrency.set(line.currencyId, (requiredByCurrency.get(line.currencyId) ?? new Decimal(0)).plus(line.foreignAmount));
+    for (const [lineCurrencyId, required] of Array.from(requiredByCurrency.entries())) {
+      const available = balanceByCurrency.get(lineCurrencyId) ?? new Decimal(0);
+      if (available.lt(required)) {
+        const code = currencyById.get(lineCurrencyId)?.code ?? `#${lineCurrencyId}`;
+        throw new Error(`Stok ${code} tidak mencukupi untuk dijual. Tersedia ${available.toFixed(2)}, dibutuhkan ${required.toFixed(2)}. Selesaikan (bukan hanya kirim) transaksi pembelian ${code} terlebih dahulu bila baru saja dibeli hari ini.`);
+      }
+    }
+    const denominationBalanceRows = await db.select().from(cashDenominationBalances).where(inArray(cashDenominationBalances.currencyId, sellCurrencyIds));
+    const denomAvailable = new Map(denominationBalanceRows.map((row) => [`${row.currencyId}:${new Decimal(String(row.denominationValue)).toFixed(6)}`, row.quantity]));
+    const denomRequired = new Map<string, number>();
+    for (const line of preparedLines) for (const entry of line.denominationRows) {
+      const key = `${line.currencyId}:${entry.denominationValue}`;
+      denomRequired.set(key, (denomRequired.get(key) ?? 0) + entry.quantity);
+    }
+    for (const [key, required] of Array.from(denomRequired.entries())) {
+      const available = denomAvailable.get(key) ?? 0;
+      if (available < required) {
+        const [lineCurrencyId, denominationValue] = key.split(":");
+        const code = currencyById.get(Number(lineCurrencyId))?.code ?? lineCurrencyId;
+        throw new Error(`Stok pecahan ${code} ${denominationValue} tidak mencukupi (tersedia ${available}, dibutuhkan ${required}).`);
+      }
+    }
+  }
+
   const usdRate = (await db.select({ rate: operationalRates }).from(operationalRates)
     .innerJoin(currencies, eq(operationalRates.currencyId, currencies.id))
     .where(and(eq(currencies.code, "USD"), eq(operationalRates.status, "ACTIVE"), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false))).orderBy(desc(operationalRates.effectiveAt)).limit(1))[0]?.rate;
@@ -1329,6 +1363,22 @@ function reconcileDenominations(entries: DenominationEntryInput[], expectedTotal
   return rows;
 }
 
+/** Resets a currency's running denomination stock to exactly these counts — for opening cash, which declares an authoritative physical count for the day, the same way it SETS cashBalances.availableAmount rather than adding to it. A blank/no-denomination opening leaves prior counts untouched (advisory field, not required every time). */
+async function resetDenominationBalances(tx: any, currencyId: number, entries: { value: string; quantity: number }[]) {
+  if (!entries.length) return;
+  await tx.delete(cashDenominationBalances).where(eq(cashDenominationBalances.currencyId, currencyId));
+  await tx.insert(cashDenominationBalances).values(entries.map((entry) => ({ currencyId, denominationValue: new Decimal(entry.value).toFixed(6), quantity: entry.quantity })));
+}
+
+/** Adds (sign=1) or removes (sign=-1) notes/coins from a currency's running denomination stock — for adjustments and completed transactions, which move stock by a delta rather than redeclaring it. */
+async function applyDenominationBalanceDelta(tx: any, currencyId: number, entries: { value: string; quantity: number }[], sign: 1 | -1) {
+  for (const entry of entries) {
+    const denominationValue = new Decimal(entry.value).toFixed(6);
+    const delta = sign * entry.quantity;
+    await tx.insert(cashDenominationBalances).values({ currencyId, denominationValue, quantity: delta }).onDuplicateKeyUpdate({ set: { quantity: sql`${cashDenominationBalances.quantity} + ${delta}` } });
+  }
+}
+
 export type PricedDenominationInput = { value: string; quantity: number; rate: string };
 
 /**
@@ -1421,6 +1471,17 @@ export async function completeTransaction(transactionId: number, actor: { id: nu
       ? lines.map((line) => ({ currencyId: line.currencyId, foreignAmount: line.foreignAmount, transactionLineId: line.id as number | null }))
       : (transaction.currencyId && transaction.foreignAmount ? [{ currencyId: transaction.currencyId, foreignAmount: transaction.foreignAmount, transactionLineId: null }] : []);
     if (!postingLines.length) throw new Error("Bon tidak memiliki baris mata uang untuk diposting ke kas.");
+    const realLineIds = lines.map((line) => line.id);
+    const denominationsByLineId = new Map<number, { denominationValue: string; quantity: number }[]>();
+    if (realLineIds.length) {
+      const denominationRows = await tx.select().from(exchangeTransactionDenominationEntries).where(inArray(exchangeTransactionDenominationEntries.transactionLineId, realLineIds));
+      for (const row of denominationRows) {
+        if (row.transactionLineId == null) continue;
+        const existing = denominationsByLineId.get(row.transactionLineId) ?? [];
+        existing.push({ denominationValue: row.denominationValue, quantity: row.quantity });
+        denominationsByLineId.set(row.transactionLineId, existing);
+      }
+    }
 
     const direction = transaction.operation === "BUY" ? "IN" as const : "OUT" as const;
     const opnameDate = jakartaBusinessDate();
@@ -1435,7 +1496,12 @@ export async function completeTransaction(transactionId: number, actor: { id: nu
       const afterBalance = new Decimal(calculateCashBalanceAfter(transaction.operation, beforeBalance.toFixed(6), movementAmount.toFixed(6)));
       await tx.update(cashBalances).set({ availableAmount: afterBalance.toFixed(6) }).where(eq(cashBalances.id, balance.id));
       const reason = postingLines.length > 1 ? `TRANSACTION_${transaction.operation}_${transaction.transactionNumber}_L${index + 1}` : `TRANSACTION_${transaction.operation}_${transaction.transactionNumber}`;
-      await tx.insert(cashBalanceMovements).values({ cashBalanceId: balance.id, transactionId: transaction.id, transactionLineId: postingLine.transactionLineId, direction, amount: movementAmount.toFixed(6), reason, createdByUserId: actor.id });
+      const [cashMovement] = await tx.insert(cashBalanceMovements).values({ cashBalanceId: balance.id, transactionId: transaction.id, transactionLineId: postingLine.transactionLineId, direction, amount: movementAmount.toFixed(6), reason, createdByUserId: actor.id }).$returningId();
+      const lineDenominations = postingLine.transactionLineId != null ? denominationsByLineId.get(postingLine.transactionLineId) : undefined;
+      if (lineDenominations?.length && cashMovement) {
+        await tx.insert(cashDenominationEntries).values(lineDenominations.map((entry) => ({ cashBalanceMovementId: cashMovement.id, denominationValue: entry.denominationValue, quantity: entry.quantity, subtotal: new Decimal(entry.denominationValue).times(entry.quantity).toFixed(6) })));
+        await applyDenominationBalanceDelta(tx, postingLine.currencyId, lineDenominations.map((entry) => ({ value: entry.denominationValue, quantity: entry.quantity })), direction === "IN" ? 1 : -1);
+      }
 
       const existingOpname = (await tx.select().from(stockOpnames).where(and(eq(stockOpnames.opnameDate, opnameDate), eq(stockOpnames.currencyId, postingLine.currencyId), eq(stockOpnames.reconciliationStatus, "OPEN"), eq(stockOpnames.isDemo, false), eq(stockOpnames.isHistorical, false))).limit(1))[0];
       if (existingOpname) {
@@ -1462,6 +1528,17 @@ export async function listCashBalances() {
   });
 }
 
+/** Current running stock per denomination (see cashDenominationBalances) — the system-expected physical count to compare against at closing, and what SELL bons are checked against at creation. Zero-quantity rows are kept out of the read to avoid clutter from fully-spent denominations. */
+export async function listCashDenominationBalances() {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    return db.select({ balance: cashDenominationBalances, currency: currencies }).from(cashDenominationBalances)
+      .innerJoin(currencies, eq(cashDenominationBalances.currencyId, currencies.id))
+      .where(gt(cashDenominationBalances.quantity, 0))
+      .orderBy(currencies.code, desc(cashDenominationBalances.denominationValue));
+  });
+}
+
 /** Records the declared morning float as an immutable, auditable adjustment before the daily count begins. */
 export async function recordOpeningCash(input: { currencyId: number; openingAmount: string; notes?: string; denominations?: DenominationEntryInput[] }, actor: { id: number; role: StaffRole }) {
   const declaredAmount = nonNegativeOrZeroDecimal(input.openingAmount, "Kas pembukaan");
@@ -1483,6 +1560,7 @@ export async function recordOpeningCash(input: { currencyId: number; openingAmou
     const [movement] = await tx.insert(cashBalanceMovements).values({ cashBalanceId: balance.id, direction: "ADJUSTMENT", amount: adjustment.toFixed(6), reason, category: "OPENING", createdByUserId: actor.id }).$returningId();
     if (denominationRows.length && movement) {
       await tx.insert(cashDenominationEntries).values(denominationRows.map((row) => ({ ...row, cashBalanceMovementId: movement.id })));
+      await resetDenominationBalances(tx, input.currencyId, denominationRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })));
     }
     await writeAudit({ actorUserId: actor.id, action: "OPENING_CASH_RECORDED", entityType: "cash_balance", entityId: String(balance.id), beforeState: { availableAmount: before.toFixed(6) }, afterState: { availableAmount: declaredAmount.toFixed(6), currency: currency.code }, reason: input.notes?.trim() || null, metadata: { movementReason: reason, adjustment: adjustment.toFixed(6), denominationCount: denominationRows.length } });
     return { balanceId: balance.id, currencyCode: currency.code, beforeAmount: before.toFixed(6), openingAmount: declaredAmount.toFixed(6) };
@@ -1516,6 +1594,7 @@ export async function recordCashAdjustment(
     const [movement] = await tx.insert(cashBalanceMovements).values({ cashBalanceId: balance.id, direction, amount: amount.toFixed(6), reason: `${input.category}: ${notes}`.slice(0, 255), category: input.category, createdByUserId: actor.id }).$returningId();
     if (denominationRows.length && movement) {
       await tx.insert(cashDenominationEntries).values(denominationRows.map((row) => ({ ...row, cashBalanceMovementId: movement.id })));
+      await applyDenominationBalanceDelta(tx, input.currencyId, denominationRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })), direction === "IN" ? 1 : -1);
     }
     await writeAudit({ actorUserId: actor.id, action: "CASH_ADJUSTMENT_RECORDED", entityType: "cash_balance", entityId: String(balance.id), beforeState: { availableAmount: before.toFixed(6) }, afterState: { availableAmount: after.toFixed(6), currency: currency.code }, reason: notes, metadata: { category: input.category, direction, amount: amount.toFixed(6), denominationCount: denominationRows.length } });
     return { balanceId: balance.id, currencyCode: currency.code, beforeAmount: before.toFixed(6), afterAmount: after.toFixed(6), direction, category: input.category };

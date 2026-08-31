@@ -106,7 +106,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 
 ### 5.4 Membuat Bon Transaksi — Staff
 
-1. Buka **Buat Transaksi** dan pilih arah transaksi beli/jual sesuai kejadian di loket.
+1. Buka **Buat Transaksi** dan pilih arah transaksi beli/jual sesuai kejadian di loket. Bon **jual** hanya bisa dibuat bila stok mata uang tsb cukup (dicek terhadap kas yang sudah tercatat sistem) — bila baru saja membeli mata uang yang sama hari ini, **selesaikan** bon pembeliannya dulu (langkah 10) sebelum membuat bon jualnya.
 2. Isi **No. Kwitansi/Bon** sesuai buku kwitansi fisik yang sedang dipakai — buku Jual dan Beli punya nomor urut terpisah, jadi No. 1 boleh muncul di kedua buku sekaligus. Nomor ini diketik manual oleh teller, bukan otomatis.
 3. Cari dan pilih nasabah.
 4. Tambahkan satu **baris mata uang**: ketik kode atau nama mata uang di kotak pencarian (mis. "GBP" atau "Rupiah") — semua mata uang di dunia bisa dicari, termasuk IDR, dan otomatis terdaftar begitu dipilih. Tidak dibatasi hanya mata uang yang sudah punya kurs otomatis.
@@ -115,7 +115,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 7. Bila transaksi dilakukan oleh **pihak kuasa/wakil** (termasuk pemilik manfaat/BO), pilih nasabah tersebut dari pencarian nasabah terdaftar — bukan mengetik nama/identitas bebas. Bila BO nasabah utama sudah terdaftar sebagai nasabah, sistem otomatis menyarankan nasabah tersebut untuk dikonfirmasi. Bila pihak kuasa/wakil belum terdaftar, daftarkan dulu sebagai nasabah (data KYC lengkap) sebelum melanjutkan bon.
 8. Periksa kembali total keseluruhan bon sebelum menyimpan.
 9. Bila sistem menandai transaksi untuk review, jangan mencari jalan pintas. Simpan sesuai workflow dan beri Supervisor informasi yang diperlukan.
-10. Cetak kwitansi hanya setelah informasi bon telah benar dan status transaksi mengizinkan — kwitansi cetak mengikuti format kertas resmi PT Ibukota Valasindo, termasuk teks aturan wajib di bagian bawah. Buka **Daftar Transaksi** untuk melihat riwayat per jenis (tab Semua/Jual/Beli), cetak ulang, mengirim ke alur persetujuan, atau **Ekspor CSV** detail bon per jenis transaksi.
+10. Buka **Daftar Transaksi** untuk melihat riwayat per jenis (tab Semua/Jual/Beli). Bon berstatus "Disetujui" **belum memotong/menambah kas dan stok pecahan** — tekan tombol **Selesaikan** agar benar-benar terposting. Cetak kwitansi (mengikuti format kertas resmi PT Ibukota Valasindo, termasuk teks aturan wajib di bagian bawah), cetak ulang, atau **Ekspor CSV** detail bon per jenis transaksi juga tersedia di halaman ini.
 11. Jangan memasukkan transaksi latihan di halaman ini. Gunakan **Simulasi Aman** untuk berlatih.
 
 ### 5.5 Review Transaksi Terflag — Admin/Supervisor
@@ -127,8 +127,8 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 
 ### 5.6 Kas, Persediaan, dan Stock Opname — Staff dan Supervisor
 
-1. Catat kas pembukaan terlebih dahulu. Cari mata uang lewat kotak pencarian (termasuk **IDR** untuk modal kerja Rupiah) — tidak lagi dibatasi ke mata uang yang sudah disinkronkan otomatis.
-2. Selama hari berjalan, gunakan bon transaksi yang selesai sebagai dasar mutasi; jangan melakukan pembukuan paralel tanpa rekonsiliasi.
+1. Catat kas pembukaan terlebih dahulu, **termasuk rincian pecahan** — ini stok fisik awal per pecahan yang jadi acuan sistem sepanjang hari. Cari mata uang lewat kotak pencarian (termasuk **IDR** untuk modal kerja Rupiah) — tidak lagi dibatasi ke mata uang yang sudah disinkronkan otomatis.
+2. Selama hari berjalan, kas dan stok pecahan bergerak otomatis setiap kali bon **diselesaikan** (bukan hanya dibuat/dikirim/disetujui) — lihat langkah "Selesaikan" di Daftar Transaksi (§5.4). Jangan melakukan pembukuan paralel tanpa rekonsiliasi. Bagian "Stok pecahan saat ini" di halaman ini menampilkan angka sistem berjalan; **cek fisik hanya perlu dilakukan sekali saat mau tutup**, bukan sepanjang hari.
 3. Menjelang tutup, masuk ke **Kas & Persediaan**, masukkan hitungan fisik per mata uang, lalu kirim stock opname.
 4. Telaah varians yang tampil. Varians memerlukan peninjauan Supervisor; Direksi harus memperoleh informasi pengawasan sesuai workflow.
 5. Jangan menyembunyikan selisih dengan mengubah angka fisik agar sama dengan sistem.

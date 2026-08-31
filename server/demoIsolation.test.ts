@@ -49,7 +49,7 @@ describe("isolasi struktural data demo", () => {
     // createTransaction's activeRatesByCurrency lookup filters eq(operationalRates.isDemo, false)
     // directly, so a demo rate simply never becomes a line's referenceRateSnapshot — see that query.
     getDbMock.mockResolvedValueOnce(databaseWithSelectResults([demoCustomer]));
-    await expect(operations.createTransaction({ customerId: 10, operation: "BUY", receiptNumber: "1", lines: [{ currencyId: 1, agreedRate: "15000", foreignAmount: "10" }], paymentMethod: "CASH", transactionAt: new Date() }, 9)).rejects.toThrow("Nasabah demo");
+    await expect(operations.createTransaction({ customerId: 10, operation: "BUY", receiptNumber: "1", lines: [{ currencyId: 1, denominations: [{ value: "100", quantity: 1, rate: "15000" }] }], paymentMethod: "CASH", transactionAt: new Date() }, 9)).rejects.toThrow("Nasabah demo");
   });
 
   it("menolak transaksi demo pada seluruh tindakan lifecycle live", async () => {

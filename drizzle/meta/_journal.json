@@ -155,6 +155,13 @@
       "when": 1788178383382,
       "tag": "0021_little_sage",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "5",
+      "when": 1788180961113,
+      "tag": "0022_lethal_spiral",
+      "breakpoints": true
     }
   ]
 }

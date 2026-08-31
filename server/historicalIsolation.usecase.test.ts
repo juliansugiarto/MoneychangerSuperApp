@@ -71,7 +71,7 @@ describe("use case isolasi buku besar historis", () => {
 
   it("menolak data historis pada pembuatan transaksi live dan seluruh mutasi transaksi atau kas live", async () => {
     getDbMock.mockResolvedValueOnce(databaseWithSelectResults([historicalCustomer]));
-    await expect(operations.createTransaction({ customerId: 10, operation: "BUY", receiptNumber: "1", lines: [{ currencyId: 1, agreedRate: "15000", foreignAmount: "10" }], paymentMethod: "CASH", transactionAt: new Date() }, 9)).rejects.toThrow("Nasabah demo atau historis");
+    await expect(operations.createTransaction({ customerId: 10, operation: "BUY", receiptNumber: "1", lines: [{ currencyId: 1, denominations: [{ value: "100", quantity: 1, rate: "15000" }] }], paymentMethod: "CASH", transactionAt: new Date() }, 9)).rejects.toThrow("Nasabah demo atau historis");
     // Operational rates are now optional reference-only data (teller types the price manually per
     // line), so a historical rate can no longer block bon creation the way it used to — createTransaction's
     // activeRatesByCurrency lookup filters eq(operationalRates.isHistorical, false) directly instead.

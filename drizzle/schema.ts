@@ -326,6 +326,17 @@ export const cashDenominationEntries = mysqlTable("cash_denomination_entries", {
   index("cash_denomination_entries_movement_idx").on(table.cashBalanceMovementId),
 ]);
 
+/** Running physical stock per denomination, mirroring how cashBalances.availableAmount tracks the running total per currency. Kept up to date by opening cash (resets to the declared count), adjustments, and completed transactions (delta) — so "how many USD 100 notes do we have right now" is a direct lookup, not a ledger sum. */
+export const cashDenominationBalances = mysqlTable("cash_denomination_balances", {
+  id: int("id").autoincrement().primaryKey(),
+  currencyId: int("currencyId").notNull(),
+  denominationValue: decimal("denominationValue", { precision: 24, scale: 6 }).notNull(),
+  quantity: int("quantity").default(0).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("cash_denomination_balances_currency_value_uq").on(table.currencyId, table.denominationValue),
+]);
+
 export const stockOpnames = mysqlTable("stock_opnames", {
   id: int("id").autoincrement().primaryKey(),
   opnameDate: date("opnameDate").notNull(),

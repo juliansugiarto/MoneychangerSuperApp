@@ -20,6 +20,7 @@ export default function TransactionList() {
 
   const submit = trpc.transactions.submit.useMutation({ onSuccess: () => { utils.transactions.list.invalidate(); toast.success("Transaksi dikirim ke alur persetujuan."); }, onError: (error) => toast.error(error.message) });
   const cancel = trpc.transactions.cancel.useMutation({ onSuccess: () => utils.transactions.list.invalidate(), onError: (error) => toast.error(error.message) });
+  const complete = trpc.transactions.complete.useMutation({ onSuccess: () => { utils.transactions.list.invalidate(); utils.cash.balances.invalidate(); utils.cash.denominationBalances.invalidate(); toast.success("Transaksi selesai — saldo dan stok pecahan sudah diperbarui."); }, onError: (error) => toast.error(error.message) });
 
   const listRows = useMemo(() => (transactions ?? []).filter((row) => listTab === "ALL" || row.transaction.operation === listTab), [transactions, listTab]);
 
@@ -69,7 +70,7 @@ export default function TransactionList() {
     </header>
 
     <Card className="border-[#dce6f0]">
-      <CardHeader><CardTitle className="text-[#18395f]">Riwayat dan status transaksi</CardTitle><CardDescription>Draft dengan underlying hanya dapat dikirim setelah file tersimpan. Gunakan tombol cetak untuk membuka kwitansi.</CardDescription></CardHeader>
+      <CardHeader><CardTitle className="text-[#18395f]">Riwayat dan status transaksi</CardTitle><CardDescription>Draft dengan underlying hanya dapat dikirim setelah file tersimpan. Status "Disetujui" belum mengubah saldo kas — tekan <strong>Selesaikan</strong> agar kas dan stok pecahan benar-benar terpotong/bertambah. Gunakan tombol cetak untuk membuka kwitansi.</CardDescription></CardHeader>
       <CardContent>
         <Tabs value={listTab} onValueChange={(value) => setListTab(value as typeof listTab)}>
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -95,6 +96,7 @@ export default function TransactionList() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => reprint(row)}><Printer className="size-3" /></Button>
                     {["DRAFT", "RETURNED"].includes(transaction.status) ? <Button size="sm" variant="outline" onClick={() => submit.mutate({ transactionId: transaction.id })}>Kirim</Button> : null}
+                    {transaction.status === "APPROVED" ? <Button size="sm" className="bg-[#183f70]" disabled={complete.isPending} onClick={() => complete.mutate({ transactionId: transaction.id })}>Selesaikan (posting kas &amp; stok)</Button> : null}
                     {!["COMPLETED", "CANCELLED"].includes(transaction.status) ? <Button size="sm" variant="ghost" onClick={() => { const reason = window.prompt("Alasan pembatalan:"); if (reason) cancel.mutate({ transactionId: transaction.id, reason }); }}>Batalkan</Button> : null}
                   </div>
                 </div>;
