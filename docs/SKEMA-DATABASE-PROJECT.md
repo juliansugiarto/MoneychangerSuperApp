@@ -12,7 +12,7 @@
 |---|---|---|
 | Identitas dan akses | `users` | Username, hash sandi, peran, status akun, versi sesi, dan kewajiban ganti sandi. |
 | Mata uang dan kurs | `currencies`, `rate_reference_snapshots`, `operational_rates`, `market_rate_observations`, `rate_volatility_alerts`, `rate_sync_configurations`, `rate_sync_runs` | Mata uang, referensi, kurs outlet berstatus, observasi pasar, alarm, dan riwayat sinkronisasi. |
-| Nasabah dan bon | `customers`, `exchange_transactions`, `operational_documents`, `transaction_review_actions` | KYC, snapshot bon, dokumen S3, serta keputusan review yang tidak ditimpa. |
+| Nasabah dan bon | `customers`, `exchange_transactions`, `exchange_transaction_denomination_entries`, `operational_documents`, `transaction_review_actions` | KYC, snapshot bon, rincian pecahan valuta per bon, dokumen S3, serta keputusan review yang tidak ditimpa. |
 | Kas dan outlet | `cash_balances`, `cash_balance_movements`, `stock_opnames`, `daily_operational_checklists` | Saldo per mata uang, mutasi, opname fisik, dan checklist harian. |
 | Konfigurasi dan layanan | `operational_settings`, `service_requests`, `public_announcements`, `consumer_complaints` | Ambang pengawasan, permintaan layanan, pengumuman, dan keluhan. |
 | Audit dan pengawasan | `audit_logs`, `director_acknowledgements` | Jejak perubahan serta tugas Direksi mengetahui. |
@@ -40,6 +40,8 @@ erDiagram
 |---|---|---|
 | Presisi uang | `decimal(24, 6)` untuk valuta/rate, `decimal(24, 2)` untuk Rupiah bon | Jangan mengonversi nilai uang menjadi `float`. |
 | Snapshot bon | Nilai kurs dan KYC disalin ke `exchange_transactions` | Riwayat bon tetap dapat dibaca bila profil/kurs berubah. |
+| Pihak kuasa/wakil | `exchange_transactions.representativeCustomerId` merujuk nasabah terdaftar; `representativeName`/`representativeIdentityNumber` adalah snapshot otomatis dari nasabah tsb | Kuasa/wakil (termasuk BO) wajib didaftarkan sebagai nasabah sebelum dipilih di bon; tidak ada lagi input nama/identitas bebas. |
+| Rincian pecahan | `exchange_transaction_denomination_entries` menyimpan nilai pecahan × jumlah lembar/keping per bon, wajib rekonsiliasi dengan nominal valuta bila diisi | Data pecahan tersedia untuk pelaporan stok fisik dan dicetak ulang di bon. |
 | Data latihan | Flag `isDemo` pada transaksi, nasabah, kurs, dan opname | Query produksi wajib mengecualikan data demo. |
 | Data historis | Flag `isHistorical` dan `historicalSourceKey` | Catatan impor tidak dapat dipakai sebagai transaksi hidup. |
 | Dokumen | Hanya metadata dan `storageKey` di `operational_documents` | Bytes dokumen berada di object storage, bukan kolom database. |

@@ -107,10 +107,12 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 
 1. Buka **Bon Transaksi** dan pilih arah transaksi beli/jual sesuai kejadian di loket.
 2. Pilih nasabah, mata uang, kurs yang berlaku, jumlah valuta, serta metode pembayaran sesuai bukti aktual.
-3. Periksa kembali nominal Rupiah, unit kutip, dan jumlah valuta sebelum menyimpan.
-4. Bila sistem menandai transaksi untuk review, jangan mencari jalan pintas. Simpan sesuai workflow dan beri Supervisor informasi yang diperlukan.
-5. Cetak atau simpan PDF bon hanya setelah informasi bon telah benar dan status transaksi mengizinkan.
-6. Jangan memasukkan transaksi latihan di halaman ini. Gunakan **Simulasi Aman** untuk berlatih.
+3. Setelah nominal valuta diisi, lengkapi **rincian pecahan** (nilai pecahan × jumlah lembar/keping) — data ini penting untuk rekonsiliasi kas dan pelaporan stok fisik. Sistem menampilkan total rincian agar mudah dicocokkan dengan nominal valuta.
+4. Bila transaksi dilakukan oleh **pihak kuasa/wakil** (termasuk pemilik manfaat/BO), pilih nasabah tersebut dari pencarian nasabah terdaftar — bukan mengetik nama/identitas bebas. Bila BO nasabah utama sudah terdaftar sebagai nasabah, sistem otomatis menyarankan nasabah tersebut untuk dikonfirmasi. Bila pihak kuasa/wakil belum terdaftar, daftarkan dulu sebagai nasabah (data KYC lengkap) sebelum melanjutkan bon.
+5. Periksa kembali nominal Rupiah, unit kutip, dan jumlah valuta sebelum menyimpan.
+6. Bila sistem menandai transaksi untuk review, jangan mencari jalan pintas. Simpan sesuai workflow dan beri Supervisor informasi yang diperlukan.
+7. Cetak atau simpan PDF bon hanya setelah informasi bon telah benar dan status transaksi mengizinkan. Gunakan tab **Semua / Bon jual / Bon beli** di daftar bon untuk memisahkan riwayat, dan tombol **Ekspor CSV** untuk mengunduh detail bon per jenis transaksi.
+8. Jangan memasukkan transaksi latihan di halaman ini. Gunakan **Simulasi Aman** untuk berlatih.
 
 ### 5.5 Review Transaksi Terflag — Admin/Supervisor
 

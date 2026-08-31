@@ -1,0 +1,41 @@
+name: Deploy to production
+
+# Runs deploy.sh on the production server over SSH whenever main is updated,
+# or on demand from the Actions tab. All credentials come from encrypted
+# GitHub Secrets (Settings > Secrets and variables > Actions) — nothing here
+# is a real value, and none of it is ever visible to Claude or anyone without
+# repo admin access.
+#
+# Required secrets (set these yourself in GitHub, not in this file):
+#   SSH_HOST           - production server hostname or IP
+#   SSH_USER           - dedicated deploy user (not root)
+#   SSH_PRIVATE_KEY    - private key matching a key in that user's authorized_keys
+#   SSH_PORT           - optional, defaults to 22
+#   DEPLOY_PATH        - absolute path to the repo checkout on the server
+#     e.g. /home/deploy/MoneychangerSuperApp
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            cd "${{ secrets.DEPLOY_PATH }}"
+            ./deploy.sh

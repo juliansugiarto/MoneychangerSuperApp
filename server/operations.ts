@@ -12,6 +12,7 @@ import {
   customers,
   dailyOperationalChecklists,
   directorAcknowledgements,
+  exchangeTransactionDenominationEntries,
   exchangeTransactions,
   financialStatementSnapshots,
   operationalRates,
@@ -564,6 +565,8 @@ export async function searchCustomers(query: string, limit = 20) {
       profileStatus: customers.profileStatus,
       riskLevel: customers.riskLevel,
       transactionPurpose: customers.transactionPurpose,
+      hasBeneficialOwner: customers.hasBeneficialOwner,
+      beneficialOwnerCustomerId: customers.beneficialOwnerCustomerId,
     }).from(customers).where(and(
       eq(customers.isDemo, false),
       eq(customers.isHistorical, false),
@@ -574,6 +577,29 @@ export async function searchCustomers(query: string, limit = 20) {
         like(customers.identityNumber, `%${term}%`),
       ),
     )).orderBy(customers.fullName).limit(Math.min(Math.max(limit, 1), 30));
+  });
+}
+
+/** Fetches a single active, live customer row — used to pre-fill/confirm the representative (kuasa/wakil) picker from a linked beneficial owner. */
+export async function getCustomerById(customerId: number) {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const row = (await db.select({
+      id: customers.id,
+      cifNumber: customers.cifNumber,
+      fullName: customers.fullName,
+      phoneNumber: customers.phoneNumber,
+      identityType: customers.identityType,
+      identityNumber: customers.identityNumber,
+      address: customers.address,
+      occupation: customers.occupation,
+      sourceOfFunds: customers.sourceOfFunds,
+      profileStatus: customers.profileStatus,
+      riskLevel: customers.riskLevel,
+      transactionPurpose: customers.transactionPurpose,
+    }).from(customers).where(and(eq(customers.id, customerId), eq(customers.isDemo, false), eq(customers.isHistorical, false))).limit(1))[0];
+    if (!row) throw new Error("Nasabah tidak ditemukan.");
+    return row;
   });
 }
 
@@ -967,11 +993,12 @@ export type CreateTransactionInput = {
   paymentReference?: string;
   transactionPurposeSnapshot?: string;
   customerActingAs?: "SELF" | "REPRESENTATIVE";
-  representativeName?: string;
-  representativeIdentityNumber?: string;
+  /** Registered customer id acting as representative/kuasa; the name and identity number are snapshotted server-side from that customer. */
+  representativeCustomerId?: number;
   underlyingRequired?: boolean;
   underlyingReference?: string;
   underlyingNotes?: string;
+  denominations?: DenominationEntryInput[];
   transactionAt: Date;
 };
 
@@ -986,6 +1013,13 @@ export async function listTransactions(requester: { id: number; role: StaffRole 
       ? await baseQuery.where(and(liveTransactionFilter, eq(exchangeTransactions.tellerUserId, requester.id))).orderBy(desc(exchangeTransactions.transactionAt))
       : await baseQuery.where(liveTransactionFilter).orderBy(desc(exchangeTransactions.transactionAt));
     return rows.filter(({ transaction, customer }) => !transaction.isDemo && !transaction.isHistorical && !customer.isDemo && !customer.isHistorical);
+  });
+}
+
+export async function listTransactionDenominations(transactionId: number) {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    return db.select().from(exchangeTransactionDenominationEntries).where(eq(exchangeTransactionDenominationEntries.transactionId, transactionId)).orderBy(desc(exchangeTransactionDenominationEntries.denominationValue));
   });
 }
 
@@ -1022,6 +1056,16 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   if (!rateRow || rateRow.rate.status !== "ACTIVE") throw new Error("Pilih kurs operasional aktif yang sah.");
   if (rateRow.rate.isDemo || rateRow.rate.isHistorical) throw new Error("Kurs demo atau historis tidak dapat digunakan pada transaksi operasional.");
 
+  let representative: typeof customer | undefined;
+  if (input.customerActingAs === "REPRESENTATIVE") {
+    if (!input.representativeCustomerId) throw new Error("Pilih nasabah terdaftar sebagai pihak kuasa/wakil.");
+    representative = (await db.select().from(customers).where(and(eq(customers.id, input.representativeCustomerId), eq(customers.isDemo, false), eq(customers.isHistorical, false))).limit(1))[0];
+    if (!representative) throw new Error("Nasabah pihak kuasa/wakil tidak ditemukan.");
+    if (representative.profileStatus === "INACTIVE") throw new Error("Nasabah pihak kuasa/wakil tidak aktif.");
+    if (representative.id === customer.id) throw new Error("Pihak kuasa/wakil harus nasabah yang berbeda dari nasabah transaksi.");
+  }
+  const denominationRows = reconcileDenominations(input.denominations ?? [], new Decimal(input.foreignAmount));
+
   const selectedRate = input.operation === "BUY" ? rateRow.rate.buyRate : rateRow.rate.sellRate;
   const { rateSnapshot: referenceRateSnapshot, quoteUnitSnapshot } = captureRateSnapshot(selectedRate, rateRow.rate.quoteUnit);
   // The reference rate is always captured above for audit. If the teller entered an agreed/negotiated price, that price — not the reference — is what actually applies to this deal.
@@ -1053,44 +1097,51 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   const { requiresReview, reviewReason } = assessReviewRequirement({ rupiahAmount, thresholdUsd: thresholds.reviewThresholdUsd, usdSellRate: usdRate?.sellRate, usdQuoteUnit: usdRate?.quoteUnit, cashDailyRupiahTotal, eddCashDailyThresholdIdr: thresholds.eddCashDailyThresholdIdr, isCashPayment: input.paymentMethod === "CASH", profileStatus: customer.profileStatus, riskLevel: customer.riskLevel });
   const number = transactionNumber();
 
-  await db.insert(exchangeTransactions).values({
-    transactionNumber: number,
-    transactionAt: input.transactionAt,
-    operation: input.operation,
-    customerId: input.customerId,
-    tellerUserId,
-    currencyId: rateRow.currency.id,
-    operationalRateId: rateRow.rate.id,
-    foreignAmount: new Decimal(input.foreignAmount).toFixed(6),
-    rateSnapshot,
-    quoteUnitSnapshot,
-    referenceRateSnapshot,
-    dealNotes: input.dealNotes?.trim() || null,
-    rupiahAmount,
-    paymentMethod: input.paymentMethod,
-    paymentReference: input.paymentReference?.trim() || null,
-    customerFullNameSnapshot: customer.fullName,
-    customerIdentityTypeSnapshot: customer.identityType,
-    customerIdentityNumberSnapshot: customer.identityNumber,
-    customerPhoneSnapshot: customer.phoneNumber,
-    customerAddressSnapshot: customer.address,
-    customerOccupationSnapshot: customer.occupation,
-    sourceOfFundsSnapshot: customer.sourceOfFunds,
-    transactionPurposeSnapshot: input.transactionPurposeSnapshot?.trim() || customer.transactionPurpose,
-    customerActingAs: input.customerActingAs ?? "SELF",
-    representativeName: input.customerActingAs === "REPRESENTATIVE" ? input.representativeName?.trim() || null : null,
-    representativeIdentityNumber: input.customerActingAs === "REPRESENTATIVE" ? input.representativeIdentityNumber?.trim() || null : null,
-    underlyingRequired: input.underlyingRequired ?? false,
-    underlyingReference: input.underlyingReference?.trim() || null,
-    underlyingNotes: input.underlyingNotes?.trim() || null,
-    status: "DRAFT",
-    requiresReview,
-    reviewStatus: requiresReview ? "NEEDS_REVIEW" : "NOT_REVIEWED",
-    reviewReason,
+  const created = await db.transaction(async (tx) => {
+    await tx.insert(exchangeTransactions).values({
+      transactionNumber: number,
+      transactionAt: input.transactionAt,
+      operation: input.operation,
+      customerId: input.customerId,
+      tellerUserId,
+      currencyId: rateRow.currency.id,
+      operationalRateId: rateRow.rate.id,
+      foreignAmount: new Decimal(input.foreignAmount).toFixed(6),
+      rateSnapshot,
+      quoteUnitSnapshot,
+      referenceRateSnapshot,
+      dealNotes: input.dealNotes?.trim() || null,
+      rupiahAmount,
+      paymentMethod: input.paymentMethod,
+      paymentReference: input.paymentReference?.trim() || null,
+      customerFullNameSnapshot: customer.fullName,
+      customerIdentityTypeSnapshot: customer.identityType,
+      customerIdentityNumberSnapshot: customer.identityNumber,
+      customerPhoneSnapshot: customer.phoneNumber,
+      customerAddressSnapshot: customer.address,
+      customerOccupationSnapshot: customer.occupation,
+      sourceOfFundsSnapshot: customer.sourceOfFunds,
+      transactionPurposeSnapshot: input.transactionPurposeSnapshot?.trim() || customer.transactionPurpose,
+      customerActingAs: input.customerActingAs ?? "SELF",
+      representativeCustomerId: representative?.id ?? null,
+      representativeName: representative?.fullName ?? null,
+      representativeIdentityNumber: representative?.identityNumber ?? null,
+      underlyingRequired: input.underlyingRequired ?? false,
+      underlyingReference: input.underlyingReference?.trim() || null,
+      underlyingNotes: input.underlyingNotes?.trim() || null,
+      status: "DRAFT",
+      requiresReview,
+      reviewStatus: requiresReview ? "NEEDS_REVIEW" : "NOT_REVIEWED",
+      reviewReason,
+    });
+    const row = (await tx.select().from(exchangeTransactions).where(eq(exchangeTransactions.transactionNumber, number)).limit(1))[0];
+    if (!row) throw new Error("Transaksi tidak dapat dibuat.");
+    if (denominationRows.length) {
+      await tx.insert(exchangeTransactionDenominationEntries).values(denominationRows.map((entry) => ({ transactionId: row.id, denominationValue: entry.denominationValue, quantity: entry.quantity, lineTotal: entry.subtotal })));
+    }
+    return row;
   });
-  const created = (await db.select().from(exchangeTransactions).where(eq(exchangeTransactions.transactionNumber, number)).limit(1))[0];
-  if (!created) throw new Error("Transaksi tidak dapat dibuat.");
-  await writeAudit({ actorUserId: tellerUserId, action: "TRANSACTION_DRAFT_CREATED", entityType: "exchange_transaction", entityId: String(created.id), afterState: { transactionNumber: number, operation: input.operation, foreignAmount: created.foreignAmount, rateSnapshot: created.rateSnapshot, quoteUnitSnapshot: created.quoteUnitSnapshot, rupiahAmount: created.rupiahAmount, requiresReview, reviewReason, underlyingRequired: created.underlyingRequired } });
+  await writeAudit({ actorUserId: tellerUserId, action: "TRANSACTION_DRAFT_CREATED", entityType: "exchange_transaction", entityId: String(created.id), afterState: { transactionNumber: number, operation: input.operation, foreignAmount: created.foreignAmount, rateSnapshot: created.rateSnapshot, quoteUnitSnapshot: created.quoteUnitSnapshot, rupiahAmount: created.rupiahAmount, requiresReview, reviewReason, underlyingRequired: created.underlyingRequired, denominationCount: denominationRows.length } });
   return created;
 }
 

@@ -18,6 +18,7 @@ import {
   createRegulatoryIncidentReport,
   createRegulatoryLkuDraft,
   createCustomer,
+  getCustomerById,
   getDailyOperationalChecklist,
   getNextCifNumber,
   createTransaction,
@@ -48,6 +49,7 @@ import {
   listRateVolatilityAlerts,
   listServiceRequests,
   listTransactions,
+  listTransactionDenominations,
   listStockOpnames,
   openStockOpname,
   recordOpeningCash,
@@ -259,6 +261,7 @@ export const appRouter = router({
   customers: router({
     list: staffProcedure.query(() => listCustomers()),
     nextCif: staffProcedure.query(() => getNextCifNumber()),
+    get: staffProcedure.input(z.object({ customerId: z.number().int().positive() })).query(({ input }) => getCustomerById(input.customerId)),
     search: staffProcedure.input(z.object({ query: z.string().trim().max(200), limit: z.number().int().min(1).max(30).default(12) })).query(({ input }) => searchCustomers(input.query, input.limit)),
     create: staffProcedure.input(customerInput).mutation(({ input, ctx }) => createCustomer(input, ctx.user.id)),
     import: controllerProcedure.input(z.object({ rows: z.array(customerInput).min(1).max(300) })).mutation(({ input, ctx }) => importCustomers(input.rows, ctx.user.id)),
@@ -278,6 +281,7 @@ export const appRouter = router({
 
   transactions: router({
     list: staffProcedure.query(({ ctx }) => listTransactions(ctx.user)),
+    denominations: staffProcedure.input(z.object({ transactionId: z.number().int().positive() })).query(({ input }) => listTransactionDenominations(input.transactionId)),
     create: staffProcedure.input(z.object({
       operation: z.enum(["BUY", "SELL"]),
       customerId: z.number().int().positive(),
@@ -290,15 +294,16 @@ export const appRouter = router({
       paymentReference: z.string().trim().max(160).optional(),
       transactionPurposeSnapshot: z.string().trim().min(3).max(1000).optional(),
       customerActingAs: z.enum(["SELF", "REPRESENTATIVE"]).default("SELF"),
-      representativeName: z.string().trim().min(3).max(200).optional(),
-      representativeIdentityNumber: z.string().trim().min(3).max(80).optional(),
+      /** Registered customer id acting as representative/kuasa; must be picked from search, never typed freely. */
+      representativeCustomerId: z.number().int().positive().optional(),
       underlyingRequired: z.boolean().default(false),
       underlyingReference: z.string().trim().max(160).optional(),
       underlyingNotes: z.string().trim().max(1000).optional(),
+      denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).max(50).optional(),
       transactionAt: z.coerce.date(),
     }).superRefine((value, ctx) => {
-      if (value.customerActingAs === "REPRESENTATIVE" && (!value.representativeName || !value.representativeIdentityNumber)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Nama dan nomor identitas wakil wajib diisi." });
+      if (value.customerActingAs === "REPRESENTATIVE" && !value.representativeCustomerId) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Pilih nasabah terdaftar sebagai pihak kuasa/wakil." });
       }
       if (value.underlyingRequired && !value.underlyingReference) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Referensi underlying wajib diisi." });

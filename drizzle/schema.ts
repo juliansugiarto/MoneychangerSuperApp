@@ -166,6 +166,9 @@ export const exchangeTransactions = mysqlTable("exchange_transactions", {
   sourceOfFundsSnapshot: text("sourceOfFundsSnapshot"),
   transactionPurposeSnapshot: text("transactionPurposeSnapshot"),
   customerActingAs: mysqlEnum("customerActingAs", ["SELF", "REPRESENTATIVE"]).default("SELF").notNull(),
+  /** Registered customer row acting as representative/kuasa; required when customerActingAs is REPRESENTATIVE. */
+  representativeCustomerId: int("representativeCustomerId"),
+  /** Immutable snapshot copied from the representative customer at deal time. */
   representativeName: varchar("representativeName", { length: 200 }),
   representativeIdentityNumber: varchar("representativeIdentityNumber", { length: 80 }),
   underlyingRequired: boolean("underlyingRequired").default(false).notNull(),
@@ -196,6 +199,21 @@ export const exchangeTransactions = mysqlTable("exchange_transactions", {
   index("exchange_transactions_live_date_idx").on(table.isDemo, table.isHistorical, table.transactionAt),
   index("exchange_transactions_status_idx").on(table.status, table.reviewStatus),
   index("exchange_transactions_customer_idx").on(table.customerId),
+  index("exchange_transactions_representative_idx").on(table.representativeCustomerId),
+]);
+
+/** Physical denomination breakdown captured at bon creation time, so BI stock/cash records always reflect the actual notes/coins handled per deal. */
+export const exchangeTransactionDenominationEntries = mysqlTable("exchange_transaction_denomination_entries", {
+  id: int("id").autoincrement().primaryKey(),
+  transactionId: int("transactionId").notNull(),
+  /** Face value of one note/coin in the transaction currency, e.g. 100.000000 for a USD 100 bill. */
+  denominationValue: decimal("denominationValue", { precision: 24, scale: 6 }).notNull(),
+  quantity: int("quantity").notNull(),
+  /** denominationValue * quantity, stored redundantly to make reconciliation queries cheap. */
+  lineTotal: decimal("lineTotal", { precision: 24, scale: 6 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("exchange_transaction_denomination_entries_transaction_idx").on(table.transactionId),
 ]);
 
 /**
