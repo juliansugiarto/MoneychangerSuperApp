@@ -55,7 +55,7 @@ fi
 
 log "Step 2/6: git pull origin main"
 git fetch origin main
-git status --porcelain | grep -q . && { echo "[deploy] Working tree has uncommitted changes. Aborting — commit, stash, or discard first." >&2; exit 1; }
+git status --porcelain --untracked-files=no | grep -q . && { echo "[deploy] Tracked files have uncommitted changes. Aborting — commit, stash, or discard first." >&2; exit 1; }
 git checkout main
 git pull --ff-only origin main
 
