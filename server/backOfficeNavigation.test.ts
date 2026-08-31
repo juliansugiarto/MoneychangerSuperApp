@@ -10,6 +10,7 @@ const pageByPath: Record<string, string> = {
   "/operasional/monitoring": "Monitoring",
   "/operasional/kesiapan": "OperationalReadiness",
   "/operasional/transaksi": "GuidedTransactions",
+  "/operasional/transaksi/daftar": "TransactionList",
   "/operasional/simulasi": "SafeSimulation",
   "/operasional/layanan": "ServiceDesk",
   "/operasional/nasabah": "Customers",

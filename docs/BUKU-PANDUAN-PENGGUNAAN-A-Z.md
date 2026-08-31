@@ -55,7 +55,8 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 |---|---|---|---|
 | Ringkasan | Hari Ini | Melihat transaksi, antrian, saldo tercatat, dan tindakan utama. | Staff |
 | Ringkasan | Monitoring | Pengawasan kondisi operasional dan tindak lanjut. | Controller |
-| Layanan & Transaksi | Bon Transaksi | Membuat dan menuntaskan transaksi beli/jual valuta. | Staff |
+| Layanan & Transaksi | Buat Transaksi | Membuat bon jual/beli valuta baru, boleh berisi lebih dari satu mata uang. | Staff |
+| Layanan & Transaksi | Daftar Transaksi | Melihat riwayat bon per jenis (Jual/Beli), cetak ulang, ekspor CSV, kirim/batalkan bon. | Staff |
 | Layanan & Transaksi | Simulasi Aman | Latihan bon, guncangan kurs, penutupan, dan arsip tanpa penulisan produksi. | Staff |
 | Layanan & Transaksi | Permintaan Layanan | Mencatat serta menindaklanjuti kebutuhan layanan. | Staff |
 | Layanan & Transaksi | Nasabah Baru | Menambahkan data nasabah baru sesuai dokumen, termasuk Beneficial Owner, status PEP, dan pencocokan DTTOT/PPSPM. | Staff |
@@ -105,14 +106,17 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 
 ### 5.4 Membuat Bon Transaksi — Staff
 
-1. Buka **Bon Transaksi** dan pilih arah transaksi beli/jual sesuai kejadian di loket.
-2. Pilih nasabah, mata uang, kurs yang berlaku, jumlah valuta, serta metode pembayaran sesuai bukti aktual.
-3. Setelah nominal valuta diisi, lengkapi **rincian pecahan** (nilai pecahan × jumlah lembar/keping) — data ini penting untuk rekonsiliasi kas dan pelaporan stok fisik. Sistem menampilkan total rincian agar mudah dicocokkan dengan nominal valuta.
-4. Bila transaksi dilakukan oleh **pihak kuasa/wakil** (termasuk pemilik manfaat/BO), pilih nasabah tersebut dari pencarian nasabah terdaftar — bukan mengetik nama/identitas bebas. Bila BO nasabah utama sudah terdaftar sebagai nasabah, sistem otomatis menyarankan nasabah tersebut untuk dikonfirmasi. Bila pihak kuasa/wakil belum terdaftar, daftarkan dulu sebagai nasabah (data KYC lengkap) sebelum melanjutkan bon.
-5. Periksa kembali nominal Rupiah, unit kutip, dan jumlah valuta sebelum menyimpan.
-6. Bila sistem menandai transaksi untuk review, jangan mencari jalan pintas. Simpan sesuai workflow dan beri Supervisor informasi yang diperlukan.
-7. Cetak atau simpan PDF bon hanya setelah informasi bon telah benar dan status transaksi mengizinkan. Gunakan tab **Semua / Bon jual / Bon beli** di daftar bon untuk memisahkan riwayat, dan tombol **Ekspor CSV** untuk mengunduh detail bon per jenis transaksi.
-8. Jangan memasukkan transaksi latihan di halaman ini. Gunakan **Simulasi Aman** untuk berlatih.
+1. Buka **Buat Transaksi** dan pilih arah transaksi beli/jual sesuai kejadian di loket.
+2. Isi **No. Kwitansi/Bon** sesuai buku kwitansi fisik yang sedang dipakai — buku Jual dan Beli punya nomor urut terpisah, jadi No. 1 boleh muncul di kedua buku sekaligus. Nomor ini diketik manual oleh teller, bukan otomatis.
+3. Cari dan pilih nasabah.
+4. Isi satu **baris mata uang** (mata uang, nominal valuta, harga). Semua mata uang aktif bisa dipilih — tidak dibatasi hanya yang sudah punya kurs otomatis. Harga diketik manual oleh teller sesuai kesepakatan dengan nasabah; kurs referensi (bila ada) hanya ditampilkan sebagai pembanding.
+5. Tambah baris lagi bila nasabah menukar lebih dari satu mata uang sekaligus, atau bila pecahan besar dan kecil dalam mata uang yang sama punya harga berbeda (mis. USD 100/50 vs USD 20/10) — buat baris terpisah untuk tiap harga.
+6. Setelah nominal valuta baris terisi, lengkapi **rincian pecahan** (nilai pecahan × jumlah lembar/keping) — data ini penting untuk rekonsiliasi kas dan pelaporan stok fisik, meski tidak dicetak di kwitansi. Sistem menampilkan total rincian agar mudah dicocokkan dengan nominal valuta baris tersebut.
+7. Bila transaksi dilakukan oleh **pihak kuasa/wakil** (termasuk pemilik manfaat/BO), pilih nasabah tersebut dari pencarian nasabah terdaftar — bukan mengetik nama/identitas bebas. Bila BO nasabah utama sudah terdaftar sebagai nasabah, sistem otomatis menyarankan nasabah tersebut untuk dikonfirmasi. Bila pihak kuasa/wakil belum terdaftar, daftarkan dulu sebagai nasabah (data KYC lengkap) sebelum melanjutkan bon.
+8. Periksa kembali total keseluruhan bon sebelum menyimpan.
+9. Bila sistem menandai transaksi untuk review, jangan mencari jalan pintas. Simpan sesuai workflow dan beri Supervisor informasi yang diperlukan.
+10. Cetak kwitansi hanya setelah informasi bon telah benar dan status transaksi mengizinkan — kwitansi cetak mengikuti format kertas resmi PT Ibukota Valasindo, termasuk teks aturan wajib di bagian bawah. Buka **Daftar Transaksi** untuk melihat riwayat per jenis (tab Semua/Jual/Beli), cetak ulang, mengirim ke alur persetujuan, atau **Ekspor CSV** detail bon per jenis transaksi.
+11. Jangan memasukkan transaksi latihan di halaman ini. Gunakan **Simulasi Aman** untuk berlatih.
 
 ### 5.5 Review Transaksi Terflag — Admin/Supervisor
 

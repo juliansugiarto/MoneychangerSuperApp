@@ -12,7 +12,7 @@
 |---|---|---|
 | Identitas dan akses | `users` | Username, hash sandi, peran, status akun, versi sesi, dan kewajiban ganti sandi. |
 | Mata uang dan kurs | `currencies`, `rate_reference_snapshots`, `operational_rates`, `market_rate_observations`, `rate_volatility_alerts`, `rate_sync_configurations`, `rate_sync_runs` | Mata uang, referensi, kurs outlet berstatus, observasi pasar, alarm, dan riwayat sinkronisasi. |
-| Nasabah dan bon | `customers`, `exchange_transactions`, `exchange_transaction_denomination_entries`, `operational_documents`, `transaction_review_actions` | KYC, snapshot bon, rincian pecahan valuta per bon, dokumen S3, serta keputusan review yang tidak ditimpa. |
+| Nasabah dan bon | `customers`, `exchange_transactions`, `exchange_transaction_lines`, `exchange_transaction_denomination_entries`, `operational_documents`, `transaction_review_actions` | KYC, header bon (bisa berisi banyak baris mata uang), rincian pecahan valuta per baris, dokumen S3, serta keputusan review yang tidak ditimpa. |
 | Kas dan outlet | `cash_balances`, `cash_balance_movements`, `stock_opnames`, `daily_operational_checklists` | Saldo per mata uang, mutasi, opname fisik, dan checklist harian. |
 | Konfigurasi dan layanan | `operational_settings`, `service_requests`, `public_announcements`, `consumer_complaints` | Ambang pengawasan, permintaan layanan, pengumuman, dan keluhan. |
 | Audit dan pengawasan | `audit_logs`, `director_acknowledgements` | Jejak perubahan serta tugas Direksi mengetahui. |
@@ -25,7 +25,8 @@ erDiagram
   USERS ||--o{ EXCHANGE_TRANSACTIONS : "mencatat atau meninjau"
   CUSTOMERS ||--o{ EXCHANGE_TRANSACTIONS : "menjadi nasabah"
   CURRENCIES ||--o{ OPERATIONAL_RATES : "memiliki kurs"
-  OPERATIONAL_RATES ||--o{ EXCHANGE_TRANSACTIONS : "dipakai bon"
+  EXCHANGE_TRANSACTIONS ||--o{ EXCHANGE_TRANSACTION_LINES : "berisi baris mata uang"
+  CURRENCIES ||--o{ EXCHANGE_TRANSACTION_LINES : "dipakai baris"
   CURRENCIES ||--|| CASH_BALANCES : "memiliki saldo"
   CASH_BALANCES ||--o{ CASH_BALANCE_MOVEMENTS : "memiliki mutasi"
   EXCHANGE_TRANSACTIONS ||--o{ TRANSACTION_REVIEW_ACTIONS : "memiliki keputusan"
@@ -40,8 +41,11 @@ erDiagram
 |---|---|---|
 | Presisi uang | `decimal(24, 6)` untuk valuta/rate, `decimal(24, 2)` untuk Rupiah bon | Jangan mengonversi nilai uang menjadi `float`. |
 | Snapshot bon | Nilai kurs dan KYC disalin ke `exchange_transactions` | Riwayat bon tetap dapat dibaca bila profil/kurs berubah. |
+| Bon multi-mata uang | `exchange_transaction_lines` — satu baris per mata uang/harga per bon (mirip tabel di kertas kwitansi fisik). `exchange_transactions.currencyId`/`foreignAmount`/`rateSnapshot`/`operationalRateId`/`quoteUnitSnapshot` nullable dan hanya terisi pada bon lama (sebelum fitur ini); `rupiahAmount` di header tetap terisi sebagai total seluruh baris. | Bon baru selalu dibaca lewat `exchange_transaction_lines`; kode yang membaca bon lama tetap jalan lewat kolom header lama (tidak dimigrasikan). |
+| Harga manual per baris | `exchange_transaction_lines.agreedRate` diketik manual oleh teller; `operationalRateId`/`referenceRateSnapshot` di baris hanya pembanding opsional, bukan sumber harga | Mata uang tanpa kurs otomatis (di luar 7 mata uang sinkronisasi BI) tetap bisa dipakai transaksi. |
+| Nomor kwitansi fisik | `exchange_transactions.receiptNumber` + unique index `(operation, receiptNumber)` | Bon Jual dan Bon Beli punya urutan nomor terpisah (No. 1 boleh ada di keduanya); `transactionNumber` sistem tetap ada terpisah untuk audit. |
 | Pihak kuasa/wakil | `exchange_transactions.representativeCustomerId` merujuk nasabah terdaftar; `representativeName`/`representativeIdentityNumber` adalah snapshot otomatis dari nasabah tsb | Kuasa/wakil (termasuk BO) wajib didaftarkan sebagai nasabah sebelum dipilih di bon; tidak ada lagi input nama/identitas bebas. |
-| Rincian pecahan | `exchange_transaction_denomination_entries` menyimpan nilai pecahan × jumlah lembar/keping per bon, wajib rekonsiliasi dengan nominal valuta bila diisi | Data pecahan tersedia untuk pelaporan stok fisik dan dicetak ulang di bon. |
+| Rincian pecahan | `exchange_transaction_denomination_entries` menyimpan nilai pecahan × jumlah lembar/keping per baris bon (`transactionLineId`), wajib rekonsiliasi dengan nominal valuta baris tsb bila diisi | Data pecahan tersedia untuk pelaporan stok fisik; tidak dicetak di kwitansi (kertas fisik hanya menampilkan ringkasan per baris). |
 | Data latihan | Flag `isDemo` pada transaksi, nasabah, kurs, dan opname | Query produksi wajib mengecualikan data demo. |
 | Data historis | Flag `isHistorical` dan `historicalSourceKey` | Catatan impor tidak dapat dipakai sebagai transaksi hidup. |
 | Dokumen | Hanya metadata dan `storageKey` di `operational_documents` | Bytes dokumen berada di object storage, bukan kolom database. |

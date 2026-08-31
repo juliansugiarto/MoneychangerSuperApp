@@ -136,23 +136,27 @@ export const customers = mysqlTable("customers", {
 
 export const exchangeTransactions = mysqlTable("exchange_transactions", {
   id: int("id").autoincrement().primaryKey(),
+  /** System-generated audit id (FX-YYYYMMDDHHMMSS-XXXXXX), always set, never edited by staff. */
   transactionNumber: varchar("transactionNumber", { length: 50 }).notNull(),
+  /** Physical receipt-book number, typed manually by the teller. Jual and Beli use separate books, so the same number can exist once per operation (see unique index below). Null on bons created before this field existed. */
+  receiptNumber: varchar("receiptNumber", { length: 80 }),
   transactionAt: datetime("transactionAt").notNull(),
   operation: mysqlEnum("operation", ["BUY", "SELL"]).notNull(),
   customerId: int("customerId").notNull(),
   tellerUserId: int("tellerUserId").notNull(),
-  currencyId: int("currencyId").notNull(),
-  operationalRateId: int("operationalRateId").notNull(),
-  foreignAmount: decimal("foreignAmount", { precision: 24, scale: 6 }).notNull(),
+  /** Single-currency legacy fields. Null on multi-line bons (see exchangeTransactionLines) created after this column set was loosened to nullable; still populated as-is on older single-currency bons. */
+  currencyId: int("currencyId"),
+  operationalRateId: int("operationalRateId"),
+  foreignAmount: decimal("foreignAmount", { precision: 24, scale: 6 }),
   /** Immutable numerical snapshot copied from the selected operational rate. This is the price actually applied to the deal — it may equal the reference rate below, or be a negotiated/rounded price the teller entered. */
-  rateSnapshot: decimal("rateSnapshot", { precision: 24, scale: 6 }).notNull(),
+  rateSnapshot: decimal("rateSnapshot", { precision: 24, scale: 6 }),
   /** Immutable quote unit copied with the rate snapshot, e.g. 100 for JPY. */
-  quoteUnitSnapshot: decimal("quoteUnitSnapshot", { precision: 18, scale: 6 }).notNull(),
+  quoteUnitSnapshot: decimal("quoteUnitSnapshot", { precision: 18, scale: 6 }),
   /** The official active operational rate at the moment of the deal, kept for audit even when the teller negotiated a different rateSnapshot. Never used to activate or approve rates — reference only. */
   referenceRateSnapshot: decimal("referenceRateSnapshot", { precision: 24, scale: 6 }),
   /** Optional note explaining why the applied rate differs from the reference rate (e.g. rounding, negotiation). */
   dealNotes: varchar("dealNotes", { length: 255 }),
-  /** Immutable full-precision result in Rupiah, retained as decimal rather than float. */
+  /** Immutable full-precision result in Rupiah, retained as decimal rather than float. On a multi-line bon this is the sum of every exchangeTransactionLines row, not a single conversion. */
   rupiahAmount: decimal("rupiahAmount", { precision: 24, scale: 2 }).notNull(),
   paymentMethod: mysqlEnum("paymentMethod", ["CASH", "BANK_TRANSFER", "OTHER"]).notNull(),
   paymentReference: varchar("paymentReference", { length: 160 }),
@@ -195,6 +199,8 @@ export const exchangeTransactions = mysqlTable("exchange_transactions", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [
   uniqueIndex("exchange_transactions_number_uq").on(table.transactionNumber),
+  /** Physical receipt books are separate per operation, so "receiptNumber 1" can exist once for BUY and once for SELL. MySQL allows unlimited NULLs through a unique index, so pre-migration bons with no receiptNumber never collide. */
+  uniqueIndex("exchange_transactions_receipt_number_uq").on(table.operation, table.receiptNumber),
   index("exchange_transactions_date_idx").on(table.transactionAt),
   index("exchange_transactions_live_date_idx").on(table.isDemo, table.isHistorical, table.transactionAt),
   index("exchange_transactions_status_idx").on(table.status, table.reviewStatus),
@@ -202,10 +208,33 @@ export const exchangeTransactions = mysqlTable("exchange_transactions", {
   index("exchange_transactions_representative_idx").on(table.representativeCustomerId),
 ]);
 
+/** One row per currency/price-tier on a bon — mirrors the printed kwitansi's table (NO. / MATA UANG / JUMLAH / KURS / TOTAL). The same currency can appear on more than one line when denominations within it were priced differently (e.g. large notes vs small notes). */
+export const exchangeTransactionLines = mysqlTable("exchange_transaction_lines", {
+  id: int("id").autoincrement().primaryKey(),
+  transactionId: int("transactionId").notNull(),
+  /** 1-based row order as printed on the kwitansi. */
+  lineNumber: int("lineNumber").notNull(),
+  currencyId: int("currencyId").notNull(),
+  /** Optional reference only — the active operational rate at the time, if the currency happened to have one. Never the source of the price. */
+  operationalRateId: int("operationalRateId"),
+  referenceRateSnapshot: decimal("referenceRateSnapshot", { precision: 24, scale: 6 }),
+  quoteUnit: decimal("quoteUnit", { precision: 18, scale: 6 }).default("1.000000").notNull(),
+  /** Price the teller typed in for this line/price-tier, independent of any operational rate. */
+  agreedRate: decimal("agreedRate", { precision: 24, scale: 6 }).notNull(),
+  foreignAmount: decimal("foreignAmount", { precision: 24, scale: 6 }).notNull(),
+  rupiahAmount: decimal("rupiahAmount", { precision: 24, scale: 2 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("exchange_transaction_lines_transaction_idx").on(table.transactionId),
+]);
+
 /** Physical denomination breakdown captured at bon creation time, so BI stock/cash records always reflect the actual notes/coins handled per deal. */
 export const exchangeTransactionDenominationEntries = mysqlTable("exchange_transaction_denomination_entries", {
   id: int("id").autoincrement().primaryKey(),
+  /** Set on every row. On a multi-line bon this is the parent bon (for convenience queries); the specific price-tier is transactionLineId below. */
   transactionId: int("transactionId").notNull(),
+  /** Which price-tier line this breakdown belongs to. Null on rows written before multi-line bons existed. */
+  transactionLineId: int("transactionLineId"),
   /** Face value of one note/coin in the transaction currency, e.g. 100.000000 for a USD 100 bill. */
   denominationValue: decimal("denominationValue", { precision: 24, scale: 6 }).notNull(),
   quantity: int("quantity").notNull(),
@@ -214,6 +243,7 @@ export const exchangeTransactionDenominationEntries = mysqlTable("exchange_trans
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [
   index("exchange_transaction_denomination_entries_transaction_idx").on(table.transactionId),
+  index("exchange_transaction_denomination_entries_line_idx").on(table.transactionLineId),
 ]);
 
 /**
@@ -263,6 +293,8 @@ export const cashBalanceMovements = mysqlTable("cash_balance_movements", {
   id: int("id").autoincrement().primaryKey(),
   cashBalanceId: int("cashBalanceId").notNull(),
   transactionId: int("transactionId"),
+  /** Set for movements posted from a multi-line bon (one movement per exchangeTransactionLines row); null for movements predating that model or not tied to a specific line. */
+  transactionLineId: int("transactionLineId"),
   direction: mysqlEnum("direction", ["IN", "OUT", "ADJUSTMENT"]).notNull(),
   amount: decimal("amount", { precision: 24, scale: 6 }).notNull(),
   reason: varchar("reason", { length: 255 }).notNull(),
@@ -271,7 +303,10 @@ export const cashBalanceMovements = mysqlTable("cash_balance_movements", {
   createdByUserId: int("createdByUserId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [
-  uniqueIndex("cash_balance_transaction_movement_uq").on(table.transactionId),
+  /** No longer unique: a multi-line bon posts one movement per exchangeTransactionLines row, so the same transactionId now legitimately appears more than once here. Uniqueness (double-posting guard) moved to transactionLineId below; this stays a plain index for lookups on legacy single-line bons. */
+  index("cash_balance_movements_transaction_idx").on(table.transactionId),
+  /** One movement per bon line — guards against double-posting the same line (MySQL allows unlimited NULLs through a unique index, so legacy movements with no line still coexist freely). */
+  uniqueIndex("cash_balance_transaction_line_movement_uq").on(table.transactionLineId),
   index("cash_balance_movements_balance_idx").on(table.cashBalanceId, table.createdAt),
 ]);
 

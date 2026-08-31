@@ -13,6 +13,7 @@ import {
   dailyOperationalChecklists,
   directorAcknowledgements,
   exchangeTransactionDenominationEntries,
+  exchangeTransactionLines,
   exchangeTransactions,
   financialStatementSnapshots,
   operationalRates,
@@ -981,13 +982,23 @@ function transactionNumber() {
   return `FX-${timestamp}-${nanoid(6).toUpperCase()}`;
 }
 
+/** One row of the printed kwitansi's table (NO. / MATA UANG / JUMLAH / KURS / TOTAL). The same currency can appear as more than one line when denominations within it were priced differently. */
+export type CreateTransactionLineInput = {
+  currencyId: number;
+  /** Price the teller typed in for this line, independent of any operational rate. */
+  agreedRate: string;
+  foreignAmount: string;
+  /** Defaults to 1 — only needed for currencies quoted per 100 units etc. */
+  quoteUnit?: string;
+  denominations?: DenominationEntryInput[];
+};
+
 export type CreateTransactionInput = {
   operation: "BUY" | "SELL";
   customerId: number;
-  operationalRateId: number;
-  foreignAmount: string;
-  /** Agreed price with the customer, if it differs from the active operational rate (rounding/negotiation). Never used to activate or approve rates. */
-  negotiatedRate?: string;
+  /** Physical receipt-book number, typed manually by the teller. Unique per operation (Jual and Beli books are numbered independently). */
+  receiptNumber: string;
+  lines: CreateTransactionLineInput[];
   dealNotes?: string;
   paymentMethod: "CASH" | "BANK_TRANSFER" | "OTHER";
   paymentReference?: string;
@@ -998,21 +1009,49 @@ export type CreateTransactionInput = {
   underlyingRequired?: boolean;
   underlyingReference?: string;
   underlyingNotes?: string;
-  denominations?: DenominationEntryInput[];
   transactionAt: Date;
 };
+
+/** Groups exchangeTransactionLines (joined to currency) by transactionId, for attaching to a batch of listed transactions in one extra query instead of N+1. Also returns single-currency legacy bons (pre-multi-line) as a synthesized one-line array, so callers never need two code paths. */
+async function linesByTransactionId(db: Awaited<ReturnType<typeof databaseOrThrow>>, rows: { transaction: typeof exchangeTransactions.$inferSelect }[]) {
+  const transactionIds = rows.map(({ transaction }) => transaction.id);
+  const lineRows = transactionIds.length
+    ? await db.select({ line: exchangeTransactionLines, currency: currencies }).from(exchangeTransactionLines)
+      .innerJoin(currencies, eq(exchangeTransactionLines.currencyId, currencies.id))
+      .where(inArray(exchangeTransactionLines.transactionId, transactionIds))
+      .orderBy(exchangeTransactionLines.transactionId, exchangeTransactionLines.lineNumber)
+    : [];
+  const grouped = new Map<number, { line: typeof exchangeTransactionLines.$inferSelect; currency: typeof currencies.$inferSelect }[]>();
+  for (const row of lineRows) {
+    const existing = grouped.get(row.line.transactionId) ?? [];
+    existing.push(row);
+    grouped.set(row.line.transactionId, existing);
+  }
+  const legacyCurrencyIds = Array.from(new Set(rows.filter(({ transaction }) => !grouped.has(transaction.id) && transaction.currencyId).map(({ transaction }) => transaction.currencyId as number)));
+  const legacyCurrencies = legacyCurrencyIds.length ? await db.select().from(currencies).where(inArray(currencies.id, legacyCurrencyIds)) : [];
+  const legacyCurrencyById = new Map(legacyCurrencies.map((currency) => [currency.id, currency]));
+  return (transaction: typeof exchangeTransactions.$inferSelect) => {
+    const lines = grouped.get(transaction.id);
+    if (lines) return lines;
+    // Bon created before multi-line bons existed: synthesize a single line from the legacy header columns so callers have one shape to render.
+    const legacyCurrency = transaction.currencyId ? legacyCurrencyById.get(transaction.currencyId) : undefined;
+    if (!legacyCurrency || !transaction.foreignAmount || !transaction.rateSnapshot) return [];
+    return [{ line: { id: -transaction.id, transactionId: transaction.id, lineNumber: 1, currencyId: transaction.currencyId!, operationalRateId: transaction.operationalRateId, referenceRateSnapshot: transaction.referenceRateSnapshot, quoteUnit: transaction.quoteUnitSnapshot ?? "1.000000", agreedRate: transaction.rateSnapshot, foreignAmount: transaction.foreignAmount, rupiahAmount: transaction.rupiahAmount, createdAt: transaction.createdAt }, currency: legacyCurrency }];
+  };
+}
 
 export async function listTransactions(requester: { id: number; role: StaffRole }) {
   return retryTransientDatabaseRead(async () => {
     const db = await databaseOrThrow();
-    const baseQuery = db.select({ transaction: exchangeTransactions, customer: customers, currency: currencies }).from(exchangeTransactions)
-      .innerJoin(customers, eq(exchangeTransactions.customerId, customers.id))
-      .innerJoin(currencies, eq(exchangeTransactions.currencyId, currencies.id));
+    const baseQuery = db.select({ transaction: exchangeTransactions, customer: customers }).from(exchangeTransactions)
+      .innerJoin(customers, eq(exchangeTransactions.customerId, customers.id));
     const liveTransactionFilter = and(eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false), eq(customers.isDemo, false), eq(customers.isHistorical, false));
     const rows = requester.role === "STAFF"
       ? await baseQuery.where(and(liveTransactionFilter, eq(exchangeTransactions.tellerUserId, requester.id))).orderBy(desc(exchangeTransactions.transactionAt))
       : await baseQuery.where(liveTransactionFilter).orderBy(desc(exchangeTransactions.transactionAt));
-    return rows.filter(({ transaction, customer }) => !transaction.isDemo && !transaction.isHistorical && !customer.isDemo && !customer.isHistorical);
+    const liveRows = rows.filter(({ transaction, customer }) => !transaction.isDemo && !transaction.isHistorical && !customer.isDemo && !customer.isHistorical);
+    const resolveLines = await linesByTransactionId(db, liveRows);
+    return liveRows.map((row) => ({ ...row, lines: resolveLines(row.transaction) }));
   });
 }
 
@@ -1050,11 +1089,12 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   if (!customer) throw new Error("Nasabah tidak ditemukan.");
   if (customer.isDemo || customer.isHistorical) throw new Error("Nasabah demo atau historis tidak dapat digunakan pada transaksi operasional.");
   if (customer.profileStatus === "INACTIVE") throw new Error("Nasabah tidak aktif dan tidak dapat digunakan pada transaksi.");
-  const rateRow = (await db.select({ rate: operationalRates, currency: currencies }).from(operationalRates)
-    .innerJoin(currencies, eq(operationalRates.currencyId, currencies.id))
-    .where(and(eq(operationalRates.id, input.operationalRateId), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false))).limit(1))[0];
-  if (!rateRow || rateRow.rate.status !== "ACTIVE") throw new Error("Pilih kurs operasional aktif yang sah.");
-  if (rateRow.rate.isDemo || rateRow.rate.isHistorical) throw new Error("Kurs demo atau historis tidak dapat digunakan pada transaksi operasional.");
+  if (!input.lines?.length) throw new Error("Bon harus punya minimal satu baris mata uang.");
+  if (input.lines.length > 30) throw new Error("Terlalu banyak baris pada satu bon.");
+  const receiptNumber = input.receiptNumber.trim();
+  if (!receiptNumber) throw new Error("Nomor kwitansi wajib diisi.");
+  const duplicateReceipt = (await db.select({ id: exchangeTransactions.id }).from(exchangeTransactions).where(and(eq(exchangeTransactions.operation, input.operation), eq(exchangeTransactions.receiptNumber, receiptNumber))).limit(1))[0];
+  if (duplicateReceipt) throw new Error(`Nomor kwitansi ${receiptNumber} sudah dipakai pada bon ${input.operation === "BUY" ? "beli" : "jual"} lain.`);
 
   let representative: typeof customer | undefined;
   if (input.customerActingAs === "REPRESENTATIVE") {
@@ -1064,18 +1104,31 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     if (representative.profileStatus === "INACTIVE") throw new Error("Nasabah pihak kuasa/wakil tidak aktif.");
     if (representative.id === customer.id) throw new Error("Pihak kuasa/wakil harus nasabah yang berbeda dari nasabah transaksi.");
   }
-  const denominationRows = reconcileDenominations(input.denominations ?? [], new Decimal(input.foreignAmount));
 
-  const selectedRate = input.operation === "BUY" ? rateRow.rate.buyRate : rateRow.rate.sellRate;
-  const { rateSnapshot: referenceRateSnapshot, quoteUnitSnapshot } = captureRateSnapshot(selectedRate, rateRow.rate.quoteUnit);
-  // The reference rate is always captured above for audit. If the teller entered an agreed/negotiated price, that price — not the reference — is what actually applies to this deal.
-  let rateSnapshot = referenceRateSnapshot;
-  if (input.negotiatedRate !== undefined && input.negotiatedRate.trim() !== "") {
-    const negotiated = nonNegativeOrZeroDecimal(input.negotiatedRate, "Harga sepakat");
-    if (negotiated.lte(0)) throw new Error("Harga sepakat harus lebih besar dari nol.");
-    rateSnapshot = negotiated.toFixed(6);
-  }
-  const rupiahAmount = calculateRupiahAmount(input.foreignAmount, rateSnapshot, quoteUnitSnapshot);
+  const lineCurrencyIds = Array.from(new Set(input.lines.map((line) => line.currencyId)));
+  const lineCurrencies = await db.select().from(currencies).where(inArray(currencies.id, lineCurrencyIds));
+  const currencyById = new Map(lineCurrencies.map((currency) => [currency.id, currency]));
+  const activeRatesByCurrency = new Map((await db.select({ rate: operationalRates }).from(operationalRates)
+    .where(and(inArray(operationalRates.currencyId, lineCurrencyIds), eq(operationalRates.status, "ACTIVE"), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false))))
+    .map(({ rate }) => [rate.currencyId, rate]));
+
+  type PreparedLine = { currencyId: number; operationalRateId: number | null; referenceRateSnapshot: string | null; quoteUnit: string; agreedRate: string; foreignAmount: string; rupiahAmount: string; denominationRows: ReturnType<typeof reconcileDenominations> };
+  const preparedLines: PreparedLine[] = input.lines.map((line, index) => {
+    const currency = currencyById.get(line.currencyId);
+    if (!currency || !currency.active) throw new Error(`Mata uang pada baris ${index + 1} tidak ditemukan atau tidak aktif.`);
+    const agreedRate = nonNegativeDecimal(line.agreedRate, `Harga baris ${index + 1}`);
+    if (agreedRate.lte(0)) throw new Error(`Harga pada baris ${index + 1} harus lebih besar dari nol.`);
+    const quoteUnit = nonNegativeDecimal(line.quoteUnit ?? "1", `Satuan kuotasi baris ${index + 1}`);
+    const foreignAmount = nonNegativeDecimal(line.foreignAmount, `Nominal valuta baris ${index + 1}`);
+    if (foreignAmount.lte(0)) throw new Error(`Nominal valuta pada baris ${index + 1} harus lebih besar dari nol.`);
+    const rupiahAmount = calculateRupiahAmount(foreignAmount.toFixed(6), agreedRate.toFixed(6), quoteUnit.toFixed(6));
+    const activeRate = activeRatesByCurrency.get(line.currencyId);
+    const referenceRateSnapshot = activeRate ? (input.operation === "BUY" ? activeRate.buyRate : activeRate.sellRate) : null;
+    const denominationRows = reconcileDenominations(line.denominations ?? [], foreignAmount);
+    return { currencyId: line.currencyId, operationalRateId: activeRate?.id ?? null, referenceRateSnapshot, quoteUnit: quoteUnit.toFixed(6), agreedRate: agreedRate.toFixed(6), foreignAmount: foreignAmount.toFixed(6), rupiahAmount, denominationRows };
+  });
+  const rupiahAmount = preparedLines.reduce((sum, line) => sum.plus(line.rupiahAmount), new Decimal(0)).toFixed(2);
+
   const usdRate = (await db.select({ rate: operationalRates }).from(operationalRates)
     .innerJoin(currencies, eq(operationalRates.currencyId, currencies.id))
     .where(and(eq(currencies.code, "USD"), eq(operationalRates.status, "ACTIVE"), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false))).orderBy(desc(operationalRates.effectiveAt)).limit(1))[0]?.rate;
@@ -1100,16 +1153,11 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   const created = await db.transaction(async (tx) => {
     await tx.insert(exchangeTransactions).values({
       transactionNumber: number,
+      receiptNumber,
       transactionAt: input.transactionAt,
       operation: input.operation,
       customerId: input.customerId,
       tellerUserId,
-      currencyId: rateRow.currency.id,
-      operationalRateId: rateRow.rate.id,
-      foreignAmount: new Decimal(input.foreignAmount).toFixed(6),
-      rateSnapshot,
-      quoteUnitSnapshot,
-      referenceRateSnapshot,
       dealNotes: input.dealNotes?.trim() || null,
       rupiahAmount,
       paymentMethod: input.paymentMethod,
@@ -1136,12 +1184,25 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     });
     const row = (await tx.select().from(exchangeTransactions).where(eq(exchangeTransactions.transactionNumber, number)).limit(1))[0];
     if (!row) throw new Error("Transaksi tidak dapat dibuat.");
-    if (denominationRows.length) {
-      await tx.insert(exchangeTransactionDenominationEntries).values(denominationRows.map((entry) => ({ transactionId: row.id, denominationValue: entry.denominationValue, quantity: entry.quantity, lineTotal: entry.subtotal })));
+    for (const [index, line] of Array.from(preparedLines.entries())) {
+      const [insertedLine] = await tx.insert(exchangeTransactionLines).values({
+        transactionId: row.id,
+        lineNumber: index + 1,
+        currencyId: line.currencyId,
+        operationalRateId: line.operationalRateId,
+        referenceRateSnapshot: line.referenceRateSnapshot,
+        quoteUnit: line.quoteUnit,
+        agreedRate: line.agreedRate,
+        foreignAmount: line.foreignAmount,
+        rupiahAmount: line.rupiahAmount,
+      }).$returningId();
+      if (line.denominationRows.length && insertedLine) {
+        await tx.insert(exchangeTransactionDenominationEntries).values(line.denominationRows.map((entry: { denominationValue: string; quantity: number; subtotal: string }) => ({ transactionId: row.id, transactionLineId: insertedLine.id, denominationValue: entry.denominationValue, quantity: entry.quantity, lineTotal: entry.subtotal })));
+      }
     }
     return row;
   });
-  await writeAudit({ actorUserId: tellerUserId, action: "TRANSACTION_DRAFT_CREATED", entityType: "exchange_transaction", entityId: String(created.id), afterState: { transactionNumber: number, operation: input.operation, foreignAmount: created.foreignAmount, rateSnapshot: created.rateSnapshot, quoteUnitSnapshot: created.quoteUnitSnapshot, rupiahAmount: created.rupiahAmount, requiresReview, reviewReason, underlyingRequired: created.underlyingRequired, denominationCount: denominationRows.length } });
+  await writeAudit({ actorUserId: tellerUserId, action: "TRANSACTION_DRAFT_CREATED", entityType: "exchange_transaction", entityId: String(created.id), afterState: { transactionNumber: number, receiptNumber, operation: input.operation, lineCount: preparedLines.length, rupiahAmount, requiresReview, reviewReason, underlyingRequired: created.underlyingRequired } });
   return created;
 }
 
@@ -1293,30 +1354,42 @@ export async function completeTransaction(transactionId: number, actor: { id: nu
     if (actor.role === "STAFF" && transaction.tellerUserId !== actor.id) throw new Error("Staff hanya dapat menyelesaikan transaksi miliknya sendiri.");
     if (transaction.status !== "APPROVED") throw new Error("Hanya transaksi APPROVED yang dapat diselesaikan.");
 
-    await tx.insert(cashBalances).values({ currencyId: transaction.currencyId, availableAmount: "0.000000" }).onDuplicateKeyUpdate({ set: { currencyId: sql`${cashBalances.currencyId}` } });
-    await tx.execute(sql`SELECT ${cashBalances.id} FROM ${cashBalances} WHERE ${cashBalances.currencyId} = ${transaction.currencyId} FOR UPDATE`);
-    const balance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, transaction.currencyId)).limit(1))[0];
-    if (!balance) throw new Error("Saldo kas tidak dapat dikunci.");
-    const movementAmount = new Decimal(String(transaction.foreignAmount));
-    const beforeBalance = new Decimal(String(balance.availableAmount));
-    const direction = transaction.operation === "BUY" ? "IN" as const : "OUT" as const;
-    const afterBalance = new Decimal(calculateCashBalanceAfter(transaction.operation, beforeBalance.toFixed(6), movementAmount.toFixed(6)));
-    const completedAt = new Date();
-    await tx.update(cashBalances).set({ availableAmount: afterBalance.toFixed(6) }).where(eq(cashBalances.id, balance.id));
-    await tx.insert(cashBalanceMovements).values({ cashBalanceId: balance.id, transactionId: transaction.id, direction, amount: movementAmount.toFixed(6), reason: `TRANSACTION_${transaction.operation}_${transaction.transactionNumber}`, createdByUserId: actor.id });
-    await tx.update(exchangeTransactions).set({ status: "COMPLETED" }).where(eq(exchangeTransactions.id, transactionId));
+    const lines = await tx.select().from(exchangeTransactionLines).where(eq(exchangeTransactionLines.transactionId, transactionId)).orderBy(exchangeTransactionLines.lineNumber);
+    // Bons created before multi-line bons existed have no rows here; post cash from the legacy header columns instead.
+    const postingLines = lines.length
+      ? lines.map((line) => ({ currencyId: line.currencyId, foreignAmount: line.foreignAmount, transactionLineId: line.id as number | null }))
+      : (transaction.currencyId && transaction.foreignAmount ? [{ currencyId: transaction.currencyId, foreignAmount: transaction.foreignAmount, transactionLineId: null }] : []);
+    if (!postingLines.length) throw new Error("Bon tidak memiliki baris mata uang untuk diposting ke kas.");
 
+    const direction = transaction.operation === "BUY" ? "IN" as const : "OUT" as const;
     const opnameDate = jakartaBusinessDate();
-    const existingOpname = (await tx.select().from(stockOpnames).where(and(eq(stockOpnames.opnameDate, opnameDate), eq(stockOpnames.currencyId, transaction.currencyId), eq(stockOpnames.reconciliationStatus, "OPEN"), eq(stockOpnames.isDemo, false), eq(stockOpnames.isHistorical, false))).limit(1))[0];
-    if (existingOpname) {
-      await tx.update(stockOpnames).set({
-        purchases: transaction.operation === "BUY" ? sql`${stockOpnames.purchases} + ${movementAmount.toFixed(6)}` : existingOpname.purchases,
-        sales: transaction.operation === "SELL" ? sql`${stockOpnames.sales} + ${movementAmount.toFixed(6)}` : existingOpname.sales,
-        closingSystemBalance: afterBalance.toFixed(6),
-      }).where(eq(stockOpnames.id, existingOpname.id));
+    const cashResults: { currencyId: number; before: string; after: string }[] = [];
+    for (const [index, postingLine] of Array.from(postingLines.entries())) {
+      await tx.insert(cashBalances).values({ currencyId: postingLine.currencyId, availableAmount: "0.000000" }).onDuplicateKeyUpdate({ set: { currencyId: sql`${cashBalances.currencyId}` } });
+      await tx.execute(sql`SELECT ${cashBalances.id} FROM ${cashBalances} WHERE ${cashBalances.currencyId} = ${postingLine.currencyId} FOR UPDATE`);
+      const balance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, postingLine.currencyId)).limit(1))[0];
+      if (!balance) throw new Error("Saldo kas tidak dapat dikunci.");
+      const movementAmount = new Decimal(String(postingLine.foreignAmount));
+      const beforeBalance = new Decimal(String(balance.availableAmount));
+      const afterBalance = new Decimal(calculateCashBalanceAfter(transaction.operation, beforeBalance.toFixed(6), movementAmount.toFixed(6)));
+      await tx.update(cashBalances).set({ availableAmount: afterBalance.toFixed(6) }).where(eq(cashBalances.id, balance.id));
+      const reason = postingLines.length > 1 ? `TRANSACTION_${transaction.operation}_${transaction.transactionNumber}_L${index + 1}` : `TRANSACTION_${transaction.operation}_${transaction.transactionNumber}`;
+      await tx.insert(cashBalanceMovements).values({ cashBalanceId: balance.id, transactionId: transaction.id, transactionLineId: postingLine.transactionLineId, direction, amount: movementAmount.toFixed(6), reason, createdByUserId: actor.id });
+
+      const existingOpname = (await tx.select().from(stockOpnames).where(and(eq(stockOpnames.opnameDate, opnameDate), eq(stockOpnames.currencyId, postingLine.currencyId), eq(stockOpnames.reconciliationStatus, "OPEN"), eq(stockOpnames.isDemo, false), eq(stockOpnames.isHistorical, false))).limit(1))[0];
+      if (existingOpname) {
+        await tx.update(stockOpnames).set({
+          purchases: transaction.operation === "BUY" ? sql`${stockOpnames.purchases} + ${movementAmount.toFixed(6)}` : existingOpname.purchases,
+          sales: transaction.operation === "SELL" ? sql`${stockOpnames.sales} + ${movementAmount.toFixed(6)}` : existingOpname.sales,
+          closingSystemBalance: afterBalance.toFixed(6),
+        }).where(eq(stockOpnames.id, existingOpname.id));
+      }
+      cashResults.push({ currencyId: postingLine.currencyId, before: beforeBalance.toFixed(6), after: afterBalance.toFixed(6) });
     }
-    await tx.insert(auditLogs).values({ actorUserId: actor.id, action: "TRANSACTION_COMPLETED_AND_CASH_POSTED", entityType: "exchange_transaction", entityId: String(transaction.id), beforeState: { status: transaction.status, cashBalance: beforeBalance.toFixed(6) }, afterState: { status: "COMPLETED", cashBalance: afterBalance.toFixed(6), direction }, metadata: { cashBalanceId: balance.id, transactionNumber: transaction.transactionNumber } });
-    return { ...transaction, status: "COMPLETED" as const, cashBefore: beforeBalance.toFixed(6), cashAfter: afterBalance.toFixed(6) };
+
+    await tx.update(exchangeTransactions).set({ status: "COMPLETED" }).where(eq(exchangeTransactions.id, transactionId));
+    await tx.insert(auditLogs).values({ actorUserId: actor.id, action: "TRANSACTION_COMPLETED_AND_CASH_POSTED", entityType: "exchange_transaction", entityId: String(transaction.id), beforeState: { status: transaction.status }, afterState: { status: "COMPLETED", cashResults }, metadata: { transactionNumber: transaction.transactionNumber, lineCount: postingLines.length } });
+    return { ...transaction, status: "COMPLETED" as const, cashResults };
   });
   return result;
 }
@@ -1460,7 +1533,7 @@ export async function getOperationalDashboard() {
       const db = await databaseOrThrow();
     const end = nextBusinessDate(start);
     const [todayTransactions, cashBalancesResult, pendingReview, variances] = await Promise.all([
-      db.select({ transaction: exchangeTransactions, customer: customers, currency: currencies }).from(exchangeTransactions).innerJoin(customers, eq(exchangeTransactions.customerId, customers.id)).innerJoin(currencies, eq(exchangeTransactions.currencyId, currencies.id)).where(and(gte(exchangeTransactions.transactionAt, start), lt(exchangeTransactions.transactionAt, end), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false), eq(customers.isDemo, false), eq(customers.isHistorical, false))).orderBy(desc(exchangeTransactions.transactionAt)),
+      db.select({ transaction: exchangeTransactions, customer: customers }).from(exchangeTransactions).innerJoin(customers, eq(exchangeTransactions.customerId, customers.id)).where(and(gte(exchangeTransactions.transactionAt, start), lt(exchangeTransactions.transactionAt, end), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false), eq(customers.isDemo, false), eq(customers.isHistorical, false))).orderBy(desc(exchangeTransactions.transactionAt)),
       listCashBalances(),
       db.select().from(exchangeTransactions).where(and(eq(exchangeTransactions.status, "PENDING_REVIEW"), eq(exchangeTransactions.requiresReview, true), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false))).orderBy(desc(exchangeTransactions.transactionAt)),
       db.select({ opname: stockOpnames, currency: currencies }).from(stockOpnames).innerJoin(currencies, eq(stockOpnames.currencyId, currencies.id)).where(and(eq(stockOpnames.reconciliationStatus, "VARIANCE"), eq(stockOpnames.isDemo, false), eq(stockOpnames.isHistorical, false))).orderBy(desc(stockOpnames.opnameDate)),
@@ -1478,8 +1551,22 @@ export async function getOperationalDashboard() {
 export async function getTransactionReport(input: { from: Date; to: Date }) {
   return retryTransientDatabaseRead(async () => {
     const db = await databaseOrThrow();
-    const rows = await db.select({ transaction: exchangeTransactions, customer: customers, currency: currencies }).from(exchangeTransactions).innerJoin(customers, eq(exchangeTransactions.customerId, customers.id)).innerJoin(currencies, eq(exchangeTransactions.currencyId, currencies.id)).where(and(gte(exchangeTransactions.transactionAt, input.from), lt(exchangeTransactions.transactionAt, input.to), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false), eq(customers.isDemo, false), eq(customers.isHistorical, false))).orderBy(desc(exchangeTransactions.transactionAt));
-    return rows.filter(({ transaction, customer }) => !transaction.isDemo && !transaction.isHistorical && !customer.isDemo && !customer.isHistorical);
+    const periodFilter = and(gte(exchangeTransactions.transactionAt, input.from), lt(exchangeTransactions.transactionAt, input.to), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false), eq(customers.isDemo, false), eq(customers.isHistorical, false));
+    // Legacy single-currency bons: unchanged query/shape. A multi-line bon has currencyId null on its
+    // header, so it never matches this inner join — it's picked up separately below instead of duplicated here.
+    const legacyRows = await db.select({ transaction: exchangeTransactions, customer: customers, currency: currencies }).from(exchangeTransactions).innerJoin(customers, eq(exchangeTransactions.customerId, customers.id)).innerJoin(currencies, eq(exchangeTransactions.currencyId, currencies.id)).where(periodFilter);
+    // Multi-line bons: one report row per exchangeTransactionLines row, with that line's own currency/amount/rate.
+    const lineRows = await db.select({ transaction: exchangeTransactions, customer: customers, currency: currencies, line: exchangeTransactionLines }).from(exchangeTransactionLines)
+      .innerJoin(exchangeTransactions, eq(exchangeTransactionLines.transactionId, exchangeTransactions.id))
+      .innerJoin(customers, eq(exchangeTransactions.customerId, customers.id))
+      .innerJoin(currencies, eq(exchangeTransactionLines.currencyId, currencies.id))
+      .where(periodFilter);
+    const rows = [
+      ...legacyRows,
+      ...lineRows.map(({ transaction, customer, currency, line }) => ({ transaction: { ...transaction, foreignAmount: line.foreignAmount, rateSnapshot: line.agreedRate, rupiahAmount: line.rupiahAmount }, customer, currency })),
+    ];
+    return rows.filter(({ transaction, customer }) => !transaction.isDemo && !transaction.isHistorical && !customer.isDemo && !customer.isHistorical)
+      .sort((a, b) => new Date(b.transaction.transactionAt).getTime() - new Date(a.transaction.transactionAt).getTime());
   });
 }
 
@@ -1539,9 +1626,21 @@ async function activeRegulatoryPackageLock(input: { reportType: "LKU" | "FINANCI
 async function createLkuSnapshot(input: { from: Date; to: Date }) {
   if (input.to <= input.from) throw new Error("Akhir periode harus setelah awal periode.");
   const db = await databaseOrThrow();
-  const sourceRows = await db.select({ transaction: exchangeTransactions, currency: currencies }).from(exchangeTransactions)
+  const periodFilter = and(gte(exchangeTransactions.transactionAt, input.from), lt(exchangeTransactions.transactionAt, input.to), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false), eq(exchangeTransactions.status, "COMPLETED"));
+  // Multi-line bons: one LKU row per exchangeTransactionLines row (its own currency/amount), not per bon.
+  const lineRows = await db.select({ transaction: exchangeTransactions, currency: currencies, line: exchangeTransactionLines }).from(exchangeTransactionLines)
+    .innerJoin(exchangeTransactions, eq(exchangeTransactionLines.transactionId, exchangeTransactions.id))
+    .innerJoin(currencies, eq(exchangeTransactionLines.currencyId, currencies.id))
+    .where(periodFilter);
+  const transactionIdsWithLines = new Set(lineRows.map(({ transaction }) => transaction.id));
+  // Bons predating multi-line bons never got a exchangeTransactionLines row; fall back to their single legacy currencyId/foreignAmount.
+  const legacyRows = await db.select({ transaction: exchangeTransactions, currency: currencies }).from(exchangeTransactions)
     .innerJoin(currencies, eq(exchangeTransactions.currencyId, currencies.id))
-    .where(and(gte(exchangeTransactions.transactionAt, input.from), lt(exchangeTransactions.transactionAt, input.to), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false), eq(exchangeTransactions.status, "COMPLETED")));
+    .where(periodFilter);
+  const sourceRows: LkuSourceRow[] = [
+    ...lineRows.map(({ transaction, currency, line }) => ({ transaction: { operation: transaction.operation, foreignAmount: line.foreignAmount, rupiahAmount: line.rupiahAmount, status: transaction.status, isDemo: transaction.isDemo, isHistorical: transaction.isHistorical }, currency: { code: currency.code } })),
+    ...legacyRows.filter(({ transaction }) => !transactionIdsWithLines.has(transaction.id)).map(({ transaction, currency }) => ({ transaction: { operation: transaction.operation, foreignAmount: transaction.foreignAmount ?? "0.000000", rupiahAmount: transaction.rupiahAmount, status: transaction.status, isDemo: transaction.isDemo, isHistorical: transaction.isHistorical }, currency: { code: currency.code } })),
+  ];
   const rows = buildLkuSnapshotRows(sourceRows);
   const totals = rows.reduce((accumulator, row) => ({ buyIdr: new Decimal(accumulator.buyIdr).plus(row.buyIdr).toFixed(2), sellIdr: new Decimal(accumulator.sellIdr).plus(row.sellIdr).toFixed(2), transactionCount: accumulator.transactionCount + row.transactionCount }), { buyIdr: "0.00", sellIdr: "0.00", transactionCount: 0 });
   const snapshot = { reportType: "LKU", periodStart: input.from.toISOString(), periodEndExclusive: input.to.toISOString(), scope: "LIVE_COMPLETED_ONLY", rows, totals, excluded: ["DRAFT", "PENDING_REVIEW", "APPROVED", "RETURNED", "CANCELLED", "SIMULATION", "HISTORICAL"], generatedAt: new Date().toISOString() };

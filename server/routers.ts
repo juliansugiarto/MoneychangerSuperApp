@@ -285,10 +285,16 @@ export const appRouter = router({
     create: staffProcedure.input(z.object({
       operation: z.enum(["BUY", "SELL"]),
       customerId: z.number().int().positive(),
-      operationalRateId: z.number().int().positive(),
-      foreignAmount: decimalString,
-      /** Optional agreed price with the customer (rounded/negotiated). When omitted, the active operational rate is used as-is, unchanged from prior behavior. */
-      negotiatedRate: decimalString.optional(),
+      /** Physical receipt-book number, typed manually by the teller. Jual and Beli books are numbered independently. */
+      receiptNumber: z.string().trim().min(1).max(80),
+      lines: z.array(z.object({
+        currencyId: z.number().int().positive(),
+        /** Price the teller typed in for this line, independent of any operational rate. */
+        agreedRate: decimalString,
+        foreignAmount: decimalString,
+        quoteUnit: decimalString.optional(),
+        denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).max(50).optional(),
+      })).min(1).max(30),
       dealNotes: z.string().trim().max(255).optional(),
       paymentMethod: z.enum(["CASH", "BANK_TRANSFER", "OTHER"]),
       paymentReference: z.string().trim().max(160).optional(),
@@ -299,7 +305,6 @@ export const appRouter = router({
       underlyingRequired: z.boolean().default(false),
       underlyingReference: z.string().trim().max(160).optional(),
       underlyingNotes: z.string().trim().max(1000).optional(),
-      denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).max(50).optional(),
       transactionAt: z.coerce.date(),
     }).superRefine((value, ctx) => {
       if (value.customerActingAs === "REPRESENTATIVE" && !value.representativeCustomerId) {

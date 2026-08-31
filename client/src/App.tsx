@@ -11,6 +11,7 @@ import Customers from "./pages/Customers";
 import CustomerList from "./pages/CustomerList";
 import Rates from "./pages/Rates";
 import GuidedTransactions from "./pages/GuidedTransactions";
+import TransactionList from "./pages/TransactionList";
 import StockOpname from "./pages/StockOpname";
 import Reports from "./pages/Reports";
 import AuditLog from "./pages/AuditLog";
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/operasional/checklist"><OperationsRoute page={<DailyChecklist />} /></Route>
       <Route path="/operasional/monitoring"><OperationsRoute minimumRole="CONTROLLER" page={<Monitoring />} /></Route>
       <Route path="/operasional/transaksi"><OperationsRoute page={<GuidedTransactions />} /></Route>
+      <Route path="/operasional/transaksi/daftar"><OperationsRoute page={<TransactionList />} /></Route>
       <Route path="/operasional/simulasi"><OperationsRoute page={<SafeSimulation />} /></Route>
       <Route path="/operasional/kesiapan"><OperationsRoute minimumRole="CONTROLLER" page={<OperationalReadiness />} /></Route>
       <Route path="/operasional/kurs"><OperationsRoute minimumRole="ADMIN" page={<Rates />} /></Route>

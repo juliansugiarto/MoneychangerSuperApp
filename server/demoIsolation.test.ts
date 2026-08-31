@@ -36,11 +36,6 @@ function databaseWithSelectResults(...results: unknown[][]) {
 
 const liveCustomer = { id: 10, isDemo: false, profileStatus: "ACTIVE", riskLevel: "LOW" };
 const demoCustomer = { ...liveCustomer, isDemo: true };
-const liveRateRow = {
-  rate: { id: 20, isDemo: false, status: "ACTIVE", buyRate: "15000", sellRate: "15100", quoteUnit: "1" },
-  currency: { id: 1, code: "USD" },
-};
-const demoRateRow = { ...liveRateRow, rate: { ...liveRateRow.rate, isDemo: true } };
 const demoTransaction = { id: 30, isDemo: true, status: "DRAFT", tellerUserId: 9, requiresReview: false };
 
 describe("isolasi struktural data demo", () => {
@@ -48,12 +43,13 @@ describe("isolasi struktural data demo", () => {
     getDbMock.mockReset();
   });
 
-  it("menolak customer demo dan kurs demo pada pembuatan transaksi live", async () => {
+  it("menolak customer demo pada pembuatan transaksi live", async () => {
+    // Operational rates are now optional reference-only data (teller types the price manually per
+    // line), so a demo rate can no longer block bon creation the way a demo customer still does.
+    // createTransaction's activeRatesByCurrency lookup filters eq(operationalRates.isDemo, false)
+    // directly, so a demo rate simply never becomes a line's referenceRateSnapshot — see that query.
     getDbMock.mockResolvedValueOnce(databaseWithSelectResults([demoCustomer]));
-    await expect(operations.createTransaction({ customerId: 10, operationalRateId: 20, operation: "BUY", foreignAmount: "10", paymentMethod: "CASH" }, 9)).rejects.toThrow("Nasabah demo");
-
-    getDbMock.mockResolvedValueOnce(databaseWithSelectResults([liveCustomer], [demoRateRow]));
-    await expect(operations.createTransaction({ customerId: 10, operationalRateId: 20, operation: "BUY", foreignAmount: "10", paymentMethod: "CASH" }, 9)).rejects.toThrow("Kurs demo");
+    await expect(operations.createTransaction({ customerId: 10, operation: "BUY", receiptNumber: "1", lines: [{ currencyId: 1, agreedRate: "15000", foreignAmount: "10" }], paymentMethod: "CASH", transactionAt: new Date() }, 9)).rejects.toThrow("Nasabah demo");
   });
 
   it("menolak transaksi demo pada seluruh tindakan lifecycle live", async () => {
@@ -78,7 +74,7 @@ describe("isolasi struktural data demo", () => {
     const demoCustomerRow = { transaction: { id: 3, isDemo: false }, customer: { id: 2, isDemo: true }, currency: { code: "JPY" } };
 
     getDbMock.mockResolvedValueOnce(databaseWithSelectResults([liveRow, demoTransactionRow, demoCustomerRow]));
-    await expect(operations.listTransactions({ id: 9, role: "ADMIN" })).resolves.toEqual([liveRow]);
+    await expect(operations.listTransactions({ id: 9, role: "ADMIN" })).resolves.toEqual([{ ...liveRow, lines: [] }]);
 
     getDbMock.mockResolvedValueOnce(databaseWithSelectResults([liveRow, demoTransactionRow, demoCustomerRow]));
     await expect(operations.getTransactionReport({ from: new Date("2026-08-01"), to: new Date("2026-08-31") })).resolves.toEqual([liveRow]);

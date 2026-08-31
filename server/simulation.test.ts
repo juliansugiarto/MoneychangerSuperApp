@@ -41,13 +41,11 @@ describe("safe training simulation", () => {
 
   it("leaves production receipt lists and reports unchanged after a simulation", async () => {
     const liveRows = [{ transaction: { id: 91, transactionNumber: "LIVE-001", isDemo: false, isHistorical: false }, customer: { id: 12, isDemo: false, isHistorical: false }, currency: { code: "USD" } }];
-    const reader = {
-      from: () => reader,
-      innerJoin: () => reader,
-      where: () => reader,
-      orderBy: () => Promise.resolve(liveRows),
-    };
-    const fakeDb = { select: vi.fn(() => reader) };
+    const makeReader = (rows: unknown[]): Record<string, unknown> & PromiseLike<unknown[]> => ({ from: () => makeReader(rows), innerJoin: () => makeReader(rows), where: () => makeReader(rows), orderBy: () => Promise.resolve(rows), then: (onfulfilled: any, onrejected: any) => Promise.resolve(rows).then(onfulfilled, onrejected) });
+    // listTransactions issues a second, follow-up select() for exchangeTransactionLines; this bon has no
+    // line rows (predates multi-line bons), so that call should come back empty, not repeat liveRows.
+    // Told apart by the field-selection object, since listTransactions/getTransactionReport run concurrently.
+    const fakeDb = { select: vi.fn((fields: Record<string, unknown>) => makeReader(fields && "line" in fields ? [] : liveRows)) };
     const getDb = vi.spyOn(db, "getDb").mockResolvedValue(fakeDb as never);
     const caller = appRouter.createCaller({ req: { headers: {} } as never, res: {} as never, user: { id: 7, role: "STAFF", mustChangePassword: false } as never });
 
@@ -72,9 +70,9 @@ describe("safe training simulation", () => {
     let printedHtml = "";
     vi.stubGlobal("window", { open: vi.fn(() => ({ document: { write: (html: string) => { printedHtml = html; }, close: vi.fn() } })) });
 
-    printBon({ transactionNumber: "LIVE-ARCHIVE-001", operation: "BUY", transactionAt: new Date("2026-08-24T08:00:00.000Z"), foreignAmount: "10", rateSnapshot: "15000", quoteUnitSnapshot: "1", rupiahAmount: "150000", paymentMethod: "CASH", paymentReference: "Kas", transactionPurposeSnapshot: "Perjalanan", customerActingAs: "SELF" }, { id: 12, fullName: "Nasabah Produksi", cifNumber: "CIF-001", identityType: "KTP", identityNumber: "3203", transactionPurpose: "Perjalanan" }, "USD");
+    printBon({ transactionNumber: "LIVE-ARCHIVE-001", receiptNumber: "1", operation: "BUY", transactionAt: new Date("2026-08-24T08:00:00.000Z"), rupiahAmount: "150000", paymentMethod: "CASH", paymentReference: "Kas", transactionPurposeSnapshot: "Perjalanan", customerActingAs: "SELF" }, { id: 12, fullName: "Nasabah Produksi", cifNumber: "CIF-001", identityType: "KTP", identityNumber: "3203", transactionPurpose: "Perjalanan" }, [{ currencyCode: "USD", foreignAmount: "10", agreedRate: "15000", rupiahAmount: "150000" }]);
 
-    expect(printedHtml).toContain("LIVE-ARCHIVE-001");
+    expect(printedHtml).toContain("No: 1");
     expect(printedHtml).toContain("Rp 150.000,00");
     expect(printedHtml).not.toContain(simulation.rupiahAmount);
     expect(printedHtml).not.toContain("isSimulation");

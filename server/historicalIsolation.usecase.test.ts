@@ -36,10 +36,6 @@ function databaseWithSelectResults(...results: unknown[][]) {
 
 const liveCustomer = { id: 10, isDemo: false, isHistorical: false, profileStatus: "ACTIVE", riskLevel: "LOW" };
 const historicalCustomer = { ...liveCustomer, isHistorical: true };
-const historicalRate = {
-  rate: { id: 20, isDemo: false, isHistorical: true, status: "ACTIVE", buyRate: "15000", sellRate: "15100", quoteUnit: "1" },
-  currency: { id: 1, code: "USD" },
-};
 const historicalTransaction = {
   id: 30,
   isDemo: false,
@@ -64,7 +60,7 @@ describe("use case isolasi buku besar historis", () => {
     const dateRange = { from: new Date("2025-01-01"), to: new Date("2027-01-01") };
 
     getDbMock.mockResolvedValueOnce(databaseWithSelectResults([liveRow, historicalRow]));
-    await expect(operations.listTransactions({ id: 9, role: "ADMIN" })).resolves.toEqual([liveRow]);
+    await expect(operations.listTransactions({ id: 9, role: "ADMIN" })).resolves.toEqual([{ ...liveRow, lines: [] }]);
 
     getDbMock.mockResolvedValueOnce(databaseWithSelectResults([liveRow, historicalRow]));
     await expect(operations.getTransactionReport(dateRange)).resolves.toEqual([liveRow]);
@@ -73,12 +69,12 @@ describe("use case isolasi buku besar historis", () => {
     await expect(operations.getHistoricalTransactionReport(dateRange)).resolves.toEqual([historicalRow]);
   });
 
-  it("menolak data historis pada pembuatan kurs dan seluruh mutasi transaksi atau kas live", async () => {
+  it("menolak data historis pada pembuatan transaksi live dan seluruh mutasi transaksi atau kas live", async () => {
     getDbMock.mockResolvedValueOnce(databaseWithSelectResults([historicalCustomer]));
-    await expect(operations.createTransaction({ customerId: 10, operationalRateId: 20, operation: "BUY", foreignAmount: "10", paymentMethod: "CASH", transactionAt: new Date() }, 9)).rejects.toThrow("Nasabah demo atau historis");
-
-    getDbMock.mockResolvedValueOnce(databaseWithSelectResults([liveCustomer], [historicalRate]));
-    await expect(operations.createTransaction({ customerId: 10, operationalRateId: 20, operation: "BUY", foreignAmount: "10", paymentMethod: "CASH", transactionAt: new Date() }, 9)).rejects.toThrow("Kurs demo atau historis");
+    await expect(operations.createTransaction({ customerId: 10, operation: "BUY", receiptNumber: "1", lines: [{ currencyId: 1, agreedRate: "15000", foreignAmount: "10" }], paymentMethod: "CASH", transactionAt: new Date() }, 9)).rejects.toThrow("Nasabah demo atau historis");
+    // Operational rates are now optional reference-only data (teller types the price manually per
+    // line), so a historical rate can no longer block bon creation the way it used to — createTransaction's
+    // activeRatesByCurrency lookup filters eq(operationalRates.isHistorical, false) directly instead.
 
     const actor = { id: 9, role: "STAFF" as const };
     getDbMock.mockResolvedValueOnce(databaseWithSelectResults([historicalTransaction]));
