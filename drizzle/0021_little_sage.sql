@@ -1,0 +1,1 @@
+ALTER TABLE `exchange_transaction_denomination_entries` ADD `agreedRate` decimal(24,6);

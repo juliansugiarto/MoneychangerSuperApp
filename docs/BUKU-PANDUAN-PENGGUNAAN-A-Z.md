@@ -109,9 +109,9 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 1. Buka **Buat Transaksi** dan pilih arah transaksi beli/jual sesuai kejadian di loket.
 2. Isi **No. Kwitansi/Bon** sesuai buku kwitansi fisik yang sedang dipakai — buku Jual dan Beli punya nomor urut terpisah, jadi No. 1 boleh muncul di kedua buku sekaligus. Nomor ini diketik manual oleh teller, bukan otomatis.
 3. Cari dan pilih nasabah.
-4. Isi satu **baris mata uang** (mata uang, nominal valuta, harga). Semua mata uang aktif bisa dipilih — tidak dibatasi hanya yang sudah punya kurs otomatis. Harga diketik manual oleh teller sesuai kesepakatan dengan nasabah; kurs referensi (bila ada) hanya ditampilkan sebagai pembanding.
-5. Tambah baris lagi bila nasabah menukar lebih dari satu mata uang sekaligus, atau bila pecahan besar dan kecil dalam mata uang yang sama punya harga berbeda (mis. USD 100/50 vs USD 20/10) — buat baris terpisah untuk tiap harga.
-6. Setelah nominal valuta baris terisi, lengkapi **rincian pecahan** (nilai pecahan × jumlah lembar/keping) — data ini penting untuk rekonsiliasi kas dan pelaporan stok fisik, meski tidak dicetak di kwitansi. Sistem menampilkan total rincian agar mudah dicocokkan dengan nominal valuta baris tersebut.
+4. Tambahkan satu **baris mata uang**: ketik kode atau nama mata uang di kotak pencarian (mis. "GBP" atau "Rupiah") — semua mata uang di dunia bisa dicari, termasuk IDR, dan otomatis terdaftar begitu dipilih. Tidak dibatasi hanya mata uang yang sudah punya kurs otomatis.
+5. Isi **rincian pecahan** pada baris tsb — wajib diisi, minimal satu baris pecahan (nilai pecahan, jumlah lembar/keping, dan **harga khusus pecahan itu**). Harga ditulis manual oleh teller per kelompok pecahan, karena pecahan besar dan kecil sering dihargai berbeda: misalnya transaksi 1.000 USD dengan pecahan 100×5 seharga 17.800, pecahan 50×5 seharga 17.500, dan pecahan 10×25 seharga 17.000 — tambahkan tiga baris pecahan seperti itu di baris mata uang yang sama. Kurs referensi (bila ada) hanya ditampilkan sebagai pembanding, bukan sumber harga.
+6. Tambah baris mata uang lagi bila nasabah menukar lebih dari satu mata uang sekaligus.
 7. Bila transaksi dilakukan oleh **pihak kuasa/wakil** (termasuk pemilik manfaat/BO), pilih nasabah tersebut dari pencarian nasabah terdaftar — bukan mengetik nama/identitas bebas. Bila BO nasabah utama sudah terdaftar sebagai nasabah, sistem otomatis menyarankan nasabah tersebut untuk dikonfirmasi. Bila pihak kuasa/wakil belum terdaftar, daftarkan dulu sebagai nasabah (data KYC lengkap) sebelum melanjutkan bon.
 8. Periksa kembali total keseluruhan bon sebelum menyimpan.
 9. Bila sistem menandai transaksi untuk review, jangan mencari jalan pintas. Simpan sesuai workflow dan beri Supervisor informasi yang diperlukan.
@@ -127,7 +127,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 
 ### 5.6 Kas, Persediaan, dan Stock Opname — Staff dan Supervisor
 
-1. Catat kas pembukaan terlebih dahulu.
+1. Catat kas pembukaan terlebih dahulu. Cari mata uang lewat kotak pencarian (termasuk **IDR** untuk modal kerja Rupiah) — tidak lagi dibatasi ke mata uang yang sudah disinkronkan otomatis.
 2. Selama hari berjalan, gunakan bon transaksi yang selesai sebagai dasar mutasi; jangan melakukan pembukuan paralel tanpa rekonsiliasi.
 3. Menjelang tutup, masuk ke **Kas & Persediaan**, masukkan hitungan fisik per mata uang, lalu kirim stock opname.
 4. Telaah varians yang tampil. Varians memerlukan peninjauan Supervisor; Direksi harus memperoleh informasi pengawasan sesuai workflow.

@@ -23,24 +23,33 @@ export default function TransactionList() {
 
   const listRows = useMemo(() => (transactions ?? []).filter((row) => listTab === "ALL" || row.transaction.operation === listTab), [transactions, listTab]);
 
+  /** Each priced denomination group is its own printed/exported row (e.g. USD 100s vs USD 10s at different rates); a line with no denomination rows (very old bons) falls back to its own aggregate figures as one row. */
+  const linePrintRows = ({ line, currency, denominations }: NonNullable<typeof transactions>[number]["lines"][number]) => (denominations.length
+    ? denominations.map((denomination) => {
+      const foreignAmount = Number(denomination.denominationValue) * denomination.quantity;
+      const agreedRate = denomination.agreedRate ?? line.agreedRate;
+      return { currencyCode: currency.code, foreignAmount: String(foreignAmount), agreedRate: String(agreedRate), rupiahAmount: (foreignAmount * Number(agreedRate) / Number(line.quoteUnit)).toFixed(2) };
+    })
+    : [{ currencyCode: currency.code, foreignAmount: String(line.foreignAmount), agreedRate: String(line.agreedRate), rupiahAmount: String(line.rupiahAmount) }]);
+
   const reprint = (row: NonNullable<typeof transactions>[number]) => {
-    const printableLines: PrintableLine[] = row.lines.map(({ line, currency }) => ({ currencyCode: currency.code, foreignAmount: String(line.foreignAmount), agreedRate: String(line.agreedRate), rupiahAmount: String(line.rupiahAmount) }));
+    const printableLines: PrintableLine[] = row.lines.flatMap(linePrintRows);
     printBon(row.transaction, row.customer, printableLines);
   };
 
   const exportCsv = () => {
     const headers = ["No. Transaksi", "No. Kwitansi", "Tanggal", "Nasabah", "CIF", "Jenis", "Mata Uang", "Nominal Valuta", "Kurs", "Nilai Rupiah (baris)", "Cara Bayar", "Status", "Bertindak Sebagai"];
-    const rows = listRows.flatMap(({ transaction, customer, lines }) => lines.map(({ line, currency }) => [
+    const rows = listRows.flatMap(({ transaction, customer, lines }) => lines.flatMap(linePrintRows).map((printRow) => [
       transaction.transactionNumber,
       transaction.receiptNumber ?? "-",
       new Date(transaction.transactionAt).toLocaleString("id-ID"),
       customer.fullName,
       customer.cifNumber,
       transaction.operation === "BUY" ? "Transaksi beli" : "Transaksi jual",
-      currency.code,
-      String(line.foreignAmount),
-      String(line.agreedRate),
-      String(line.rupiahAmount),
+      printRow.currencyCode,
+      printRow.foreignAmount,
+      printRow.agreedRate,
+      printRow.rupiahAmount,
       transaction.paymentMethod,
       transactionStatusLabel[transaction.status] ?? transaction.status,
       transaction.customerActingAs === "REPRESENTATIVE" ? `${transaction.representativeName ?? "-"} (kuasa)` : "Nasabah sendiri",

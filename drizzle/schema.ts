@@ -240,6 +240,8 @@ export const exchangeTransactionDenominationEntries = mysqlTable("exchange_trans
   quantity: int("quantity").notNull(),
   /** denominationValue * quantity, stored redundantly to make reconciliation queries cheap. */
   lineTotal: decimal("lineTotal", { precision: 24, scale: 6 }).notNull(),
+  /** Price the teller typed in for THIS specific denomination group (e.g. USD 100s priced differently from USD 10s in the same deal). Required for transaction bons going forward; null on cash-movement denomination rows (those have no price concept) and on bons written before per-denomination pricing existed. */
+  agreedRate: decimal("agreedRate", { precision: 24, scale: 6 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [
   index("exchange_transaction_denomination_entries_transaction_idx").on(table.transactionId),

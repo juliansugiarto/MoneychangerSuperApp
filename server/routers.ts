@@ -13,6 +13,7 @@ import {
   createPublicServiceRequest,
   createConsumerComplaint,
   createCurrency,
+  ensureCurrency,
   createFinancialStatementSnapshot,
   createRegulatoryFinancialDraft,
   createRegulatoryIncidentReport,
@@ -256,6 +257,8 @@ export const appRouter = router({
     list: staffProcedure.query(() => listCurrencies()),
     create: adminProcedure.input(z.object({ code: z.string().trim().regex(/^[A-Za-z]{3}$/), name: z.string().trim().min(3).max(100) })).mutation(({ input, ctx }) => createCurrency({ ...input, actorUserId: ctx.user.id })),
     setActive: adminProcedure.input(z.object({ currencyId: z.number().int().positive(), active: z.boolean() })).mutation(({ input, ctx }) => setCurrencyActive({ ...input, actorUserId: ctx.user.id })),
+    /** Staff-level, idempotent: registers a world currency on first use (e.g. picked from a search box) without needing an Admin to pre-create it. Never touches rates. */
+    ensure: staffProcedure.input(z.object({ code: z.string().trim().regex(/^[A-Za-z]{3}$/), name: z.string().trim().min(1).max(100) })).mutation(({ input }) => ensureCurrency(input)),
   }),
 
   customers: router({
@@ -289,11 +292,9 @@ export const appRouter = router({
       receiptNumber: z.string().trim().min(1).max(80),
       lines: z.array(z.object({
         currencyId: z.number().int().positive(),
-        /** Price the teller typed in for this line, independent of any operational rate. */
-        agreedRate: decimalString,
-        foreignAmount: decimalString,
         quoteUnit: decimalString.optional(),
-        denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).max(50).optional(),
+        /** Every denomination group is priced on its own (e.g. USD 100s vs USD 10s), so this is required — no line-level price/amount. */
+        denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive(), rate: decimalString })).min(1).max(50),
       })).min(1).max(30),
       dealNotes: z.string().trim().max(255).optional(),
       paymentMethod: z.enum(["CASH", "BANK_TRANSFER", "OTHER"]),

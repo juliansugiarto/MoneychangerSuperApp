@@ -474,6 +474,23 @@ export async function createCurrency(input: { code: string; name: string; actorU
   return created;
 }
 
+/**
+ * Registers a currency on first use, idempotently — lets a teller pick any world currency (GBP, IDR,
+ * INR, ...) straight from the transaction/cash form without waiting on an Admin to pre-create it via
+ * Kurs Operasional. Never touches operational rates; purely a reference-data lookup/insert.
+ */
+export async function ensureCurrency(input: { code: string; name: string }) {
+  const db = await databaseOrThrow();
+  const code = input.code.trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(code)) throw new Error("Kode mata uang harus 3 huruf sesuai ISO 4217.");
+  const existing = (await db.select().from(currencies).where(eq(currencies.code, code)).limit(1))[0];
+  if (existing) return existing;
+  await db.insert(currencies).values({ code, name: input.name.trim() || code, active: true }).onDuplicateKeyUpdate({ set: { code: sql`${currencies.code}` } });
+  const created = (await db.select().from(currencies).where(eq(currencies.code, code)).limit(1))[0];
+  if (!created) throw new Error("Mata uang tidak dapat didaftarkan.");
+  return created;
+}
+
 export async function setCurrencyActive(input: { currencyId: number; active: boolean; actorUserId: number }) {
   const db = await databaseOrThrow();
   const existing = (await db.select().from(currencies).where(eq(currencies.id, input.currencyId)).limit(1))[0];
@@ -982,15 +999,15 @@ function transactionNumber() {
   return `FX-${timestamp}-${nanoid(6).toUpperCase()}`;
 }
 
-/** One row of the printed kwitansi's table (NO. / MATA UANG / JUMLAH / KURS / TOTAL). The same currency can appear as more than one line when denominations within it were priced differently. */
+/** One currency within a bon. Priced per denomination (not per line) — e.g. USD 100s at one rate, USD
+ * 10s at another, in the same currency and deal — so foreignAmount/agreedRate on the line are derived
+ * from summing/averaging the denominations, never entered directly. */
 export type CreateTransactionLineInput = {
   currencyId: number;
-  /** Price the teller typed in for this line, independent of any operational rate. */
-  agreedRate: string;
-  foreignAmount: string;
   /** Defaults to 1 — only needed for currencies quoted per 100 units etc. */
   quoteUnit?: string;
-  denominations?: DenominationEntryInput[];
+  /** Required, at least one row — each denomination group carries its own price. */
+  denominations: PricedDenominationInput[];
 };
 
 export type CreateTransactionInput = {
@@ -1030,13 +1047,31 @@ async function linesByTransactionId(db: Awaited<ReturnType<typeof databaseOrThro
   const legacyCurrencyIds = Array.from(new Set(rows.filter(({ transaction }) => !grouped.has(transaction.id) && transaction.currencyId).map(({ transaction }) => transaction.currencyId as number)));
   const legacyCurrencies = legacyCurrencyIds.length ? await db.select().from(currencies).where(inArray(currencies.id, legacyCurrencyIds)) : [];
   const legacyCurrencyById = new Map(legacyCurrencies.map((currency) => [currency.id, currency]));
+  // Priced denomination rows are the printed kwitansi's real rows (each carries its own price); fetch
+  // them for every transaction in this batch and group by line so callers get them alongside each line.
+  const denominationRows = transactionIds.length
+    ? await db.select().from(exchangeTransactionDenominationEntries).where(inArray(exchangeTransactionDenominationEntries.transactionId, transactionIds))
+    : [];
+  const denomsByLineId = new Map<number, typeof denominationRows>();
+  const legacyDenomsByTransactionId = new Map<number, typeof denominationRows>();
+  for (const denomination of denominationRows) {
+    if (denomination.transactionLineId != null) {
+      const existing = denomsByLineId.get(denomination.transactionLineId) ?? [];
+      existing.push(denomination);
+      denomsByLineId.set(denomination.transactionLineId, existing);
+    } else {
+      const existing = legacyDenomsByTransactionId.get(denomination.transactionId) ?? [];
+      existing.push(denomination);
+      legacyDenomsByTransactionId.set(denomination.transactionId, existing);
+    }
+  }
   return (transaction: typeof exchangeTransactions.$inferSelect) => {
     const lines = grouped.get(transaction.id);
-    if (lines) return lines;
+    if (lines) return lines.map((entry) => ({ ...entry, denominations: denomsByLineId.get(entry.line.id) ?? [] }));
     // Bon created before multi-line bons existed: synthesize a single line from the legacy header columns so callers have one shape to render.
     const legacyCurrency = transaction.currencyId ? legacyCurrencyById.get(transaction.currencyId) : undefined;
     if (!legacyCurrency || !transaction.foreignAmount || !transaction.rateSnapshot) return [];
-    return [{ line: { id: -transaction.id, transactionId: transaction.id, lineNumber: 1, currencyId: transaction.currencyId!, operationalRateId: transaction.operationalRateId, referenceRateSnapshot: transaction.referenceRateSnapshot, quoteUnit: transaction.quoteUnitSnapshot ?? "1.000000", agreedRate: transaction.rateSnapshot, foreignAmount: transaction.foreignAmount, rupiahAmount: transaction.rupiahAmount, createdAt: transaction.createdAt }, currency: legacyCurrency }];
+    return [{ line: { id: -transaction.id, transactionId: transaction.id, lineNumber: 1, currencyId: transaction.currencyId!, operationalRateId: transaction.operationalRateId, referenceRateSnapshot: transaction.referenceRateSnapshot, quoteUnit: transaction.quoteUnitSnapshot ?? "1.000000", agreedRate: transaction.rateSnapshot, foreignAmount: transaction.foreignAmount, rupiahAmount: transaction.rupiahAmount, createdAt: transaction.createdAt }, currency: legacyCurrency, denominations: legacyDenomsByTransactionId.get(transaction.id) ?? [] }];
   };
 }
 
@@ -1112,20 +1147,19 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     .where(and(inArray(operationalRates.currencyId, lineCurrencyIds), eq(operationalRates.status, "ACTIVE"), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false))))
     .map(({ rate }) => [rate.currencyId, rate]));
 
-  type PreparedLine = { currencyId: number; operationalRateId: number | null; referenceRateSnapshot: string | null; quoteUnit: string; agreedRate: string; foreignAmount: string; rupiahAmount: string; denominationRows: ReturnType<typeof reconcileDenominations> };
+  type PreparedLine = { currencyId: number; operationalRateId: number | null; referenceRateSnapshot: string | null; quoteUnit: string; agreedRate: string; foreignAmount: string; rupiahAmount: string; denominationRows: ReturnType<typeof reconcilePricedDenominations>["rows"] };
   const preparedLines: PreparedLine[] = input.lines.map((line, index) => {
     const currency = currencyById.get(line.currencyId);
     if (!currency || !currency.active) throw new Error(`Mata uang pada baris ${index + 1} tidak ditemukan atau tidak aktif.`);
-    const agreedRate = nonNegativeDecimal(line.agreedRate, `Harga baris ${index + 1}`);
-    if (agreedRate.lte(0)) throw new Error(`Harga pada baris ${index + 1} harus lebih besar dari nol.`);
     const quoteUnit = nonNegativeDecimal(line.quoteUnit ?? "1", `Satuan kuotasi baris ${index + 1}`);
-    const foreignAmount = nonNegativeDecimal(line.foreignAmount, `Nominal valuta baris ${index + 1}`);
-    if (foreignAmount.lte(0)) throw new Error(`Nominal valuta pada baris ${index + 1} harus lebih besar dari nol.`);
-    const rupiahAmount = calculateRupiahAmount(foreignAmount.toFixed(6), agreedRate.toFixed(6), quoteUnit.toFixed(6));
+    const { rows: denominationRows, totalForeign, totalRupiah } = reconcilePricedDenominations(line.denominations, quoteUnit, `baris ${index + 1}`);
+    // agreedRate on the line is a derived weighted average across its (possibly differently-priced)
+    // denomination rows — informational only; the authoritative price lives on each denomination row.
+    // reconcilePricedDenominations guarantees at least one row with value>0 and rate>0, so totalForeign>0.
+    const agreedRate = new Decimal(totalRupiah).div(totalForeign).times(quoteUnit);
     const activeRate = activeRatesByCurrency.get(line.currencyId);
     const referenceRateSnapshot = activeRate ? (input.operation === "BUY" ? activeRate.buyRate : activeRate.sellRate) : null;
-    const denominationRows = reconcileDenominations(line.denominations ?? [], foreignAmount);
-    return { currencyId: line.currencyId, operationalRateId: activeRate?.id ?? null, referenceRateSnapshot, quoteUnit: quoteUnit.toFixed(6), agreedRate: agreedRate.toFixed(6), foreignAmount: foreignAmount.toFixed(6), rupiahAmount, denominationRows };
+    return { currencyId: line.currencyId, operationalRateId: activeRate?.id ?? null, referenceRateSnapshot, quoteUnit: quoteUnit.toFixed(6), agreedRate: agreedRate.toFixed(6), foreignAmount: totalForeign.toFixed(6), rupiahAmount: totalRupiah, denominationRows };
   });
   const rupiahAmount = preparedLines.reduce((sum, line) => sum.plus(line.rupiahAmount), new Decimal(0)).toFixed(2);
 
@@ -1196,8 +1230,8 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
         foreignAmount: line.foreignAmount,
         rupiahAmount: line.rupiahAmount,
       }).$returningId();
-      if (line.denominationRows.length && insertedLine) {
-        await tx.insert(exchangeTransactionDenominationEntries).values(line.denominationRows.map((entry: { denominationValue: string; quantity: number; subtotal: string }) => ({ transactionId: row.id, transactionLineId: insertedLine.id, denominationValue: entry.denominationValue, quantity: entry.quantity, lineTotal: entry.subtotal })));
+      if (insertedLine) {
+        await tx.insert(exchangeTransactionDenominationEntries).values(line.denominationRows.map((entry) => ({ transactionId: row.id, transactionLineId: insertedLine.id, denominationValue: entry.denominationValue, quantity: entry.quantity, lineTotal: entry.lineTotal, agreedRate: entry.agreedRate })));
       }
     }
     return row;
@@ -1293,6 +1327,33 @@ function reconcileDenominations(entries: DenominationEntryInput[], expectedTotal
   });
   if (!sum.eq(expectedTotal)) throw new Error(`Rincian pecahan (${sum.toFixed(2)}) tidak sama dengan jumlah kas yang dimasukkan (${expectedTotal.toFixed(2)}). Perbaiki rincian sebelum menyimpan.`);
   return rows;
+}
+
+export type PricedDenominationInput = { value: string; quantity: number; rate: string };
+
+/**
+ * Transaction bons price by denomination, not by line: e.g. USD 100s at one rate, USD 10s at another,
+ * within the same currency/deal. Every row is its own priced group — unlike reconcileDenominations
+ * (cash movements only), there is no separate "declared total" to reconcile against; the line's
+ * foreign/rupiah totals are simply the sum of these rows. Requires at least one row.
+ */
+function reconcilePricedDenominations(entries: PricedDenominationInput[], quoteUnit: Decimal, lineLabel: string) {
+  if (!entries.length) throw new Error(`Rincian pecahan wajib diisi minimal satu baris pada ${lineLabel}.`);
+  let totalForeign = new Decimal(0);
+  let totalRupiah = new Decimal(0);
+  const rows = entries.map((entry) => {
+    const value = nonNegativeOrZeroDecimal(entry.value, "Nilai pecahan");
+    if (value.lte(0)) throw new Error(`Nilai pecahan pada ${lineLabel} harus lebih besar dari nol.`);
+    if (!Number.isInteger(entry.quantity) || entry.quantity <= 0) throw new Error(`Jumlah lembar/keping tiap pecahan pada ${lineLabel} harus bilangan bulat positif.`);
+    const rate = nonNegativeDecimal(entry.rate, "Harga pecahan");
+    if (rate.lte(0)) throw new Error(`Harga pecahan pada ${lineLabel} harus lebih besar dari nol.`);
+    const foreignSubtotal = value.times(entry.quantity);
+    const rupiahSubtotal = foreignSubtotal.times(rate).div(quoteUnit).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+    totalForeign = totalForeign.plus(foreignSubtotal);
+    totalRupiah = totalRupiah.plus(rupiahSubtotal);
+    return { denominationValue: value.toFixed(6), quantity: entry.quantity, lineTotal: foreignSubtotal.toFixed(6), agreedRate: rate.toFixed(6), rupiahSubtotal: rupiahSubtotal.toFixed(2) };
+  });
+  return { rows, totalForeign, totalRupiah: totalRupiah.toFixed(2) };
 }
 
 export function openingCashMovementReason(currencyCode: string, businessDate = jakartaBusinessDate()) {

@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CurrencyPicker, PickedCurrency } from "@/components/CurrencyPicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,23 +10,25 @@ import { ArrowLeftRight, Banknote, CircleDollarSign, FileText, Plus, Printer, Se
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
-import { Customer, DenominationRow, PrintableLine, printBon } from "./Transactions";
+import { Customer, PrintableLine, printBon } from "./Transactions";
 
-type LineDraft = { key: string; currencyId: string; agreedRate: string; foreignAmount: string; quoteUnit: string; denominations: DenominationRow[] };
+/** Every denomination group is priced on its own (e.g. USD 100s vs USD 10s in the same deal), so price lives here, not on the line. */
+type PricedDenominationRow = { value: string; quantity: string; rate: string };
+type LineDraft = { key: string; currency: PickedCurrency | null; quoteUnit: string; denominations: PricedDenominationRow[] };
 
-const emptyLine = (): LineDraft => ({ key: crypto.randomUUID(), currencyId: "", agreedRate: "", foreignAmount: "", quoteUnit: "1", denominations: [] });
-const denominationsForSubmit = (rows: DenominationRow[]) => rows.filter((row) => row.value && row.quantity).map((row) => ({ value: row.value, quantity: Number(row.quantity) }));
-const lineRupiah = (line: LineDraft) => { const foreign = Number(line.foreignAmount) || 0, rate = Number(line.agreedRate) || 0, unit = Number(line.quoteUnit) || 1; return foreign * rate / unit; };
+const emptyDenominationRow = (): PricedDenominationRow => ({ value: "", quantity: "", rate: "" });
+const emptyLine = (): LineDraft => ({ key: crypto.randomUUID(), currency: null, quoteUnit: "1", denominations: [emptyDenominationRow()] });
+const isCompleteDenominationRow = (row: PricedDenominationRow) => Boolean(row.value && row.quantity && row.rate);
+const lineForeignTotal = (line: LineDraft) => line.denominations.reduce((sum, row) => sum + (Number(row.value) || 0) * (Number(row.quantity) || 0), 0);
+const lineRupiahTotal = (line: LineDraft) => { const unit = Number(line.quoteUnit) || 1; return line.denominations.reduce((sum, row) => sum + (Number(row.value) || 0) * (Number(row.quantity) || 0) * (Number(row.rate) || 0) / unit, 0); };
 
 export default function TransactionCreate() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
 
-  const { data: currencies } = trpc.currencies.list.useQuery(undefined, { enabled: Boolean(user) });
   const { data: rates } = trpc.rates.listOperational.useQuery(undefined, { enabled: Boolean(user) });
-  const activeCurrencies = useMemo(() => currencies?.filter((currency) => currency.active) ?? [], [currencies]);
-  const referenceRateFor = (currencyId: string) => rates?.find(({ rate, currency }) => rate.status === "ACTIVE" && String(currency.id) === currencyId);
+  const referenceRateFor = (currencyId?: number) => rates?.find(({ rate, currency }) => rate.status === "ACTIVE" && currency.id === currencyId);
 
   const [operation, setOperation] = useState<"BUY" | "SELL">("BUY");
   const [receiptNumber, setReceiptNumber] = useState("");
@@ -63,17 +66,13 @@ export default function TransactionCreate() {
   const updateLine = (index: number, patch: Partial<LineDraft>) => setLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (index: number) => setLines((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
-  const addDenominationRow = (lineIndex: number) => setLines((prev) => prev.map((line, i) => (i === lineIndex ? { ...line, denominations: [...line.denominations, { value: "", quantity: "" }] } : line)));
-  const updateDenominationRow = (lineIndex: number, denomIndex: number, field: "value" | "quantity", value: string) => setLines((prev) => prev.map((line, i) => (i === lineIndex ? { ...line, denominations: line.denominations.map((row, j) => (j === denomIndex ? { ...row, [field]: value } : row)) } : line)));
-  const removeDenominationRow = (lineIndex: number, denomIndex: number) => setLines((prev) => prev.map((line, i) => (i === lineIndex ? { ...line, denominations: line.denominations.filter((_, j) => j !== denomIndex) } : line)));
+  const addDenominationRow = (lineIndex: number) => setLines((prev) => prev.map((line, i) => (i === lineIndex ? { ...line, denominations: [...line.denominations, emptyDenominationRow()] } : line)));
+  const updateDenominationRow = (lineIndex: number, denomIndex: number, field: keyof PricedDenominationRow, value: string) => setLines((prev) => prev.map((line, i) => (i === lineIndex ? { ...line, denominations: line.denominations.map((row, j) => (j === denomIndex ? { ...row, [field]: value } : row)) } : line)));
+  const removeDenominationRow = (lineIndex: number, denomIndex: number) => setLines((prev) => prev.map((line, i) => (i === lineIndex ? { ...line, denominations: line.denominations.length > 1 ? line.denominations.filter((_, j) => j !== denomIndex) : line.denominations } : line)));
 
-  const totalRupiah = useMemo(() => lines.reduce((sum, line) => sum + lineRupiah(line), 0), [lines]);
-  const lineHasDenominationMismatch = (line: LineDraft) => {
-    if (!line.denominations.length) return false;
-    const total = line.denominations.reduce((sum, row) => sum + (Number(row.value) || 0) * (Number(row.quantity) || 0), 0);
-    return Math.abs(total - (Number(line.foreignAmount) || 0)) > 0.005;
-  };
-  const hasDenominationMismatch = lines.some(lineHasDenominationMismatch);
+  const totalRupiah = useMemo(() => lines.reduce((sum, line) => sum + lineRupiahTotal(line), 0), [lines]);
+  const lineIsComplete = (line: LineDraft) => Boolean(line.currency) && line.denominations.length > 0 && line.denominations.every(isCompleteDenominationRow);
+  const allLinesComplete = lines.every(lineIsComplete);
 
   const uploadUnderlying = async (transactionId: number) => {
     if (!underlyingFile) return;
@@ -87,7 +86,12 @@ export default function TransactionCreate() {
     onSuccess: async (transaction) => {
       try {
         if (underlyingRequired) await uploadUnderlying(transaction.id);
-        const printableLines: PrintableLine[] = lines.map((line) => { const currency = activeCurrencies.find((c) => String(c.id) === line.currencyId); return { currencyCode: currency?.code ?? "", foreignAmount: line.foreignAmount, agreedRate: line.agreedRate, rupiahAmount: lineRupiah(line).toFixed(2) }; });
+        const printableLines: PrintableLine[] = lines.flatMap((line) => line.denominations.map((row) => ({
+          currencyCode: line.currency?.code ?? "",
+          foreignAmount: ((Number(row.value) || 0) * (Number(row.quantity) || 0)).toString(),
+          agreedRate: row.rate,
+          rupiahAmount: (((Number(row.value) || 0) * (Number(row.quantity) || 0) * (Number(row.rate) || 0)) / (Number(line.quoteUnit) || 1)).toFixed(2),
+        })));
         setLastBon(transaction);
         setLastBonLines(printableLines);
         setLines([emptyLine()]);
@@ -107,15 +111,14 @@ export default function TransactionCreate() {
     event.preventDefault();
     if (!receiptNumber.trim()) return toast.error("Isi nomor kwitansi.");
     if (!customer) return toast.error("Cari dan pilih nasabah.");
-    if (lines.some((line) => !line.currencyId || !line.agreedRate || !line.foreignAmount)) return toast.error("Lengkapi mata uang, nominal, dan harga pada setiap baris.");
-    if (hasDenominationMismatch) return toast.error("Rincian pecahan pada salah satu baris belum sama dengan nominal valuta baris tersebut.");
+    if (!allLinesComplete) return toast.error("Setiap baris wajib punya mata uang dan minimal satu pecahan lengkap (nilai, jumlah, harga).");
     if (customerActingAs === "REPRESENTATIVE" && !representativeCustomer) return toast.error("Pilih nasabah terdaftar sebagai pihak kuasa/wakil.");
     if (underlyingRequired && (!underlyingFile || !underlyingReference)) return toast.error("Lampirkan file dan referensi underlying.");
     create.mutate({
       operation,
       receiptNumber: receiptNumber.trim(),
       customerId: customer.id,
-      lines: lines.map((line) => ({ currencyId: Number(line.currencyId), agreedRate: line.agreedRate, foreignAmount: line.foreignAmount, quoteUnit: line.quoteUnit || "1", denominations: denominationsForSubmit(line.denominations) })),
+      lines: lines.map((line) => ({ currencyId: line.currency!.id, quoteUnit: line.quoteUnit || "1", denominations: line.denominations.map((row) => ({ value: row.value, quantity: Number(row.quantity), rate: row.rate })) })),
       paymentMethod,
       paymentReference,
       transactionPurposeSnapshot: purpose || customer.transactionPurpose || undefined,
@@ -164,30 +167,31 @@ export default function TransactionCreate() {
       </Card>
 
       <Card className="border-[#dce6f0]">
-        <CardHeader><CardTitle className="flex items-center gap-2 font-display text-lg text-[#18395f]"><CircleDollarSign className="size-5 text-[#5c8f53]" /> 2. Baris mata uang</CardTitle><CardDescription>Tambah baris bila nasabah menukar lebih dari satu mata uang, atau bila pecahan besar dan kecil punya harga berbeda. Semua mata uang aktif bisa dipilih, tidak dibatasi kurs otomatis.</CardDescription></CardHeader>
+        <CardHeader><CardTitle className="flex items-center gap-2 font-display text-lg text-[#18395f]"><CircleDollarSign className="size-5 text-[#5c8f53]" /> 2. Baris mata uang &amp; pecahan</CardTitle><CardDescription>Cari mata uang apa saja di dunia — tidak dibatasi kurs otomatis. Setiap pecahan wajib punya harga sendiri, karena pecahan besar dan kecil sering dihargai berbeda.</CardDescription></CardHeader>
         <CardContent className="space-y-4">
           {lines.map((line, index) => {
-            const reference = referenceRateFor(line.currencyId);
-            const mismatch = lineHasDenominationMismatch(line);
+            const reference = referenceRateFor(line.currency?.id);
             return <div key={line.key} className="rounded-xl border border-[#dce6f0] bg-[#fbfdff] p-4">
               <div className="flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-wide text-[#5c8f53]">Baris {index + 1}</p>{lines.length > 1 ? <Button type="button" size="sm" variant="ghost" className="h-7 text-rose-600" onClick={() => removeLine(index)}><Trash2 className="mr-1 size-3.5" />Hapus baris</Button> : null}</div>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <div className="min-w-0"><Label className="text-xs">Mata uang</Label><Select value={line.currencyId} onValueChange={(value) => updateLine(index, { currencyId: value })}><SelectTrigger className="mt-1 w-full"><SelectValue placeholder="Pilih mata uang" /></SelectTrigger><SelectContent>{activeCurrencies.map((currency) => <SelectItem key={currency.id} value={String(currency.id)}>{currency.code} — {currency.name}</SelectItem>)}</SelectContent></Select></div>
-                <div><Label className="text-xs">Nominal valuta</Label><Input className="mt-1" required inputMode="decimal" value={line.foreignAmount} onChange={(e) => updateLine(index, { foreignAmount: e.target.value })} placeholder="Contoh: 1500" /></div>
-                <div><Label className="text-xs">Harga (manual, per satuan)</Label><Input className="mt-1" required inputMode="decimal" value={line.agreedRate} onChange={(e) => updateLine(index, { agreedRate: e.target.value })} placeholder="Contoh: 3550" /></div>
+
+              <div className="mt-3">
+                <Label className="text-xs">Mata uang</Label>
+                {line.currency ? <p className="mt-1 flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800"><span>Dipilih: {line.currency.code} — {line.currency.name}</span><button type="button" className="font-semibold text-emerald-900 underline" onClick={() => updateLine(index, { currency: null })}>Ganti</button></p>
+                  : <div className="mt-1"><CurrencyPicker onSelect={(currency) => updateLine(index, { currency })} /></div>}
               </div>
               {reference ? <p className="mt-2 text-xs text-slate-500">Kurs referensi hari ini (pembanding saja): {operation === "BUY" ? String(reference.rate.buyRate) : String(reference.rate.sellRate)} IDR per {String(reference.rate.quoteUnit)} {reference.currency.code}.</p> : null}
-              {line.foreignAmount && line.agreedRate ? <p className="mt-1 text-xs font-semibold text-[#18395f]">Perkiraan nilai baris ini: Rp {lineRupiah(line).toLocaleString("id-ID")}</p> : null}
 
-              <div className="mt-3 rounded-lg border border-dashed border-[#cbd9e7] bg-white p-3">
-                <div className="flex items-center justify-between"><Label className="text-xs font-semibold text-[#18395f]">Rincian pecahan (opsional, disarankan)</Label><Button type="button" size="sm" variant="outline" className="h-7 border-[#bcd2e5] text-xs text-[#183f70]" onClick={() => addDenominationRow(index)}><Plus className="mr-1 size-3" />Tambah pecahan</Button></div>
-                {line.denominations.map((row, denomIndex) => <div key={denomIndex} className="mt-2 grid grid-cols-[1fr_100px_auto] gap-2">
-                  <Input inputMode="decimal" value={row.value} onChange={(e) => updateDenominationRow(index, denomIndex, "value", e.target.value)} placeholder="Nilai pecahan, mis. 100" />
-                  <Input inputMode="numeric" value={row.quantity} onChange={(e) => updateDenominationRow(index, denomIndex, "quantity", e.target.value)} placeholder="Lembar" />
-                  <Button type="button" size="sm" variant="ghost" className="text-rose-600" onClick={() => removeDenominationRow(index, denomIndex)}>Hapus</Button>
+              <div className="mt-3 rounded-lg border border-[#cbd9e7] bg-white p-3">
+                <div className="flex items-center justify-between"><Label className="text-xs font-semibold text-[#18395f]">Rincian pecahan (wajib — tiap pecahan punya harga sendiri)</Label><Button type="button" size="sm" variant="outline" className="h-7 border-[#bcd2e5] text-xs text-[#183f70]" onClick={() => addDenominationRow(index)}><Plus className="mr-1 size-3" />Tambah pecahan</Button></div>
+                {line.denominations.map((row, denomIndex) => <div key={denomIndex} className="mt-2 grid grid-cols-[1fr_90px_1fr_auto] gap-2">
+                  <Input required inputMode="decimal" value={row.value} onChange={(e) => updateDenominationRow(index, denomIndex, "value", e.target.value)} placeholder="Nilai pecahan, mis. 100" />
+                  <Input required inputMode="numeric" value={row.quantity} onChange={(e) => updateDenominationRow(index, denomIndex, "quantity", e.target.value)} placeholder="Lembar" />
+                  <Input required inputMode="decimal" value={row.rate} onChange={(e) => updateDenominationRow(index, denomIndex, "rate", e.target.value)} placeholder="Harga pecahan ini" />
+                  <Button type="button" size="sm" variant="ghost" className="text-rose-600" disabled={line.denominations.length === 1} onClick={() => removeDenominationRow(index, denomIndex)}>Hapus</Button>
                 </div>)}
-                {line.denominations.length ? <p className={`mt-2 text-xs ${mismatch ? "font-semibold text-rose-600" : "text-[#64748b]"}`}>{mismatch ? "Total rincian belum sama dengan nominal valuta baris ini." : "Total rincian sudah sama dengan nominal valuta baris ini."}</p> : null}
+                <p className="mt-2 text-xs text-[#64748b]">Contoh: 1000 USD dengan pecahan 100×5 harga 17800, pecahan 50×5 harga 17500, pecahan 10×25 harga 17000 — tambahkan tiga baris pecahan seperti itu.</p>
               </div>
+              {lineForeignTotal(line) > 0 ? <p className="mt-2 text-xs font-semibold text-[#18395f]">Total baris ini: {lineForeignTotal(line).toLocaleString("id-ID")} {line.currency?.code ?? ""} · Rp {lineRupiahTotal(line).toLocaleString("id-ID")}</p> : null}
             </div>;
           })}
           <Button type="button" variant="outline" className="w-full border-dashed border-[#8fb08a] text-[#3d7139]" onClick={addLine}><Plus className="mr-2 size-4" />Tambah baris mata uang</Button>
@@ -230,7 +234,7 @@ export default function TransactionCreate() {
         </CardContent>
       </Card>
 
-      <Button className="w-full bg-[#183f70]" disabled={create.isPending || hasDenominationMismatch}>{create.isPending ? "Membuat transaksi…" : "Simpan transaksi sebagai draft"}</Button>
+      <Button className="w-full bg-[#183f70]" disabled={create.isPending || !allLinesComplete}>{create.isPending ? "Membuat transaksi…" : "Simpan transaksi sebagai draft"}</Button>
     </form>
   </div>;
 }
