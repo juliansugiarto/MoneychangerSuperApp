@@ -15,6 +15,7 @@ import {
   directorAcknowledgements,
   exchangeTransactionDenominationEntries,
   exchangeTransactionLines,
+  exchangeTransactionPaymentDenominations,
   exchangeTransactions,
   financialStatementSnapshots,
   operationalRates,
@@ -1020,6 +1021,8 @@ export type CreateTransactionInput = {
   dealNotes?: string;
   paymentMethod: "CASH" | "BANK_TRANSFER" | "OTHER";
   paymentReference?: string;
+  /** Physical Rupiah denomination breakdown for the payment leg — required when paymentMethod is CASH. */
+  paymentDenominations?: DenominationEntryInput[];
   transactionPurposeSnapshot?: string;
   customerActingAs?: "SELF" | "REPRESENTATIVE";
   /** Registered customer id acting as representative/kuasa; the name and identity number are snapshotted server-side from that customer. */
@@ -1165,35 +1168,34 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   const rupiahAmount = preparedLines.reduce((sum, line) => sum.plus(line.rupiahAmount), new Decimal(0)).toFixed(2);
 
   // A SELL bon hands out foreign currency we're supposed to already be holding — never let it draft
-  // against stock we don't have. Only COMPLETED buys/adjustments count (that's when cash actually moved),
-  // so a same-day buy-then-sell works as long as the buy was completed first.
+  // against stock we don't have.
   if (input.operation === "SELL") {
-    const sellCurrencyIds = Array.from(new Set(preparedLines.map((line) => line.currencyId)));
-    const balances = await db.select().from(cashBalances).where(inArray(cashBalances.currencyId, sellCurrencyIds));
-    const balanceByCurrency = new Map(balances.map((row) => [row.currencyId, new Decimal(String(row.availableAmount))]));
     const requiredByCurrency = new Map<number, Decimal>();
-    for (const line of preparedLines) requiredByCurrency.set(line.currencyId, (requiredByCurrency.get(line.currencyId) ?? new Decimal(0)).plus(line.foreignAmount));
+    const denomRequiredByCurrency = new Map<number, Map<string, number>>();
+    for (const line of preparedLines) {
+      requiredByCurrency.set(line.currencyId, (requiredByCurrency.get(line.currencyId) ?? new Decimal(0)).plus(line.foreignAmount));
+      const denomMap = denomRequiredByCurrency.get(line.currencyId) ?? new Map<string, number>();
+      for (const entry of line.denominationRows) denomMap.set(entry.denominationValue, (denomMap.get(entry.denominationValue) ?? 0) + entry.quantity);
+      denomRequiredByCurrency.set(line.currencyId, denomMap);
+    }
     for (const [lineCurrencyId, required] of Array.from(requiredByCurrency.entries())) {
-      const available = balanceByCurrency.get(lineCurrencyId) ?? new Decimal(0);
-      if (available.lt(required)) {
-        const code = currencyById.get(lineCurrencyId)?.code ?? `#${lineCurrencyId}`;
-        throw new Error(`Stok ${code} tidak mencukupi untuk dijual. Tersedia ${available.toFixed(2)}, dibutuhkan ${required.toFixed(2)}. Selesaikan (bukan hanya kirim) transaksi pembelian ${code} terlebih dahulu bila baru saja dibeli hari ini.`);
-      }
+      const code = currencyById.get(lineCurrencyId)?.code ?? `#${lineCurrencyId}`;
+      await assertSufficientStock(db, lineCurrencyId, code, required, denomRequiredByCurrency.get(lineCurrencyId) ?? new Map(), "dijual");
     }
-    const denominationBalanceRows = await db.select().from(cashDenominationBalances).where(inArray(cashDenominationBalances.currencyId, sellCurrencyIds));
-    const denomAvailable = new Map(denominationBalanceRows.map((row) => [`${row.currencyId}:${new Decimal(String(row.denominationValue)).toFixed(6)}`, row.quantity]));
-    const denomRequired = new Map<string, number>();
-    for (const line of preparedLines) for (const entry of line.denominationRows) {
-      const key = `${line.currencyId}:${entry.denominationValue}`;
-      denomRequired.set(key, (denomRequired.get(key) ?? 0) + entry.quantity);
-    }
-    for (const [key, required] of Array.from(denomRequired.entries())) {
-      const available = denomAvailable.get(key) ?? 0;
-      if (available < required) {
-        const [lineCurrencyId, denominationValue] = key.split(":");
-        const code = currencyById.get(Number(lineCurrencyId))?.code ?? lineCurrencyId;
-        throw new Error(`Stok pecahan ${code} ${denominationValue} tidak mencukupi (tersedia ${available}, dibutuhkan ${required}).`);
-      }
+  }
+
+  // The other side of a CASH deal: physical Rupiah handed over/received. Required whenever payment is
+  // CASH (bank transfer/other never touch physical stock), reconciled the same way as a foreign line.
+  let paymentDenominationRows: ReturnType<typeof reconcileDenominations> = [];
+  let paymentCurrencyId: number | null = null;
+  if (input.paymentMethod === "CASH") {
+    if (!input.paymentDenominations?.length) throw new Error("Rincian pecahan Rupiah yang diterima/dibayarkan wajib diisi untuk pembayaran tunai.");
+    paymentDenominationRows = reconcileDenominations(input.paymentDenominations, new Decimal(rupiahAmount));
+    const idrCurrency = await ensureCurrency({ code: "IDR", name: "Rupiah Indonesia" });
+    paymentCurrencyId = idrCurrency.id;
+    if (input.operation === "BUY") {
+      const denomRequired = new Map(paymentDenominationRows.map((row) => [row.denominationValue, row.quantity]));
+      await assertSufficientStock(db, idrCurrency.id, "IDR", new Decimal(rupiahAmount), denomRequired, "membayar pembelian");
     }
   }
 
@@ -1267,6 +1269,9 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
       if (insertedLine) {
         await tx.insert(exchangeTransactionDenominationEntries).values(line.denominationRows.map((entry) => ({ transactionId: row.id, transactionLineId: insertedLine.id, denominationValue: entry.denominationValue, quantity: entry.quantity, lineTotal: entry.lineTotal, agreedRate: entry.agreedRate })));
       }
+    }
+    if (paymentDenominationRows.length && paymentCurrencyId) {
+      await tx.insert(exchangeTransactionPaymentDenominations).values(paymentDenominationRows.map((entry) => ({ transactionId: row.id, currencyId: paymentCurrencyId, denominationValue: entry.denominationValue, quantity: entry.quantity, lineTotal: entry.subtotal })));
     }
     return row;
   });
@@ -1376,6 +1381,27 @@ async function applyDenominationBalanceDelta(tx: any, currencyId: number, entrie
     const denominationValue = new Decimal(entry.value).toFixed(6);
     const delta = sign * entry.quantity;
     await tx.insert(cashDenominationBalances).values({ currencyId, denominationValue, quantity: delta }).onDuplicateKeyUpdate({ set: { quantity: sql`${cashDenominationBalances.quantity} + ${delta}` } });
+  }
+}
+
+/**
+ * Refuses to let a bon draft against stock we don't actually have — checks both the aggregate currency
+ * balance and every specific denomination required. Only COMPLETED movements count (that's when cash
+ * actually moved), so a same-day buy-then-sell (or sell-then-buy-to-cover) works as long as the earlier
+ * leg was completed, not just submitted/approved.
+ */
+async function assertSufficientStock(db: Awaited<ReturnType<typeof databaseOrThrow>>, currencyId: number, currencyCode: string, requiredTotal: Decimal, requiredDenominations: Map<string, number>, verb: string) {
+  const balance = (await db.select().from(cashBalances).where(eq(cashBalances.currencyId, currencyId)).limit(1))[0];
+  const available = balance ? new Decimal(String(balance.availableAmount)) : new Decimal(0);
+  if (available.lt(requiredTotal)) {
+    throw new Error(`Stok ${currencyCode} tidak mencukupi untuk ${verb}. Tersedia ${available.toFixed(2)}, dibutuhkan ${requiredTotal.toFixed(2)}. Selesaikan (bukan hanya kirim) transaksi terkait terlebih dahulu bila baru saja bergerak hari ini.`);
+  }
+  if (!requiredDenominations.size) return;
+  const denominationRows = await db.select().from(cashDenominationBalances).where(eq(cashDenominationBalances.currencyId, currencyId));
+  const denomAvailable = new Map(denominationRows.map((row) => [new Decimal(String(row.denominationValue)).toFixed(6), row.quantity]));
+  for (const [denominationValue, required] of Array.from(requiredDenominations.entries())) {
+    const rowAvailable = denomAvailable.get(denominationValue) ?? 0;
+    if (rowAvailable < required) throw new Error(`Stok pecahan ${currencyCode} ${denominationValue} tidak mencukupi untuk ${verb} (tersedia ${rowAvailable}, dibutuhkan ${required}).`);
   }
 }
 
@@ -1514,6 +1540,33 @@ export async function completeTransaction(transactionId: number, actor: { id: nu
       cashResults.push({ currencyId: postingLine.currencyId, before: beforeBalance.toFixed(6), after: afterBalance.toFixed(6) });
     }
 
+    // The other side of a CASH deal: physical Rupiah moves opposite the foreign currency (BUY pays it
+    // out, SELL takes it in). Bank transfer/other never touch physical stock, so nothing to post there;
+    // a bon predating this feature has no payment-denomination rows either, so this is a no-op for it.
+    const paymentRows = transaction.paymentMethod === "CASH"
+      ? await tx.select().from(exchangeTransactionPaymentDenominations).where(eq(exchangeTransactionPaymentDenominations.transactionId, transactionId))
+      : [];
+    if (paymentRows.length) {
+      const paymentCurrencyId = paymentRows[0].currencyId;
+      const paymentTotal = paymentRows.reduce((sum, row) => sum.plus(String(row.lineTotal)), new Decimal(0));
+      const paymentDirection = transaction.operation === "BUY" ? "OUT" as const : "IN" as const;
+      await tx.insert(cashBalances).values({ currencyId: paymentCurrencyId, availableAmount: "0.000000" }).onDuplicateKeyUpdate({ set: { currencyId: sql`${cashBalances.currencyId}` } });
+      await tx.execute(sql`SELECT ${cashBalances.id} FROM ${cashBalances} WHERE ${cashBalances.currencyId} = ${paymentCurrencyId} FOR UPDATE`);
+      const paymentBalance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, paymentCurrencyId)).limit(1))[0];
+      if (!paymentBalance) throw new Error("Saldo kas Rupiah tidak dapat dikunci.");
+      const paymentBefore = new Decimal(String(paymentBalance.availableAmount));
+      // calculateCashBalanceAfter treats BUY as +amount/SELL as -amount; Rupiah needs the opposite of the
+      // deal's own operation, so the flipped operation is passed in rather than duplicating that math.
+      const paymentAfter = new Decimal(calculateCashBalanceAfter(transaction.operation === "BUY" ? "SELL" : "BUY", paymentBefore.toFixed(6), paymentTotal.toFixed(6)));
+      await tx.update(cashBalances).set({ availableAmount: paymentAfter.toFixed(6) }).where(eq(cashBalances.id, paymentBalance.id));
+      const [paymentMovement] = await tx.insert(cashBalanceMovements).values({ cashBalanceId: paymentBalance.id, transactionId: transaction.id, transactionLineId: null, direction: paymentDirection, amount: paymentTotal.toFixed(6), reason: `TRANSACTION_${transaction.operation}_${transaction.transactionNumber}_IDR`, createdByUserId: actor.id }).$returningId();
+      if (paymentMovement) {
+        await tx.insert(cashDenominationEntries).values(paymentRows.map((row) => ({ cashBalanceMovementId: paymentMovement.id, denominationValue: row.denominationValue, quantity: row.quantity, subtotal: row.lineTotal })));
+        await applyDenominationBalanceDelta(tx, paymentCurrencyId, paymentRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })), paymentDirection === "IN" ? 1 : -1);
+      }
+      cashResults.push({ currencyId: paymentCurrencyId, before: paymentBefore.toFixed(6), after: paymentAfter.toFixed(6) });
+    }
+
     await tx.update(exchangeTransactions).set({ status: "COMPLETED" }).where(eq(exchangeTransactions.id, transactionId));
     await tx.insert(auditLogs).values({ actorUserId: actor.id, action: "TRANSACTION_COMPLETED_AND_CASH_POSTED", entityType: "exchange_transaction", entityId: String(transaction.id), beforeState: { status: transaction.status }, afterState: { status: "COMPLETED", cashResults }, metadata: { transactionNumber: transaction.transactionNumber, lineCount: postingLines.length } });
     return { ...transaction, status: "COMPLETED" as const, cashResults };
@@ -1540,9 +1593,10 @@ export async function listCashDenominationBalances() {
 }
 
 /** Records the declared morning float as an immutable, auditable adjustment before the daily count begins. */
-export async function recordOpeningCash(input: { currencyId: number; openingAmount: string; notes?: string; denominations?: DenominationEntryInput[] }, actor: { id: number; role: StaffRole }) {
+export async function recordOpeningCash(input: { currencyId: number; openingAmount: string; notes?: string; denominations: DenominationEntryInput[] }, actor: { id: number; role: StaffRole }) {
   const declaredAmount = nonNegativeOrZeroDecimal(input.openingAmount, "Kas pembukaan");
-  const denominationRows = reconcileDenominations(input.denominations ?? [], declaredAmount);
+  if (!input.denominations?.length) throw new Error("Rincian pecahan wajib diisi untuk kas awal — stok pecahan sistem dimulai dari sini.");
+  const denominationRows = reconcileDenominations(input.denominations, declaredAmount);
   const db = await databaseOrThrow();
   return db.transaction(async (tx) => {
     const currency = (await tx.select().from(currencies).where(and(eq(currencies.id, input.currencyId), eq(currencies.active, true))).limit(1))[0];
@@ -1569,14 +1623,15 @@ export async function recordOpeningCash(input: { currencyId: number; openingAmou
 
 /** Off-hours cash movements that aren't part of the normal transaction flow — owner safe deposits/withdrawals, or a sale made outside business hours. Always requires a note and always writes an audit trail so it shows up correctly in the daily stock report. */
 export async function recordCashAdjustment(
-  input: { currencyId: number; category: "SAFE_DEPOSIT" | "SAFE_WITHDRAWAL" | "OFF_HOURS_SALE" | "OTHER"; amount: string; notes: string; denominations?: DenominationEntryInput[] },
+  input: { currencyId: number; category: "SAFE_DEPOSIT" | "SAFE_WITHDRAWAL" | "OFF_HOURS_SALE" | "OTHER"; amount: string; notes: string; denominations: DenominationEntryInput[] },
   actor: { id: number; role: StaffRole },
 ) {
   const amount = nonNegativeOrZeroDecimal(input.amount, "Jumlah penyesuaian");
   if (amount.lte(0)) throw new Error("Jumlah penyesuaian harus lebih besar dari nol.");
   const notes = input.notes.trim();
   if (notes.length < 5) throw new Error("Catatan penyesuaian wajib diisi (minimal 5 karakter) untuk jejak audit.");
-  const denominationRows = reconcileDenominations(input.denominations ?? [], amount);
+  if (!input.denominations?.length) throw new Error("Rincian pecahan wajib diisi untuk penyesuaian kas/brankas.");
+  const denominationRows = reconcileDenominations(input.denominations, amount);
   // Deposits into the safe and off-hours sales both remove cash from the counter; a withdrawal from the safe adds it back.
   const direction: "IN" | "OUT" = input.category === "SAFE_WITHDRAWAL" ? "IN" : "OUT";
   const db = await databaseOrThrow();

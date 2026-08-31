@@ -300,6 +300,8 @@ export const appRouter = router({
       dealNotes: z.string().trim().max(255).optional(),
       paymentMethod: z.enum(["CASH", "BANK_TRANSFER", "OTHER"]),
       paymentReference: z.string().trim().max(160).optional(),
+      /** Physical Rupiah denomination breakdown for the payment leg — required when paymentMethod is CASH; bank transfer/other never touch physical stock. */
+      paymentDenominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).max(80).optional(),
       transactionPurposeSnapshot: z.string().trim().min(3).max(1000).optional(),
       customerActingAs: z.enum(["SELF", "REPRESENTATIVE"]).default("SELF"),
       /** Registered customer id acting as representative/kuasa; must be picked from search, never typed freely. */
@@ -314,6 +316,9 @@ export const appRouter = router({
       }
       if (value.underlyingRequired && !value.underlyingReference) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Referensi underlying wajib diisi." });
+      }
+      if (value.paymentMethod === "CASH" && !value.paymentDenominations?.length) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Rincian pecahan Rupiah wajib diisi untuk pembayaran tunai.", path: ["paymentDenominations"] });
       }
     })).mutation(({ input, ctx }) => createTransaction(input, ctx.user.id)),
     submit: staffProcedure.input(z.object({ transactionId: z.number().int().positive() })).mutation(({ input, ctx }) => submitTransaction(input.transactionId, ctx.user)),
@@ -339,8 +344,8 @@ export const appRouter = router({
   cash: router({
     balances: staffProcedure.query(() => listCashBalances()),
     denominationBalances: staffProcedure.query(() => listCashDenominationBalances()),
-    recordOpening: staffProcedure.input(z.object({ currencyId: z.number().int().positive(), openingAmount: decimalString, notes: z.string().trim().max(500).optional(), denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).max(50).optional() })).mutation(({ input, ctx }) => recordOpeningCash(input, ctx.user)),
-    recordAdjustment: controllerProcedure.input(z.object({ currencyId: z.number().int().positive(), category: z.enum(["SAFE_DEPOSIT", "SAFE_WITHDRAWAL", "OFF_HOURS_SALE", "OTHER"]), amount: decimalString, notes: z.string().trim().min(5).max(500), denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).max(50).optional() })).mutation(({ input, ctx }) => recordCashAdjustment(input, ctx.user)),
+    recordOpening: staffProcedure.input(z.object({ currencyId: z.number().int().positive(), openingAmount: decimalString, notes: z.string().trim().max(500).optional(), denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).min(1, "Rincian pecahan wajib diisi untuk kas awal.").max(50) })).mutation(({ input, ctx }) => recordOpeningCash(input, ctx.user)),
+    recordAdjustment: controllerProcedure.input(z.object({ currencyId: z.number().int().positive(), category: z.enum(["SAFE_DEPOSIT", "SAFE_WITHDRAWAL", "OFF_HOURS_SALE", "OTHER"]), amount: decimalString, notes: z.string().trim().min(5).max(500), denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).min(1, "Rincian pecahan wajib diisi untuk penyesuaian.").max(50) })).mutation(({ input, ctx }) => recordCashAdjustment(input, ctx.user)),
   }),
 
   stockOpname: router({

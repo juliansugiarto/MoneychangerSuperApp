@@ -31,6 +31,9 @@ Perubahan kode tidak selesai tanpa test Vitest yang relevan, pemeriksaan tipe, d
 - Jangan mereset sandi, menonaktifkan akun, membuat akun, mengubah peran, mengaktifkan kurs, atau mengekspor/menyetujui paket nyata tanpa permintaan eksplisit dan alur yang berwenang.
 - Jangan menyimpan secret, kata sandi, token, cookie, data KYC, atau workbook aktual di source, fixture, log, screenshot, dokumentasi, atau commit.
 - Impor XLS/XLSX harus mempertahankan batas 5 MB serta validasi MIME/base64/signature. Hanya workbook internal tepercaya dan dipindai antivirus yang boleh diimpor.
+- Rincian pecahan (nilai × jumlah lembar/keping) WAJIB diisi untuk setiap pergerakan kas fisik — kas awal, penyesuaian brankas/off-hours, dan kedua sisi bon (valuta asing maupun Rupiah pada transaksi tunai). Jangan membuatnya opsional; stok pecahan berjalan (`cash_denomination_balances`) adalah sumber kebenaran operasional, bukan sekadar catatan tambahan.
+- Transaksi valuta selalu bergerak dua arah: sisi valuta asing (`exchange_transaction_denomination_entries`, per baris mata uang) dan sisi Rupiah pada pembayaran tunai (`exchange_transaction_payment_denominations`). Perubahan pada salah satu sisi (validasi stok, posting kas, pelaporan) wajib dicek ulang terhadap sisi lainnya — jangan hanya menyelesaikan satu kaki transaksi.
+- Sebelum menganggap perubahan kas/stok/transaksi selesai, telusuri skenario operasional nyata secara eksplisit (modal awal → beli → jual di hari yang sama → tutup/opname; beli tanpa modal Rupiah cukup; jual tanpa stok valuta cukup) dan pastikan logikanya konsisten end-to-end, bukan hanya lolos linting/type-check.
 
 ## Perubahan Skema, UI, dan Rilis
 

@@ -44,7 +44,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 2. Bila sistem meminta penggantian kata sandi awal, buat kata sandi baru yang hanya diketahui pemilik akun.
 3. Controller membuka **Pengawasan → Mulai Go-Live** dan **Kesiapan Operasional** untuk memeriksa kontrol yang belum siap.
 4. Admin memeriksa **Kontrol Outlet → Kurs Operasional** dan **Bandingkan Kurs**; pastikan daftar kurs aktif benar-benar milik outlet dan bukan data demo/historis.
-5. Staff membuka **Buka & Tutup Outlet** dan **Kas & Persediaan** untuk memastikan checklist serta mata uang kas dapat ditampilkan.
+5. Staff membuka **Buka & Tutup Outlet** dan **Kas Awal** untuk memastikan checklist serta mata uang kas dapat ditampilkan.
 6. Shareholder membuka **Pelaporan Regulator** hanya untuk membaca panduan; jangan membuat paket dengan data percobaan.
 7. Controller membuka **Akses Staf** dan menonaktifkan akun yang tidak digunakan atau belum diverifikasi.
 8. Jika ada halaman kosong, pesan gagal memuat, atau angka yang tidak dikenal, **jangan lanjutkan transaksi**. Catat waktu, halaman, dan pesan yang tampil; lalu eskalasi ke Controller.
@@ -64,7 +64,10 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 | Kontrol Outlet | Buka & Tutup Outlet | Checklist pembukaan, penutupan, catatan serah-terima, dan arsip PDF penutupan. | Staff |
 | Kontrol Outlet | Kurs Operasional | Memantau, menyiapkan, dan mengaktifkan kurs secara manual dengan alasan. | Admin |
 | Kontrol Outlet | Bandingkan Kurs | Membandingkan kurs outlet dengan referensi yang tersedia. | Admin |
-| Kontrol Outlet | Kas & Persediaan | Kas pembukaan, saldo, stock opname, dan rekonsiliasi. | Staff |
+| Kontrol Outlet | Kas Awal | Mencatat kas fisik pembukaan per mata uang, wajib dengan rincian pecahan. | Staff |
+| Kontrol Outlet | Stok Saat Ini | Melihat saldo dan stok pecahan berjalan per mata uang (termasuk Rupiah). | Staff |
+| Kontrol Outlet | Stock Opname | Buka hitungan, kirim hasil hitung fisik saat tutup, dan rekonsiliasi selisih. | Staff |
+| Kontrol Outlet | Penyesuaian Brankas | Setor/ambil brankas dan penjualan luar jam kerja, wajib dengan rincian pecahan. | Controller |
 | Kontrol Outlet | Keluhan Nasabah | Register, investigasi, hasil, dan eskalasi pengaduan konsumen. | Staff |
 | Pengawasan | Kesiapan Operasional | Kontrol harian Controller, termasuk status Paket Pelaporan. | Controller |
 | Pengawasan | Direksi Mengetahui | Daftar informasi pengawasan yang perlu diakui Direksi. | Controller |
@@ -81,7 +84,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 
 1. Masuk ke **Buka & Tutup Outlet**.
 2. Periksa empat kontrol pembukaan: modal kerja diterima, lampu UV siap, mesin hitung siap, dan kas awal sudah dicatat.
-3. Buka **Kas & Persediaan** untuk mencatat kas pembukaan per mata uang. Masukkan angka fisik yang benar-benar diterima; jangan mengisi angka perkiraan.
+3. Buka **Kas Awal** untuk mencatat kas pembukaan per mata uang, termasuk mata uang Rupiah (modal kerja untuk membayar pembelian). Masukkan angka fisik yang benar-benar diterima beserta rincian pecahannya (wajib); jangan mengisi angka perkiraan.
 4. Kembali ke checklist, centang hanya kontrol yang telah dilakukan, lalu klik **Simpan pembukaan**.
 5. Bila ada alat rusak atau modal belum diterima, jangan mencentang kontrol tersebut. Tulis catatan operasional singkat tanpa nomor identitas nasabah dan beri tahu Supervisor.
 
@@ -106,12 +109,13 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 
 ### 5.4 Membuat Bon Transaksi — Staff
 
-1. Buka **Buat Transaksi** dan pilih arah transaksi beli/jual sesuai kejadian di loket. Bon **jual** hanya bisa dibuat bila stok mata uang tsb cukup (dicek terhadap kas yang sudah tercatat sistem) — bila baru saja membeli mata uang yang sama hari ini, **selesaikan** bon pembeliannya dulu (langkah 10) sebelum membuat bon jualnya.
+1. Buka **Buat Transaksi** dan pilih arah transaksi beli/jual sesuai kejadian di loket. Bon **jual** hanya bisa dibuat bila stok valuta asing tsb cukup, dan bon **beli** hanya bisa dibuat bila stok modal Rupiah cukup untuk membayar nasabah (keduanya dicek terhadap kas yang sudah tercatat sistem) — bila baru saja membeli/menjual hari ini, **selesaikan** bon terkait dulu (langkah 10) sebelum membuat bon berikutnya.
 2. Isi **No. Kwitansi/Bon** sesuai buku kwitansi fisik yang sedang dipakai — buku Jual dan Beli punya nomor urut terpisah, jadi No. 1 boleh muncul di kedua buku sekaligus. Nomor ini diketik manual oleh teller, bukan otomatis.
 3. Cari dan pilih nasabah.
 4. Tambahkan satu **baris mata uang**: ketik kode atau nama mata uang di kotak pencarian (mis. "GBP" atau "Rupiah") — semua mata uang di dunia bisa dicari, termasuk IDR, dan otomatis terdaftar begitu dipilih. Tidak dibatasi hanya mata uang yang sudah punya kurs otomatis.
 5. Isi **rincian pecahan** pada baris tsb — wajib diisi, minimal satu baris pecahan (nilai pecahan, jumlah lembar/keping, dan **harga khusus pecahan itu**). Harga ditulis manual oleh teller per kelompok pecahan, karena pecahan besar dan kecil sering dihargai berbeda: misalnya transaksi 1.000 USD dengan pecahan 100×5 seharga 17.800, pecahan 50×5 seharga 17.500, dan pecahan 10×25 seharga 17.000 — tambahkan tiga baris pecahan seperti itu di baris mata uang yang sama. Kurs referensi (bila ada) hanya ditampilkan sebagai pembanding, bukan sumber harga.
 6. Tambah baris mata uang lagi bila nasabah menukar lebih dari satu mata uang sekaligus.
+6a. Bila cara bayar **Tunai**, isi juga **rincian pecahan Rupiah** yang diterima/dibayarkan (wajib, total harus sama dengan nilai Rupiah transaksi) — ini sisi Rupiah dari bon, terpisah dari rincian pecahan valuta asing di langkah 5. Transfer bank/lainnya tidak memerlukan ini karena tidak ada uang fisik yang berpindah.
 7. Bila transaksi dilakukan oleh **pihak kuasa/wakil** (termasuk pemilik manfaat/BO), pilih nasabah tersebut dari pencarian nasabah terdaftar — bukan mengetik nama/identitas bebas. Bila BO nasabah utama sudah terdaftar sebagai nasabah, sistem otomatis menyarankan nasabah tersebut untuk dikonfirmasi. Bila pihak kuasa/wakil belum terdaftar, daftarkan dulu sebagai nasabah (data KYC lengkap) sebelum melanjutkan bon.
 8. Periksa kembali total keseluruhan bon sebelum menyimpan.
 9. Bila sistem menandai transaksi untuk review, jangan mencari jalan pintas. Simpan sesuai workflow dan beri Supervisor informasi yang diperlukan.
@@ -127,11 +131,14 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 
 ### 5.6 Kas, Persediaan, dan Stock Opname — Staff dan Supervisor
 
-1. Catat kas pembukaan terlebih dahulu, **termasuk rincian pecahan** — ini stok fisik awal per pecahan yang jadi acuan sistem sepanjang hari. Cari mata uang lewat kotak pencarian (termasuk **IDR** untuk modal kerja Rupiah) — tidak lagi dibatasi ke mata uang yang sudah disinkronkan otomatis.
-2. Selama hari berjalan, kas dan stok pecahan bergerak otomatis setiap kali bon **diselesaikan** (bukan hanya dibuat/dikirim/disetujui) — lihat langkah "Selesaikan" di Daftar Transaksi (§5.4). Jangan melakukan pembukuan paralel tanpa rekonsiliasi. Bagian "Stok pecahan saat ini" di halaman ini menampilkan angka sistem berjalan; **cek fisik hanya perlu dilakukan sekali saat mau tutup**, bukan sepanjang hari.
-3. Menjelang tutup, masuk ke **Kas & Persediaan**, masukkan hitungan fisik per mata uang, lalu kirim stock opname.
-4. Telaah varians yang tampil. Varians memerlukan peninjauan Supervisor; Direksi harus memperoleh informasi pengawasan sesuai workflow.
-5. Jangan menyembunyikan selisih dengan mengubah angka fisik agar sama dengan sistem.
+Menu ini terbagi menjadi empat halaman terpisah: **Kas Awal**, **Stok Saat Ini**, **Stock Opname**, dan **Penyesuaian Brankas** (Controller).
+
+1. Buka **Kas Awal** terlebih dahulu, **termasuk rincian pecahan** (wajib) — ini stok fisik awal per pecahan yang jadi acuan sistem sepanjang hari. Cari mata uang lewat kotak pencarian, **termasuk IDR** untuk modal kerja Rupiah (dibutuhkan agar bon beli bisa diselesaikan — sistem menolak bon beli bila modal Rupiah tidak cukup) — tidak dibatasi ke mata uang yang sudah disinkronkan otomatis.
+2. Selama hari berjalan, kas dan stok pecahan **kedua sisi** (valuta asing dan Rupiah untuk pembayaran tunai) bergerak otomatis setiap kali bon **diselesaikan** (bukan hanya dibuat/dikirim/disetujui) — lihat langkah "Selesaikan" di Daftar Transaksi (§5.4). Jangan melakukan pembukuan paralel tanpa rekonsiliasi. Buka **Stok Saat Ini** untuk melihat angka sistem berjalan per pecahan; **cek fisik hanya perlu dilakukan sekali saat mau tutup**, bukan sepanjang hari.
+3. Setor/ambil dari brankas atau penjualan luar jam kerja dicatat lewat **Penyesuaian Brankas** — rincian pecahan wajib diisi di sini juga.
+4. Menjelang tutup, masuk ke **Stock Opname**, masukkan hitungan fisik per mata uang (bandingkan dengan rincian pecahan di Stok Saat Ini), lalu kirim hasil hitung.
+5. Telaah varians yang tampil. Varians memerlukan peninjauan Supervisor; Direksi harus memperoleh informasi pengawasan sesuai workflow.
+6. Jangan menyembunyikan selisih dengan mengubah angka fisik agar sama dengan sistem.
 
 ### 5.7 Penutupan Outlet — Staff dan Supervisor
 

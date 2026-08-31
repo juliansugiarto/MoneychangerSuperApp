@@ -15,8 +15,11 @@ import { Customer, PrintableLine, printBon } from "./Transactions";
 /** Every denomination group is priced on its own (e.g. USD 100s vs USD 10s in the same deal), so price lives here, not on the line. */
 type PricedDenominationRow = { value: string; quantity: string; rate: string };
 type LineDraft = { key: string; currency: PickedCurrency | null; quoteUnit: string; denominations: PricedDenominationRow[] };
+/** The Rupiah leg of a CASH deal has no price to enter — it's already valued at face value. */
+type PlainDenominationRow = { value: string; quantity: string };
 
 const emptyDenominationRow = (): PricedDenominationRow => ({ value: "", quantity: "", rate: "" });
+const emptyPlainDenominationRow = (): PlainDenominationRow => ({ value: "", quantity: "" });
 const emptyLine = (): LineDraft => ({ key: crypto.randomUUID(), currency: null, quoteUnit: "1", denominations: [emptyDenominationRow()] });
 const isCompleteDenominationRow = (row: PricedDenominationRow) => Boolean(row.value && row.quantity && row.rate);
 const lineForeignTotal = (line: LineDraft) => line.denominations.reduce((sum, row) => sum + (Number(row.value) || 0) * (Number(row.quantity) || 0), 0);
@@ -37,6 +40,7 @@ export default function TransactionCreate() {
   const [lines, setLines] = useState<LineDraft[]>([emptyLine()]);
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "BANK_TRANSFER" | "OTHER">("CASH");
   const [paymentReference, setPaymentReference] = useState("");
+  const [paymentDenominations, setPaymentDenominations] = useState<PlainDenominationRow[]>([emptyPlainDenominationRow()]);
   const [purpose, setPurposeValue] = useState("");
   const [customerActingAs, setCustomerActingAs] = useState<"SELF" | "REPRESENTATIVE">("SELF");
   const [repSearch, setRepSearch] = useState("");
@@ -74,6 +78,13 @@ export default function TransactionCreate() {
   const lineIsComplete = (line: LineDraft) => Boolean(line.currency) && line.denominations.length > 0 && line.denominations.every(isCompleteDenominationRow);
   const allLinesComplete = lines.every(lineIsComplete);
 
+  const addPaymentDenominationRow = () => setPaymentDenominations((rows) => [...rows, emptyPlainDenominationRow()]);
+  const updatePaymentDenominationRow = (index: number, field: keyof PlainDenominationRow, value: string) => setPaymentDenominations((rows) => rows.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+  const removePaymentDenominationRow = (index: number) => setPaymentDenominations((rows) => (rows.length > 1 ? rows.filter((_, i) => i !== index) : rows));
+  const paymentDenominationTotal = paymentDenominations.reduce((sum, row) => sum + (Number(row.value) || 0) * (Number(row.quantity) || 0), 0);
+  const paymentDenominationsComplete = paymentDenominations.length > 0 && paymentDenominations.every((row) => row.value && row.quantity);
+  const paymentDenominationMismatch = paymentMethod === "CASH" && totalRupiah > 0 && Math.abs(paymentDenominationTotal - totalRupiah) > 0.5;
+
   const uploadUnderlying = async (transactionId: number) => {
     if (!underlyingFile) return;
     const response = await fetch("/api/operational-documents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ documentType: "UNDERLYING", transactionId, originalFileName: underlyingFile.name, mimeType: underlyingFile.type, byteSize: underlyingFile.size, dataBase64: await toBase64(underlyingFile), documentReference: underlyingReference }) });
@@ -95,6 +106,7 @@ export default function TransactionCreate() {
         setLastBon(transaction);
         setLastBonLines(printableLines);
         setLines([emptyLine()]);
+        setPaymentDenominations([emptyPlainDenominationRow()]);
         setReceiptNumber("");
         setRepresentativeCustomer(null);
         setRepSearch("");
@@ -112,6 +124,8 @@ export default function TransactionCreate() {
     if (!receiptNumber.trim()) return toast.error("Isi nomor kwitansi.");
     if (!customer) return toast.error("Cari dan pilih nasabah.");
     if (!allLinesComplete) return toast.error("Setiap baris wajib punya mata uang dan minimal satu pecahan lengkap (nilai, jumlah, harga).");
+    if (paymentMethod === "CASH" && !paymentDenominationsComplete) return toast.error("Rincian pecahan Rupiah wajib diisi untuk pembayaran tunai.");
+    if (paymentDenominationMismatch) return toast.error("Rincian pecahan Rupiah belum sama dengan total transaksi.");
     if (customerActingAs === "REPRESENTATIVE" && !representativeCustomer) return toast.error("Pilih nasabah terdaftar sebagai pihak kuasa/wakil.");
     if (underlyingRequired && (!underlyingFile || !underlyingReference)) return toast.error("Lampirkan file dan referensi underlying.");
     create.mutate({
@@ -121,6 +135,7 @@ export default function TransactionCreate() {
       lines: lines.map((line) => ({ currencyId: line.currency!.id, quoteUnit: line.quoteUnit || "1", denominations: line.denominations.map((row) => ({ value: row.value, quantity: Number(row.quantity), rate: row.rate })) })),
       paymentMethod,
       paymentReference,
+      paymentDenominations: paymentMethod === "CASH" ? paymentDenominations.map((row) => ({ value: row.value, quantity: Number(row.quantity) })) : undefined,
       transactionPurposeSnapshot: purpose || customer.transactionPurpose || undefined,
       customerActingAs,
       representativeCustomerId: customerActingAs === "REPRESENTATIVE" ? representativeCustomer?.id : undefined,
@@ -206,6 +221,16 @@ export default function TransactionCreate() {
             <div><Label>Cara bayar</Label><Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as typeof paymentMethod)}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="CASH">Tunai</SelectItem><SelectItem value="BANK_TRANSFER">Transfer bank</SelectItem><SelectItem value="OTHER">Lainnya</SelectItem></SelectContent></Select></div>
             <div><Label>Referensi pembayaran</Label><Input className="mt-1" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} placeholder="No. transfer / keterangan kas" /></div>
           </div>
+          {paymentMethod === "CASH" ? <div className="rounded-xl border border-[#cbd9e7] bg-[#f8fbfe] p-3">
+            <div className="flex items-center justify-between"><Label className="text-xs font-semibold text-[#18395f]">Rincian pecahan Rupiah yang diterima/dibayarkan (wajib)</Label><Button type="button" size="sm" variant="outline" className="h-7 border-[#bcd2e5] text-xs text-[#183f70]" onClick={addPaymentDenominationRow}><Plus className="mr-1 size-3" />Tambah pecahan</Button></div>
+            <p className="mt-1 text-xs text-slate-500">Uang tunai yang benar-benar berpindah — bertambah/berkurang otomatis di stok pecahan Rupiah saat bon ini diselesaikan.</p>
+            {paymentDenominations.map((row, index) => <div key={index} className="mt-2 grid grid-cols-[1fr_100px_auto] gap-2">
+              <Input required inputMode="decimal" value={row.value} onChange={(e) => updatePaymentDenominationRow(index, "value", e.target.value)} placeholder="Nilai pecahan, mis. 100000" />
+              <Input required inputMode="numeric" value={row.quantity} onChange={(e) => updatePaymentDenominationRow(index, "quantity", e.target.value)} placeholder="Lembar" />
+              <Button type="button" size="sm" variant="ghost" className="text-rose-600" disabled={paymentDenominations.length === 1} onClick={() => removePaymentDenominationRow(index)}>Hapus</Button>
+            </div>)}
+            <p className={`mt-2 text-xs ${paymentDenominationMismatch ? "font-semibold text-rose-600" : "text-[#64748b]"}`}>Total rincian: Rp {paymentDenominationTotal.toLocaleString("id-ID")} {paymentDenominationMismatch ? `— belum sama dengan total transaksi (Rp ${totalRupiah.toLocaleString("id-ID")})` : ""}</p>
+          </div> : null}
           <div><Label>Tujuan transaksi</Label><Input className="mt-1" required value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Contoh: perjalanan atau pendidikan" /></div>
           <div><Label>Bertindak sebagai</Label><Select value={customerActingAs} onValueChange={(value) => setCustomerActingAs(value as "SELF" | "REPRESENTATIVE")}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="SELF">Nasabah sendiri</SelectItem><SelectItem value="REPRESENTATIVE">Pihak kuasa / wakil</SelectItem></SelectContent></Select></div>
           {customerActingAs === "REPRESENTATIVE" ? <div className="relative rounded-xl border p-3">
@@ -234,7 +259,7 @@ export default function TransactionCreate() {
         </CardContent>
       </Card>
 
-      <Button className="w-full bg-[#183f70]" disabled={create.isPending || !allLinesComplete}>{create.isPending ? "Membuat transaksi…" : "Simpan transaksi sebagai draft"}</Button>
+      <Button className="w-full bg-[#183f70]" disabled={create.isPending || !allLinesComplete || (paymentMethod === "CASH" && (!paymentDenominationsComplete || paymentDenominationMismatch))}>{create.isPending ? "Membuat transaksi…" : "Simpan transaksi sebagai draft"}</Button>
     </form>
   </div>;
 }

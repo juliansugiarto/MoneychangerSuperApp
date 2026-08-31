@@ -248,6 +248,20 @@ export const exchangeTransactionDenominationEntries = mysqlTable("exchange_trans
   index("exchange_transaction_denomination_entries_line_idx").on(table.transactionLineId),
 ]);
 
+/** The other side of a cash exchange: physical Rupiah notes handed over or received, for CASH-settled bons. A money-changer deal always moves two currencies — the foreign leg lives in exchangeTransactionDenominationEntries, this is the Rupiah leg. One set of rows per bon (not per foreign-currency line), because payment is settled once for the whole bon. */
+export const exchangeTransactionPaymentDenominations = mysqlTable("exchange_transaction_payment_denominations", {
+  id: int("id").autoincrement().primaryKey(),
+  transactionId: int("transactionId").notNull(),
+  /** The settlement currency — IDR in practice, stored explicitly rather than hardcoded for correctness. */
+  currencyId: int("currencyId").notNull(),
+  denominationValue: decimal("denominationValue", { precision: 24, scale: 6 }).notNull(),
+  quantity: int("quantity").notNull(),
+  lineTotal: decimal("lineTotal", { precision: 24, scale: 6 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("exchange_transaction_payment_denominations_transaction_idx").on(table.transactionId),
+]);
+
 /**
  * Private KYC and transaction-supporting documents. File bytes live in managed
  * object storage; this table retains authorization, audit, and retrieval metadata.

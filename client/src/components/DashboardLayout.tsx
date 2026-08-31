@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { ArrowLeftRight, BadgeDollarSign, BookOpenCheck, ChartNoAxesCombined, ClipboardCheck, ClipboardList, FileSearch, Gauge, Landmark, LayoutDashboard, LogOut, MessageSquareWarning, MessagesSquare, ShieldCheck, ShieldQuestion, UsersRound } from "lucide-react";
+import { ArrowLeftRight, BadgeDollarSign, Banknote, BookOpenCheck, ChartNoAxesCombined, ClipboardCheck, ClipboardList, FileSearch, Gauge, Landmark, LayoutDashboard, LogOut, MessageSquareWarning, MessagesSquare, ShieldCheck, ShieldQuestion, UsersRound, Vault, Wallet } from "lucide-react";
 import { backOfficeNavigationGroups, isRoleAllowed, roleRank, type BackOfficeRole } from "@shared/backOfficeNavigation";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 
@@ -21,7 +21,11 @@ const navigationIcons: Record<string, typeof LayoutDashboard> = {
   "/operasional/nasabah/daftar": ClipboardList,
   "/operasional/kurs": BadgeDollarSign,
   "/operasional/perbandingan-kurs": ChartNoAxesCombined,
-  "/operasional/stock": ClipboardCheck,
+  "/operasional/stock": Banknote,
+  "/operasional/stock/kas-awal": Banknote,
+  "/operasional/stock/saat-ini": Wallet,
+  "/operasional/stock/opname": ClipboardCheck,
+  "/operasional/stock/penyesuaian": Vault,
   "/operasional/pengaduan": MessageSquareWarning,
   "/operasional/laporan": ChartNoAxesCombined,
   "/operasional/pelaporan-regulator": Landmark,
@@ -47,8 +51,12 @@ const pageTitles: Record<string, { eyebrow: string; title: string }> = {
   "/operasional/nasabah/daftar": { eyebrow: "Layanan & transaksi", title: "Daftar nasabah" },
   "/operasional/kurs": { eyebrow: "Kontrol outlet", title: "Kurs operasional" },
   "/operasional/perbandingan-kurs": { eyebrow: "Kontrol outlet", title: "Bandingkan kurs" },
-  "/operasional/stock": { eyebrow: "Kontrol outlet", title: "Kas & persediaan" },
-  "/operasional/stock-opname": { eyebrow: "Kontrol outlet", title: "Kas & persediaan" },
+  "/operasional/stock": { eyebrow: "Kontrol outlet", title: "Kas awal" },
+  "/operasional/stock/kas-awal": { eyebrow: "Kontrol outlet", title: "Kas awal" },
+  "/operasional/stock/saat-ini": { eyebrow: "Kontrol outlet", title: "Stok saat ini" },
+  "/operasional/stock/opname": { eyebrow: "Kontrol outlet", title: "Stock opname" },
+  "/operasional/stock-opname": { eyebrow: "Kontrol outlet", title: "Stock opname" },
+  "/operasional/stock/penyesuaian": { eyebrow: "Kontrol outlet", title: "Penyesuaian brankas" },
   "/operasional/pengaduan": { eyebrow: "Kontrol outlet", title: "Keluhan nasabah" },
   "/operasional/laporan": { eyebrow: "Pengawasan", title: "Laporan" },
   "/operasional/pelaporan-regulator": { eyebrow: "Pengawasan", title: "Pelaporan regulator" },
