@@ -1,35 +1,43 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
+import { lazy, Suspense } from "react";
 import { Route, Switch } from "wouter";
 import DashboardLayout from "./components/DashboardLayout";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
-import OperationsDashboard from "./pages/OperationsDashboard";
-import Customers from "./pages/Customers";
-import CustomerList from "./pages/CustomerList";
-import Rates from "./pages/Rates";
-import GuidedTransactions from "./pages/GuidedTransactions";
-import TransactionList from "./pages/TransactionList";
-import StockControl from "./pages/StockControl";
-import Reports from "./pages/Reports";
-import AuditLog from "./pages/AuditLog";
 import Login from "./pages/Login";
 import ChangePassword from "./pages/ChangePassword";
-import ConsumerComplaints from "./pages/ConsumerComplaints";
-import UserManagement from "./pages/UserManagement";
-import ServiceDesk from "./pages/ServiceDesk";
-import Monitoring from "./pages/Monitoring";
-import DailyChecklist from "./pages/DailyChecklist";
-import DirectorAcknowledgements from "./pages/DirectorAcknowledgements";
-import CustomerImport from "./pages/CustomerImport";
-import GoLiveSetup from "./pages/GoLiveSetup";
-import RateComparison from "./pages/RateComparison";
-import SafeSimulation from "./pages/SafeSimulation";
-import OperationalReadiness from "./pages/OperationalReadiness";
-import RegulatoryReporting from "./pages/RegulatoryReporting";
-import CompanyProfile from "./pages/CompanyProfile";
+
+// Every operational page loads on demand, split into its own chunk — none of these are needed for
+// the public landing page or login, so there's no reason to ship them in the main bundle upfront.
+const NotFound = lazy(() => import("@/pages/NotFound"));
+const OperationsDashboard = lazy(() => import("./pages/OperationsDashboard"));
+const Customers = lazy(() => import("./pages/Customers"));
+const CustomerList = lazy(() => import("./pages/CustomerList"));
+const Rates = lazy(() => import("./pages/Rates"));
+const GuidedTransactions = lazy(() => import("./pages/GuidedTransactions"));
+const TransactionList = lazy(() => import("./pages/TransactionList"));
+const StockControl = lazy(() => import("./pages/StockControl"));
+const Reports = lazy(() => import("./pages/Reports"));
+const AuditLog = lazy(() => import("./pages/AuditLog"));
+const ConsumerComplaints = lazy(() => import("./pages/ConsumerComplaints"));
+const UserManagement = lazy(() => import("./pages/UserManagement"));
+const ServiceDesk = lazy(() => import("./pages/ServiceDesk"));
+const Monitoring = lazy(() => import("./pages/Monitoring"));
+const DailyChecklist = lazy(() => import("./pages/DailyChecklist"));
+const DirectorAcknowledgements = lazy(() => import("./pages/DirectorAcknowledgements"));
+const CustomerImport = lazy(() => import("./pages/CustomerImport"));
+const GoLiveSetup = lazy(() => import("./pages/GoLiveSetup"));
+const RateComparison = lazy(() => import("./pages/RateComparison"));
+const SafeSimulation = lazy(() => import("./pages/SafeSimulation"));
+const OperationalReadiness = lazy(() => import("./pages/OperationalReadiness"));
+const RegulatoryReporting = lazy(() => import("./pages/RegulatoryReporting"));
+const CompanyProfile = lazy(() => import("./pages/CompanyProfile"));
+
+function RouteLoading() {
+  return <div className="flex min-h-[40vh] items-center justify-center text-sm text-[#475569]">Memuat halaman…</div>;
+}
 
 function OperationsRoute({ page, minimumRole = "STAFF" }: { page: React.ReactNode; minimumRole?: "STAFF" | "ADMIN" | "CONTROLLER" | "SHAREHOLDER" }) {
   return (
@@ -84,7 +92,9 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster richColors position="top-right" />
-          <Router />
+          <Suspense fallback={<RouteLoading />}>
+            <Router />
+          </Suspense>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
