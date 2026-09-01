@@ -140,6 +140,8 @@ export const exchangeTransactions = mysqlTable("exchange_transactions", {
   transactionNumber: varchar("transactionNumber", { length: 50 }).notNull(),
   /** Physical receipt-book number, typed manually by the teller. Jual and Beli use separate books, so the same number can exist once per operation (see unique index below). Null on bons created before this field existed. */
   receiptNumber: varchar("receiptNumber", { length: 80 }),
+  /** Which company bank account the Rupiah leg moved through — required when paymentMethod is BANK_TRANSFER, null for CASH/OTHER and for bons predating account tracking. */
+  bankAccountId: int("bankAccountId"),
   transactionAt: datetime("transactionAt").notNull(),
   operation: mysqlEnum("operation", ["BUY", "SELL"]).notNull(),
   customerId: int("customerId").notNull(),
@@ -349,6 +351,42 @@ export const cashDenominationBalances = mysqlTable("cash_denomination_balances",
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [
   uniqueIndex("cash_denomination_balances_currency_value_uq").on(table.currencyId, table.denominationValue),
+]);
+
+/** Company bank accounts, each with its own running balance — mirrors how cashBalances tracks physical currency, but for money that only ever moves by transfer. IDR-only for now: BANK_TRANSFER only ever covers the Rupiah leg of a bon (see exchangeTransactions.bankAccountId), same scope CASH already has. */
+export const bankAccounts = mysqlTable("bank_accounts", {
+  id: int("id").autoincrement().primaryKey(),
+  bankName: varchar("bankName", { length: 120 }).notNull(),
+  accountHolderName: varchar("accountHolderName", { length: 160 }).notNull(),
+  accountNumber: varchar("accountNumber", { length: 60 }).notNull(),
+  currencyId: int("currencyId").notNull(),
+  availableAmount: decimal("availableAmount", { precision: 24, scale: 6 }).default("0.000000").notNull(),
+  active: boolean("active").default(true).notNull(),
+  notes: text("notes"),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("bank_accounts_bank_number_uq").on(table.bankName, table.accountNumber),
+  index("bank_accounts_currency_idx").on(table.currencyId),
+]);
+
+/** Immutable ledger of every bank account balance change — opening declarations, manual adjustments, and completed BANK_TRANSFER bon legs. Same shape as cashBalanceMovements, minus denominations (bank money has no physical notes to count). */
+export const bankAccountMovements = mysqlTable("bank_account_movements", {
+  id: int("id").autoincrement().primaryKey(),
+  bankAccountId: int("bankAccountId").notNull(),
+  transactionId: int("transactionId"),
+  transactionLineId: int("transactionLineId"),
+  direction: mysqlEnum("direction", ["IN", "OUT", "ADJUSTMENT"]).notNull(),
+  amount: decimal("amount", { precision: 24, scale: 6 }).notNull(),
+  reason: varchar("reason", { length: 255 }).notNull(),
+  category: mysqlEnum("category", ["OPENING", "TRANSACTION", "ADJUSTMENT", "OTHER"]).default("OTHER").notNull(),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  /** One movement per bon line, same double-posting guard cashBalanceMovements uses. */
+  uniqueIndex("bank_account_movement_transaction_line_uq").on(table.transactionLineId),
+  index("bank_account_movements_account_idx").on(table.bankAccountId, table.createdAt),
 ]);
 
 export const stockOpnames = mysqlTable("stock_opnames", {

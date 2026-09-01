@@ -47,6 +47,8 @@ export default function TransactionCreate() {
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "BANK_TRANSFER" | "OTHER">("CASH");
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentDenominations, setPaymentDenominations] = useState<PlainDenominationRow[]>([emptyPlainDenominationRow()]);
+  const [bankAccountId, setBankAccountId] = useState<number | null>(null);
+  const { data: bankAccounts } = trpc.bankAccounts.list.useQuery(undefined, { enabled: Boolean(user) && paymentMethod === "BANK_TRANSFER" });
   const [purpose, setPurposeValue] = useState("");
   const [customerActingAs, setCustomerActingAs] = useState<"SELF" | "REPRESENTATIVE">("SELF");
   const [repSearch, setRepSearch] = useState("");
@@ -157,6 +159,7 @@ export default function TransactionCreate() {
         setLastBonLines(printableLines);
         setLines([emptyLine()]);
         setPaymentDenominations([emptyPlainDenominationRow()]);
+        setBankAccountId(null);
         setReceiptNumber("");
         setRepresentativeCustomer(null);
         setRepSearch("");
@@ -176,6 +179,7 @@ export default function TransactionCreate() {
     if (!allLinesComplete) return toast.error("Setiap baris wajib punya mata uang dan minimal satu pecahan lengkap (nilai, jumlah, harga).");
     if (paymentMethod === "CASH" && !paymentDenominationsComplete) return toast.error("Rincian pecahan Rupiah wajib diisi untuk pembayaran tunai.");
     if (paymentDenominationMismatch) return toast.error("Rincian pecahan Rupiah belum sama dengan total transaksi.");
+    if (paymentMethod === "BANK_TRANSFER" && !bankAccountId) return toast.error("Pilih rekening bank yang menerima/mengirim transfer.");
     if (customerActingAs === "REPRESENTATIVE" && !representativeCustomer) return toast.error("Pilih nasabah terdaftar sebagai pihak kuasa/wakil.");
     if (underlyingRequired && (!underlyingFile || !underlyingReference)) return toast.error("Lampirkan file dan referensi underlying.");
     create.mutate({
@@ -186,6 +190,7 @@ export default function TransactionCreate() {
       paymentMethod,
       paymentReference,
       paymentDenominations: paymentMethod === "CASH" ? paymentDenominations.map((row) => ({ value: row.value, quantity: Number(row.quantity) })) : undefined,
+      bankAccountId: paymentMethod === "BANK_TRANSFER" ? bankAccountId ?? undefined : undefined,
       transactionPurposeSnapshot: purpose || customer.transactionPurpose || undefined,
       customerActingAs,
       representativeCustomerId: customerActingAs === "REPRESENTATIVE" ? representativeCustomer?.id : undefined,
@@ -271,6 +276,14 @@ export default function TransactionCreate() {
             <div><Label>Cara bayar</Label><Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as typeof paymentMethod)}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="CASH">Tunai</SelectItem><SelectItem value="BANK_TRANSFER">Transfer bank</SelectItem><SelectItem value="OTHER">Lainnya</SelectItem></SelectContent></Select></div>
             <div><Label>Referensi pembayaran</Label><Input className="mt-1" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} placeholder="No. transfer / keterangan kas" /></div>
           </div>
+          {paymentMethod === "BANK_TRANSFER" ? <div>
+            <Label>Rekening bank</Label>
+            <Select value={bankAccountId ? String(bankAccountId) : ""} onValueChange={(value) => setBankAccountId(Number(value))}>
+              <SelectTrigger className="mt-1 w-full"><SelectValue placeholder="Pilih rekening" /></SelectTrigger>
+              <SelectContent>{bankAccounts?.filter((row) => row.account.active).map((row) => <SelectItem key={row.account.id} value={String(row.account.id)}>{row.account.bankName} · {row.account.accountHolderName} · {row.account.accountNumber}</SelectItem>)}</SelectContent>
+            </Select>
+            {!bankAccounts?.length ? <p className="mt-1 text-xs text-amber-700">Belum ada rekening bank terdaftar — Controller dapat menambahkannya di tab Kas Awal.</p> : null}
+          </div> : null}
           {paymentMethod === "CASH" ? <div className="rounded-xl border border-[#cbd9e7] bg-[#f8fbfe] p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Label className="text-xs font-semibold text-[#18395f]">Rincian pecahan Rupiah yang diterima/dibayarkan (wajib)</Label>

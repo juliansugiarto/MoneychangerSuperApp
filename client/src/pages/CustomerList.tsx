@@ -4,11 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { Download, IdCard, Search, UserPlus, UsersRound } from "lucide-react";
+import { Download, IdCard, Pencil, Search, UserPlus, UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+
+type CustomerRow = { id: number; identityExpiryDate: string | Date | null; dateOfBirth: string | Date | null; fullName: string; phoneNumber: string | null; identityType: "KTP" | "PASSPORT" | "OTHER"; identityNumber: string; placeOfBirth: string | null; address: string; occupation: string | null; sourceOfFunds: string | null; transactionPurpose: string | null; profileStatus: "ACTIVE" | "RESTRICTED" | "INACTIVE"; riskLevel: "LOW" | "MEDIUM" | "HIGH"; riskNotes: string | null; pepStatus: "NONE" | "SELF" | "RELATED"; pepDetails: string | null; dttotPpsdmMatch: boolean; dttotPpsdmNotes: string | null };
+const toDateInputValue = (value: string | Date | null | undefined) => (value ? new Date(value).toISOString().slice(0, 10) : "");
+const editFormFromCustomer = (customer: CustomerRow) => ({
+  fullName: customer.fullName, phoneNumber: customer.phoneNumber ?? "", identityType: customer.identityType, identityNumber: customer.identityNumber,
+  identityExpiryDate: toDateInputValue(customer.identityExpiryDate), placeOfBirth: customer.placeOfBirth ?? "", dateOfBirth: toDateInputValue(customer.dateOfBirth),
+  address: customer.address, occupation: customer.occupation ?? "", sourceOfFunds: customer.sourceOfFunds ?? "", transactionPurpose: customer.transactionPurpose ?? "",
+  profileStatus: customer.profileStatus, riskLevel: customer.riskLevel, riskNotes: customer.riskNotes ?? "",
+  pepStatus: customer.pepStatus, pepDetails: customer.pepDetails ?? "", dttotPpsdmMatch: customer.dttotPpsdmMatch, dttotPpsdmNotes: customer.dttotPpsdmNotes ?? "",
+  changeReason: "",
+});
 
 function formatDate(value: string | Date | null | undefined) {
   if (!value) return "—";
@@ -36,9 +49,12 @@ export default function CustomerList() {
   const { data: customers, isLoading, isError } = trpc.customers.list.useQuery(undefined, { enabled: Boolean(user) });
   const [selectedCustomer, setSelectedCustomer] = useState<NonNullable<typeof customers>[number] | null>(null);
   const [showIdentityRequested, setShowIdentityRequested] = useState(false);
+  const [identityPreview, setIdentityPreview] = useState<{ url: string; mimeType: string; fileName: string } | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<ReturnType<typeof editFormFromCustomer> | null>(null);
   const utils = trpc.useUtils();
 
-  const openCustomer = (customer: NonNullable<typeof customers>[number]) => { setSelectedCustomer(customer); setShowIdentityRequested(false); };
+  const openCustomer = (customer: NonNullable<typeof customers>[number]) => { setSelectedCustomer(customer); setShowIdentityRequested(false); setEditing(false); };
 
   const viewIdentity = async () => {
     if (!selectedCustomer) return;
@@ -48,12 +64,37 @@ export default function CustomerList() {
       const ktp = docs.find((doc) => doc.documentType === "KTP_PHOTO");
       if (!ktp) { toast.error("Belum ada foto identitas tersimpan untuk nasabah ini."); return; }
       const url = await utils.documents.downloadUrl.fetch({ documentId: ktp.id });
-      window.open(url, "_blank", "noopener,noreferrer");
+      setIdentityPreview({ url, mimeType: ktp.mimeType, fileName: ktp.originalFileName });
     } catch {
       toast.error("Gagal membuka dokumen identitas.");
     } finally {
       setShowIdentityRequested(false);
     }
+  };
+
+  const startEdit = () => { if (selectedCustomer) { setEditForm(editFormFromCustomer(selectedCustomer)); setEditing(true); } };
+
+  const update = trpc.customers.update.useMutation({
+    onSuccess: (updated) => {
+      toast.success("Perubahan data nasabah disimpan.");
+      setSelectedCustomer(updated as never);
+      setEditing(false);
+      utils.customers.list.invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const saveEdit = () => {
+    if (!selectedCustomer || !editForm) return;
+    if (editForm.pepStatus !== "NONE" && !editForm.pepDetails.trim()) return toast.error("Keterangan PEP wajib diisi.");
+    if (editForm.dttotPpsdmMatch && !editForm.dttotPpsdmNotes.trim()) return toast.error("Catatan kecocokan DTTOT/PPSPM wajib diisi.");
+    if (editForm.changeReason.trim().length < 5) return toast.error("Alasan perubahan wajib diisi (minimal 5 karakter).");
+    update.mutate({
+      customerId: selectedCustomer.id,
+      ...editForm,
+      identityExpiryDate: editForm.identityExpiryDate ? new Date(editForm.identityExpiryDate) : undefined,
+      dateOfBirth: new Date(editForm.dateOfBirth),
+    });
   };
 
   const nameById = useMemo(() => new Map((customers ?? []).map((customer) => [customer.id, customer.fullName])), [customers]);
@@ -175,10 +216,47 @@ export default function CustomerList() {
               </div>
               <DialogDescription>CIF {selectedCustomer.cifNumber} · Dibuat {formatDate(selectedCustomer.createdAt)}</DialogDescription>
             </DialogHeader>
-            <Button type="button" size="sm" onClick={viewIdentity} disabled={showIdentityRequested} className="w-fit border-2 border-[#183f70] bg-white text-[#183f70] hover:bg-[#eef4fb]">
-              <IdCard className="mr-1.5 size-4" />{showIdentityRequested ? "Membuka…" : "Lihat foto identitas"}
-            </Button>
-            <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" onClick={viewIdentity} disabled={showIdentityRequested} className="w-fit border-2 border-[#183f70] bg-white text-[#183f70] hover:bg-[#eef4fb]">
+                <IdCard className="mr-1.5 size-4" />{showIdentityRequested ? "Membuka…" : "Lihat foto identitas"}
+              </Button>
+              {!editing ? <Button type="button" size="sm" variant="outline" onClick={startEdit} className="w-fit border-2 border-[#5c8f53] text-[#3d7139] hover:bg-[#f5fbf5]"><Pencil className="mr-1.5 size-4" />Edit</Button> : null}
+            </div>
+
+            {editing && editForm ? <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><Label className="text-xs">Nama lengkap</Label><Input className="mt-1" value={editForm.fullName} onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })} /></div>
+                <div><Label className="text-xs">Telepon</Label><Input className="mt-1" value={editForm.phoneNumber} onChange={(e) => setEditForm({ ...editForm, phoneNumber: e.target.value })} /></div>
+                <div><Label className="text-xs">Jenis identitas</Label><Select value={editForm.identityType} onValueChange={(v) => setEditForm({ ...editForm, identityType: v as typeof editForm.identityType })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="KTP">KTP</SelectItem><SelectItem value="PASSPORT">Paspor</SelectItem><SelectItem value="OTHER">Lainnya</SelectItem></SelectContent></Select></div>
+                <div><Label className="text-xs">Nomor identitas</Label><Input className="mt-1" value={editForm.identityNumber} onChange={(e) => setEditForm({ ...editForm, identityNumber: e.target.value })} /></div>
+                <div><Label className="text-xs">Berlaku hingga (kosongkan bila seumur hidup)</Label><Input className="mt-1" type="date" value={editForm.identityExpiryDate} onChange={(e) => setEditForm({ ...editForm, identityExpiryDate: e.target.value })} /></div>
+                <div><Label className="text-xs">Tempat lahir</Label><Input className="mt-1" value={editForm.placeOfBirth} onChange={(e) => setEditForm({ ...editForm, placeOfBirth: e.target.value })} /></div>
+                <div><Label className="text-xs">Tanggal lahir</Label><Input className="mt-1" type="date" required value={editForm.dateOfBirth} onChange={(e) => setEditForm({ ...editForm, dateOfBirth: e.target.value })} /></div>
+                <div><Label className="text-xs">Pekerjaan</Label><Input className="mt-1" value={editForm.occupation} onChange={(e) => setEditForm({ ...editForm, occupation: e.target.value })} /></div>
+              </div>
+              <div><Label className="text-xs">Alamat</Label><Input className="mt-1" value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} /></div>
+              <div><Label className="text-xs">Sumber dana</Label><Input className="mt-1" value={editForm.sourceOfFunds} onChange={(e) => setEditForm({ ...editForm, sourceOfFunds: e.target.value })} /></div>
+              <div><Label className="text-xs">Tujuan transaksi</Label><Input className="mt-1" value={editForm.transactionPurpose} onChange={(e) => setEditForm({ ...editForm, transactionPurpose: e.target.value })} /></div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><Label className="text-xs">Status profil</Label><Select value={editForm.profileStatus} onValueChange={(v) => setEditForm({ ...editForm, profileStatus: v as typeof editForm.profileStatus })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ACTIVE">Aktif</SelectItem><SelectItem value="RESTRICTED">Terbatas</SelectItem><SelectItem value="INACTIVE">Nonaktif</SelectItem></SelectContent></Select></div>
+                <div><Label className="text-xs">Tingkat risiko</Label><Select value={editForm.riskLevel} onValueChange={(v) => setEditForm({ ...editForm, riskLevel: v as typeof editForm.riskLevel })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="LOW">Rendah</SelectItem><SelectItem value="MEDIUM">Sedang</SelectItem><SelectItem value="HIGH">Tinggi</SelectItem></SelectContent></Select></div>
+              </div>
+              <div><Label className="text-xs">Catatan risiko</Label><Input className="mt-1" value={editForm.riskNotes} onChange={(e) => setEditForm({ ...editForm, riskNotes: e.target.value })} /></div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><Label className="text-xs">Status PEP</Label><Select value={editForm.pepStatus} onValueChange={(v) => setEditForm({ ...editForm, pepStatus: v as typeof editForm.pepStatus })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="NONE">Bukan PEP</SelectItem><SelectItem value="SELF">Nasabah adalah PEP</SelectItem><SelectItem value="RELATED">Berhubungan dengan PEP</SelectItem></SelectContent></Select></div>
+                <div><Label className="text-xs">Cocok DTTOT/PPSPM</Label><Select value={editForm.dttotPpsdmMatch ? "yes" : "no"} onValueChange={(v) => setEditForm({ ...editForm, dttotPpsdmMatch: v === "yes" })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="no">Tidak</SelectItem><SelectItem value="yes">Ya</SelectItem></SelectContent></Select></div>
+              </div>
+              {editForm.pepStatus !== "NONE" ? <div><Label className="text-xs">Keterangan PEP</Label><Input className="mt-1" value={editForm.pepDetails} onChange={(e) => setEditForm({ ...editForm, pepDetails: e.target.value })} /></div> : null}
+              {editForm.dttotPpsdmMatch ? <div><Label className="text-xs">Catatan DTTOT/PPSPM</Label><Input className="mt-1" value={editForm.dttotPpsdmNotes} onChange={(e) => setEditForm({ ...editForm, dttotPpsdmNotes: e.target.value })} /></div> : null}
+              <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-3">
+                <Label className="text-xs font-semibold text-amber-900">Alasan perubahan (wajib, tercatat di jejak audit)</Label>
+                <Input className="mt-1" value={editForm.changeReason} onChange={(e) => setEditForm({ ...editForm, changeReason: e.target.value })} placeholder="Contoh: koreksi nomor telepon sesuai konfirmasi nasabah" />
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={() => setEditing(false)}>Batal</Button>
+                <Button type="button" disabled={update.isPending} onClick={saveEdit} className="bg-[#183f70] text-white hover:bg-[#12345d]">{update.isPending ? "Menyimpan…" : "Simpan perubahan"}</Button>
+              </div>
+            </div> : <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
               <DetailField label="Jenis identitas" value={selectedCustomer.identityType} />
               <DetailField label="Nomor identitas" value={selectedCustomer.identityNumber} />
               <DetailField label="Berlaku hingga" value={selectedCustomer.identityExpiryDate ? formatDate(selectedCustomer.identityExpiryDate) : "Seumur hidup"} />
@@ -194,7 +272,18 @@ export default function CustomerList() {
               {selectedCustomer.pepDetails ? <DetailField label="Keterangan PEP" value={selectedCustomer.pepDetails} full /> : null}
               <DetailField label="Cocok DTTOT/PPSPM" value={selectedCustomer.dttotPpsdmMatch ? "Ya" : "Tidak"} />
               {selectedCustomer.dttotPpsdmNotes ? <DetailField label="Catatan DTTOT/PPSPM" value={selectedCustomer.dttotPpsdmNotes} full /> : null}
-            </div>
+            </div>}
+          </> : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(identityPreview)} onOpenChange={(open) => { if (!open) setIdentityPreview(null); }}>
+        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+          {identityPreview ? <>
+            <DialogHeader><DialogTitle className="font-display text-lg text-[#18395f]">Foto identitas</DialogTitle></DialogHeader>
+            {identityPreview.mimeType.startsWith("image/")
+              ? <img src={identityPreview.url} alt="Foto identitas nasabah" className="w-full rounded-xl border border-[#e2eaf2]" />
+              : <div className="rounded-xl border border-[#e2eaf2] bg-[#f8fbfe] p-6 text-center text-sm text-[#475569]"><p>{identityPreview.fileName}</p><p className="mt-1 text-xs">Format dokumen ini (PDF) tidak dapat ditampilkan langsung di sini.</p><a href={identityPreview.url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block font-semibold text-[#183f70] underline">Buka di tab baru</a></div>}
           </> : null}
         </DialogContent>
       </Dialog>

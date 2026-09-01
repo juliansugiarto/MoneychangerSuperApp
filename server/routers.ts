@@ -19,6 +19,7 @@ import {
   createRegulatoryIncidentReport,
   createRegulatoryLkuDraft,
   createCustomer,
+  updateCustomer,
   getCustomerById,
   getDailyOperationalChecklist,
   getNextCifNumber,
@@ -63,6 +64,10 @@ import {
   suggestDenominationBreakdown,
   suggestDenominationExchange,
   recordDenominationExchange,
+  listBankAccounts,
+  createBankAccount,
+  updateBankAccount,
+  recordBankAccountAdjustment,
   markRegulatoryReportExported,
   markRegulatoryIncidentExported,
   approveRegulatoryIncidentReport,
@@ -142,6 +147,36 @@ export const customerInput = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Data pemilik manfaat (beneficial owner) wajib diisi.", path: ["beneficialOwner"] });
   }
   if (value.pepStatus && value.pepStatus !== "NONE" && !value.pepDetails?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Keterangan PEP wajib diisi.", path: ["pepDetails"] });
+  }
+  if (value.dttotPpsdmMatch && !value.dttotPpsdmNotes?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Catatan kecocokan DTTOT/PPSPM wajib diisi.", path: ["dttotPpsdmNotes"] });
+  }
+});
+
+export const customerUpdateInput = z.object({
+  customerId: z.number().int().positive(),
+  fullName: z.string().trim().min(3).max(200),
+  phoneNumber: z.string().trim().min(6).max(40),
+  identityType: z.enum(["KTP", "PASSPORT", "OTHER"]),
+  identityNumber: z.string().trim().min(3).max(80),
+  identityExpiryDate: z.coerce.date().optional(),
+  placeOfBirth: z.string().trim().min(2).max(120),
+  dateOfBirth: z.coerce.date(),
+  address: z.string().trim().min(8),
+  occupation: z.string().trim().min(2).max(160),
+  sourceOfFunds: z.string().trim().min(3).max(1000),
+  transactionPurpose: z.string().trim().min(3).max(1000),
+  profileStatus: z.enum(["ACTIVE", "RESTRICTED", "INACTIVE"]),
+  riskLevel: z.enum(["LOW", "MEDIUM", "HIGH"]),
+  riskNotes: z.string().trim().max(1000).optional(),
+  pepStatus: z.enum(["NONE", "SELF", "RELATED"]),
+  pepDetails: z.string().trim().max(1000).optional(),
+  dttotPpsdmMatch: z.boolean(),
+  dttotPpsdmNotes: z.string().trim().max(1000).optional(),
+  changeReason: z.string().trim().min(5).max(500),
+}).superRefine((value, ctx) => {
+  if (value.pepStatus !== "NONE" && !value.pepDetails?.trim()) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Keterangan PEP wajib diisi.", path: ["pepDetails"] });
   }
   if (value.dttotPpsdmMatch && !value.dttotPpsdmNotes?.trim()) {
@@ -271,6 +306,7 @@ export const appRouter = router({
     get: staffProcedure.input(z.object({ customerId: z.number().int().positive() })).query(({ input }) => getCustomerById(input.customerId)),
     search: staffProcedure.input(z.object({ query: z.string().trim().max(200), limit: z.number().int().min(1).max(30).default(12) })).query(({ input }) => searchCustomers(input.query, input.limit)),
     create: staffProcedure.input(customerInput).mutation(({ input, ctx }) => createCustomer(input, ctx.user.id)),
+    update: staffProcedure.input(customerUpdateInput).mutation(({ input, ctx }) => updateCustomer(input, ctx.user)),
     import: controllerProcedure.input(z.object({ rows: z.array(customerInput).min(1).max(300) })).mutation(({ input, ctx }) => importCustomers(input.rows, ctx.user.id)),
   }),
 
@@ -305,6 +341,8 @@ export const appRouter = router({
       paymentReference: z.string().trim().max(160).optional(),
       /** Physical Rupiah denomination breakdown for the payment leg — required when paymentMethod is CASH; bank transfer/other never touch physical stock. */
       paymentDenominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).max(80).optional(),
+      /** Which company bank account the transfer moved through — required when paymentMethod is BANK_TRANSFER. */
+      bankAccountId: z.number().int().positive().optional(),
       transactionPurposeSnapshot: z.string().trim().min(3).max(1000).optional(),
       customerActingAs: z.enum(["SELF", "REPRESENTATIVE"]).default("SELF"),
       /** Registered customer id acting as representative/kuasa; must be picked from search, never typed freely. */
@@ -322,6 +360,9 @@ export const appRouter = router({
       }
       if (value.paymentMethod === "CASH" && !value.paymentDenominations?.length) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Rincian pecahan Rupiah wajib diisi untuk pembayaran tunai.", path: ["paymentDenominations"] });
+      }
+      if (value.paymentMethod === "BANK_TRANSFER" && !value.bankAccountId) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Pilih rekening bank yang menerima/mengirim transfer.", path: ["bankAccountId"] });
       }
     })).mutation(({ input, ctx }) => createTransaction(input, ctx.user.id)),
     submit: staffProcedure.input(z.object({ transactionId: z.number().int().positive() })).mutation(({ input, ctx }) => submitTransaction(input.transactionId, ctx.user)),
@@ -352,6 +393,13 @@ export const appRouter = router({
     suggestDenominationBreakdown: staffProcedure.input(z.object({ currencyId: z.number().int().positive(), targetAmount: decimalString })).query(({ input }) => suggestDenominationBreakdown(input)),
     suggestDenominationExchange: staffProcedure.input(z.object({ currencyId: z.number().int().positive(), shortfallAmount: decimalString })).query(({ input }) => suggestDenominationExchange(input)),
     recordDenominationExchange: staffProcedure.input(z.object({ currencyId: z.number().int().positive(), give: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).min(1), receive: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).min(1), notes: z.string().trim().max(500).optional() })).mutation(({ input, ctx }) => recordDenominationExchange(input, ctx.user)),
+  }),
+
+  bankAccounts: router({
+    list: staffProcedure.query(() => listBankAccounts()),
+    create: controllerProcedure.input(z.object({ bankName: z.string().trim().min(1).max(120), accountHolderName: z.string().trim().min(1).max(160), accountNumber: z.string().trim().min(1).max(60), currencyId: z.number().int().positive(), openingBalance: decimalString, notes: z.string().trim().max(500).optional() })).mutation(({ input, ctx }) => createBankAccount(input, ctx.user)),
+    update: controllerProcedure.input(z.object({ bankAccountId: z.number().int().positive(), bankName: z.string().trim().min(1).max(120), accountHolderName: z.string().trim().min(1).max(160), accountNumber: z.string().trim().min(1).max(60), active: z.boolean(), notes: z.string().trim().max(500).optional() })).mutation(({ input, ctx }) => updateBankAccount(input, ctx.user)),
+    recordAdjustment: controllerProcedure.input(z.object({ bankAccountId: z.number().int().positive(), direction: z.enum(["IN", "OUT"]), amount: decimalString, notes: z.string().trim().min(5).max(500) })).mutation(({ input, ctx }) => recordBankAccountAdjustment(input, ctx.user)),
   }),
 
   stockOpname: router({

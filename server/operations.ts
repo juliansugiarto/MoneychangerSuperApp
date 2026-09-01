@@ -4,6 +4,8 @@ import { createHash } from "node:crypto";
 import { nanoid } from "nanoid";
 import {
   auditLogs,
+  bankAccountMovements,
+  bankAccounts,
   cashBalanceMovements,
   cashBalances,
   cashDenominationBalances,
@@ -706,6 +708,81 @@ export async function createCustomer(input: CustomerInput, actorUserId: number) 
   return created;
 }
 
+export type CustomerUpdateInput = {
+  fullName: string;
+  phoneNumber: string;
+  identityType: "KTP" | "PASSPORT" | "OTHER";
+  identityNumber: string;
+  identityExpiryDate?: Date;
+  placeOfBirth: string;
+  dateOfBirth: Date;
+  address: string;
+  occupation: string;
+  sourceOfFunds: string;
+  transactionPurpose: string;
+  profileStatus: "ACTIVE" | "RESTRICTED" | "INACTIVE";
+  riskLevel: "LOW" | "MEDIUM" | "HIGH";
+  riskNotes?: string;
+  pepStatus: "NONE" | "SELF" | "RELATED";
+  pepDetails?: string;
+  dttotPpsdmMatch: boolean;
+  dttotPpsdmNotes?: string;
+};
+
+/**
+ * Edits an existing customer profile — always requires a reason (this is the actual safeguard: KYC
+ * data can be corrected, but never silently). Doesn't touch beneficial-owner linkage (hasBeneficialOwner/
+ * beneficialOwnerCustomerId) — that relationship is set once at creation and stays a separate concern.
+ */
+export async function updateCustomer(input: { customerId: number; changeReason: string } & CustomerUpdateInput, actor: { id: number; role: StaffRole }) {
+  const changeReason = input.changeReason.trim();
+  if (changeReason.length < 5) throw new Error("Alasan perubahan wajib diisi (minimal 5 karakter) untuk jejak audit.");
+  if (input.pepStatus !== "NONE" && !input.pepDetails?.trim()) throw new Error("Keterangan PEP wajib diisi.");
+  if (input.dttotPpsdmMatch && !input.dttotPpsdmNotes?.trim()) throw new Error("Catatan kecocokan DTTOT/PPSPM wajib diisi.");
+
+  const db = await databaseOrThrow();
+  const existing = (await db.select().from(customers).where(and(eq(customers.id, input.customerId), eq(customers.isDemo, false), eq(customers.isHistorical, false))).limit(1))[0];
+  if (!existing) throw new Error("Nasabah tidak ditemukan.");
+
+  const nextValues = {
+    fullName: input.fullName.trim(),
+    phoneNumber: input.phoneNumber.trim(),
+    identityType: input.identityType,
+    identityNumber: input.identityNumber.trim().toUpperCase(),
+    identityExpiryDate: input.identityExpiryDate ?? null,
+    placeOfBirth: input.placeOfBirth.trim(),
+    dateOfBirth: input.dateOfBirth,
+    address: input.address.trim(),
+    occupation: input.occupation.trim(),
+    sourceOfFunds: input.sourceOfFunds.trim(),
+    transactionPurpose: input.transactionPurpose.trim(),
+    profileStatus: input.profileStatus,
+    riskLevel: input.riskLevel,
+    riskNotes: input.riskNotes?.trim() || null,
+    pepStatus: input.pepStatus,
+    pepDetails: input.pepStatus !== "NONE" ? input.pepDetails?.trim() || null : null,
+    dttotPpsdmMatch: input.dttotPpsdmMatch,
+    dttotPpsdmNotes: input.dttotPpsdmMatch ? input.dttotPpsdmNotes?.trim() || null : null,
+  };
+
+  await db.update(customers).set(nextValues).where(eq(customers.id, input.customerId));
+  await writeAudit({
+    actorUserId: actor.id, action: "CUSTOMER_UPDATED", entityType: "customer", entityId: String(input.customerId),
+    beforeState: {
+      fullName: existing.fullName, phoneNumber: existing.phoneNumber, identityType: existing.identityType, identityNumber: existing.identityNumber,
+      identityExpiryDate: existing.identityExpiryDate, placeOfBirth: existing.placeOfBirth, dateOfBirth: existing.dateOfBirth, address: existing.address,
+      occupation: existing.occupation, sourceOfFunds: existing.sourceOfFunds, transactionPurpose: existing.transactionPurpose, profileStatus: existing.profileStatus,
+      riskLevel: existing.riskLevel, riskNotes: existing.riskNotes, pepStatus: existing.pepStatus, pepDetails: existing.pepDetails,
+      dttotPpsdmMatch: existing.dttotPpsdmMatch, dttotPpsdmNotes: existing.dttotPpsdmNotes,
+    },
+    afterState: nextValues,
+    reason: changeReason,
+  });
+  const [updated] = await db.select().from(customers).where(eq(customers.id, input.customerId)).limit(1);
+  if (!updated) throw new Error("Nasabah tidak dapat diperbarui.");
+  return updated;
+}
+
 export async function importCustomers(rows: CustomerInput[], actorUserId: number) {
   if (!rows.length) throw new Error("Tidak ada baris nasabah yang dapat diimpor.");
   if (rows.length > 300) throw new Error("Maksimal 300 nasabah dapat diimpor dalam satu kali proses.");
@@ -1032,6 +1109,8 @@ export type CreateTransactionInput = {
   paymentReference?: string;
   /** Physical Rupiah denomination breakdown for the payment leg — required when paymentMethod is CASH. */
   paymentDenominations?: DenominationEntryInput[];
+  /** Company bank account the transfer moved through — required when paymentMethod is BANK_TRANSFER. */
+  bankAccountId?: number;
   transactionPurposeSnapshot?: string;
   customerActingAs?: "SELF" | "REPRESENTATIVE";
   /** Registered customer id acting as representative/kuasa; the name and identity number are snapshotted server-side from that customer. */
@@ -1208,6 +1287,14 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     }
   }
 
+  let bankAccount: { id: number; currencyId: number } | null = null;
+  if (input.paymentMethod === "BANK_TRANSFER") {
+    if (!input.bankAccountId) throw new Error("Pilih rekening bank yang menerima/mengirim transfer.");
+    const account = (await db.select({ id: bankAccounts.id, currencyId: bankAccounts.currencyId, active: bankAccounts.active }).from(bankAccounts).where(eq(bankAccounts.id, input.bankAccountId)).limit(1))[0];
+    if (!account || !account.active) throw new Error("Rekening bank tidak ditemukan atau sudah tidak aktif.");
+    bankAccount = account;
+  }
+
   // The >=10,000 USD-equivalent review/underlying threshold is measured against the official BI
   // reference sell rate (synced daily via syncBiReferenceRates), not the outlet's own quoted rate —
   // the outlet's rate is negotiable per deal, so anchoring the regulatory threshold to it would let
@@ -1247,6 +1334,7 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
       rupiahAmount,
       paymentMethod: input.paymentMethod,
       paymentReference: input.paymentReference?.trim() || null,
+      bankAccountId: bankAccount?.id ?? null,
       customerFullNameSnapshot: customer.fullName,
       customerIdentityTypeSnapshot: customer.identityType,
       customerIdentityNumberSnapshot: customer.identityNumber,
@@ -1592,11 +1680,111 @@ export async function completeTransaction(transactionId: number, actor: { id: nu
       cashResults.push({ currencyId: paymentCurrencyId, before: paymentBefore.toFixed(6), after: paymentAfter.toFixed(6) });
     }
 
+    // Bank transfer leg: same IN/OUT direction logic as the CASH payment leg above (BUY pays the
+    // customer out, SELL takes payment in), just posted against a bank account balance instead of
+    // physical stock — no denominations, since there are no notes to count.
+    let bankResult: { bankAccountId: number; before: string; after: string } | null = null;
+    if (transaction.paymentMethod === "BANK_TRANSFER" && transaction.bankAccountId) {
+      await tx.execute(sql`SELECT ${bankAccounts.id} FROM ${bankAccounts} WHERE ${bankAccounts.id} = ${transaction.bankAccountId} FOR UPDATE`);
+      const account = (await tx.select().from(bankAccounts).where(eq(bankAccounts.id, transaction.bankAccountId)).limit(1))[0];
+      if (!account) throw new Error("Rekening bank untuk transaksi ini tidak ditemukan.");
+      const bankBefore = new Decimal(String(account.availableAmount));
+      const bankDirection = transaction.operation === "BUY" ? "OUT" as const : "IN" as const;
+      const bankAfter = new Decimal(calculateCashBalanceAfter(transaction.operation === "BUY" ? "SELL" : "BUY", bankBefore.toFixed(6), String(transaction.rupiahAmount)));
+      await tx.update(bankAccounts).set({ availableAmount: bankAfter.toFixed(6) }).where(eq(bankAccounts.id, account.id));
+      await tx.insert(bankAccountMovements).values({ bankAccountId: account.id, transactionId: transaction.id, transactionLineId: null, direction: bankDirection, amount: String(transaction.rupiahAmount), reason: `TRANSACTION_${transaction.operation}_${transaction.transactionNumber}_IDR`, category: "TRANSACTION", createdByUserId: actor.id });
+      bankResult = { bankAccountId: account.id, before: bankBefore.toFixed(6), after: bankAfter.toFixed(6) };
+    }
+
     await tx.update(exchangeTransactions).set({ status: "COMPLETED" }).where(eq(exchangeTransactions.id, transactionId));
-    await tx.insert(auditLogs).values({ actorUserId: actor.id, action: "TRANSACTION_COMPLETED_AND_CASH_POSTED", entityType: "exchange_transaction", entityId: String(transaction.id), beforeState: { status: transaction.status }, afterState: { status: "COMPLETED", cashResults }, metadata: { transactionNumber: transaction.transactionNumber, lineCount: postingLines.length } });
-    return { ...transaction, status: "COMPLETED" as const, cashResults };
+    await tx.insert(auditLogs).values({ actorUserId: actor.id, action: "TRANSACTION_COMPLETED_AND_CASH_POSTED", entityType: "exchange_transaction", entityId: String(transaction.id), beforeState: { status: transaction.status }, afterState: { status: "COMPLETED", cashResults, bankResult }, metadata: { transactionNumber: transaction.transactionNumber, lineCount: postingLines.length } });
+    return { ...transaction, status: "COMPLETED" as const, cashResults, bankResult };
   });
   return result;
+}
+
+/** Every company bank account and its running balance — includes inactive accounts so Controller/Shareholder can still see history; the transaction form filters to active ones itself. */
+export async function listBankAccounts() {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    return db.select({ account: bankAccounts, currency: currencies }).from(bankAccounts)
+      .innerJoin(currencies, eq(bankAccounts.currencyId, currencies.id))
+      .orderBy(bankAccounts.bankName, bankAccounts.accountHolderName);
+  });
+}
+
+/** Declares a new company bank account with its opening balance — the bank-account equivalent of recordOpeningCash, minus denominations (nothing physical to count). */
+export async function createBankAccount(
+  input: { bankName: string; accountHolderName: string; accountNumber: string; currencyId: number; openingBalance: string; notes?: string },
+  actor: { id: number; role: StaffRole },
+) {
+  const bankName = input.bankName.trim();
+  const accountHolderName = input.accountHolderName.trim();
+  const accountNumber = input.accountNumber.trim();
+  if (!bankName || !accountHolderName || !accountNumber) throw new Error("Nama bank, nama pemilik rekening, dan nomor rekening wajib diisi.");
+  const openingBalance = nonNegativeOrZeroDecimal(input.openingBalance, "Saldo awal rekening");
+
+  const db = await databaseOrThrow();
+  const currency = (await db.select({ id: currencies.id, code: currencies.code }).from(currencies).where(and(eq(currencies.id, input.currencyId), eq(currencies.active, true))).limit(1))[0];
+  if (!currency) throw new Error("Mata uang aktif tidak ditemukan.");
+
+  return db.transaction(async (tx) => {
+    const [created] = await tx.insert(bankAccounts).values({
+      bankName, accountHolderName, accountNumber, currencyId: currency.id,
+      availableAmount: openingBalance.toFixed(6), notes: input.notes?.trim() || null, createdByUserId: actor.id,
+    }).$returningId();
+    if (!created) throw new Error("Rekening bank tidak dapat disimpan.");
+    await tx.insert(bankAccountMovements).values({ bankAccountId: created.id, direction: "ADJUSTMENT", amount: openingBalance.toFixed(6), reason: `Saldo awal rekening ${bankName} ${accountNumber}`, category: "OPENING", createdByUserId: actor.id });
+    await writeAudit({ actorUserId: actor.id, action: "BANK_ACCOUNT_CREATED", entityType: "bank_account", entityId: String(created.id), afterState: { bankName, accountHolderName, accountNumber, currencyCode: currency.code, openingBalance: openingBalance.toFixed(6) }, reason: input.notes?.trim() || null });
+    return { id: created.id, bankName, accountHolderName, accountNumber, currencyCode: currency.code, availableAmount: openingBalance.toFixed(6) };
+  });
+}
+
+/** Metadata-only edit (bank name, holder name, account number, notes, active flag) — balance never moves through this path, only through opening/adjustment/completed transfers, same separation cash keeps between "declare the account" and "move its money". */
+export async function updateBankAccount(
+  input: { bankAccountId: number; bankName: string; accountHolderName: string; accountNumber: string; active: boolean; notes?: string },
+  actor: { id: number; role: StaffRole },
+) {
+  const bankName = input.bankName.trim();
+  const accountHolderName = input.accountHolderName.trim();
+  const accountNumber = input.accountNumber.trim();
+  if (!bankName || !accountHolderName || !accountNumber) throw new Error("Nama bank, nama pemilik rekening, dan nomor rekening wajib diisi.");
+
+  const db = await databaseOrThrow();
+  const existing = (await db.select().from(bankAccounts).where(eq(bankAccounts.id, input.bankAccountId)).limit(1))[0];
+  if (!existing) throw new Error("Rekening bank tidak ditemukan.");
+  await db.update(bankAccounts).set({ bankName, accountHolderName, accountNumber, active: input.active, notes: input.notes?.trim() || null }).where(eq(bankAccounts.id, input.bankAccountId));
+  await writeAudit({
+    actorUserId: actor.id, action: "BANK_ACCOUNT_UPDATED", entityType: "bank_account", entityId: String(input.bankAccountId),
+    beforeState: { bankName: existing.bankName, accountHolderName: existing.accountHolderName, accountNumber: existing.accountNumber, active: existing.active, notes: existing.notes },
+    afterState: { bankName, accountHolderName, accountNumber, active: input.active, notes: input.notes?.trim() || null },
+  });
+  return { id: input.bankAccountId, bankName, accountHolderName, accountNumber, active: input.active };
+}
+
+/** Manual correction to a bank account's balance — e.g. a bank fee, interest posted, or fixing a data-entry mistake. Always requires a reason, same as recordCashAdjustment. */
+export async function recordBankAccountAdjustment(
+  input: { bankAccountId: number; direction: "IN" | "OUT"; amount: string; notes: string },
+  actor: { id: number; role: StaffRole },
+) {
+  const amount = nonNegativeOrZeroDecimal(input.amount, "Jumlah penyesuaian");
+  if (amount.lte(0)) throw new Error("Jumlah penyesuaian harus lebih besar dari nol.");
+  const notes = input.notes.trim();
+  if (notes.length < 5) throw new Error("Catatan penyesuaian wajib diisi (minimal 5 karakter) untuk jejak audit.");
+
+  const db = await databaseOrThrow();
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT ${bankAccounts.id} FROM ${bankAccounts} WHERE ${bankAccounts.id} = ${input.bankAccountId} FOR UPDATE`);
+    const account = (await tx.select().from(bankAccounts).where(eq(bankAccounts.id, input.bankAccountId)).limit(1))[0];
+    if (!account) throw new Error("Rekening bank tidak ditemukan.");
+    const before = new Decimal(String(account.availableAmount));
+    if (input.direction === "OUT" && before.lt(amount)) throw new Error("Jumlah penyesuaian melebihi saldo rekening yang tersedia.");
+    const after = input.direction === "OUT" ? before.minus(amount) : before.plus(amount);
+    await tx.update(bankAccounts).set({ availableAmount: after.toFixed(6) }).where(eq(bankAccounts.id, account.id));
+    await tx.insert(bankAccountMovements).values({ bankAccountId: account.id, direction: input.direction, amount: amount.toFixed(6), reason: notes, category: "ADJUSTMENT", createdByUserId: actor.id });
+    await writeAudit({ actorUserId: actor.id, action: "BANK_ACCOUNT_ADJUSTMENT_RECORDED", entityType: "bank_account", entityId: String(account.id), beforeState: { availableAmount: before.toFixed(6) }, afterState: { availableAmount: after.toFixed(6) }, reason: notes, metadata: { direction: input.direction, amount: amount.toFixed(6) } });
+    return { id: account.id, beforeAmount: before.toFixed(6), afterAmount: after.toFixed(6) };
+  });
 }
 
 export async function listCashBalances() {

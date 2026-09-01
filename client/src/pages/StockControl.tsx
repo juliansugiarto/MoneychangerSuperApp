@@ -111,7 +111,97 @@ function KasAwalPanel() {
       <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Saldo sistem saat ini</CardTitle></CardHeader>
       <CardContent><div className="space-y-2">{balances?.length ? balances.map(({ balance, currency }) => <div key={balance.id} className="flex justify-between rounded-xl bg-[#f6fafc] px-3 py-2 text-sm"><span className="font-semibold text-[#18395f]">{currency.code}</span><span className="font-mono font-semibold text-[#334155]">{formatPlainAmount(balance.availableAmount)}</span></div>) : <p className="text-sm text-[#475569]">Belum ada saldo kas tercatat.</p>}</div></CardContent>
     </Card>
+    <div className="lg:col-span-2"><BankAccountsPanel /></div>
   </div>;
+}
+
+function BankAccountsPanel() {
+  const { user } = useAuth();
+  const utils = trpc.useUtils();
+  const canManage = user?.role !== "STAFF";
+  const { data: accounts } = trpc.bankAccounts.list.useQuery(undefined, { enabled: Boolean(user) });
+  const [adding, setAdding] = useState(false);
+  const [managingId, setManagingId] = useState<number | null>(null);
+  const [form, setForm] = useState({ bankName: "", accountHolderName: "", accountNumber: "", openingBalance: "", notes: "" });
+  const [editForm, setEditForm] = useState({ bankName: "", accountHolderName: "", accountNumber: "", active: true, notes: "" });
+  const [adjustForm, setAdjustForm] = useState({ direction: "IN" as "IN" | "OUT", amount: "", notes: "" });
+  const { data: currencyList } = trpc.currencies.list.useQuery(undefined, { enabled: Boolean(user) });
+  const idrCurrencyId = currencyList?.find((currency) => currency.code === "IDR")?.id;
+
+  const invalidateAll = () => utils.bankAccounts.list.invalidate();
+
+  const create = trpc.bankAccounts.create.useMutation({
+    onSuccess: () => { toast.success("Rekening bank ditambahkan."); setForm({ bankName: "", accountHolderName: "", accountNumber: "", openingBalance: "", notes: "" }); setAdding(false); invalidateAll(); },
+    onError: (error) => toast.error(error.message),
+  });
+  const update = trpc.bankAccounts.update.useMutation({
+    onSuccess: () => { toast.success("Rekening bank diperbarui."); setManagingId(null); invalidateAll(); },
+    onError: (error) => toast.error(error.message),
+  });
+  const adjust = trpc.bankAccounts.recordAdjustment.useMutation({
+    onSuccess: () => { toast.success("Penyesuaian saldo rekening tercatat."); setAdjustForm({ direction: "IN", amount: "", notes: "" }); invalidateAll(); },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const startManaging = (account: NonNullable<typeof accounts>[number]["account"]) => {
+    setManagingId(account.id);
+    setEditForm({ bankName: account.bankName, accountHolderName: account.accountHolderName, accountNumber: account.accountNumber, active: account.active, notes: account.notes ?? "" });
+    setAdjustForm({ direction: "IN", amount: "", notes: "" });
+  };
+
+  return <Card className="border-[#dce6f0]">
+    <CardHeader>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div><CardTitle className="font-display text-lg text-[#18395f]">Rekening bank perusahaan</CardTitle><CardDescription>Saldo rekening bergerak otomatis saat bon Transfer Bank diselesaikan (arah sama seperti kas: BELI keluar, JUAL masuk).</CardDescription></div>
+        {canManage ? <Button type="button" size="sm" variant="outline" className="border-[#5c8f53] text-xs text-[#3d7139]" onClick={() => setAdding((v) => !v)}><Plus className="mr-1 size-3" />{adding ? "Batal" : "Tambah rekening"}</Button> : null}
+      </div>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      {adding && canManage ? <div className="space-y-3 rounded-xl border border-[#cbd9e7] bg-[#f8fbfe] p-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div><Label className="text-xs">Nama bank</Label><Input className="mt-1" value={form.bankName} onChange={(e) => setForm({ ...form, bankName: e.target.value })} placeholder="Contoh: BCA" /></div>
+          <div><Label className="text-xs">Nama pemilik rekening</Label><Input className="mt-1" value={form.accountHolderName} onChange={(e) => setForm({ ...form, accountHolderName: e.target.value })} placeholder="PT Ibukota Valasindo" /></div>
+          <div><Label className="text-xs">Nomor rekening</Label><Input className="mt-1" value={form.accountNumber} onChange={(e) => setForm({ ...form, accountNumber: e.target.value })} placeholder="Nomor rekening" /></div>
+          <div><Label className="text-xs">Saldo awal (Rp)</Label><Input className="mt-1" inputMode="decimal" value={form.openingBalance} onChange={(e) => setForm({ ...form, openingBalance: e.target.value })} placeholder="0" /></div>
+        </div>
+        <div><Label className="text-xs">Catatan (opsional)</Label><Input className="mt-1" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+        <Button type="button" disabled={!form.bankName || !form.accountHolderName || !form.accountNumber || !form.openingBalance || !idrCurrencyId || create.isPending} onClick={() => create.mutate({ ...form, currencyId: idrCurrencyId!, notes: form.notes || undefined })} className="w-full bg-[#183f70] text-white hover:bg-[#12345d]">{create.isPending ? "Menyimpan…" : "Simpan rekening"}</Button>
+      </div> : null}
+
+      {accounts?.length ? <div className="space-y-2">{accounts.map(({ account, currency }) => <div key={account.id} className="rounded-xl border border-[#e2eaf2] bg-[#fbfdff] p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="font-semibold text-[#18395f]">{account.bankName} · {account.accountHolderName}</p>
+            <p className="text-xs text-[#475569]">{account.accountNumber}{!account.active ? " · nonaktif" : ""}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-base font-bold text-[#18395f]">{currency.code} {formatPlainAmount(account.availableAmount)}</span>
+            {canManage ? <Button type="button" size="sm" variant="outline" onClick={() => (managingId === account.id ? setManagingId(null) : startManaging(account))}>{managingId === account.id ? "Tutup" : "Kelola"}</Button> : null}
+          </div>
+        </div>
+        {managingId === account.id && canManage ? <div className="mt-3 space-y-3 border-t border-[#e2eaf2] pt-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div><Label className="text-xs">Nama bank</Label><Input className="mt-1" value={editForm.bankName} onChange={(e) => setEditForm({ ...editForm, bankName: e.target.value })} /></div>
+            <div><Label className="text-xs">Nama pemilik rekening</Label><Input className="mt-1" value={editForm.accountHolderName} onChange={(e) => setEditForm({ ...editForm, accountHolderName: e.target.value })} /></div>
+            <div><Label className="text-xs">Nomor rekening</Label><Input className="mt-1" value={editForm.accountNumber} onChange={(e) => setEditForm({ ...editForm, accountNumber: e.target.value })} /></div>
+            <div><Label className="text-xs">Status</Label><Select value={editForm.active ? "active" : "inactive"} onValueChange={(v) => setEditForm({ ...editForm, active: v === "active" })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Aktif</SelectItem><SelectItem value="inactive">Nonaktif</SelectItem></SelectContent></Select></div>
+          </div>
+          <div><Label className="text-xs">Catatan</Label><Input className="mt-1" value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} /></div>
+          <Button type="button" size="sm" disabled={!editForm.bankName || !editForm.accountHolderName || !editForm.accountNumber || update.isPending} onClick={() => update.mutate({ bankAccountId: account.id, ...editForm, notes: editForm.notes || undefined })} className="bg-[#183f70] text-white hover:bg-[#12345d]">{update.isPending ? "Menyimpan…" : "Simpan perubahan"}</Button>
+
+          <div className="rounded-lg bg-[#f8fbfe] p-3">
+            <Label className="text-xs font-semibold text-[#18395f]">Penyesuaian saldo (mis. biaya bank, bunga, koreksi)</Label>
+            <div className="mt-2 grid gap-2 sm:grid-cols-[100px_1fr_1fr_auto]">
+              <Select value={adjustForm.direction} onValueChange={(v) => setAdjustForm({ ...adjustForm, direction: v as "IN" | "OUT" })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="IN">Masuk</SelectItem><SelectItem value="OUT">Keluar</SelectItem></SelectContent></Select>
+              <Input inputMode="decimal" value={adjustForm.amount} onChange={(e) => setAdjustForm({ ...adjustForm, amount: e.target.value })} placeholder="Jumlah" />
+              <Input value={adjustForm.notes} onChange={(e) => setAdjustForm({ ...adjustForm, notes: e.target.value })} placeholder="Catatan (wajib, min. 5 karakter)" />
+              <Button type="button" size="sm" disabled={!adjustForm.amount || adjustForm.notes.trim().length < 5 || adjust.isPending} onClick={() => adjust.mutate({ bankAccountId: account.id, ...adjustForm })}>{adjust.isPending ? "Mencatat…" : "Catat"}</Button>
+            </div>
+          </div>
+        </div> : null}
+      </div>)}</div> : <p className="text-sm text-[#475569]">Belum ada rekening bank terdaftar.</p>}
+    </CardContent>
+  </Card>;
 }
 
 function StokSaatIniPanel() {
