@@ -17,13 +17,13 @@ import { Customer, PrintableLine, printBon } from "./Transactions";
 
 /** Every denomination group is priced on its own (e.g. USD 100s vs USD 10s in the same deal), so price lives here, not on the line. */
 type PricedDenominationRow = { value: string; quantity: string; rate: string };
-type LineDraft = { key: string; currency: PickedCurrency | null; quoteUnit: string; denominations: PricedDenominationRow[] };
+type LineDraft = { key: string; currency: PickedCurrency | null; quoteUnit: string; denominations: PricedDenominationRow[]; sellTargetAmount: string };
 /** The Rupiah leg of a CASH deal has no price to enter — it's already valued at face value. */
 type PlainDenominationRow = { value: string; quantity: string };
 
 const emptyDenominationRow = (): PricedDenominationRow => ({ value: "", quantity: "", rate: "" });
 const emptyPlainDenominationRow = (): PlainDenominationRow => ({ value: "", quantity: "" });
-const emptyLine = (): LineDraft => ({ key: crypto.randomUUID(), currency: null, quoteUnit: "1", denominations: [emptyDenominationRow()] });
+const emptyLine = (): LineDraft => ({ key: crypto.randomUUID(), currency: null, quoteUnit: "1", denominations: [emptyDenominationRow()], sellTargetAmount: "" });
 const isCompleteDenominationRow = (row: PricedDenominationRow) => Boolean(row.value && row.quantity && row.rate);
 const lineForeignTotal = (line: LineDraft) => line.denominations.reduce((sum, row) => sum + (Number(row.value) || 0) * (Number(row.quantity) || 0), 0);
 const lineRupiahTotal = (line: LineDraft) => { const unit = Number(line.quoteUnit) || 1; return line.denominations.reduce((sum, row) => sum + (Number(row.value) || 0) * (Number(row.quantity) || 0) * (Number(row.rate) || 0) / unit, 0); };
@@ -104,30 +104,60 @@ export default function TransactionCreate() {
   const paymentDenominationsComplete = paymentDenominations.length > 0 && paymentDenominations.every((row) => row.value && row.quantity);
   const paymentDenominationMismatch = paymentMethod === "CASH" && totalRupiah > 0 && Math.abs(paymentDenominationTotal - totalRupiah) > 0.5;
 
-  const [exchangeProposal, setExchangeProposal] = useState<{ currencyId: number; shortfall: string; give: { value: string; quantity: number }[]; receive: { value: string; quantity: number }[] } | null>(null);
+  const [exchangeProposal, setExchangeProposal] = useState<{ currencyId: number; currencyCode: string; shortfall: string; give: { value: string; quantity: number }[]; receive: { value: string; quantity: number }[]; retry: () => Promise<void> } | null>(null);
   const [exchangeSubmitting, setExchangeSubmitting] = useState(false);
 
+  /** Shared by the Rupiah payment leg and every SELL line's foreign-currency leg — tries an exact
+   * fill from current stock, and if that comes up short, offers a Tukar Pecahan exchange to close
+   * the gap (see suggestDenominationExchange), then retries via whichever caller-supplied fill
+   * function invoked this. */
+  const autoFillFromStock = async (currencyId: number, targetAmount: string, onFilled: (breakdown: { value: string; quantity: number }[]) => void, retry: () => Promise<void>) => {
+    const result = await utils.cash.suggestDenominationBreakdown.fetch({ currencyId, targetAmount });
+    if (!result.breakdown.length) { toast.error("Tidak ditemukan kombinasi pecahan dari stok saat ini."); return; }
+    onFilled(result.breakdown);
+    if (result.exact) { toast.success("Rincian pecahan terisi otomatis dari stok saat ini."); return; }
+    try {
+      const exchange = await utils.cash.suggestDenominationExchange.fetch({ currencyId, shortfallAmount: result.shortfall });
+      setExchangeProposal({ currencyId, currencyCode: exchange.currencyCode, shortfall: result.shortfall, give: exchange.give, receive: exchange.receive, retry });
+    } catch {
+      toast.warning(`Kombinasi dari stok belum pas — kurang ${result.currencyCode} ${formatPlainAmount(result.shortfall)}. Lengkapi sisanya secara manual.`);
+    }
+  };
+
   const autoFillPaymentDenominations = async () => {
-    if (!idrCurrencyId) return toast.error("Data mata uang IDR belum termuat, coba lagi sesaat lagi.");
-    if (totalRupiah <= 0) return toast.error("Isi baris mata uang dan harga terlebih dahulu sebelum auto-isi.");
+    if (!idrCurrencyId) { toast.error("Data mata uang IDR belum termuat, coba lagi sesaat lagi."); return; }
+    if (totalRupiah <= 0) { toast.error("Isi baris mata uang dan harga terlebih dahulu sebelum auto-isi."); return; }
     setAutoFillingPayment(true);
     try {
-      const result = await utils.cash.suggestDenominationBreakdown.fetch({ currencyId: idrCurrencyId, targetAmount: totalRupiah.toFixed(2) });
-      if (!result.breakdown.length) return toast.error("Tidak ditemukan kombinasi pecahan dari stok saat ini.");
-      setPaymentDenominations(result.breakdown.map((row) => ({ value: row.value, quantity: String(row.quantity) })));
-      if (result.exact) { toast.success("Rincian pecahan Rupiah terisi otomatis dari stok saat ini."); return; }
-      // Exact fill from current composition isn't possible — offer a real, equal-value note exchange
-      // (e.g. break one 100,000 into smaller notes) to close the gap, instead of just leaving it short.
-      try {
-        const exchange = await utils.cash.suggestDenominationExchange.fetch({ currencyId: idrCurrencyId, shortfallAmount: result.shortfall });
-        setExchangeProposal({ currencyId: idrCurrencyId, shortfall: result.shortfall, give: exchange.give, receive: exchange.receive });
-      } catch {
-        toast.warning(`Kombinasi dari stok belum pas — kurang Rp ${formatPlainAmount(result.shortfall)}. Lengkapi sisanya secara manual.`);
-      }
+      await autoFillFromStock(
+        idrCurrencyId, totalRupiah.toFixed(2),
+        (breakdown) => setPaymentDenominations(breakdown.map((row) => ({ value: row.value, quantity: String(row.quantity) }))),
+        autoFillPaymentDenominations,
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Auto-isi gagal.");
     } finally {
       setAutoFillingPayment(false);
+    }
+  };
+
+  const [autoFillingLine, setAutoFillingLine] = useState<string | null>(null);
+  const autoFillLineDenominations = async (lineIndex: number) => {
+    const line = lines[lineIndex];
+    if (!line.currency) { toast.error("Pilih mata uang baris ini terlebih dahulu."); return; }
+    const target = Number(line.sellTargetAmount);
+    if (!target || target <= 0) { toast.error("Isi jumlah yang akan dijual terlebih dahulu."); return; }
+    setAutoFillingLine(line.key);
+    try {
+      await autoFillFromStock(
+        line.currency.id, line.sellTargetAmount,
+        (breakdown) => setLines((prev) => prev.map((l, i) => (i === lineIndex ? { ...l, denominations: breakdown.map((row) => ({ value: row.value, quantity: String(row.quantity), rate: "" })) } : l))),
+        () => autoFillLineDenominations(lineIndex),
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Auto-isi gagal.");
+    } finally {
+      setAutoFillingLine(null);
     }
   };
 
@@ -136,11 +166,12 @@ export default function TransactionCreate() {
     if (!exchangeProposal) return;
     setExchangeSubmitting(true);
     try {
-      await exchangeMutation.mutateAsync({ currencyId: exchangeProposal.currencyId, give: exchangeProposal.give, receive: exchangeProposal.receive, notes: `Auto-isi transaksi: menutup kekurangan Rp ${formatPlainAmount(exchangeProposal.shortfall)}` });
+      await exchangeMutation.mutateAsync({ currencyId: exchangeProposal.currencyId, give: exchangeProposal.give, receive: exchangeProposal.receive, notes: `Auto-isi transaksi: menutup kekurangan ${formatPlainAmount(exchangeProposal.shortfall)}` });
       utils.cash.balances.invalidate(); utils.cash.denominationBalances.invalidate();
       toast.success("Pertukaran pecahan tercatat. Mengisi ulang rincian…");
+      const retry = exchangeProposal.retry;
       setExchangeProposal(null);
-      await autoFillPaymentDenominations();
+      await retry();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Pertukaran pecahan gagal dicatat.");
     } finally {
@@ -272,8 +303,13 @@ export default function TransactionCreate() {
               </div>
               {reference ? <p className="mt-2 text-xs text-slate-600">Kurs referensi hari ini (pembanding saja): {operation === "BUY" ? String(reference.rate.buyRate) : String(reference.rate.sellRate)} IDR per {String(reference.rate.quoteUnit)} {reference.currency.code}.</p> : null}
 
+              {operation === "SELL" && line.currency ? <div className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-[#5c8f53]/40 bg-[#f5fbf5] p-3">
+                <div className="flex-1"><Label className="text-xs">Jumlah {line.currency.code} yang akan dijual</Label><Input className="mt-1" inputMode="decimal" value={line.sellTargetAmount} onChange={(e) => updateLine(index, { sellTargetAmount: e.target.value })} placeholder="Contoh: 500" /></div>
+                <Button type="button" size="sm" variant="outline" className="border-[#5c8f53] text-xs text-[#3d7139]" disabled={autoFillingLine === line.key} onClick={() => autoFillLineDenominations(index)}><Sparkles className="mr-1 size-3" />{autoFillingLine === line.key ? "Mengisi…" : "Auto-isi dari stok"}</Button>
+              </div> : null}
               <div className="mt-3 rounded-lg border border-[#cbd9e7] bg-white p-3">
                 <div className="flex items-center justify-between"><Label className="text-xs font-semibold text-[#18395f]">Rincian pecahan (wajib — tiap pecahan punya harga sendiri)</Label><Button type="button" size="sm" variant="outline" className="h-7 border-[#bcd2e5] text-xs text-[#183f70]" onClick={() => addDenominationRow(index)}><Plus className="mr-1 size-3" />Tambah pecahan</Button></div>
+                {operation === "SELL" ? <p className="mb-1 text-[11px] text-[#475569]">Auto-isi hanya mengisi nilai dan jumlah lembar dari stok — harga per pecahan tetap harus diisi manual di bawah.</p> : null}
                 {line.denominations.map((row, denomIndex) => <div key={denomIndex} className="mt-2 grid grid-cols-[1fr_90px_1fr_auto] items-start gap-2">
                   <DenominationValueInput currencyCode={line.currency?.code} value={row.value} onChange={(value) => updateDenominationRow(index, denomIndex, "value", value)} />
                   <Input required inputMode="numeric" value={row.quantity} onChange={(e) => updateDenominationRow(index, denomIndex, "quantity", e.target.value)} placeholder="Lembar" />
@@ -371,16 +407,16 @@ export default function TransactionCreate() {
         {exchangeProposal ? <>
           <DialogHeader>
             <DialogTitle className="font-display text-lg text-[#18395f]">Tukar pecahan untuk menutup kekurangan?</DialogTitle>
-            <DialogDescription>Stok saat ini tidak bisa membentuk Rp {formatPlainAmount(exchangeProposal.shortfall)} yang tersisa. Nilai pecahan di bawah ini sama persis (tidak ada nilai yang hilang) — hanya komposisinya yang berubah.</DialogDescription>
+            <DialogDescription>Stok saat ini tidak bisa membentuk {exchangeProposal.currencyCode} {formatPlainAmount(exchangeProposal.shortfall)} yang tersisa. Nilai pecahan di bawah ini sama persis (tidak ada nilai yang hilang) — hanya komposisinya yang berubah.</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 rounded-xl border border-[#cbd9e7] bg-[#f8fbfe] p-3 text-sm">
             <div>
               <p className="mb-1 text-xs font-bold uppercase tracking-wide text-[#68758c]">Diserahkan</p>
-              {exchangeProposal.give.map((row) => <p key={row.value} className="font-mono font-semibold text-[#18395f]">{row.quantity}× Rp {formatPlainAmount(row.value)}</p>)}
+              {exchangeProposal.give.map((row) => <p key={row.value} className="font-mono font-semibold text-[#18395f]">{row.quantity}× {exchangeProposal.currencyCode} {formatPlainAmount(row.value)}</p>)}
             </div>
             <div>
               <p className="mb-1 text-xs font-bold uppercase tracking-wide text-[#68758c]">Diterima</p>
-              {exchangeProposal.receive.map((row) => <p key={row.value} className="font-mono font-semibold text-[#18395f]">{row.quantity}× Rp {formatPlainAmount(row.value)}</p>)}
+              {exchangeProposal.receive.map((row) => <p key={row.value} className="font-mono font-semibold text-[#18395f]">{row.quantity}× {exchangeProposal.currencyCode} {formatPlainAmount(row.value)}</p>)}
             </div>
           </div>
           <DialogFooter>
