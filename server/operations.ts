@@ -201,6 +201,12 @@ export function normalizeRateShockThreshold(value: string) {
   return nonNegativeDecimal(value, "Ambang perubahan kurs").toDecimalPlaces(4, Decimal.ROUND_HALF_UP).toFixed(4);
 }
 
+/** LTKT (Laporan Transaksi Keuangan Tunai) to PPATK — a fixed regulatory threshold, not an
+ * operator-tunable risk setting like the EDD cash threshold above, so it's a constant rather than
+ * something read from operational_settings. Applies to cash transactions only (bank transfers leave
+ * their own trail at the bank). */
+const LTKT_CASH_THRESHOLD_IDR = "500000000.00";
+
 export function assessReviewRequirement(input: {
   rupiahAmount: string;
   thresholdUsd: string;
@@ -219,14 +225,20 @@ export function assessReviewRequirement(input: {
   const exceedsCashDailyEdd = input.isCashPayment && input.cashDailyRupiahTotal && input.eddCashDailyThresholdIdr
     ? new Decimal(input.cashDailyRupiahTotal).gte(new Decimal(input.eddCashDailyThresholdIdr))
     : false;
+  const ltktThreshold = new Decimal(LTKT_CASH_THRESHOLD_IDR);
+  const meetsLtktThreshold = Boolean(input.isCashPayment) && (
+    new Decimal(input.rupiahAmount).gte(ltktThreshold)
+    || (input.cashDailyRupiahTotal ? new Decimal(input.cashDailyRupiahTotal).gte(ltktThreshold) : false)
+  );
   const profileMismatch = input.profileStatus === "RESTRICTED" || input.riskLevel === "HIGH";
   const reviewReason = [
     exceedsThreshold ? "NILAI_SETARA_USD_MELEBIHI_AMBANG" : null,
     exceedsCashDailyEdd ? "AKUMULASI_TRANSAKSI_TUNAI_HARIAN_MEMENUHI_AMBANG_EDD" : null,
+    meetsLtktThreshold ? "MEMENUHI_AMBANG_LTKT_PPATK" : null,
     input.profileStatus === "RESTRICTED" ? "PROFIL_NASABAH_RESTRICTED" : null,
     input.riskLevel === "HIGH" ? "RISIKO_NASABAH_TINGGI" : null,
   ].filter(Boolean).join("; ") || null;
-  return { requiresReview: exceedsThreshold || exceedsCashDailyEdd || profileMismatch, reviewReason, usdEquivalent: usdEquivalent?.toFixed(6) ?? null };
+  return { requiresReview: exceedsThreshold || exceedsCashDailyEdd || profileMismatch, reviewReason, usdEquivalent: usdEquivalent?.toFixed(6) ?? null, meetsLtktThreshold };
 }
 
 export function submissionTransition(status: "DRAFT" | "RETURNED", requiresReview: boolean) {

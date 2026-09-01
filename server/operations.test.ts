@@ -64,6 +64,22 @@ describe("review thresholds and immutable rate snapshots", () => {
     expect(assessReviewRequirement({ rupiahAmount: "15000000.00", thresholdUsd: "10000.00", usdSellRate: "16000.00", usdQuoteUnit: "1.00", cashDailyRupiahTotal: "100000000.00", eddCashDailyThresholdIdr: "100000000.00", isCashPayment: true, profileStatus: "ACTIVE", riskLevel: "LOW" })).toMatchObject({ requiresReview: true, reviewReason: "AKUMULASI_TRANSAKSI_TUNAI_HARIAN_MEMENUHI_AMBANG_EDD" });
   });
 
+  it("flags a single cash transaction at or above the Rp 500 million LTKT threshold", () => {
+    const result = assessReviewRequirement({ rupiahAmount: "500000000.00", thresholdUsd: "10000.00", isCashPayment: true, profileStatus: "ACTIVE", riskLevel: "LOW" });
+    expect(result.meetsLtktThreshold).toBe(true);
+    expect(result.reviewReason).toContain("MEMENUHI_AMBANG_LTKT_PPATK");
+  });
+
+  it("flags a cash day whose accumulated total reaches the LTKT threshold even if this transaction alone doesn't", () => {
+    const result = assessReviewRequirement({ rupiahAmount: "50000000.00", thresholdUsd: "10000.00", cashDailyRupiahTotal: "500000000.00", isCashPayment: true, profileStatus: "ACTIVE", riskLevel: "LOW" });
+    expect(result.meetsLtktThreshold).toBe(true);
+  });
+
+  it("never flags the LTKT threshold for a bank transfer, even above Rp 500 million", () => {
+    const result = assessReviewRequirement({ rupiahAmount: "600000000.00", thresholdUsd: "10000.00", isCashPayment: false, profileStatus: "ACTIVE", riskLevel: "LOW" });
+    expect(result.meetsLtktThreshold).toBe(false);
+  });
+
   it("copies both the rate and quote unit used by a transaction", () => {
     const captured = captureRateSnapshot("11272.75", "100");
     const laterMasterRate = captureRateSnapshot("11500.00", "1");

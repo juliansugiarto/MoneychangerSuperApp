@@ -106,7 +106,10 @@ export default function TransactionList() {
                       <b className="text-[#18395f]">{transaction.receiptNumber ? `No. ${transaction.receiptNumber}` : transaction.transactionNumber}</b>
                       <p className="text-xs text-slate-600">{customer.fullName} · {transaction.operation === "BUY" ? "Transaksi beli" : "Transaksi jual"} · {currencySummary || "Belum ada baris mata uang"}</p>
                     </div>
-                    <Badge className={transactionStatusClass[transaction.status] ?? "status-inactive"}>{transactionStatusLabel[transaction.status] ?? transaction.status}</Badge>
+                    <div className="flex flex-wrap justify-end gap-1.5">
+                      {transaction.paymentMethod === "CASH" && Number(transaction.rupiahAmount) >= 500000000 ? <Badge className="bg-amber-600 text-white hover:bg-amber-600" title="Memenuhi ambang LTKT (≥ Rp 500 juta tunai) — wajib dilaporkan ke PPATK secara manual sesuai prosedur">LTKT</Badge> : null}
+                      <Badge className={transactionStatusClass[transaction.status] ?? "status-inactive"}>{transactionStatusLabel[transaction.status] ?? transaction.status}</Badge>
+                    </div>
                   </div>
                   <p className="mt-2 text-xs">{formatIdrDecimal(String(transaction.rupiahAmount))} · {lines.length} baris mata uang</p>
                   <div className="mt-2 flex flex-wrap gap-2">
