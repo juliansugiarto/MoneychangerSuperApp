@@ -47,6 +47,7 @@ export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
     { label: "Jejak Audit", path: "/operasional/audit", minimumRole: "CONTROLLER" },
     { label: "Impor Nasabah", path: "/operasional/impor-nasabah", minimumRole: "CONTROLLER" },
     { label: "Akses Staf", path: "/operasional/pengguna", minimumRole: "CONTROLLER" },
+    { label: "Profil Perusahaan", path: "/operasional/profil-perusahaan", minimumRole: "CONTROLLER" },
   ] },
 ];
 

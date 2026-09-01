@@ -13,8 +13,8 @@
 | Identitas dan akses | `users` | Username, hash sandi, peran, status akun, versi sesi, dan kewajiban ganti sandi. |
 | Mata uang dan kurs | `currencies`, `rate_reference_snapshots`, `operational_rates`, `market_rate_observations`, `rate_volatility_alerts`, `rate_sync_configurations`, `rate_sync_runs` | Mata uang, referensi, kurs outlet berstatus, observasi pasar, alarm, dan riwayat sinkronisasi. |
 | Nasabah dan bon | `customers`, `exchange_transactions`, `exchange_transaction_lines`, `exchange_transaction_denomination_entries`, `exchange_transaction_payment_denominations`, `operational_documents`, `transaction_review_actions` | KYC, header bon (bisa berisi banyak baris mata uang), rincian pecahan valuta per baris, rincian pecahan Rupiah sisi pembayaran tunai, dokumen S3, serta keputusan review yang tidak ditimpa. |
-| Kas dan outlet | `cash_balances`, `cash_balance_movements`, `cash_denomination_balances`, `stock_opnames`, `daily_operational_checklists` | Saldo per mata uang, mutasi, stok pecahan berjalan, opname fisik, dan checklist harian. |
-| Konfigurasi dan layanan | `operational_settings`, `service_requests`, `public_announcements`, `consumer_complaints` | Ambang pengawasan, permintaan layanan, pengumuman, dan keluhan. |
+| Kas dan outlet | `cash_balances`, `cash_balance_movements`, `cash_denomination_balances`, `stock_opnames`, `daily_operational_checklists`, `bank_accounts`, `bank_account_movements` | Saldo per mata uang, mutasi, stok pecahan berjalan, opname fisik, checklist harian, dan saldo rekening bank perusahaan (IDR-only, migrasi `0025`). |
+| Konfigurasi dan layanan | `operational_settings`, `service_requests`, `public_announcements`, `consumer_complaints`, `company_profile` | Ambang pengawasan, permintaan layanan, pengumuman, keluhan, dan identitas perusahaan (migrasi `0027`) — nama PT/dagang, izin usaha, base currency (seed untuk multi-tenant masa depan, belum dipakai di luar kolom ini). |
 | Audit dan pengawasan | `audit_logs`, `director_acknowledgements` | Jejak perubahan serta tugas Direksi mengetahui. |
 | Pelaporan internal | `regulatory_report_packages`, `financial_statement_snapshots`, `regulatory_incident_reports` | Paket manual, snapshot B0002/B0003/B0004, dan register insidental. |
 
@@ -59,6 +59,7 @@ erDiagram
 | Data latihan | Flag `isDemo` pada transaksi, nasabah, kurs, dan opname | Query produksi wajib mengecualikan data demo. |
 | Data historis | Flag `isHistorical` dan `historicalSourceKey` | Catatan impor tidak dapat dipakai sebagai transaksi hidup. |
 | Dokumen | Hanya metadata dan `storageKey` di `operational_documents` | Bytes dokumen berada di object storage, bukan kolom database. |
+| Dokumen profil perusahaan | `operational_documents.ownerType = 'COMPANY'` (`documentType`: `COMPANY_LOGO`/`LICENSE_CERTIFICATE`/`LICENSE_ATTACHMENT`), tanpa `customerId`/`transactionId`; upload dibatasi Controller ke atas (dicek di `server/_core/index.ts`, bukan hanya di client) | `company_profile.logoDocumentId` menunjuk salah satu dokumen `COMPANY_LOGO`; sertifikat/lampiran bisa lebih dari satu file per jenis. |
 | Audit | `audit_logs` memakai before/after state JSON | Jangan menghapus bukti untuk memperbaiki tampilan. |
 | Sesi | `sessionVersion` pada `users` | Reset sandi, perubahan peran/status mencabut sesi lama. |
 

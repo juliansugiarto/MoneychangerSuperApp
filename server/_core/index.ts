@@ -12,6 +12,7 @@ import { appRouter } from "../routers";
 import { handleScheduledBiRateSync } from "../biRateSync";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { isRoleAllowed } from "../../shared/backOfficeNavigation";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -45,6 +46,8 @@ async function startServer() {
     try {
       const user = await authenticateInternalRequest(req);
       if (user.mustChangePassword) return res.status(403).json({ message: "Ganti kata sandi terlebih dahulu sebelum mengunggah dokumen." });
+      const isCompanyDoc = ["COMPANY_LOGO", "LICENSE_CERTIFICATE", "LICENSE_ATTACHMENT"].includes(String(req.body?.documentType));
+      if (isCompanyDoc && !isRoleAllowed(user.role, "CONTROLLER")) return res.status(403).json({ message: "Hanya Controller ke atas yang dapat mengunggah dokumen profil perusahaan." });
       const data = decodeOperationalDocumentData(String(req.body?.dataBase64 ?? ""));
       const document = await uploadOperationalDocument({
         documentType: req.body?.documentType,

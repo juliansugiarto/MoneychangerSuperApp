@@ -68,6 +68,8 @@ import {
   createBankAccount,
   updateBankAccount,
   recordBankAccountAdjustment,
+  getCompanyProfile,
+  updateCompanyProfile,
   markRegulatoryReportExported,
   markRegulatoryIncidentExported,
   approveRegulatoryIncidentReport,
@@ -86,7 +88,7 @@ import {
   updatePublicAnnouncement,
   updateServiceRequest,
 } from "./operations";
-import { getOperationalDocumentDownloadUrl, listOperationalDocuments } from "./documentOperations";
+import { deleteCompanyDocument, getOperationalDocumentDownloadUrl, listCompanyDocuments, listOperationalDocuments } from "./documentOperations";
 import { simulateArchiveReadiness, simulateClosing, simulateExchange, simulateRateShock } from "./simulation";
 import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedure, router, staffProcedure } from "./_core/trpc";
 import { createInternalSession, hashPassword, internalSessionMaxAge, validateUsername, verifyInternalCredentials, verifyPassword } from "./internalAuth";
@@ -313,7 +315,27 @@ export const appRouter = router({
   documents: router({
     forCustomer: staffProcedure.input(z.object({ customerId: z.number().int().positive() })).query(({ input }) => listOperationalDocuments({ customerId: input.customerId })),
     forTransaction: staffProcedure.input(z.object({ transactionId: z.number().int().positive() })).query(({ input }) => listOperationalDocuments({ transactionId: input.transactionId })),
+    forCompany: staffProcedure.query(() => listCompanyDocuments()),
     downloadUrl: staffProcedure.input(z.object({ documentId: z.number().int().positive() })).query(({ input }) => getOperationalDocumentDownloadUrl(input.documentId)),
+    deleteCompany: controllerProcedure.input(z.object({ documentId: z.number().int().positive() })).mutation(({ input }) => deleteCompanyDocument(input.documentId)),
+  }),
+
+  companyProfile: router({
+    get: staffProcedure.query(() => getCompanyProfile()),
+    update: controllerProcedure.input(z.object({
+      legalEntityName: z.string().trim().min(1).max(200),
+      tradingName: z.string().trim().min(1).max(200),
+      licenseNumber: z.string().trim().max(80).optional(),
+      kupvaCode: z.string().trim().max(40).optional(),
+      npwp: z.string().trim().max(40).optional(),
+      nib: z.string().trim().max(40).optional(),
+      biReporterCode: z.string().trim().max(80).optional(),
+      address: z.string().trim().max(2000).optional(),
+      phone: z.string().trim().max(60).optional(),
+      email: z.string().trim().max(200).optional(),
+      website: z.string().trim().max(200).optional(),
+      logoDocumentId: z.number().int().positive().optional(),
+    })).mutation(({ input, ctx }) => updateCompanyProfile(input, ctx.user)),
   }),
 
   complaints: router({

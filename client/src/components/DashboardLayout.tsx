@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { ArrowLeftRight, BadgeDollarSign, Banknote, BookOpenCheck, ChartNoAxesCombined, ClipboardCheck, ClipboardList, FileSearch, Gauge, Landmark, LayoutDashboard, LogOut, MessageSquareWarning, MessagesSquare, ShieldCheck, ShieldQuestion, UsersRound, Vault, Wallet } from "lucide-react";
+import { ArrowLeftRight, BadgeDollarSign, Banknote, BookOpenCheck, Building2, ChartNoAxesCombined, ClipboardCheck, ClipboardList, FileSearch, Gauge, Landmark, LayoutDashboard, LogOut, MessageSquareWarning, MessagesSquare, ShieldCheck, ShieldQuestion, UsersRound, Vault, Wallet } from "lucide-react";
 import { backOfficeNavigationGroups, isRoleAllowed, roleRank, type BackOfficeRole } from "@shared/backOfficeNavigation";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 
@@ -32,6 +32,7 @@ const navigationIcons: Record<string, typeof LayoutDashboard> = {
   "/operasional/pelaporan-regulator": Landmark,
   "/operasional/audit": FileSearch,
   "/operasional/pengguna": UsersRound,
+  "/operasional/profil-perusahaan": Building2,
   "/operasional/pengawasan-direksi": ShieldCheck,
   "/operasional/go-live": ClipboardCheck,
   "/operasional/impor-nasabah": FileSearch,
@@ -63,6 +64,7 @@ const pageTitles: Record<string, { eyebrow: string; title: string }> = {
   "/operasional/pelaporan-regulator": { eyebrow: "Pengawasan", title: "Pelaporan regulator" },
   "/operasional/audit": { eyebrow: "Pengawasan", title: "Jejak audit" },
   "/operasional/pengguna": { eyebrow: "Pengawasan", title: "Akses staf" },
+  "/operasional/profil-perusahaan": { eyebrow: "Pengawasan", title: "Profil perusahaan" },
   "/operasional/pengawasan-direksi": { eyebrow: "Pengawasan", title: "Direksi mengetahui" },
   "/operasional/go-live": { eyebrow: "Pengawasan", title: "Mulai go-live" },
   "/operasional/impor-nasabah": { eyebrow: "Pengawasan", title: "Impor nasabah" },

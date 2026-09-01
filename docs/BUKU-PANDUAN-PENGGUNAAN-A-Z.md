@@ -74,6 +74,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 | Pengawasan | Jejak Audit | Melihat tindakan penting yang tercatat sistem. | Controller |
 | Pengawasan | Impor Nasabah | Memetakan file pelanggan sesuai format yang ditetapkan. | Controller |
 | Pengawasan | Akses Staf | Membuat, mengatur peran, menonaktifkan, mereset sandi, atau meninjau akun. Dashboard Shareholder menyediakan pintasan khusus untuk Admin dan Staff. | Controller |
+| Pengawasan | Profil Perusahaan | Nama PT, nama dagang, izin usaha, logo, dan lampiran sertifikat — tampil di kwitansi cetak. | Controller |
 
 ## 5. Alur Satu Hari Operasional
 
@@ -147,6 +148,14 @@ Menu ini adalah **satu halaman** ("Kas & Persediaan") dengan tab di dalamnya —
 3. Simpan checklist penutupan. Bila seluruh langkah lengkap, tombol **Arsip PDF penutupan** dapat digunakan untuk arsip fisik/digital perusahaan.
 4. Catatan operasional boleh berisi informasi serah-terima yang diperlukan, tetapi tidak boleh berisi nomor identitas nasabah.
 5. Supervisor memeriksa varians dan tindakan terbuka sebelum hari operasional ditutup.
+
+### 5.8 Profil Perusahaan — Controller ke atas
+
+1. Buka **Pengawasan → Profil Perusahaan**. Isi nama PT (badan hukum), nama moneychanger (dagang), nomor izin usaha KUPVA, Kode KUPVA, NPWP, NIB, alamat, telepon, email, dan website. Nama PT dan nama moneychanger wajib diisi, sisanya opsional.
+2. **Sandi pelapor BI (SINTA)** bersifat sensitif — hanya untuk referensi internal, tidak pernah ditampilkan di kwitansi maupun layar publik manapun.
+3. Unggah **logo** (JPG/PNG/WEBP, maksimal 8 MB) — tampil otomatis di kwitansi cetak begitu tersimpan.
+4. Unggah **sertifikat izin usaha** (scan/foto) dan **lampiran izin lainnya** (bisa lebih dari satu file) untuk arsip digital perusahaan.
+5. Nama moneychanger, alamat, dan telepon di sini otomatis dipakai di kwitansi cetak (menggantikan header baku bila sudah diisi).
 
 ## 6. Pelaporan dan Pengawasan
 

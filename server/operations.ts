@@ -6,6 +6,7 @@ import {
   auditLogs,
   bankAccountMovements,
   bankAccounts,
+  companyProfile,
   cashBalanceMovements,
   cashBalances,
   cashDenominationBalances,
@@ -1728,6 +1729,44 @@ export async function completeTransaction(transactionId: number, actor: { id: nu
     return { ...transaction, status: "COMPLETED" as const, cashResults, bankResult };
   });
   return result;
+}
+
+/** The single company-profile row (id ascending, first one), or null if never configured yet — printed receipts and regulator screens fall back to sensible defaults when this is null. */
+export async function getCompanyProfile() {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    return (await db.select().from(companyProfile).orderBy(companyProfile.id).limit(1))[0] ?? null;
+  });
+}
+
+/** Creates or updates the single company-profile row — Controller/Shareholder only (enforced at the router). Upsert-by-existence rather than a fixed id, since a fresh install has no row yet. */
+export async function updateCompanyProfile(
+  input: {
+    legalEntityName: string; tradingName: string; licenseNumber?: string; kupvaCode?: string; npwp?: string; nib?: string;
+    biReporterCode?: string; address?: string; phone?: string; email?: string; website?: string; logoDocumentId?: number;
+  },
+  actor: { id: number; role: StaffRole },
+) {
+  const legalEntityName = input.legalEntityName.trim();
+  const tradingName = input.tradingName.trim();
+  if (!legalEntityName || !tradingName) throw new Error("Nama PT dan nama moneychanger wajib diisi.");
+
+  const db = await databaseOrThrow();
+  const values = {
+    legalEntityName, tradingName,
+    licenseNumber: input.licenseNumber?.trim() || null, kupvaCode: input.kupvaCode?.trim() || null,
+    npwp: input.npwp?.trim() || null, nib: input.nib?.trim() || null, biReporterCode: input.biReporterCode?.trim() || null,
+    address: input.address?.trim() || null, phone: input.phone?.trim() || null, email: input.email?.trim() || null, website: input.website?.trim() || null,
+    logoDocumentId: input.logoDocumentId ?? null, updatedByUserId: actor.id,
+  };
+  const existing = (await db.select({ id: companyProfile.id }).from(companyProfile).orderBy(companyProfile.id).limit(1))[0];
+  if (existing) {
+    await db.update(companyProfile).set(values).where(eq(companyProfile.id, existing.id));
+  } else {
+    await db.insert(companyProfile).values(values);
+  }
+  await writeAudit({ actorUserId: actor.id, action: "COMPANY_PROFILE_UPDATED", entityType: "company_profile", entityId: String(existing?.id ?? "new"), afterState: values });
+  return (await db.select().from(companyProfile).orderBy(companyProfile.id).limit(1))[0];
 }
 
 /** Every company bank account and its running balance — includes inactive accounts so Controller/Shareholder can still see history; the transaction form filters to active ones itself. */

@@ -29,6 +29,7 @@ import RateComparison from "./pages/RateComparison";
 import SafeSimulation from "./pages/SafeSimulation";
 import OperationalReadiness from "./pages/OperationalReadiness";
 import RegulatoryReporting from "./pages/RegulatoryReporting";
+import CompanyProfile from "./pages/CompanyProfile";
 
 function OperationsRoute({ page, minimumRole = "STAFF" }: { page: React.ReactNode; minimumRole?: "STAFF" | "ADMIN" | "CONTROLLER" | "SHAREHOLDER" }) {
   return (
@@ -67,6 +68,7 @@ function Router() {
       <Route path="/operasional/pelaporan-regulator"><OperationsRoute minimumRole="CONTROLLER" page={<RegulatoryReporting />} /></Route>
       <Route path="/operasional/audit"><OperationsRoute minimumRole="CONTROLLER" page={<AuditLog />} /></Route>
       <Route path="/operasional/pengguna"><OperationsRoute minimumRole="CONTROLLER" page={<UserManagement />} /></Route>
+      <Route path="/operasional/profil-perusahaan"><OperationsRoute minimumRole="CONTROLLER" page={<CompanyProfile />} /></Route>
       <Route path="/operasional/pengawasan-direksi"><OperationsRoute minimumRole="CONTROLLER" page={<DirectorAcknowledgements />} /></Route>
       <Route path="/operasional/go-live"><OperationsRoute minimumRole="CONTROLLER" page={<GoLiveSetup />} /></Route>
       <Route path="/operasional/impor-nasabah"><OperationsRoute minimumRole="CONTROLLER" page={<CustomerImport />} /></Route>

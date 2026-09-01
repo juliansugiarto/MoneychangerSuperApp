@@ -38,6 +38,12 @@ export default function TransactionCreate() {
   const { data: currencyList } = trpc.currencies.list.useQuery(undefined, { enabled: Boolean(user) });
   const idrCurrencyId = currencyList?.find((currency) => currency.code === "IDR")?.id;
   const [autoFillingPayment, setAutoFillingPayment] = useState(false);
+  const { data: companyProfile } = trpc.companyProfile.get.useQuery(undefined, { enabled: Boolean(user) });
+  const companyBranding = async () => {
+    if (!companyProfile) return null;
+    const logoUrl = companyProfile.logoDocumentId ? await utils.documents.downloadUrl.fetch({ documentId: companyProfile.logoDocumentId }).catch(() => null) : null;
+    return { tradingName: companyProfile.tradingName, address: companyProfile.address, phone: companyProfile.phone, logoUrl };
+  };
 
   const [operation, setOperation] = useState<"BUY" | "SELL">("BUY");
   const [receiptNumber, setReceiptNumber] = useState("");
@@ -225,7 +231,7 @@ export default function TransactionCreate() {
     {lastBon ? <Card className="border-emerald-200 bg-emerald-50"><CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
       <div><p className="font-semibold text-emerald-900">Transaksi {lastBon.receiptNumber ?? lastBon.transactionNumber} berhasil dibuat.</p><p className="text-xs text-emerald-800">Cetak sekarang, atau lihat statusnya di Daftar Transaksi.</p></div>
       <div className="flex gap-2">
-        <Button size="sm" className="bg-[#183f70]" onClick={() => printBon(lastBon, customer, lastBonLines)}><Printer className="mr-1 size-4" />Cetak</Button>
+        <Button size="sm" className="bg-[#183f70]" onClick={async () => printBon(lastBon, customer, lastBonLines, await companyBranding())}><Printer className="mr-1 size-4" />Cetak</Button>
         <Button size="sm" variant="outline" onClick={() => setLocation("/operasional/transaksi/daftar")}>Lihat daftar transaksi</Button>
       </div>
     </CardContent></Card> : null}

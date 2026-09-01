@@ -11,7 +11,8 @@ const ACCEPTED_DOCUMENT_MIME_TYPES = new Set([
   "application/pdf",
 ]);
 
-export type OperationalDocumentType = "KTP_PHOTO" | "UNDERLYING";
+export type OperationalDocumentType = "KTP_PHOTO" | "UNDERLYING" | "COMPANY_LOGO" | "LICENSE_CERTIFICATE" | "LICENSE_ATTACHMENT";
+const COMPANY_DOCUMENT_TYPES = new Set<OperationalDocumentType>(["COMPANY_LOGO", "LICENSE_CERTIFICATE", "LICENSE_ATTACHMENT"]);
 
 type UploadDocumentInput = {
   documentType: OperationalDocumentType;
@@ -52,10 +53,12 @@ export function assertAcceptedOperationalDocument(mimeType: string, data: Buffer
 export async function uploadOperationalDocument(input: UploadDocumentInput, actorUserId: number) {
   const db = await databaseOrThrow();
   assertAcceptedOperationalDocument(input.mimeType, input.data, input.byteSize);
+  const isCompanyDoc = COMPANY_DOCUMENT_TYPES.has(input.documentType);
   const isKtp = input.documentType === "KTP_PHOTO";
-  if (isKtp ? !input.customerId || input.transactionId : !input.transactionId || input.customerId) {
+  if (!isCompanyDoc && (isKtp ? !input.customerId || input.transactionId : !input.transactionId || input.customerId)) {
     throw new Error(isKtp ? "Foto KTP harus terhubung ke satu nasabah." : "Underlying harus terhubung ke satu draft transaksi.");
   }
+  if (isCompanyDoc && (input.customerId || input.transactionId)) throw new Error("Dokumen profil perusahaan tidak boleh terhubung ke nasabah atau transaksi.");
 
   if (input.customerId) {
     const customer = (await db.select({ id: customers.id }).from(customers).where(and(
@@ -75,10 +78,10 @@ export async function uploadOperationalDocument(input: UploadDocumentInput, acto
   }
 
   const fileName = cleanFileName(input.originalFileName);
-  const ownerPath = input.customerId ? `nasabah-${input.customerId}` : `transaksi-${input.transactionId}`;
+  const ownerPath = isCompanyDoc ? "perusahaan" : input.customerId ? `nasabah-${input.customerId}` : `transaksi-${input.transactionId}`;
   const { key } = await storagePut(`operasional/${ownerPath}/${Date.now()}-${fileName}`, input.data, input.mimeType);
   await db.insert(operationalDocuments).values({
-    ownerType: isKtp ? "CUSTOMER" : "TRANSACTION",
+    ownerType: isCompanyDoc ? "COMPANY" : isKtp ? "CUSTOMER" : "TRANSACTION",
     documentType: input.documentType,
     customerId: input.customerId ?? null,
     transactionId: input.transactionId ?? null,
@@ -101,6 +104,18 @@ export async function listOperationalDocuments(input: { customerId?: number; tra
   return input.customerId
     ? db.select().from(operationalDocuments).where(eq(operationalDocuments.customerId, input.customerId)).orderBy(desc(operationalDocuments.createdAt))
     : db.select().from(operationalDocuments).where(eq(operationalDocuments.transactionId, input.transactionId!)).orderBy(desc(operationalDocuments.createdAt));
+}
+
+export async function listCompanyDocuments() {
+  const db = await databaseOrThrow();
+  return db.select().from(operationalDocuments).where(eq(operationalDocuments.ownerType, "COMPANY")).orderBy(desc(operationalDocuments.createdAt));
+}
+
+export async function deleteCompanyDocument(documentId: number) {
+  const db = await databaseOrThrow();
+  const document = (await db.select().from(operationalDocuments).where(and(eq(operationalDocuments.id, documentId), eq(operationalDocuments.ownerType, "COMPANY"))).limit(1))[0];
+  if (!document) throw new Error("Dokumen tidak ditemukan.");
+  await db.delete(operationalDocuments).where(eq(operationalDocuments.id, documentId));
 }
 
 export async function getOperationalDocumentDownloadUrl(documentId: number) {

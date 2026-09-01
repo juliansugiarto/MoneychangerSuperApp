@@ -276,8 +276,8 @@ export const exchangeTransactionPaymentDenominations = mysqlTable("exchange_tran
  */
 export const operationalDocuments = mysqlTable("operational_documents", {
   id: int("id").autoincrement().primaryKey(),
-  ownerType: mysqlEnum("ownerType", ["CUSTOMER", "TRANSACTION"]).notNull(),
-  documentType: mysqlEnum("documentType", ["KTP_PHOTO", "UNDERLYING"]).notNull(),
+  ownerType: mysqlEnum("ownerType", ["CUSTOMER", "TRANSACTION", "COMPANY"]).notNull(),
+  documentType: mysqlEnum("documentType", ["KTP_PHOTO", "UNDERLYING", "COMPANY_LOGO", "LICENSE_CERTIFICATE", "LICENSE_ATTACHMENT"]).notNull(),
   customerId: int("customerId"),
   transactionId: int("transactionId"),
   storageKey: varchar("storageKey", { length: 500 }).notNull(),
@@ -450,6 +450,35 @@ export const operationalSettings = mysqlTable("operational_settings", {
   updatedByUserId: int("updatedByUserId"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [uniqueIndex("operational_settings_code_uq").on(table.settingCode)]);
+
+/**
+ * Company/tenant identity — legal entity, licensing, and branding shown on printed kwitansi and
+ * regulator-facing screens. Deliberately a single row (id 1) for this deployment; `baseCurrencyCode`
+ * exists for a future multi-tenant "seed" but nothing else in the app reads it yet — IDR stays
+ * hardcoded elsewhere until that wiring is done as its own pass.
+ */
+export const companyProfile = mysqlTable("company_profile", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Nama badan hukum resmi, mis. "PT Ibukota Valasindo". */
+  legalEntityName: varchar("legalEntityName", { length: 200 }).notNull(),
+  /** Nama dagang/merek yang tampil ke publik, bisa berbeda dari nama PT. */
+  tradingName: varchar("tradingName", { length: 200 }).notNull(),
+  licenseNumber: varchar("licenseNumber", { length: 80 }),
+  kupvaCode: varchar("kupvaCode", { length: 40 }),
+  npwp: varchar("npwp", { length: 40 }),
+  nib: varchar("nib", { length: 40 }),
+  /** Kredensial pelaporan ke sistem BI (mis. SINTA) — data sensitif operasional, bukan rahasia aplikasi ini, tapi tetap tidak boleh diekspos di tempat lain (log, dsb). */
+  biReporterCode: varchar("biReporterCode", { length: 80 }),
+  address: text("address"),
+  phone: varchar("phone", { length: 60 }),
+  email: varchar("email", { length: 200 }),
+  website: varchar("website", { length: 200 }),
+  baseCurrencyCode: varchar("baseCurrencyCode", { length: 3 }).default("IDR").notNull(),
+  logoDocumentId: int("logoDocumentId"),
+  updatedByUserId: int("updatedByUserId"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
 
 export const rateSyncConfigurations = mysqlTable("rate_sync_configurations", {
   id: int("id").autoincrement().primaryKey(),

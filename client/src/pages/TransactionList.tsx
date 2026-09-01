@@ -16,7 +16,14 @@ export default function TransactionList() {
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
   const { data: transactions, isLoading } = trpc.transactions.list.useQuery(undefined, { enabled: Boolean(user) });
+  const { data: companyProfile } = trpc.companyProfile.get.useQuery(undefined, { enabled: Boolean(user) });
   const [listTab, setListTab] = useState<"ALL" | "SELL" | "BUY">("ALL");
+
+  const companyBranding = async () => {
+    if (!companyProfile) return null;
+    const logoUrl = companyProfile.logoDocumentId ? await utils.documents.downloadUrl.fetch({ documentId: companyProfile.logoDocumentId }).catch(() => null) : null;
+    return { tradingName: companyProfile.tradingName, address: companyProfile.address, phone: companyProfile.phone, logoUrl };
+  };
 
   const submit = trpc.transactions.submit.useMutation({
     onSuccess: (result) => {
@@ -42,9 +49,9 @@ export default function TransactionList() {
     })
     : [{ currencyCode: currency.code, foreignAmount: String(line.foreignAmount), agreedRate: String(line.agreedRate), rupiahAmount: String(line.rupiahAmount) }]);
 
-  const reprint = (row: NonNullable<typeof transactions>[number]) => {
+  const reprint = async (row: NonNullable<typeof transactions>[number]) => {
     const printableLines: PrintableLine[] = row.lines.flatMap(linePrintRows);
-    printBon(row.transaction, row.customer, printableLines);
+    printBon(row.transaction, row.customer, printableLines, await companyBranding());
   };
 
   const exportCsv = () => {
