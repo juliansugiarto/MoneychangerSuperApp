@@ -11,7 +11,7 @@ const ACCEPTED_DOCUMENT_MIME_TYPES = new Set([
   "application/pdf",
 ]);
 
-export type OperationalDocumentType = "KTP_PHOTO" | "UNDERLYING" | "COMPANY_LOGO" | "LICENSE_CERTIFICATE" | "LICENSE_ATTACHMENT";
+export type OperationalDocumentType = "KTP_PHOTO" | "UNDERLYING" | "UNDERLYING_FORM" | "UNDERLYING_STATEMENT" | "UNDERLYING_INVOICE" | "COMPANY_LOGO" | "LICENSE_CERTIFICATE" | "LICENSE_ATTACHMENT";
 const COMPANY_DOCUMENT_TYPES = new Set<OperationalDocumentType>(["COMPANY_LOGO", "LICENSE_CERTIFICATE", "LICENSE_ATTACHMENT"]);
 
 type UploadDocumentInput = {

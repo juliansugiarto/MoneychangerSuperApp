@@ -186,6 +186,13 @@ export const exchangeTransactions = mysqlTable("exchange_transactions", {
   underlyingRequired: boolean("underlyingRequired").default(false).notNull(),
   underlyingReference: varchar("underlyingReference", { length: 160 }),
   underlyingNotes: text("underlyingNotes"),
+  /** Separate from underlyingNotes — the teller's justification for why this specific deal legitimately reaches the >=10,000 USD-equivalent threshold. Required whenever that threshold is met; kept distinct because underlyingNotes describes the supporting documents, this describes the business reason. */
+  thresholdReason: text("thresholdReason"),
+  /** TKM = Transaksi Keuangan Mencurigakan (suspicious transaction) per PPATK indicators — internal-only flag, never printed on the kwitansi or included in exports that can leave the office (tipping-off is prohibited by law). */
+  isSuspiciousTransaction: boolean("isSuspiciousTransaction").default(false).notNull(),
+  /** Array of indicator codes from shared/suspiciousTransactionIndicators.ts, e.g. ["MENOLAK_IDENTIFIKASI"]. Required (min 1) when isSuspiciousTransaction is true. */
+  suspiciousIndicators: json("suspiciousIndicators").$type<string[]>(),
+  suspiciousNotes: text("suspiciousNotes"),
   status: mysqlEnum("status", ["DRAFT", "PENDING_REVIEW", "APPROVED", "COMPLETED", "RETURNED", "CANCELLED"]).default("DRAFT").notNull(),
   requiresReview: boolean("requiresReview").default(false).notNull(),
   reviewStatus: mysqlEnum("reviewStatus", ["NOT_REVIEWED", "NEEDS_REVIEW", "REVIEWED", "ESCALATED"]).default("NOT_REVIEWED").notNull(),
@@ -277,7 +284,8 @@ export const exchangeTransactionPaymentDenominations = mysqlTable("exchange_tran
 export const operationalDocuments = mysqlTable("operational_documents", {
   id: int("id").autoincrement().primaryKey(),
   ownerType: mysqlEnum("ownerType", ["CUSTOMER", "TRANSACTION", "COMPANY"]).notNull(),
-  documentType: mysqlEnum("documentType", ["KTP_PHOTO", "UNDERLYING", "COMPANY_LOGO", "LICENSE_CERTIFICATE", "LICENSE_ATTACHMENT"]).notNull(),
+  /** UNDERLYING is kept only for bons predating the three-document split — new transactions requiring underlying use the three specific types instead (Formulir Underlying, Surat Pernyataan, Invoice), all required together. */
+  documentType: mysqlEnum("documentType", ["KTP_PHOTO", "UNDERLYING", "UNDERLYING_FORM", "UNDERLYING_STATEMENT", "UNDERLYING_INVOICE", "COMPANY_LOGO", "LICENSE_CERTIFICATE", "LICENSE_ATTACHMENT"]).notNull(),
   customerId: int("customerId"),
   transactionId: int("transactionId"),
   storageKey: varchar("storageKey", { length: 500 }).notNull(),

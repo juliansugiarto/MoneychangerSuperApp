@@ -378,6 +378,11 @@ export const appRouter = router({
       underlyingRequired: z.boolean().default(false),
       underlyingReference: z.string().trim().max(160).optional(),
       underlyingNotes: z.string().trim().max(1000).optional(),
+      /** Required once the transaction meets the >=10,000 USD-equivalent threshold — validated for real server-side (createTransaction), since only the server knows the live BI rate at save time. */
+      thresholdReason: z.string().trim().max(1000).optional(),
+      isSuspiciousTransaction: z.boolean().default(false),
+      suspiciousIndicators: z.array(z.string()).max(20).optional(),
+      suspiciousNotes: z.string().trim().max(1000).optional(),
       transactionAt: z.coerce.date(),
     }).superRefine((value, ctx) => {
       if (value.customerActingAs === "REPRESENTATIVE" && !value.representativeCustomerId) {
@@ -385,6 +390,9 @@ export const appRouter = router({
       }
       if (value.underlyingRequired && !value.underlyingReference) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Referensi underlying wajib diisi." });
+      }
+      if (value.isSuspiciousTransaction && !value.suspiciousIndicators?.length) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Pilih minimal satu indikator TKM.", path: ["suspiciousIndicators"] });
       }
       if (value.paymentMethod === "CASH" && !value.paymentDenominations?.length) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Rincian pecahan Rupiah wajib diisi untuk pembayaran tunai.", path: ["paymentDenominations"] });

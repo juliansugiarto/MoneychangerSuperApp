@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { bankAccounts, currencies, customers, exchangeTransactions, operationalRates } from "../drizzle/schema";
+import { bankAccounts, currencies, customers, exchangeTransactions, operationalRates, operationalSettings, rateReferenceSnapshots } from "../drizzle/schema";
 import * as db from "./db";
 import { createTransaction } from "./operations";
 
@@ -110,6 +110,96 @@ describe("createTransaction — bank transfer counterparty name mismatch", () =>
       [bankAccounts, [activeBankAccount]],
     ]));
     await expect(createTransaction({ ...baseInput, counterpartyAccountHolderName: "budi santoso" }, 9)).rejects.not.toThrow(/berbeda dengan nama nasabah/);
+    getDb.mockRestore();
+  });
+});
+
+describe("createTransaction — TKM (transaksi mencurigakan) indicators", () => {
+  it("rejects isSuspiciousTransaction with no indicators selected", async () => {
+    const getDb = mockTopLevelDb(new Map<unknown, unknown[]>([
+      [customers, [activeCustomer]],
+      [exchangeTransactions, []],
+      [currencies, [usdCurrency]],
+      [operationalRates, []],
+      [bankAccounts, [activeBankAccount]],
+      [operationalSettings, [{ settingCode: "REVIEW_THRESHOLD", reviewThresholdUsd: "10000.00", eddCashDailyThresholdIdr: "100000000.00" }]],
+    ]));
+    await expect(createTransaction({ ...baseInput, isSuspiciousTransaction: true, suspiciousIndicators: [] }, 9)).rejects.toThrow(/Pilih minimal satu indikator TKM/);
+    getDb.mockRestore();
+  });
+
+  it("rejects an indicator code that isn't in the curated list", async () => {
+    const getDb = mockTopLevelDb(new Map<unknown, unknown[]>([
+      [customers, [activeCustomer]],
+      [exchangeTransactions, []],
+      [currencies, [usdCurrency]],
+      [operationalRates, []],
+      [bankAccounts, [activeBankAccount]],
+      [operationalSettings, [{ settingCode: "REVIEW_THRESHOLD", reviewThresholdUsd: "10000.00", eddCashDailyThresholdIdr: "100000000.00" }]],
+    ]));
+    await expect(createTransaction({ ...baseInput, isSuspiciousTransaction: true, suspiciousIndicators: ["NOT_A_REAL_CODE"] }, 9)).rejects.toThrow(/tidak dikenal/);
+    getDb.mockRestore();
+  });
+
+  it("does not throw a TKM validation error for a genuine curated indicator", async () => {
+    const getDb = mockTopLevelDb(new Map<unknown, unknown[]>([
+      [customers, [activeCustomer]],
+      [exchangeTransactions, []],
+      [currencies, [usdCurrency]],
+      [operationalRates, []],
+      [bankAccounts, [activeBankAccount]],
+      [operationalSettings, [{ settingCode: "REVIEW_THRESHOLD", reviewThresholdUsd: "10000.00", eddCashDailyThresholdIdr: "100000000.00" }]],
+    ]));
+    await expect(createTransaction({ ...baseInput, isSuspiciousTransaction: true, suspiciousIndicators: ["MENOLAK_IDENTIFIKASI"] }, 9)).rejects.not.toThrow(/indikator TKM|tidak dikenal/);
+    getDb.mockRestore();
+  });
+});
+
+describe("createTransaction — underlying threshold reason", () => {
+  const usdReferenceRate = { sellRate: "17000.000000", buyRate: "17000.000000", quoteUnit: "1.000000" };
+  const reviewSettings = { settingCode: "REVIEW_THRESHOLD", reviewThresholdUsd: "10000.00", eddCashDailyThresholdIdr: "100000000.00" };
+  // 100 is a genuine USD note (curated denomination) — 2000 of them is a real, valid-looking 200,000 USD deal, comfortably above the 10,000 USD threshold at any plausible rate.
+  const largeLine = { currencyId: 2, denominations: [{ value: "100", quantity: 2000, rate: "17000" }] };
+
+  it("requires a threshold reason once the deal's USD equivalent (via the BI reference rate) meets the threshold", async () => {
+    const getDb = mockTopLevelDb(new Map<unknown, unknown[]>([
+      [customers, [activeCustomer]],
+      [exchangeTransactions, []],
+      [currencies, [usdCurrency]],
+      [operationalRates, []],
+      [bankAccounts, [activeBankAccount]],
+      [rateReferenceSnapshots, [{ rate: usdReferenceRate }]],
+      [operationalSettings, [reviewSettings]],
+    ]));
+    await expect(createTransaction({ ...baseInput, lines: [largeLine] }, 9)).rejects.toThrow(/ambang setara USD 10.000/);
+    getDb.mockRestore();
+  });
+
+  it("does not throw the threshold-reason error once a reason is provided", async () => {
+    const getDb = mockTopLevelDb(new Map<unknown, unknown[]>([
+      [customers, [activeCustomer]],
+      [exchangeTransactions, []],
+      [currencies, [usdCurrency]],
+      [operationalRates, []],
+      [bankAccounts, [activeBankAccount]],
+      [rateReferenceSnapshots, [{ rate: usdReferenceRate }]],
+      [operationalSettings, [reviewSettings]],
+    ]));
+    await expect(createTransaction({ ...baseInput, lines: [largeLine], thresholdReason: "Pembelian properti sesuai akta jual beli terlampir" }, 9)).rejects.not.toThrow(/ambang setara USD 10.000/);
+    getDb.mockRestore();
+  });
+
+  it("does not require a threshold reason for a small deal well under the threshold", async () => {
+    const getDb = mockTopLevelDb(new Map<unknown, unknown[]>([
+      [customers, [activeCustomer]],
+      [exchangeTransactions, []],
+      [currencies, [usdCurrency]],
+      [operationalRates, []],
+      [bankAccounts, [activeBankAccount]],
+      [rateReferenceSnapshots, [{ rate: usdReferenceRate }]],
+      [operationalSettings, [reviewSettings]],
+    ]));
+    await expect(createTransaction(baseInput, 9)).rejects.not.toThrow(/ambang setara USD 10.000/);
     getDb.mockRestore();
   });
 });

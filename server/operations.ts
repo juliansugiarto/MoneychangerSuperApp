@@ -37,6 +37,7 @@ import {
 } from "../drizzle/schema";
 import { getDb } from "./db";
 import { knownDenominationsFor } from "../shared/currencyDenominations";
+import { isKnownSuspiciousIndicatorCode } from "../shared/suspiciousTransactionIndicators";
 
 /** Rejects a denomination value that doesn't match a real banknote/coin for this currency (when we have a curated list — see shared/currencyDenominations.ts). Never trust the client alone here: this is exactly the check that stops a typo like "IDR 131250000 × 1 lembar" from being recorded as if it were a real note. */
 function assertKnownDenomination(value: Decimal, currencyCode: string | undefined, label: string) {
@@ -238,7 +239,7 @@ export function assessReviewRequirement(input: {
     input.profileStatus === "RESTRICTED" ? "PROFIL_NASABAH_RESTRICTED" : null,
     input.riskLevel === "HIGH" ? "RISIKO_NASABAH_TINGGI" : null,
   ].filter(Boolean).join("; ") || null;
-  return { requiresReview: exceedsThreshold || exceedsCashDailyEdd || profileMismatch, reviewReason, usdEquivalent: usdEquivalent?.toFixed(6) ?? null, meetsLtktThreshold };
+  return { requiresReview: exceedsThreshold || exceedsCashDailyEdd || profileMismatch, reviewReason, usdEquivalent: usdEquivalent?.toFixed(6) ?? null, meetsLtktThreshold, exceedsThreshold };
 }
 
 export function submissionTransition(status: "DRAFT" | "RETURNED", requiresReview: boolean) {
@@ -1136,6 +1137,12 @@ export type CreateTransactionInput = {
   underlyingRequired?: boolean;
   underlyingReference?: string;
   underlyingNotes?: string;
+  /** Required once the >=10,000 USD-equivalent underlying threshold is met — a separate business
+   * justification from underlyingNotes (which describes the supporting documents themselves). */
+  thresholdReason?: string;
+  isSuspiciousTransaction?: boolean;
+  suspiciousIndicators?: string[];
+  suspiciousNotes?: string;
   transactionAt: Date;
 };
 
@@ -1355,7 +1362,27 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     )))[0]?.total ?? "0"
     : "0";
   const cashDailyRupiahTotal = new Decimal(dailyCashTotal).plus(rupiahAmount).toFixed(2);
-  const { requiresReview, reviewReason } = assessReviewRequirement({ rupiahAmount, thresholdUsd: thresholds.reviewThresholdUsd, usdSellRate: usdBiReferenceRate?.sellRate, usdQuoteUnit: usdBiReferenceRate?.quoteUnit, cashDailyRupiahTotal, eddCashDailyThresholdIdr: thresholds.eddCashDailyThresholdIdr, isCashPayment: input.paymentMethod === "CASH", profileStatus: customer.profileStatus, riskLevel: customer.riskLevel });
+  const assessment = assessReviewRequirement({ rupiahAmount, thresholdUsd: thresholds.reviewThresholdUsd, usdSellRate: usdBiReferenceRate?.sellRate, usdQuoteUnit: usdBiReferenceRate?.quoteUnit, cashDailyRupiahTotal, eddCashDailyThresholdIdr: thresholds.eddCashDailyThresholdIdr, isCashPayment: input.paymentMethod === "CASH", profileStatus: customer.profileStatus, riskLevel: customer.riskLevel });
+
+  // Underlying stops being optional once the >=10,000 USD-equivalent threshold is met — PBI
+  // 18/20/PBI/2016 requires it, so the teller's checkbox choice is overridden, not just defaulted.
+  // The business-reason field is required alongside it (separate from underlyingNotes, which is
+  // about the documents themselves).
+  const underlyingRequired = assessment.exceedsThreshold || (input.underlyingRequired ?? false);
+  if (assessment.exceedsThreshold && !input.thresholdReason?.trim()) {
+    throw new Error("Transaksi ini mencapai ambang setara USD 10.000 — alasan wajib diisi sebelum melanjutkan.");
+  }
+
+  // TKM (Transaksi Keuangan Mencurigakan) — never auto-approved: flagging it always forces human
+  // review, and at least one real indicator must be picked (never trust the client's checklist
+  // alone; validated again here against the curated list).
+  if (input.isSuspiciousTransaction) {
+    if (!input.suspiciousIndicators?.length) throw new Error("Pilih minimal satu indikator TKM saat menandai transaksi sebagai mencurigakan.");
+    const unknownCode = input.suspiciousIndicators.find((code) => !isKnownSuspiciousIndicatorCode(code));
+    if (unknownCode) throw new Error(`Indikator TKM "${unknownCode}" tidak dikenal.`);
+  }
+  const requiresReview = assessment.requiresReview || Boolean(input.isSuspiciousTransaction);
+  const reviewReason = [assessment.reviewReason, input.isSuspiciousTransaction ? "TRANSAKSI_MENCURIGAKAN_TKM" : null].filter(Boolean).join("; ") || null;
   const number = transactionNumber();
 
   const created = await db.transaction(async (tx) => {
@@ -1387,9 +1414,13 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
       representativeCustomerId: representative?.id ?? null,
       representativeName: representative?.fullName ?? null,
       representativeIdentityNumber: representative?.identityNumber ?? null,
-      underlyingRequired: input.underlyingRequired ?? false,
+      underlyingRequired,
       underlyingReference: input.underlyingReference?.trim() || null,
       underlyingNotes: input.underlyingNotes?.trim() || null,
+      thresholdReason: input.thresholdReason?.trim() || null,
+      isSuspiciousTransaction: input.isSuspiciousTransaction ?? false,
+      suspiciousIndicators: input.isSuspiciousTransaction ? input.suspiciousIndicators ?? null : null,
+      suspiciousNotes: input.isSuspiciousTransaction ? input.suspiciousNotes?.trim() || null : null,
       status: "DRAFT",
       requiresReview,
       reviewStatus: requiresReview ? "NEEDS_REVIEW" : "NOT_REVIEWED",
@@ -1430,11 +1461,17 @@ export async function submitTransaction(transactionId: number, actor: { id: numb
   if (actor.role === "STAFF" && transaction.tellerUserId !== actor.id) throw new Error("Staff hanya dapat mengirim transaksi miliknya sendiri.");
   if (!(["DRAFT", "RETURNED"] as const).includes(transaction.status as "DRAFT" | "RETURNED")) throw new Error("Hanya transaksi DRAFT atau RETURNED yang dapat dikirim.");
   if (transaction.underlyingRequired) {
-    const underlying = (await db.select({ id: operationalDocuments.id }).from(operationalDocuments).where(and(
+    const underlyingDocs = await db.select({ documentType: operationalDocuments.documentType }).from(operationalDocuments).where(and(
       eq(operationalDocuments.transactionId, transaction.id),
-      eq(operationalDocuments.documentType, "UNDERLYING"),
-    )).limit(1))[0];
-    if (!underlying) throw new Error("Unggah dokumen underlying sebelum mengirim bon transaksi ini.");
+      inArray(operationalDocuments.documentType, ["UNDERLYING_FORM", "UNDERLYING_STATEMENT", "UNDERLYING_INVOICE"]),
+    ));
+    const uploadedTypes = new Set(underlyingDocs.map((doc) => doc.documentType));
+    const missing = [
+      !uploadedTypes.has("UNDERLYING_FORM") ? "Formulir Underlying" : null,
+      !uploadedTypes.has("UNDERLYING_STATEMENT") ? "Surat Pernyataan" : null,
+      !uploadedTypes.has("UNDERLYING_INVOICE") ? "Invoice" : null,
+    ].filter(Boolean);
+    if (missing.length) throw new Error(`Unggah dokumen underlying berikut sebelum mengirim bon transaksi ini: ${missing.join(", ")}.`);
   }
   const next = submissionTransition(transaction.status as "DRAFT" | "RETURNED", transaction.requiresReview);
   await db.update(exchangeTransactions).set(next).where(eq(exchangeTransactions.id, transactionId));

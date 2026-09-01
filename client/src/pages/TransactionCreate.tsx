@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatPlainAmount } from "@/lib/money";
 import { trpc } from "@/lib/trpc";
+import { SUSPICIOUS_TRANSACTION_INDICATOR_CATEGORIES } from "@shared/suspiciousTransactionIndicators";
 import { ArrowLeftRight, Banknote, CircleDollarSign, FileText, Plus, Printer, Search, Sparkles, Trash2, Upload, UserPlus } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -67,9 +68,19 @@ export default function TransactionCreate() {
   const [underlyingRequired, setUnderlyingRequired] = useState(false);
   const [underlyingReference, setUnderlyingReference] = useState("");
   const [underlyingNotes, setUnderlyingNotes] = useState("");
-  const [underlyingFile, setUnderlyingFile] = useState<File | null>(null);
+  const [thresholdReason, setThresholdReason] = useState("");
+  const [underlyingFormFile, setUnderlyingFormFile] = useState<File | null>(null);
+  const [underlyingStatementFile, setUnderlyingStatementFile] = useState<File | null>(null);
+  const [underlyingInvoiceFile, setUnderlyingInvoiceFile] = useState<File | null>(null);
+  const [isSuspiciousTransaction, setIsSuspiciousTransaction] = useState(false);
+  const [suspiciousIndicators, setSuspiciousIndicators] = useState<string[]>([]);
+  const [suspiciousNotes, setSuspiciousNotes] = useState("");
   const [lastBon, setLastBon] = useState<any>(null);
   const [lastBonLines, setLastBonLines] = useState<PrintableLine[]>([]);
+
+  // Nudge, not enforcement (see estimatedMeetsThreshold above) — never auto-unchecks, so a teller's
+  // own manual reason for requiring underlying is never silently discarded.
+  const toggleSuspiciousIndicator = (code: string) => setSuspiciousIndicators((codes) => (codes.includes(code) ? codes.filter((c) => c !== code) : [...codes, code]));
 
   const { data: customers } = trpc.customers.search.useQuery({ query: search, limit: 12 }, { enabled: Boolean(user) && search.trim().length >= 2 && !customer });
   const { data: representativeCandidates } = trpc.customers.search.useQuery({ query: repSearch, limit: 8 }, { enabled: Boolean(user) && customerActingAs === "REPRESENTATIVE" && repSearch.trim().length >= 2 && !representativeCustomer });
@@ -94,6 +105,17 @@ export default function TransactionCreate() {
   const removeDenominationRow = (lineIndex: number, denomIndex: number) => setLines((prev) => prev.map((line, i) => (i === lineIndex ? { ...line, denominations: line.denominations.length > 1 ? line.denominations.filter((_, j) => j !== denomIndex) : line.denominations } : line)));
 
   const totalRupiah = useMemo(() => lines.reduce((sum, line) => sum + lineRupiahTotal(line), 0), [lines]);
+
+  // Rough client-side nudge only — a proactive prompt, not the enforcement. The server always
+  // re-checks against the real BI reference rate at save time regardless of what this estimates.
+  const usdOutletRate = rates?.find(({ rate, currency }) => rate.status === "ACTIVE" && currency.code === "USD");
+  const estimatedUsdEquivalent = usdOutletRate && totalRupiah > 0
+    ? totalRupiah / Number(operation === "BUY" ? usdOutletRate.rate.buyRate : usdOutletRate.rate.sellRate)
+    : 0;
+  const estimatedMeetsThreshold = estimatedUsdEquivalent >= 10000;
+  // Nudge, not enforcement — never auto-unchecks, so a teller's own manual reason for requiring
+  // underlying is never silently discarded.
+  useEffect(() => { if (estimatedMeetsThreshold) setUnderlyingRequired(true); }, [estimatedMeetsThreshold]);
   const lineIsComplete = (line: LineDraft) => Boolean(line.currency) && line.denominations.length > 0 && line.denominations.every(isCompleteDenominationRow);
   const allLinesComplete = lines.every(lineIsComplete);
 
@@ -179,11 +201,15 @@ export default function TransactionCreate() {
     }
   };
 
-  const uploadUnderlying = async (transactionId: number) => {
-    if (!underlyingFile) return;
-    const response = await fetch("/api/operational-documents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ documentType: "UNDERLYING", transactionId, originalFileName: underlyingFile.name, mimeType: underlyingFile.type, byteSize: underlyingFile.size, dataBase64: await toBase64(underlyingFile), documentReference: underlyingReference }) });
+  const uploadUnderlyingDocument = async (transactionId: number, documentType: "UNDERLYING_FORM" | "UNDERLYING_STATEMENT" | "UNDERLYING_INVOICE", file: File) => {
+    const response = await fetch("/api/operational-documents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ documentType, transactionId, originalFileName: file.name, mimeType: file.type, byteSize: file.size, dataBase64: await toBase64(file), documentReference: underlyingReference }) });
     const body = await response.json();
-    if (!response.ok) throw new Error(body.message ?? "Underlying gagal diunggah.");
+    if (!response.ok) throw new Error(body.message ?? "Dokumen underlying gagal diunggah.");
+  };
+  const uploadUnderlying = async (transactionId: number) => {
+    if (underlyingFormFile) await uploadUnderlyingDocument(transactionId, "UNDERLYING_FORM", underlyingFormFile);
+    if (underlyingStatementFile) await uploadUnderlyingDocument(transactionId, "UNDERLYING_STATEMENT", underlyingStatementFile);
+    if (underlyingInvoiceFile) await uploadUnderlyingDocument(transactionId, "UNDERLYING_INVOICE", underlyingInvoiceFile);
   };
   const toBase64 = (file: File) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
 
@@ -206,6 +232,9 @@ export default function TransactionCreate() {
         setReceiptNumber("");
         setRepresentativeCustomer(null);
         setRepSearch("");
+        setUnderlyingRequired(false); setUnderlyingReference(""); setUnderlyingNotes(""); setThresholdReason("");
+        setUnderlyingFormFile(null); setUnderlyingStatementFile(null); setUnderlyingInvoiceFile(null);
+        setIsSuspiciousTransaction(false); setSuspiciousIndicators([]); setSuspiciousNotes("");
         utils.transactions.list.invalidate();
         toast.success(`Transaksi ${transaction.receiptNumber ?? transaction.transactionNumber} dibuat.`);
       } catch (error) {
@@ -228,7 +257,12 @@ export default function TransactionCreate() {
       if (counterpartyNameMismatch && counterpartyNameMismatchReason.trim().length < 5) return toast.error("Isi alasan perbedaan nama rekening (minimal 5 karakter).");
     }
     if (customerActingAs === "REPRESENTATIVE" && !representativeCustomer) return toast.error("Pilih nasabah terdaftar sebagai pihak kuasa/wakil.");
-    if (underlyingRequired && (!underlyingFile || !underlyingReference)) return toast.error("Lampirkan file dan referensi underlying.");
+    if (underlyingRequired) {
+      if (!underlyingReference.trim()) return toast.error("Isi referensi dokumen underlying.");
+      if (!underlyingFormFile || !underlyingStatementFile || !underlyingInvoiceFile) return toast.error("Lampirkan ketiga dokumen underlying: Formulir Underlying, Surat Pernyataan, dan Invoice.");
+      if (!thresholdReason.trim()) return toast.error("Isi alasan transaksi memerlukan underlying.");
+    }
+    if (isSuspiciousTransaction && !suspiciousIndicators.length) return toast.error("Pilih minimal satu indikator TKM.");
     create.mutate({
       operation,
       receiptNumber: receiptNumber.trim(),
@@ -248,6 +282,10 @@ export default function TransactionCreate() {
       underlyingRequired,
       underlyingReference,
       underlyingNotes: underlyingNotes || undefined,
+      thresholdReason: underlyingRequired ? thresholdReason.trim() : undefined,
+      isSuspiciousTransaction,
+      suspiciousIndicators: isSuspiciousTransaction ? suspiciousIndicators : undefined,
+      suspiciousNotes: isSuspiciousTransaction ? suspiciousNotes.trim() || undefined : undefined,
       transactionAt: new Date(),
     });
   };
@@ -387,14 +425,33 @@ export default function TransactionCreate() {
       </Card>
 
       <Card className="border-[#dce6f0]">
-        <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">4. Dokumen underlying</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">4. Transaksi Mencurigakan (TKM)</CardTitle><CardDescription>Data ini bersifat internal — tidak pernah tercetak di kwitansi maupun ikut dalam ekspor CSV.</CardDescription></CardHeader>
         <CardContent className="space-y-3">
-          <label className="flex gap-3 rounded-xl border p-3 text-sm"><input className="mt-1" type="checkbox" checked={underlyingRequired} onChange={(e) => setUnderlyingRequired(e.target.checked)} /><span><b>Dokumen underlying diperlukan</b><br /><small>Transaksi tidak dapat dikirim sebelum lampiran disimpan.</small></span></label>
+          <label className="flex gap-3 rounded-xl border p-3 text-sm"><input className="mt-1" type="checkbox" checked={isSuspiciousTransaction} onChange={(e) => { setIsSuspiciousTransaction(e.target.checked); if (!e.target.checked) setSuspiciousIndicators([]); }} /><span><b>Transaksi mencurigakan (TKM)</b><br /><small>Centang bila operator menilai transaksi/nasabah mencurigakan — daftar indikator akan muncul di bawah untuk diisi.</small></span></label>
+          {isSuspiciousTransaction ? <div className="space-y-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-3">
+            <p className="text-xs font-semibold text-amber-900">Centang indikator yang sesuai dengan transaksi/nasabah. Minimal satu indikator wajib dipilih saat menandai TKM.</p>
+            {SUSPICIOUS_TRANSACTION_INDICATOR_CATEGORIES.map((category) => <div key={category.label} className="rounded-lg border border-amber-200 bg-white p-3">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#68758c]">{category.label}</p>
+              <div className="space-y-2">{category.indicators.map((indicator) => <label key={indicator.code} className="flex gap-2 text-sm"><input type="checkbox" className="mt-1" checked={suspiciousIndicators.includes(indicator.code)} onChange={() => toggleSuspiciousIndicator(indicator.code)} /><span><b className="text-[#18395f]">{indicator.label}</b><br /><small className="text-[#475569]">{indicator.description}</small></span></label>)}</div>
+            </div>)}
+            <div><Label className="text-xs">Keterangan tambahan (opsional)</Label><Input className="mt-1" value={suspiciousNotes} onChange={(e) => setSuspiciousNotes(e.target.value)} placeholder="Catatan tambahan" /></div>
+          </div> : null}
+        </CardContent>
+      </Card>
+
+      <Card className="border-[#dce6f0]">
+        <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">5. Dokumen underlying</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          {estimatedMeetsThreshold ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">Perkiraan transaksi ini mencapai/melebihi setara USD 10.000 — dokumen underlying dan alasan wajib diisi (perkiraan pakai kurs outlet; pengecekan sebenarnya memakai kurs referensi BI saat disimpan).</p> : null}
+          <label className="flex gap-3 rounded-xl border p-3 text-sm"><input className="mt-1" type="checkbox" checked={underlyingRequired} onChange={(e) => setUnderlyingRequired(e.target.checked)} /><span><b>Dokumen underlying diperlukan</b><br /><small>Transaksi tidak dapat dikirim sebelum ketiga dokumen tersimpan.</small></span></label>
           {underlyingRequired ? <div className="space-y-2 rounded-xl bg-slate-50 p-3">
             <div><Label>Referensi dokumen</Label><Input className="mt-1" required value={underlyingReference} onChange={(e) => setUnderlyingReference(e.target.value)} placeholder="No. invoice / surat / dokumen" /></div>
-            <div><Label>Catatan verifikasi</Label><Input className="mt-1" value={underlyingNotes} onChange={(e) => setUnderlyingNotes(e.target.value)} placeholder="Keterangan pemeriksaan staf" /></div>
-            <div><Label>File underlying</Label><Input className="mt-1" required type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setUnderlyingFile(e.target.files?.[0] ?? null)} /></div>
-            <p className="text-xs text-slate-600"><Upload className="mr-1 inline size-3" />JPG, PNG, WEBP, PDF; maksimal 8 MB.</p>
+            <div><Label>Alasan transaksi memerlukan underlying</Label><Input className="mt-1" required value={thresholdReason} onChange={(e) => setThresholdReason(e.target.value)} placeholder="Contoh: pembelian properti, pelunasan utang usaha" /></div>
+            <div><Label>Catatan verifikasi (opsional)</Label><Input className="mt-1" value={underlyingNotes} onChange={(e) => setUnderlyingNotes(e.target.value)} placeholder="Keterangan pemeriksaan staf" /></div>
+            <div><Label>Formulir Underlying</Label><Input className="mt-1" required type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setUnderlyingFormFile(e.target.files?.[0] ?? null)} /></div>
+            <div><Label>Surat Pernyataan</Label><Input className="mt-1" required type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setUnderlyingStatementFile(e.target.files?.[0] ?? null)} /></div>
+            <div><Label>Invoice</Label><Input className="mt-1" required type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setUnderlyingInvoiceFile(e.target.files?.[0] ?? null)} /></div>
+            <p className="text-xs text-slate-600"><Upload className="mr-1 inline size-3" />JPG, PNG, WEBP, PDF; maksimal 8 MB per file. Ketiga dokumen wajib diunggah.</p>
           </div> : null}
         </CardContent>
       </Card>

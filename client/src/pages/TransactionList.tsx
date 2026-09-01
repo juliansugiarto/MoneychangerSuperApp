@@ -107,6 +107,7 @@ export default function TransactionList() {
                       <p className="text-xs text-slate-600">{customer.fullName} · {transaction.operation === "BUY" ? "Transaksi beli" : "Transaksi jual"} · {currencySummary || "Belum ada baris mata uang"}</p>
                     </div>
                     <div className="flex flex-wrap justify-end gap-1.5">
+                      {transaction.isSuspiciousTransaction ? <Badge className="bg-rose-700 text-white hover:bg-rose-700" title="Ditandai sebagai Transaksi Keuangan Mencurigakan (TKM) — data internal, tidak pernah tercetak di kwitansi atau ekspor">TKM</Badge> : null}
                       {transaction.paymentMethod === "CASH" && Number(transaction.rupiahAmount) >= 500000000 ? <Badge className="bg-amber-600 text-white hover:bg-amber-600" title="Memenuhi ambang LTKT (≥ Rp 500 juta tunai) — wajib dilaporkan ke PPATK secara manual sesuai prosedur">LTKT</Badge> : null}
                       <Badge className={transactionStatusClass[transaction.status] ?? "status-inactive"}>{transactionStatusLabel[transaction.status] ?? transaction.status}</Badge>
                     </div>
