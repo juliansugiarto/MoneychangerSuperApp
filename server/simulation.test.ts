@@ -73,7 +73,7 @@ describe("safe training simulation", () => {
     printBon({ transactionNumber: "LIVE-ARCHIVE-001", receiptNumber: "1", operation: "BUY", transactionAt: new Date("2026-08-24T08:00:00.000Z"), rupiahAmount: "150000", paymentMethod: "CASH", paymentReference: "Kas", transactionPurposeSnapshot: "Perjalanan", customerActingAs: "SELF" }, { id: 12, fullName: "Nasabah Produksi", cifNumber: "CIF-001", identityType: "KTP", identityNumber: "3203", transactionPurpose: "Perjalanan" }, [{ currencyCode: "USD", foreignAmount: "10", agreedRate: "15000", rupiahAmount: "150000" }]);
 
     expect(printedHtml).toContain("No: 1");
-    expect(printedHtml).toContain("Rp 150000");
+    expect(printedHtml).toContain("Rp 150,000");
     expect(printedHtml).not.toContain(simulation.rupiahAmount);
     expect(printedHtml).not.toContain("isSimulation");
     expect(getDb).not.toHaveBeenCalled();

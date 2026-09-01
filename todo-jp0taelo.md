@@ -120,3 +120,20 @@
 - [x] Audit dan perkuat instruksi Claude Code untuk perubahan serta penambahan fitur masa depan, termasuk guardrail, verifikasi, dan alur rilis.
 - [x] Buat dan verifikasi PDF komprehensif untuk Buku Panduan Penggunaan serta Skenario Use Case Proyek.
 - [x] Rakit ulang satu ZIP handoff berisi source bersih, dua PDF, dokumentasi, inventaris, checksum, dan bukti validasi.
+
+## Dorongan 3 hari menuju penggunaan harian (mulai 2026-08-31)
+
+Riset KUPVA BB (PBI 18/20/PBI/2016, kewajiban LTKT/LTKM ke PPATK) dan audit kode `server/operations.ts` malam ini **tidak menemukan bug pemblokir** — arah pergerakan kas BUY/SELL sudah benar (ditelusuri end-to-end di `completeTransaction`), dan cakupan fitur (KYC/BO/PEP/DTTOT, kas & pecahan, review workflow, pelaporan regulator, audit log) sudah sesuai kebutuhan KUPVA BB nyata. Sisa pekerjaan didominasi kesiapan operasional, bukan fitur baru.
+
+- [x] Perbaiki privilege MySQL user `appuser` (`GRANT PROCESS ON *.*`) agar `mysqldump` di `deploy.sh` tidak lagi gagal dengan peringatan akses ditolak. Diverifikasi 2026-09-01: backup berjalan bersih (exit 0, tanpa stderr).
+- [x] Verifikasi visual manual di browser untuk halaman yang baru diubah 2026-08-31 — dilakukan pengguna 2026-09-01, hasilnya memicu putaran perbaikan berikut (lihat di bawah).
+- [x] Berdasarkan verifikasi visual: kembalikan pemisah ribuan (koma per 3 digit, tanpa desimal dipaksa) — `formatPlainAmount`/`formatIdrDecimal`/`sumIdrDecimals` di `client/src/lib/money.ts`.
+- [x] Perbaiki keterbacaan tab & panel Stok Saat Ini di `StockControl.tsx` (tab lebih tebal/kontras, kartu saldo & pecahan diberi border dan hierarki lebih jelas).
+- [x] Tambahkan tombol "Lihat foto identitas" di popup Daftar Nasabah (lazy-load lewat `documents.forCustomer` + `documents.downloadUrl`, tidak memuat gambar sampai diklik).
+- [x] Tambahkan "Auto-isi dari stok" untuk rincian pecahan Rupiah pada transaksi BELI (`suggestDenominationBreakdown` di `server/operations.ts`, bounded-knapsack, tidak pernah menyarankan pecahan melebihi stok — diuji di `server/denominationSuggestion.test.ts`). Auto-isi untuk sisi valuta asing pada transaksi JUAL belum dikerjakan — follow-up.
+- [ ] Reset seluruh data uji produksi (4 transaksi uji, 1 nasabah uji, saldo kas, stock opname OPEN) ke kondisi bersih — rencana truncate sudah disiapkan di percakapan sebelumnya, tunggu otorisasi eksplisit sebelum eksekusi. Backup dulu sebelum truncate.
+- [ ] Jalankan seluruh "Tindakan Wajib Hari Pertama" di `docs/finalisasi-operasional-2026-08-25.md` §41-49 dengan akun asli (bukan akun uji): reset kata sandi tiap pengguna nyata, tinjau kurs aktif, hitung & catat kas fisik pembukaan asli, cek lampu UV/mesin hitung, dry-run prosedural 2 akun tanpa bon fiktif produksi, sepakati jalur eskalasi, distribusikan Buku Panduan A-Z ke tim.
+- [ ] Setelah reset data, hapus/nonaktifkan akun `claude_readonly` MySQL bila sudah tidak diperlukan lagi untuk audit lanjutan.
+- [ ] (Opsional, bukan pemblokir) Tambahkan indikator eksplisit "memenuhi ambang LTKT" (≥ Rp 500 juta/transaksi atau kumulatif per hari) di `assessReviewRequirement`/`RegulatoryReporting.tsx` — saat ini transaksi besar sudah tertangkap oleh ambang review EDD yang lebih rendah, tapi belum diberi label LTKT secara eksplisit untuk mengurangi risiko human error staff.
+- [ ] Tambahkan "Auto-isi dari stok" yang setara untuk rincian pecahan valuta asing pada transaksi JUAL (mata uang keluar dari stok, sama seperti sisi Rupiah pada BELI) — endpoint server sudah generik per mata uang, tinggal wiring di sisi baris valuta pada `TransactionCreate.tsx`.
+- [ ] (Opsional) Pertimbangkan code-splitting bundle client (>500kB setelah minifikasi) — sudah didokumentasikan sebagai non-blocking sejak 2026-08-25, tidak berubah malam ini.

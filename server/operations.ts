@@ -1611,6 +1611,117 @@ export async function listCashDenominationBalances() {
   });
 }
 
+function gcdBig(a: bigint, b: bigint): bigint {
+  a = a < BigInt(0) ? -a : a;
+  b = b < BigInt(0) ? -b : b;
+  while (b) [a, b] = [b, a % b];
+  return a;
+}
+
+const DENOMINATION_SUGGESTION_SCALE = 6;
+const DENOMINATION_SUGGESTION_STATE_CAP = 200_000;
+
+/** Largest-denomination-first, capped by what's actually in stock — used only as the fallback when an exact combination can't be found (or the search space is too large to solve exactly), so the teller still gets a usable starting point instead of nothing. */
+function greedyDenominationBreakdown(denoms: { value: string; valueBig: bigint; quantity: number }[], targetBig: bigint) {
+  const sorted = [...denoms].sort((a, b) => (b.valueBig > a.valueBig ? 1 : a.valueBig > b.valueBig ? -1 : 0));
+  let remaining = targetBig;
+  const breakdown: { value: string; quantity: number }[] = [];
+  for (const denom of sorted) {
+    if (remaining <= BigInt(0) || denom.valueBig <= BigInt(0)) continue;
+    const want = remaining / denom.valueBig;
+    const used = want > BigInt(denom.quantity) ? BigInt(denom.quantity) : want;
+    if (used > BigInt(0)) {
+      breakdown.push({ value: denom.value, quantity: Number(used) });
+      remaining -= used * denom.valueBig;
+    }
+  }
+  return { breakdown, remaining };
+}
+
+/**
+ * Suggests a denomination breakdown that sums exactly to `targetAmount`, built only from currency
+ * actually in `cash_denomination_balances` right now — a UX helper so a teller doesn't have to
+ * mentally solve "which real notes do we have on hand that add up to this" by hand for every bon.
+ * This never loosens the "pecahan wajib" rule: it only pre-fills a combination that (a) uses real
+ * curated denominations and (b) is provably available in current stock; the teller can still edit
+ * it, and the usual reconcile/stock-sufficiency checks still run unchanged at submit time.
+ */
+export async function suggestDenominationBreakdown(input: { currencyId: number; targetAmount: string }) {
+  const db = await databaseOrThrow();
+  const currency = (await db.select({ code: currencies.code }).from(currencies).where(eq(currencies.id, input.currencyId)).limit(1))[0];
+  if (!currency) throw new Error("Mata uang tidak ditemukan.");
+
+  const target = new Decimal(input.targetAmount);
+  if (target.lte(0)) throw new Error("Jumlah target harus lebih besar dari nol.");
+
+  const stockRows = await db.select({ value: cashDenominationBalances.denominationValue, quantity: cashDenominationBalances.quantity })
+    .from(cashDenominationBalances)
+    .where(and(eq(cashDenominationBalances.currencyId, input.currencyId), gt(cashDenominationBalances.quantity, 0)));
+  if (!stockRows.length) throw new Error(`Belum ada stok pecahan ${currency.code} yang tercatat untuk diisi otomatis.`);
+
+  const factor = new Decimal(10).pow(DENOMINATION_SUGGESTION_SCALE);
+  const targetUnits = target.mul(factor);
+  if (!targetUnits.isInteger()) throw new Error("Jumlah target memiliki presisi desimal yang tidak didukung untuk auto-isi.");
+  const targetBig = BigInt(targetUnits.toFixed(0));
+
+  const denoms = stockRows.map((row) => ({ value: row.value, valueBig: BigInt(new Decimal(row.value).mul(factor).toFixed(0)), quantity: row.quantity })).filter((row) => row.valueBig > BigInt(0));
+
+  let unit = targetBig;
+  for (const denom of denoms) unit = gcdBig(unit, denom.valueBig);
+  if (unit <= BigInt(0)) throw new Error("Tidak ada pecahan yang dapat digunakan untuk auto-isi.");
+
+  const steps = targetBig / unit;
+  if (steps <= BigInt(DENOMINATION_SUGGESTION_STATE_CAP)) {
+    const stepsNum = Number(steps);
+    type Item = { unitValue: number; quantity: number; denomIndex: number };
+    const items: Item[] = [];
+    denoms.forEach((denom, denomIndex) => {
+      const stepValue = Number(denom.valueBig / unit);
+      let remainingQty = denom.quantity;
+      let chunk = 1;
+      while (remainingQty > 0) {
+        const take = Math.min(chunk, remainingQty);
+        items.push({ unitValue: stepValue * take, quantity: take, denomIndex });
+        remainingQty -= take;
+        chunk *= 2;
+      }
+    });
+
+    const dp = new Array<number>(stepsNum + 1).fill(Infinity);
+    const choice = new Array<number>(stepsNum + 1).fill(-1);
+    dp[0] = 0;
+    for (let i = 0; i < items.length; i++) {
+      const { unitValue, quantity } = items[i];
+      for (let amount = stepsNum; amount >= unitValue; amount--) {
+        if (dp[amount - unitValue] + quantity < dp[amount]) {
+          dp[amount] = dp[amount - unitValue] + quantity;
+          choice[amount] = i;
+        }
+      }
+    }
+
+    if (dp[stepsNum] !== Infinity) {
+      const usedByDenom = new Map<number, number>();
+      let remaining = stepsNum;
+      while (remaining > 0) {
+        const item = items[choice[remaining]];
+        usedByDenom.set(item.denomIndex, (usedByDenom.get(item.denomIndex) ?? 0) + item.quantity);
+        remaining -= item.unitValue;
+      }
+      const breakdown = denoms.map((denom, index) => ({ value: denom.value, quantity: usedByDenom.get(index) ?? 0 })).filter((row) => row.quantity > 0);
+      return { exact: true, currencyCode: currency.code, breakdown, shortfall: "0" };
+    }
+  }
+
+  const { breakdown, remaining } = greedyDenominationBreakdown(denoms, targetBig);
+  return {
+    exact: remaining === BigInt(0),
+    currencyCode: currency.code,
+    breakdown,
+    shortfall: remaining > BigInt(0) ? new Decimal(remaining.toString()).div(factor).toFixed(DENOMINATION_SUGGESTION_SCALE).replace(/0+$/, "").replace(/\.$/, "") : "0",
+  };
+}
+
 /** Records the declared morning float as an immutable, auditable adjustment before the daily count begins. */
 export async function recordOpeningCash(input: { currencyId: number; openingAmount: string; notes?: string; denominations: DenominationEntryInput[] }, actor: { id: number; role: StaffRole }) {
   const declaredAmount = nonNegativeOrZeroDecimal(input.openingAmount, "Kas pembukaan");

@@ -38,11 +38,11 @@ export default function StockControl() {
       <p className="mt-2 max-w-2xl text-sm text-[#334155]">Kas awal, stok saat ini, stock opname, dan penyesuaian brankas — semua di sini, pindah lewat tab tanpa ganti halaman.</p>
     </header>
     <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
-      <TabsList className="flex-wrap">
-        <TabsTrigger value="kas-awal"><Banknote className="mr-1.5 size-4" />Kas Awal</TabsTrigger>
-        <TabsTrigger value="saat-ini"><Wallet className="mr-1.5 size-4" />Stok Saat Ini</TabsTrigger>
-        <TabsTrigger value="opname"><ClipboardCheck className="mr-1.5 size-4" />Stock Opname</TabsTrigger>
-        {canSeePenyesuaian ? <TabsTrigger value="penyesuaian"><Vault className="mr-1.5 size-4" />Penyesuaian Brankas</TabsTrigger> : null}
+      <TabsList className="h-auto w-full flex-wrap gap-1.5 rounded-2xl border-2 border-[#183f70]/15 bg-[#eef3f9] p-1.5">
+        <TabsTrigger value="kas-awal" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white data-[state=active]:shadow-md"><Banknote className="mr-1.5 size-4" />Kas Awal</TabsTrigger>
+        <TabsTrigger value="saat-ini" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white data-[state=active]:shadow-md"><Wallet className="mr-1.5 size-4" />Stok Saat Ini</TabsTrigger>
+        <TabsTrigger value="opname" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white data-[state=active]:shadow-md"><ClipboardCheck className="mr-1.5 size-4" />Stock Opname</TabsTrigger>
+        {canSeePenyesuaian ? <TabsTrigger value="penyesuaian" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white data-[state=active]:shadow-md"><Vault className="mr-1.5 size-4" />Penyesuaian Brankas</TabsTrigger> : null}
       </TabsList>
       <TabsContent value="kas-awal" className="mt-5"><KasAwalPanel /></TabsContent>
       <TabsContent value="saat-ini" className="mt-5"><StokSaatIniPanel /></TabsContent>
@@ -135,14 +135,14 @@ function StokSaatIniPanel() {
     <div className="flex justify-end"><Button variant="outline" className="border-[#d8e5ef]" onClick={refreshAll}><RefreshCw className="mr-2 size-4" /> Muat ulang</Button></div>
     <Card className="border-[#dce6f0]">
       <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Saldo per mata uang</CardTitle><CardDescription>Bertambah/berkurang otomatis saat kas awal, penyesuaian brankas, dan bon yang diselesaikan. Cocokkan dengan hitung fisik hanya saat Stock Opname penutupan.</CardDescription></CardHeader>
-      <CardContent><div className="grid gap-2 sm:grid-cols-2">{balances?.length ? balances.map(({ balance, currency }) => <div key={balance.id} className="flex justify-between rounded-xl bg-[#f6fafc] px-3 py-2 text-sm"><span className="font-semibold text-[#18395f]">{currency.code}</span><span className="font-mono font-semibold text-[#334155]">{formatPlainAmount(balance.availableAmount)}</span></div>) : <p className="text-sm text-[#475569]">Belum ada saldo kas. Catat kas awal terlebih dahulu.</p>}</div></CardContent>
+      <CardContent><div className="grid gap-3 sm:grid-cols-2">{balances?.length ? balances.map(({ balance, currency }) => <div key={balance.id} className="flex items-center justify-between rounded-xl border-2 border-[#d3e2f0] bg-white px-4 py-3"><span className="rounded-lg bg-[#183f70] px-2.5 py-1 text-xs font-extrabold tracking-wide text-white">{currency.code}</span><span className="font-mono text-lg font-extrabold text-[#18395f]">{formatPlainAmount(balance.availableAmount)}</span></div>) : <p className="text-sm text-[#475569]">Belum ada saldo kas. Catat kas awal terlebih dahulu.</p>}</div></CardContent>
     </Card>
     <Card className="border-[#dce6f0]">
       <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Stok pecahan per mata uang</CardTitle><CardDescription>Setiap pecahan wajib tercatat — dari kas awal, penyesuaian brankas, maupun kedua sisi bon (valuta asing dan Rupiah) yang sudah diselesaikan.</CardDescription></CardHeader>
-      <CardContent className="space-y-5">
-        {denominationsByCurrency.size ? Array.from(denominationsByCurrency.entries()).map(([code, rows]) => <div key={code}>
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#3d7139]">{code}</p>
-          <div className="grid gap-2 sm:grid-cols-2">{rows?.map(({ balance }) => <div key={balance.id} className="flex justify-between rounded-xl bg-[#f6fafc] px-3 py-2 text-sm"><span className="font-mono font-semibold text-[#18395f]">{formatPlainAmount(balance.denominationValue)}</span><span className="font-mono font-semibold text-[#334155]">{balance.quantity} lembar/keping</span></div>)}</div>
+      <CardContent className="space-y-6">
+        {denominationsByCurrency.size ? Array.from(denominationsByCurrency.entries()).map(([code, rows]) => <div key={code} className="overflow-hidden rounded-xl border-2 border-[#d3e2f0]">
+          <p className="bg-[#183f70] px-4 py-2 text-xs font-extrabold tracking-[0.12em] text-white uppercase">{code}</p>
+          <div className="divide-y divide-[#e2eaf2]">{rows?.map(({ balance }) => <div key={balance.id} className="flex items-center justify-between bg-white px-4 py-2.5 text-sm odd:bg-[#f8fbfe]"><span className="font-mono text-base font-bold text-[#18395f]">{formatPlainAmount(balance.denominationValue)}</span><span className="font-mono text-base font-bold text-[#334155]">{formatPlainAmount(balance.quantity)} lembar/keping</span></div>)}</div>
         </div>) : <p className="text-sm text-[#475569]">Belum ada rincian pecahan tercatat. Catat kas awal dengan rincian pecahan untuk memulai.</p>}
       </CardContent>
     </Card>

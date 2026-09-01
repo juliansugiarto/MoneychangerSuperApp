@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatPlainAmount } from "@/lib/money";
 import { knownDenominationsFor } from "@shared/currencyDenominations";
 import { CircleAlert } from "lucide-react";
 
@@ -15,7 +16,7 @@ export function DenominationValueInput({ currencyCode, value, onChange }: { curr
   if (known) {
     return <Select value={value} onValueChange={onChange}>
       <SelectTrigger className="w-full"><SelectValue placeholder="Pilih pecahan" /></SelectTrigger>
-      <SelectContent>{known.map((denomination) => <SelectItem key={denomination} value={String(denomination)}>{String(denomination)}</SelectItem>)}</SelectContent>
+      <SelectContent>{known.map((denomination) => <SelectItem key={denomination} value={String(denomination)}>{formatPlainAmount(denomination)}</SelectItem>)}</SelectContent>
     </Select>;
   }
   return <div>

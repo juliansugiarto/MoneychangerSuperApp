@@ -60,6 +60,7 @@ import {
   proposeLatestReferenceRates,
   recordMarketRateObservation,
   recordReviewAction,
+  suggestDenominationBreakdown,
   markRegulatoryReportExported,
   markRegulatoryIncidentExported,
   approveRegulatoryIncidentReport,
@@ -346,6 +347,7 @@ export const appRouter = router({
     denominationBalances: staffProcedure.query(() => listCashDenominationBalances()),
     recordOpening: staffProcedure.input(z.object({ currencyId: z.number().int().positive(), openingAmount: decimalString, notes: z.string().trim().max(500).optional(), denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).min(1, "Rincian pecahan wajib diisi untuk kas awal.").max(50) })).mutation(({ input, ctx }) => recordOpeningCash(input, ctx.user)),
     recordAdjustment: controllerProcedure.input(z.object({ currencyId: z.number().int().positive(), category: z.enum(["SAFE_DEPOSIT", "SAFE_WITHDRAWAL", "OFF_HOURS_SALE", "OTHER"]), amount: decimalString, notes: z.string().trim().min(5).max(500), denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).min(1, "Rincian pecahan wajib diisi untuk penyesuaian.").max(50) })).mutation(({ input, ctx }) => recordCashAdjustment(input, ctx.user)),
+    suggestDenominationBreakdown: staffProcedure.input(z.object({ currencyId: z.number().int().positive(), targetAmount: decimalString })).query(({ input }) => suggestDenominationBreakdown(input)),
   }),
 
   stockOpname: router({

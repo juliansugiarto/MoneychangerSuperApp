@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
-import { Download, Search, UserPlus, UsersRound } from "lucide-react";
+import { Download, IdCard, Search, UserPlus, UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useLocation } from "wouter";
 
 function formatDate(value: string | Date | null | undefined) {
@@ -34,6 +35,26 @@ export default function CustomerList() {
   const [search, setSearch] = useState("");
   const { data: customers, isLoading, isError } = trpc.customers.list.useQuery(undefined, { enabled: Boolean(user) });
   const [selectedCustomer, setSelectedCustomer] = useState<NonNullable<typeof customers>[number] | null>(null);
+  const [showIdentityRequested, setShowIdentityRequested] = useState(false);
+  const utils = trpc.useUtils();
+
+  const openCustomer = (customer: NonNullable<typeof customers>[number]) => { setSelectedCustomer(customer); setShowIdentityRequested(false); };
+
+  const viewIdentity = async () => {
+    if (!selectedCustomer) return;
+    setShowIdentityRequested(true);
+    try {
+      const docs = await utils.documents.forCustomer.fetch({ customerId: selectedCustomer.id });
+      const ktp = docs.find((doc) => doc.documentType === "KTP_PHOTO");
+      if (!ktp) { toast.error("Belum ada foto identitas tersimpan untuk nasabah ini."); return; }
+      const url = await utils.documents.downloadUrl.fetch({ documentId: ktp.id });
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      toast.error("Gagal membuka dokumen identitas.");
+    } finally {
+      setShowIdentityRequested(false);
+    }
+  };
 
   const nameById = useMemo(() => new Map((customers ?? []).map((customer) => [customer.id, customer.fullName])), [customers]);
 
@@ -114,7 +135,7 @@ export default function CustomerList() {
                 </thead>
                 <tbody className="divide-y divide-[#edf0f5]">
                   {filtered.map((customer) => (
-                    <tr key={customer.id} className="cursor-pointer align-top hover:bg-[#f9fbff]" onClick={() => setSelectedCustomer(customer)}>
+                    <tr key={customer.id} className="cursor-pointer align-top hover:bg-[#f9fbff]" onClick={() => openCustomer(customer)}>
                       <td className="px-3 py-3 font-semibold whitespace-nowrap text-[#18395f]">{customer.cifNumber}</td>
                       <td className="px-3 py-3 font-medium text-[#18395f]">{customer.fullName}</td>
                       <td className="px-3 py-3 text-xs text-[#475569] whitespace-nowrap">{customer.identityType} · {customer.identityNumber}</td>
@@ -154,6 +175,9 @@ export default function CustomerList() {
               </div>
               <DialogDescription>CIF {selectedCustomer.cifNumber} · Dibuat {formatDate(selectedCustomer.createdAt)}</DialogDescription>
             </DialogHeader>
+            <Button type="button" size="sm" onClick={viewIdentity} disabled={showIdentityRequested} className="w-fit border-2 border-[#183f70] bg-white text-[#183f70] hover:bg-[#eef4fb]">
+              <IdCard className="mr-1.5 size-4" />{showIdentityRequested ? "Membuka…" : "Lihat foto identitas"}
+            </Button>
             <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
               <DetailField label="Jenis identitas" value={selectedCustomer.identityType} />
               <DetailField label="Nomor identitas" value={selectedCustomer.identityNumber} />

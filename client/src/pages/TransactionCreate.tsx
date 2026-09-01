@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatPlainAmount } from "@/lib/money";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeftRight, Banknote, CircleDollarSign, FileText, Plus, Printer, Search, Trash2, Upload, UserPlus } from "lucide-react";
+import { ArrowLeftRight, Banknote, CircleDollarSign, FileText, Plus, Printer, Search, Sparkles, Trash2, Upload, UserPlus } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -34,6 +34,9 @@ export default function TransactionCreate() {
 
   const { data: rates } = trpc.rates.listOperational.useQuery(undefined, { enabled: Boolean(user) });
   const referenceRateFor = (currencyId?: number) => rates?.find(({ rate, currency }) => rate.status === "ACTIVE" && currency.id === currencyId);
+  const { data: currencyList } = trpc.currencies.list.useQuery(undefined, { enabled: Boolean(user) });
+  const idrCurrencyId = currencyList?.find((currency) => currency.code === "IDR")?.id;
+  const [autoFillingPayment, setAutoFillingPayment] = useState(false);
 
   const [operation, setOperation] = useState<"BUY" | "SELL">("BUY");
   const [receiptNumber, setReceiptNumber] = useState("");
@@ -86,6 +89,23 @@ export default function TransactionCreate() {
   const paymentDenominationTotal = paymentDenominations.reduce((sum, row) => sum + (Number(row.value) || 0) * (Number(row.quantity) || 0), 0);
   const paymentDenominationsComplete = paymentDenominations.length > 0 && paymentDenominations.every((row) => row.value && row.quantity);
   const paymentDenominationMismatch = paymentMethod === "CASH" && totalRupiah > 0 && Math.abs(paymentDenominationTotal - totalRupiah) > 0.5;
+
+  const autoFillPaymentDenominations = async () => {
+    if (!idrCurrencyId) return toast.error("Data mata uang IDR belum termuat, coba lagi sesaat lagi.");
+    if (totalRupiah <= 0) return toast.error("Isi baris mata uang dan harga terlebih dahulu sebelum auto-isi.");
+    setAutoFillingPayment(true);
+    try {
+      const result = await utils.cash.suggestDenominationBreakdown.fetch({ currencyId: idrCurrencyId, targetAmount: totalRupiah.toFixed(2) });
+      if (!result.breakdown.length) return toast.error("Tidak ditemukan kombinasi pecahan dari stok saat ini.");
+      setPaymentDenominations(result.breakdown.map((row) => ({ value: row.value, quantity: String(row.quantity) })));
+      if (result.exact) toast.success("Rincian pecahan Rupiah terisi otomatis dari stok saat ini.");
+      else toast.warning(`Kombinasi dari stok belum pas — kurang Rp ${formatPlainAmount(result.shortfall)}. Lengkapi sisanya secara manual.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Auto-isi gagal.");
+    } finally {
+      setAutoFillingPayment(false);
+    }
+  };
 
   const uploadUnderlying = async (transactionId: number) => {
     if (!underlyingFile) return;
@@ -224,8 +244,14 @@ export default function TransactionCreate() {
             <div><Label>Referensi pembayaran</Label><Input className="mt-1" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} placeholder="No. transfer / keterangan kas" /></div>
           </div>
           {paymentMethod === "CASH" ? <div className="rounded-xl border border-[#cbd9e7] bg-[#f8fbfe] p-3">
-            <div className="flex items-center justify-between"><Label className="text-xs font-semibold text-[#18395f]">Rincian pecahan Rupiah yang diterima/dibayarkan (wajib)</Label><Button type="button" size="sm" variant="outline" className="h-7 border-[#bcd2e5] text-xs text-[#183f70]" onClick={addPaymentDenominationRow}><Plus className="mr-1 size-3" />Tambah pecahan</Button></div>
-            <p className="mt-1 text-xs text-slate-600">Uang tunai yang benar-benar berpindah — bertambah/berkurang otomatis di stok pecahan Rupiah saat bon ini diselesaikan.</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label className="text-xs font-semibold text-[#18395f]">Rincian pecahan Rupiah yang diterima/dibayarkan (wajib)</Label>
+              <div className="flex gap-2">
+                {operation === "BUY" ? <Button type="button" size="sm" variant="outline" className="h-7 border-[#5c8f53] text-xs text-[#3d7139]" disabled={autoFillingPayment} onClick={autoFillPaymentDenominations}><Sparkles className="mr-1 size-3" />{autoFillingPayment ? "Mengisi…" : "Auto-isi dari stok"}</Button> : null}
+                <Button type="button" size="sm" variant="outline" className="h-7 border-[#bcd2e5] text-xs text-[#183f70]" onClick={addPaymentDenominationRow}><Plus className="mr-1 size-3" />Tambah pecahan</Button>
+              </div>
+            </div>
+            <p className="mt-1 text-xs text-slate-600">Uang tunai yang benar-benar berpindah — bertambah/berkurang otomatis di stok pecahan Rupiah saat bon ini diselesaikan.{operation === "BUY" ? " Untuk pembelian, gunakan \"Auto-isi dari stok\" agar kombinasi pecahan otomatis sesuai yang benar-benar tersedia di kas — tidak perlu menghitung manual." : ""}</p>
             {paymentDenominations.map((row, index) => <div key={index} className="mt-2 grid grid-cols-[1fr_100px_auto] items-start gap-2">
               <DenominationValueInput currencyCode="IDR" value={row.value} onChange={(value) => updatePaymentDenominationRow(index, "value", value)} />
               <Input required inputMode="numeric" value={row.quantity} onChange={(e) => updatePaymentDenominationRow(index, "quantity", e.target.value)} placeholder="Lembar" />
