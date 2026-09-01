@@ -343,6 +343,12 @@ export const appRouter = router({
       paymentDenominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).max(80).optional(),
       /** Which company bank account the transfer moved through — required when paymentMethod is BANK_TRANSFER. */
       bankAccountId: z.number().int().positive().optional(),
+      /** The other side of the transfer — whose account the money came from (JUAL) or went to (BELI). Required together when paymentMethod is BANK_TRANSFER. */
+      counterpartyBankName: z.string().trim().max(120).optional(),
+      counterpartyAccountNumber: z.string().trim().max(60).optional(),
+      counterpartyAccountHolderName: z.string().trim().max(160).optional(),
+      /** Required only when counterpartyAccountHolderName doesn't match the customer's own name. */
+      counterpartyNameMismatchReason: z.string().trim().max(1000).optional(),
       transactionPurposeSnapshot: z.string().trim().min(3).max(1000).optional(),
       customerActingAs: z.enum(["SELF", "REPRESENTATIVE"]).default("SELF"),
       /** Registered customer id acting as representative/kuasa; must be picked from search, never typed freely. */
@@ -361,8 +367,11 @@ export const appRouter = router({
       if (value.paymentMethod === "CASH" && !value.paymentDenominations?.length) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Rincian pecahan Rupiah wajib diisi untuk pembayaran tunai.", path: ["paymentDenominations"] });
       }
-      if (value.paymentMethod === "BANK_TRANSFER" && !value.bankAccountId) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Pilih rekening bank yang menerima/mengirim transfer.", path: ["bankAccountId"] });
+      if (value.paymentMethod === "BANK_TRANSFER") {
+        if (!value.bankAccountId) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Pilih rekening bank perusahaan yang menerima/mengirim transfer.", path: ["bankAccountId"] });
+        if (!value.counterpartyBankName) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Nama bank rekening lawan wajib diisi.", path: ["counterpartyBankName"] });
+        if (!value.counterpartyAccountNumber) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Nomor rekening lawan wajib diisi.", path: ["counterpartyAccountNumber"] });
+        if (!value.counterpartyAccountHolderName) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Atas nama rekening lawan wajib diisi.", path: ["counterpartyAccountHolderName"] });
       }
     })).mutation(({ input, ctx }) => createTransaction(input, ctx.user.id)),
     submit: staffProcedure.input(z.object({ transactionId: z.number().int().positive() })).mutation(({ input, ctx }) => submitTransaction(input.transactionId, ctx.user)),

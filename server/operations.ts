@@ -1111,6 +1111,11 @@ export type CreateTransactionInput = {
   paymentDenominations?: DenominationEntryInput[];
   /** Company bank account the transfer moved through — required when paymentMethod is BANK_TRANSFER. */
   bankAccountId?: number;
+  /** The other side of the transfer — whose account the money came from (JUAL) or went to (BELI). */
+  counterpartyBankName?: string;
+  counterpartyAccountNumber?: string;
+  counterpartyAccountHolderName?: string;
+  counterpartyNameMismatchReason?: string;
   transactionPurposeSnapshot?: string;
   customerActingAs?: "SELF" | "REPRESENTATIVE";
   /** Registered customer id acting as representative/kuasa; the name and identity number are snapshotted server-side from that customer. */
@@ -1243,6 +1248,10 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   const preparedLines: PreparedLine[] = input.lines.map((line, index) => {
     const currency = currencyById.get(line.currencyId);
     if (!currency || !currency.active) throw new Error(`Mata uang pada baris ${index + 1} tidak ditemukan atau tidak aktif.`);
+    // The base currency (IDR) is always the payment side of a deal, never the traded line — a
+    // transaction line has to be a genuine foreign currency. Enforced here too, not just in the
+    // client's CurrencyPicker, since the client filter alone is never the only line of defense.
+    if (currency.code === "IDR") throw new Error(`Baris ${index + 1}: Rupiah tidak dapat dipilih sebagai mata uang baris — Rupiah selalu sisi pembayaran.`);
     const quoteUnit = nonNegativeDecimal(line.quoteUnit ?? "1", `Satuan kuotasi baris ${index + 1}`);
     const { rows: denominationRows, totalForeign, totalRupiah } = reconcilePricedDenominations(line.denominations, quoteUnit, `baris ${index + 1}`, currency.code);
     // agreedRate on the line is a derived weighted average across its (possibly differently-priced)
@@ -1288,11 +1297,25 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   }
 
   let bankAccount: { id: number; currencyId: number } | null = null;
+  let counterpartyNameMismatchReason: string | null = null;
   if (input.paymentMethod === "BANK_TRANSFER") {
-    if (!input.bankAccountId) throw new Error("Pilih rekening bank yang menerima/mengirim transfer.");
+    if (!input.bankAccountId) throw new Error("Pilih rekening bank perusahaan yang menerima/mengirim transfer.");
     const account = (await db.select({ id: bankAccounts.id, currencyId: bankAccounts.currencyId, active: bankAccounts.active }).from(bankAccounts).where(eq(bankAccounts.id, input.bankAccountId)).limit(1))[0];
     if (!account || !account.active) throw new Error("Rekening bank tidak ditemukan atau sudah tidak aktif.");
     bankAccount = account;
+    if (!input.counterpartyBankName?.trim() || !input.counterpartyAccountNumber?.trim() || !input.counterpartyAccountHolderName?.trim()) {
+      throw new Error("Nama bank, nomor rekening, dan atas nama rekening lawan transaksi wajib diisi untuk transfer bank.");
+    }
+    // The counterparty account should normally belong to the customer themselves — a mismatch isn't
+    // blocked (a legitimate kuasa/wakil or third-party payment happens), but it can never be silent:
+    // the reason gets printed on the kwitansi automatically (see printBon).
+    const namesMatch = input.counterpartyAccountHolderName.trim().toUpperCase() === customer.fullName.trim().toUpperCase();
+    if (!namesMatch) {
+      if (!input.counterpartyNameMismatchReason?.trim() || input.counterpartyNameMismatchReason.trim().length < 5) {
+        throw new Error(`Atas nama rekening lawan ("${input.counterpartyAccountHolderName.trim()}") berbeda dengan nama nasabah ("${customer.fullName}") — wajib diisi keterangan alasan (minimal 5 karakter).`);
+      }
+      counterpartyNameMismatchReason = input.counterpartyNameMismatchReason.trim();
+    }
   }
 
   // The >=10,000 USD-equivalent review/underlying threshold is measured against the official BI
@@ -1335,6 +1358,10 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
       paymentMethod: input.paymentMethod,
       paymentReference: input.paymentReference?.trim() || null,
       bankAccountId: bankAccount?.id ?? null,
+      counterpartyBankName: bankAccount ? input.counterpartyBankName!.trim() : null,
+      counterpartyAccountNumber: bankAccount ? input.counterpartyAccountNumber!.trim() : null,
+      counterpartyAccountHolderName: bankAccount ? input.counterpartyAccountHolderName!.trim() : null,
+      counterpartyNameMismatchReason,
       customerFullNameSnapshot: customer.fullName,
       customerIdentityTypeSnapshot: customer.identityType,
       customerIdentityNumberSnapshot: customer.identityNumber,

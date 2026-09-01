@@ -48,7 +48,12 @@ export default function TransactionCreate() {
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentDenominations, setPaymentDenominations] = useState<PlainDenominationRow[]>([emptyPlainDenominationRow()]);
   const [bankAccountId, setBankAccountId] = useState<number | null>(null);
+  const [counterpartyBankName, setCounterpartyBankName] = useState("");
+  const [counterpartyAccountNumber, setCounterpartyAccountNumber] = useState("");
+  const [counterpartyAccountHolderName, setCounterpartyAccountHolderName] = useState("");
+  const [counterpartyNameMismatchReason, setCounterpartyNameMismatchReason] = useState("");
   const { data: bankAccounts } = trpc.bankAccounts.list.useQuery(undefined, { enabled: Boolean(user) && paymentMethod === "BANK_TRANSFER" });
+  const counterpartyNameMismatch = paymentMethod === "BANK_TRANSFER" && Boolean(counterpartyAccountHolderName.trim()) && Boolean(customer) && counterpartyAccountHolderName.trim().toUpperCase() !== customer!.fullName.trim().toUpperCase();
   const [purpose, setPurposeValue] = useState("");
   const [customerActingAs, setCustomerActingAs] = useState<"SELF" | "REPRESENTATIVE">("SELF");
   const [repSearch, setRepSearch] = useState("");
@@ -160,6 +165,7 @@ export default function TransactionCreate() {
         setLines([emptyLine()]);
         setPaymentDenominations([emptyPlainDenominationRow()]);
         setBankAccountId(null);
+        setCounterpartyBankName(""); setCounterpartyAccountNumber(""); setCounterpartyAccountHolderName(""); setCounterpartyNameMismatchReason("");
         setReceiptNumber("");
         setRepresentativeCustomer(null);
         setRepSearch("");
@@ -179,7 +185,11 @@ export default function TransactionCreate() {
     if (!allLinesComplete) return toast.error("Setiap baris wajib punya mata uang dan minimal satu pecahan lengkap (nilai, jumlah, harga).");
     if (paymentMethod === "CASH" && !paymentDenominationsComplete) return toast.error("Rincian pecahan Rupiah wajib diisi untuk pembayaran tunai.");
     if (paymentDenominationMismatch) return toast.error("Rincian pecahan Rupiah belum sama dengan total transaksi.");
-    if (paymentMethod === "BANK_TRANSFER" && !bankAccountId) return toast.error("Pilih rekening bank yang menerima/mengirim transfer.");
+    if (paymentMethod === "BANK_TRANSFER") {
+      if (!bankAccountId) return toast.error("Pilih rekening perusahaan yang menerima/mengirim transfer.");
+      if (!counterpartyBankName.trim() || !counterpartyAccountNumber.trim() || !counterpartyAccountHolderName.trim()) return toast.error("Isi nama bank, nomor rekening, dan atas nama rekening lawan transaksi.");
+      if (counterpartyNameMismatch && counterpartyNameMismatchReason.trim().length < 5) return toast.error("Isi alasan perbedaan nama rekening (minimal 5 karakter).");
+    }
     if (customerActingAs === "REPRESENTATIVE" && !representativeCustomer) return toast.error("Pilih nasabah terdaftar sebagai pihak kuasa/wakil.");
     if (underlyingRequired && (!underlyingFile || !underlyingReference)) return toast.error("Lampirkan file dan referensi underlying.");
     create.mutate({
@@ -191,6 +201,10 @@ export default function TransactionCreate() {
       paymentReference,
       paymentDenominations: paymentMethod === "CASH" ? paymentDenominations.map((row) => ({ value: row.value, quantity: Number(row.quantity) })) : undefined,
       bankAccountId: paymentMethod === "BANK_TRANSFER" ? bankAccountId ?? undefined : undefined,
+      counterpartyBankName: paymentMethod === "BANK_TRANSFER" ? counterpartyBankName.trim() : undefined,
+      counterpartyAccountNumber: paymentMethod === "BANK_TRANSFER" ? counterpartyAccountNumber.trim() : undefined,
+      counterpartyAccountHolderName: paymentMethod === "BANK_TRANSFER" ? counterpartyAccountHolderName.trim() : undefined,
+      counterpartyNameMismatchReason: paymentMethod === "BANK_TRANSFER" && counterpartyNameMismatch ? counterpartyNameMismatchReason.trim() : undefined,
       transactionPurposeSnapshot: purpose || customer.transactionPurpose || undefined,
       customerActingAs,
       representativeCustomerId: customerActingAs === "REPRESENTATIVE" ? representativeCustomer?.id : undefined,
@@ -247,7 +261,8 @@ export default function TransactionCreate() {
               <div className="mt-3">
                 <Label className="text-xs">Mata uang</Label>
                 {line.currency ? <p className="mt-1 flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800"><span>Dipilih: {line.currency.code} — {line.currency.name}</span><button type="button" className="font-semibold text-emerald-900 underline" onClick={() => updateLine(index, { currency: null })}>Ganti</button></p>
-                  : <div className="mt-1"><CurrencyPicker onSelect={(currency) => updateLine(index, { currency })} /></div>}
+                  : <div className="mt-1"><CurrencyPicker excludeCodes={["IDR"]} onSelect={(currency) => updateLine(index, { currency })} /></div>}
+                <p className="mt-1 text-[11px] text-slate-600">Rupiah tidak bisa dipilih di sini — Rupiah selalu sisi pembayaran, bukan baris mata uang yang ditransaksikan.</p>
               </div>
               {reference ? <p className="mt-2 text-xs text-slate-600">Kurs referensi hari ini (pembanding saja): {operation === "BUY" ? String(reference.rate.buyRate) : String(reference.rate.sellRate)} IDR per {String(reference.rate.quoteUnit)} {reference.currency.code}.</p> : null}
 
@@ -276,13 +291,27 @@ export default function TransactionCreate() {
             <div><Label>Cara bayar</Label><Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as typeof paymentMethod)}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="CASH">Tunai</SelectItem><SelectItem value="BANK_TRANSFER">Transfer bank</SelectItem><SelectItem value="OTHER">Lainnya</SelectItem></SelectContent></Select></div>
             <div><Label>Referensi pembayaran</Label><Input className="mt-1" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} placeholder="No. transfer / keterangan kas" /></div>
           </div>
-          {paymentMethod === "BANK_TRANSFER" ? <div>
-            <Label>Rekening bank</Label>
-            <Select value={bankAccountId ? String(bankAccountId) : ""} onValueChange={(value) => setBankAccountId(Number(value))}>
-              <SelectTrigger className="mt-1 w-full"><SelectValue placeholder="Pilih rekening" /></SelectTrigger>
-              <SelectContent>{bankAccounts?.filter((row) => row.account.active).map((row) => <SelectItem key={row.account.id} value={String(row.account.id)}>{row.account.bankName} · {row.account.accountHolderName} · {row.account.accountNumber}</SelectItem>)}</SelectContent>
-            </Select>
-            {!bankAccounts?.length ? <p className="mt-1 text-xs text-amber-700">Belum ada rekening bank terdaftar — Controller dapat menambahkannya di tab Kas Awal.</p> : null}
+          {paymentMethod === "BANK_TRANSFER" ? <div className="space-y-3 rounded-xl border border-[#cbd9e7] bg-[#f8fbfe] p-3">
+            <div>
+              <Label>Rekening perusahaan yang {operation === "BUY" ? "mengirim" : "menerima"}</Label>
+              <Select value={bankAccountId ? String(bankAccountId) : ""} onValueChange={(value) => setBankAccountId(Number(value))}>
+                <SelectTrigger className="mt-1 w-full"><SelectValue placeholder="Pilih rekening" /></SelectTrigger>
+                <SelectContent>{bankAccounts?.filter((row) => row.account.active).map((row) => <SelectItem key={row.account.id} value={String(row.account.id)}>{row.account.bankName} · {row.account.accountHolderName} · {row.account.accountNumber}</SelectItem>)}</SelectContent>
+              </Select>
+              {!bankAccounts?.length ? <p className="mt-1 text-xs text-amber-700">Belum ada rekening bank terdaftar — Controller dapat menambahkannya di tab Kas Awal.</p> : null}
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-[#18395f]">Rekening {operation === "BUY" ? "tujuan (milik nasabah, uang dikirim ke sini)" : "pengirim (asal transfer masuk)"}</Label>
+              <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                <Input value={counterpartyBankName} onChange={(e) => setCounterpartyBankName(e.target.value)} placeholder="Nama bank" />
+                <Input value={counterpartyAccountNumber} onChange={(e) => setCounterpartyAccountNumber(e.target.value)} placeholder="Nomor rekening" />
+                <Input value={counterpartyAccountHolderName} onChange={(e) => setCounterpartyAccountHolderName(e.target.value)} placeholder="Atas nama" />
+              </div>
+              {counterpartyNameMismatch ? <div className="mt-2 rounded-lg border-2 border-amber-300 bg-amber-50 p-2">
+                <p className="text-xs font-semibold text-amber-900">Atas nama rekening berbeda dari nama nasabah ({customer?.fullName}) — wajib isi alasan, tercetak otomatis di kwitansi.</p>
+                <Input className="mt-1.5" value={counterpartyNameMismatchReason} onChange={(e) => setCounterpartyNameMismatchReason(e.target.value)} placeholder="Contoh: dikirim oleh keluarga atas persetujuan nasabah" />
+              </div> : null}
+            </div>
           </div> : null}
           {paymentMethod === "CASH" ? <div className="rounded-xl border border-[#cbd9e7] bg-[#f8fbfe] p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">

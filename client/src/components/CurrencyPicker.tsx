@@ -13,7 +13,7 @@ export type PickedCurrency = { id: number; code: string; name: string };
  * whatever happens to already be in the `currencies` table — selecting a currency that doesn't exist
  * yet registers it via `currencies.ensure` (idempotent, no rate involved) before returning it.
  */
-export function CurrencyPicker({ onSelect, placeholder = "Ketik kode atau nama mata uang, mis. GBP atau Rupiah" }: { onSelect: (currency: PickedCurrency) => void; placeholder?: string }) {
+export function CurrencyPicker({ onSelect, placeholder = "Ketik kode atau nama mata uang, mis. GBP atau Rupiah", excludeCodes }: { onSelect: (currency: PickedCurrency) => void; placeholder?: string; excludeCodes?: string[] }) {
   const [query, setQuery] = useState("");
   const utils = trpc.useUtils();
   const ensure = trpc.currencies.ensure.useMutation();
@@ -21,8 +21,8 @@ export function CurrencyPicker({ onSelect, placeholder = "Ketik kode atau nama m
   const matches = useMemo(() => {
     const q = query.trim().toUpperCase();
     if (q.length < 1) return [];
-    return WORLD_CURRENCIES.filter((currency) => currency.code.includes(q) || currency.name.toUpperCase().includes(q)).slice(0, 8);
-  }, [query]);
+    return WORLD_CURRENCIES.filter((currency) => (currency.code.includes(q) || currency.name.toUpperCase().includes(q)) && !excludeCodes?.includes(currency.code)).slice(0, 8);
+  }, [query, excludeCodes]);
 
   const pick = async (candidate: WorldCurrency) => {
     try {

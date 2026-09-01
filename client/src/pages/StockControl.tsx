@@ -60,6 +60,7 @@ function KasAwalPanel() {
   const [openingNotes, setOpeningNotes] = useState("");
   const [denominations, setDenominations] = useState<DenominationRow[]>([emptyRow()]);
   const { data: balances } = trpc.cash.balances.useQuery(undefined, { enabled: Boolean(user) });
+  const { data: bankAccountsForBalance } = trpc.bankAccounts.list.useQuery(undefined, { enabled: Boolean(user) });
 
   const addRow = () => setDenominations((rows) => [...rows, emptyRow()]);
   const updateRow = (index: number, field: keyof DenominationRow, value: string) => setDenominations((rows) => rows.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
@@ -108,8 +109,11 @@ function KasAwalPanel() {
       </CardContent>
     </Card>
     <Card className="border-[#dce6f0]">
-      <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Saldo sistem saat ini</CardTitle></CardHeader>
-      <CardContent><div className="space-y-2">{balances?.length ? balances.map(({ balance, currency }) => <div key={balance.id} className="flex justify-between rounded-xl bg-[#f6fafc] px-3 py-2 text-sm"><span className="font-semibold text-[#18395f]">{currency.code}</span><span className="font-mono font-semibold text-[#334155]">{formatPlainAmount(balance.availableAmount)}</span></div>) : <p className="text-sm text-[#475569]">Belum ada saldo kas tercatat.</p>}</div></CardContent>
+      <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Saldo sistem saat ini</CardTitle><CardDescription>Kategori IDR mencakup kas fisik dan rekening bank.</CardDescription></CardHeader>
+      <CardContent><div className="space-y-2">
+        {balances?.length ? balances.map(({ balance, currency }) => <div key={balance.id} className="flex justify-between rounded-xl bg-[#f6fafc] px-3 py-2 text-sm"><span className="font-semibold text-[#18395f]">{currency.code} <span className="font-normal text-[#68758c]">(kas fisik)</span></span><span className="font-mono font-semibold text-[#334155]">{formatPlainAmount(balance.availableAmount)}</span></div>) : <p className="text-sm text-[#475569]">Belum ada saldo kas tercatat.</p>}
+        {bankAccountsForBalance?.map(({ account, currency }) => <div key={account.id} className="flex justify-between rounded-xl bg-[#f6fafc] px-3 py-2 text-sm"><span className="font-semibold text-[#18395f]">{currency.code} <span className="font-normal text-[#68758c]">({account.bankName} · {account.accountNumber})</span></span><span className="font-mono font-semibold text-[#334155]">{formatPlainAmount(account.availableAmount)}</span></div>)}
+      </div></CardContent>
     </Card>
     <div className="lg:col-span-2"><BankAccountsPanel /></div>
   </div>;
@@ -208,8 +212,9 @@ function StokSaatIniPanel() {
   const { user } = useAuth();
   const balancesQuery = trpc.cash.balances.useQuery(undefined, { enabled: Boolean(user) });
   const denominationBalancesQuery = trpc.cash.denominationBalances.useQuery(undefined, { enabled: Boolean(user) });
-  const balances = balancesQuery.data, denominationBalances = denominationBalancesQuery.data;
-  const refreshAll = () => Promise.all([balancesQuery.refetch(), denominationBalancesQuery.refetch()]);
+  const bankAccountsQuery = trpc.bankAccounts.list.useQuery(undefined, { enabled: Boolean(user) });
+  const balances = balancesQuery.data, denominationBalances = denominationBalancesQuery.data, bankAccountBalances = bankAccountsQuery.data;
+  const refreshAll = () => Promise.all([balancesQuery.refetch(), denominationBalancesQuery.refetch(), bankAccountsQuery.refetch()]);
 
   const denominationsByCurrency = useMemo(() => {
     const grouped = new Map<string, typeof denominationBalances>();
@@ -224,8 +229,11 @@ function StokSaatIniPanel() {
   return <div className="space-y-6">
     <div className="flex justify-end"><Button variant="outline" className="border-[#d8e5ef]" onClick={refreshAll}><RefreshCw className="mr-2 size-4" /> Muat ulang</Button></div>
     <Card className="border-[#dce6f0]">
-      <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Saldo per mata uang</CardTitle><CardDescription>Bertambah/berkurang otomatis saat kas awal, penyesuaian brankas, dan bon yang diselesaikan. Cocokkan dengan hitung fisik hanya saat Stock Opname penutupan.</CardDescription></CardHeader>
-      <CardContent><div className="grid gap-3 sm:grid-cols-2">{balances?.length ? balances.map(({ balance, currency }) => <div key={balance.id} className="flex items-center justify-between rounded-xl border-2 border-[#d3e2f0] bg-white px-4 py-3"><span className="rounded-lg bg-[#183f70] px-2.5 py-1 text-xs font-extrabold tracking-wide text-white">{currency.code}</span><span className="font-mono text-lg font-extrabold text-[#18395f]">{formatPlainAmount(balance.availableAmount)}</span></div>) : <p className="text-sm text-[#475569]">Belum ada saldo kas. Catat kas awal terlebih dahulu.</p>}</div></CardContent>
+      <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Saldo per mata uang</CardTitle><CardDescription>Bertambah/berkurang otomatis saat kas awal, penyesuaian brankas, dan bon yang diselesaikan. Kategori IDR mencakup kas fisik dan rekening bank. Cocokkan dengan hitung fisik hanya saat Stock Opname penutupan.</CardDescription></CardHeader>
+      <CardContent><div className="grid gap-3 sm:grid-cols-2">
+        {balances?.length ? balances.map(({ balance, currency }) => <div key={balance.id} className="flex items-center justify-between rounded-xl border-2 border-[#d3e2f0] bg-white px-4 py-3"><span className="rounded-lg bg-[#183f70] px-2.5 py-1 text-xs font-extrabold tracking-wide text-white">{currency.code}<span className="ml-1 font-normal opacity-80">kas</span></span><span className="font-mono text-lg font-extrabold text-[#18395f]">{formatPlainAmount(balance.availableAmount)}</span></div>) : <p className="text-sm text-[#475569]">Belum ada saldo kas. Catat kas awal terlebih dahulu.</p>}
+        {bankAccountBalances?.map(({ account, currency }) => <div key={account.id} className="flex items-center justify-between rounded-xl border-2 border-[#d3e2f0] bg-white px-4 py-3"><span className="rounded-lg bg-[#3d7139] px-2.5 py-1 text-xs font-extrabold tracking-wide text-white">{currency.code}<span className="ml-1 font-normal opacity-80">{account.bankName}</span></span><span className="font-mono text-lg font-extrabold text-[#18395f]">{formatPlainAmount(account.availableAmount)}</span></div>)}
+      </div></CardContent>
     </Card>
     <Card className="border-[#dce6f0]">
       <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Stok pecahan per mata uang</CardTitle><CardDescription>Setiap pecahan wajib tercatat — dari kas awal, penyesuaian brankas, maupun kedua sisi bon (valuta asing dan Rupiah) yang sudah diselesaikan.</CardDescription></CardHeader>

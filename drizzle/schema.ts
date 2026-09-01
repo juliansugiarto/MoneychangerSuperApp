@@ -142,6 +142,12 @@ export const exchangeTransactions = mysqlTable("exchange_transactions", {
   receiptNumber: varchar("receiptNumber", { length: 80 }),
   /** Which company bank account the Rupiah leg moved through — required when paymentMethod is BANK_TRANSFER, null for CASH/OTHER and for bons predating account tracking. */
   bankAccountId: int("bankAccountId"),
+  /** The other side of the transfer: for JUAL, whose account the money came FROM; for BELI, whose account it went TO. Always the customer's own bank details unless counterpartyNameMismatchReason explains why not. Required together whenever paymentMethod is BANK_TRANSFER. */
+  counterpartyBankName: varchar("counterpartyBankName", { length: 120 }),
+  counterpartyAccountNumber: varchar("counterpartyAccountNumber", { length: 60 }),
+  counterpartyAccountHolderName: varchar("counterpartyAccountHolderName", { length: 160 }),
+  /** Required only when counterpartyAccountHolderName doesn't match the customer's own name — printed on the kwitansi automatically so the discrepancy is never silent. */
+  counterpartyNameMismatchReason: text("counterpartyNameMismatchReason"),
   transactionAt: datetime("transactionAt").notNull(),
   operation: mysqlEnum("operation", ["BUY", "SELL"]).notNull(),
   customerId: int("customerId").notNull(),

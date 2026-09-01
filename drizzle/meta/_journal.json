@@ -183,6 +183,13 @@
       "when": 1788247632483,
       "tag": "0025_sleepy_nitro",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "5",
+      "when": 1788249427240,
+      "tag": "0026_lucky_captain_stacy",
+      "breakpoints": true
     }
   ]
 }
