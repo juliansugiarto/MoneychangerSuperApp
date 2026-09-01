@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CurrencyPicker, PickedCurrency } from "@/components/CurrencyPicker";
 import { DenominationValueInput } from "@/components/DenominationValueInput";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -90,6 +91,9 @@ export default function TransactionCreate() {
   const paymentDenominationsComplete = paymentDenominations.length > 0 && paymentDenominations.every((row) => row.value && row.quantity);
   const paymentDenominationMismatch = paymentMethod === "CASH" && totalRupiah > 0 && Math.abs(paymentDenominationTotal - totalRupiah) > 0.5;
 
+  const [exchangeProposal, setExchangeProposal] = useState<{ currencyId: number; shortfall: string; give: { value: string; quantity: number }[]; receive: { value: string; quantity: number }[] } | null>(null);
+  const [exchangeSubmitting, setExchangeSubmitting] = useState(false);
+
   const autoFillPaymentDenominations = async () => {
     if (!idrCurrencyId) return toast.error("Data mata uang IDR belum termuat, coba lagi sesaat lagi.");
     if (totalRupiah <= 0) return toast.error("Isi baris mata uang dan harga terlebih dahulu sebelum auto-isi.");
@@ -98,12 +102,36 @@ export default function TransactionCreate() {
       const result = await utils.cash.suggestDenominationBreakdown.fetch({ currencyId: idrCurrencyId, targetAmount: totalRupiah.toFixed(2) });
       if (!result.breakdown.length) return toast.error("Tidak ditemukan kombinasi pecahan dari stok saat ini.");
       setPaymentDenominations(result.breakdown.map((row) => ({ value: row.value, quantity: String(row.quantity) })));
-      if (result.exact) toast.success("Rincian pecahan Rupiah terisi otomatis dari stok saat ini.");
-      else toast.warning(`Kombinasi dari stok belum pas — kurang Rp ${formatPlainAmount(result.shortfall)}. Lengkapi sisanya secara manual.`);
+      if (result.exact) { toast.success("Rincian pecahan Rupiah terisi otomatis dari stok saat ini."); return; }
+      // Exact fill from current composition isn't possible — offer a real, equal-value note exchange
+      // (e.g. break one 100,000 into smaller notes) to close the gap, instead of just leaving it short.
+      try {
+        const exchange = await utils.cash.suggestDenominationExchange.fetch({ currencyId: idrCurrencyId, shortfallAmount: result.shortfall });
+        setExchangeProposal({ currencyId: idrCurrencyId, shortfall: result.shortfall, give: exchange.give, receive: exchange.receive });
+      } catch {
+        toast.warning(`Kombinasi dari stok belum pas — kurang Rp ${formatPlainAmount(result.shortfall)}. Lengkapi sisanya secara manual.`);
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Auto-isi gagal.");
     } finally {
       setAutoFillingPayment(false);
+    }
+  };
+
+  const exchangeMutation = trpc.cash.recordDenominationExchange.useMutation();
+  const confirmExchange = async () => {
+    if (!exchangeProposal) return;
+    setExchangeSubmitting(true);
+    try {
+      await exchangeMutation.mutateAsync({ currencyId: exchangeProposal.currencyId, give: exchangeProposal.give, receive: exchangeProposal.receive, notes: `Auto-isi transaksi: menutup kekurangan Rp ${formatPlainAmount(exchangeProposal.shortfall)}` });
+      utils.cash.balances.invalidate(); utils.cash.denominationBalances.invalidate();
+      toast.success("Pertukaran pecahan tercatat. Mengisi ulang rincian…");
+      setExchangeProposal(null);
+      await autoFillPaymentDenominations();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Pertukaran pecahan gagal dicatat.");
+    } finally {
+      setExchangeSubmitting(false);
     }
   };
 
@@ -289,5 +317,30 @@ export default function TransactionCreate() {
 
       <Button className="w-full bg-[#183f70]" disabled={create.isPending || !allLinesComplete || (paymentMethod === "CASH" && (!paymentDenominationsComplete || paymentDenominationMismatch))}>{create.isPending ? "Membuat transaksi…" : "Simpan transaksi sebagai draft"}</Button>
     </form>
+
+    <Dialog open={Boolean(exchangeProposal)} onOpenChange={(open) => { if (!open) setExchangeProposal(null); }}>
+      <DialogContent>
+        {exchangeProposal ? <>
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg text-[#18395f]">Tukar pecahan untuk menutup kekurangan?</DialogTitle>
+            <DialogDescription>Stok saat ini tidak bisa membentuk Rp {formatPlainAmount(exchangeProposal.shortfall)} yang tersisa. Nilai pecahan di bawah ini sama persis (tidak ada nilai yang hilang) — hanya komposisinya yang berubah.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 rounded-xl border border-[#cbd9e7] bg-[#f8fbfe] p-3 text-sm">
+            <div>
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-[#68758c]">Diserahkan</p>
+              {exchangeProposal.give.map((row) => <p key={row.value} className="font-mono font-semibold text-[#18395f]">{row.quantity}× Rp {formatPlainAmount(row.value)}</p>)}
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-[#68758c]">Diterima</p>
+              {exchangeProposal.receive.map((row) => <p key={row.value} className="font-mono font-semibold text-[#18395f]">{row.quantity}× Rp {formatPlainAmount(row.value)}</p>)}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setExchangeProposal(null)}>Batal</Button>
+            <Button type="button" disabled={exchangeSubmitting} onClick={confirmExchange} className="bg-[#183f70] text-white hover:bg-[#12345d]"><Sparkles className="mr-1.5 size-4" />{exchangeSubmitting ? "Mencatat…" : "Konfirmasi tukar & isi otomatis"}</Button>
+          </DialogFooter>
+        </> : null}
+      </DialogContent>
+    </Dialog>
   </div>;
 }

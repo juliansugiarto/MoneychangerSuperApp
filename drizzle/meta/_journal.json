@@ -169,6 +169,13 @@
       "when": 1788183094368,
       "tag": "0023_adorable_wolfsbane",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1788245599139,
+      "tag": "0024_steep_tenebrous",
+      "breakpoints": true
     }
   ]
 }

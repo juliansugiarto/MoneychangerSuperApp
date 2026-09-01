@@ -33,7 +33,7 @@ describe("suggestDenominationBreakdown", () => {
     expect(total).toBe(590000);
     // never exceeds recorded stock for any denomination used
     for (const row of result.breakdown) {
-      const stocked = row.value === "100000.000000" ? 5 : row.value === "50000.000000" ? 3 : 10;
+      const stocked = row.value === "100000" ? 5 : row.value === "50000" ? 3 : 10;
       expect(row.quantity).toBeLessThanOrEqual(stocked);
     }
     getDb.mockRestore();
@@ -49,7 +49,18 @@ describe("suggestDenominationBreakdown", () => {
     expect(result.shortfall).toBe("390000");
     const total = result.breakdown.reduce((sum, row) => sum + Number(row.value) * row.quantity, 0);
     expect(total).toBe(35000000);
-    expect(result.breakdown[0]).toEqual({ value: "100000.000000", quantity: 350 });
+    expect(result.breakdown[0]).toEqual({ value: "100000", quantity: 350 });
+    getDb.mockRestore();
+  });
+
+  it("normalizes the raw decimal(24,6) stock value down to a plain integer string, matching the client's denomination dropdown options exactly", async () => {
+    // Regression: the client Select's option values are plain integers ("100000"); returning the raw
+    // DB string ("100000.000000") straight through meant the dropdown couldn't match its own value and
+    // rendered as unset, even though the quantity had filled in correctly — reported as "auto-isi only
+    // fills the quantity, not the denomination".
+    const getDb = mockDbWithStock([{ value: "100000.000000", quantity: 10 }]);
+    const result = await suggestDenominationBreakdown({ currencyId: 1, targetAmount: "300000" });
+    expect(result.breakdown).toEqual([{ value: "100000", quantity: 3 }]);
     getDb.mockRestore();
   });
 
@@ -61,7 +72,7 @@ describe("suggestDenominationBreakdown", () => {
     // A greedy-only approach would want 7x 50,000, but only 2 are in stock.
     const result = await suggestDenominationBreakdown({ currencyId: 1, targetAmount: "350000" });
     expect(result.exact).toBe(true);
-    const fifty = result.breakdown.find((row) => row.value === "50000.000000");
+    const fifty = result.breakdown.find((row) => row.value === "50000");
     expect(fifty?.quantity ?? 0).toBeLessThanOrEqual(2);
     const total = result.breakdown.reduce((sum, row) => sum + Number(row.value) * row.quantity, 0);
     expect(total).toBe(350000);

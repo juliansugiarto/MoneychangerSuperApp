@@ -315,7 +315,7 @@ export const cashBalanceMovements = mysqlTable("cash_balance_movements", {
   amount: decimal("amount", { precision: 24, scale: 6 }).notNull(),
   reason: varchar("reason", { length: 255 }).notNull(),
   /** Classifies why the movement exists, mainly for BI stock reporting; TRANSACTION rows keep the prior default behavior. */
-  category: mysqlEnum("category", ["OPENING", "TRANSACTION", "SAFE_DEPOSIT", "SAFE_WITHDRAWAL", "OFF_HOURS_SALE", "OTHER"]).default("OTHER").notNull(),
+  category: mysqlEnum("category", ["OPENING", "TRANSACTION", "SAFE_DEPOSIT", "SAFE_WITHDRAWAL", "OFF_HOURS_SALE", "DENOMINATION_EXCHANGE", "OTHER"]).default("OTHER").notNull(),
   createdByUserId: int("createdByUserId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [

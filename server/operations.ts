@@ -1208,9 +1208,15 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     }
   }
 
-  const usdRate = (await db.select({ rate: operationalRates }).from(operationalRates)
-    .innerJoin(currencies, eq(operationalRates.currencyId, currencies.id))
-    .where(and(eq(currencies.code, "USD"), eq(operationalRates.status, "ACTIVE"), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false))).orderBy(desc(operationalRates.effectiveAt)).limit(1))[0]?.rate;
+  // The >=10,000 USD-equivalent review/underlying threshold is measured against the official BI
+  // reference sell rate (synced daily via syncBiReferenceRates), not the outlet's own quoted rate —
+  // the outlet's rate is negotiable per deal, so anchoring the regulatory threshold to it would let
+  // the threshold be gamed by quoting a different rate. Falls open (no trigger) only if BI's rate
+  // hasn't synced yet for USD, same fail-open shape the outlet-rate lookup had before.
+  const usdBiReferenceRate = (await db.select({ rate: rateReferenceSnapshots }).from(rateReferenceSnapshots)
+    .innerJoin(currencies, eq(rateReferenceSnapshots.currencyId, currencies.id))
+    .where(and(eq(currencies.code, "USD"), eq(rateReferenceSnapshots.source, "BI_TRANSACTION_RATES"), eq(rateReferenceSnapshots.isDemo, false)))
+    .orderBy(desc(rateReferenceSnapshots.referenceDate)).limit(1))[0]?.rate;
   const thresholds = await reviewThresholds();
   const businessDate = jakartaBusinessDate(input.transactionAt);
   const nextDate = nextBusinessDate(businessDate);
@@ -1226,7 +1232,7 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     )))[0]?.total ?? "0"
     : "0";
   const cashDailyRupiahTotal = new Decimal(dailyCashTotal).plus(rupiahAmount).toFixed(2);
-  const { requiresReview, reviewReason } = assessReviewRequirement({ rupiahAmount, thresholdUsd: thresholds.reviewThresholdUsd, usdSellRate: usdRate?.sellRate, usdQuoteUnit: usdRate?.quoteUnit, cashDailyRupiahTotal, eddCashDailyThresholdIdr: thresholds.eddCashDailyThresholdIdr, isCashPayment: input.paymentMethod === "CASH", profileStatus: customer.profileStatus, riskLevel: customer.riskLevel });
+  const { requiresReview, reviewReason } = assessReviewRequirement({ rupiahAmount, thresholdUsd: thresholds.reviewThresholdUsd, usdSellRate: usdBiReferenceRate?.sellRate, usdQuoteUnit: usdBiReferenceRate?.quoteUnit, cashDailyRupiahTotal, eddCashDailyThresholdIdr: thresholds.eddCashDailyThresholdIdr, isCashPayment: input.paymentMethod === "CASH", profileStatus: customer.profileStatus, riskLevel: customer.riskLevel });
   const number = transactionNumber();
 
   const created = await db.transaction(async (tx) => {
@@ -1654,10 +1660,14 @@ export async function suggestDenominationBreakdown(input: { currencyId: number; 
   const target = new Decimal(input.targetAmount);
   if (target.lte(0)) throw new Error("Jumlah target harus lebih besar dari nol.");
 
-  const stockRows = await db.select({ value: cashDenominationBalances.denominationValue, quantity: cashDenominationBalances.quantity })
+  const stockRowsRaw = await db.select({ value: cashDenominationBalances.denominationValue, quantity: cashDenominationBalances.quantity })
     .from(cashDenominationBalances)
     .where(and(eq(cashDenominationBalances.currencyId, input.currencyId), gt(cashDenominationBalances.quantity, 0)));
-  if (!stockRows.length) throw new Error(`Belum ada stok pecahan ${currency.code} yang tercatat untuk diisi otomatis.`);
+  if (!stockRowsRaw.length) throw new Error(`Belum ada stok pecahan ${currency.code} yang tercatat untuk diisi otomatis.`);
+  // Normalize "100000.000000" (raw decimal(24,6) column) down to "100000" — denomination values are
+  // always whole numbers, and the client's dropdown options are plain integer strings; a mismatch here
+  // means the UI's denomination Select can't find its selected option and renders as unset.
+  const stockRows = stockRowsRaw.map((row) => ({ value: new Decimal(row.value).toFixed(0), quantity: row.quantity }));
 
   const factor = new Decimal(10).pow(DENOMINATION_SUGGESTION_SCALE);
   const targetUnits = target.mul(factor);
@@ -1785,6 +1795,104 @@ export async function recordCashAdjustment(
     }
     await writeAudit({ actorUserId: actor.id, action: "CASH_ADJUSTMENT_RECORDED", entityType: "cash_balance", entityId: String(balance.id), beforeState: { availableAmount: before.toFixed(6) }, afterState: { availableAmount: after.toFixed(6), currency: currency.code }, reason: notes, metadata: { category: input.category, direction, amount: amount.toFixed(6), denominationCount: denominationRows.length } });
     return { balanceId: balance.id, currencyCode: currency.code, beforeAmount: before.toFixed(6), afterAmount: after.toFixed(6), direction, category: input.category };
+  });
+}
+
+/** Greedy, largest-first decomposition into curated real denominations — used only for the *receiving* side of a note exchange, where supply is effectively unlimited (a bank hands over whatever combination is requested), unlike suggestDenominationBreakdown which is bounded by what's actually in our own till. */
+function decomposeIntoCuratedDenominations(amount: Decimal, currencyCode: string, excludeValue?: string) {
+  const known = knownDenominationsFor(currencyCode);
+  if (!known) throw new Error(`Belum ada daftar pecahan baku untuk ${currencyCode}, tidak dapat menguraikan nilai tukar otomatis.`);
+  const candidates = known.filter((value) => String(value) !== excludeValue).sort((a, b) => b - a);
+  let remaining = amount;
+  const result: { value: string; quantity: number }[] = [];
+  for (const value of candidates) {
+    if (remaining.lte(0)) break;
+    const take = remaining.div(value).floor();
+    if (take.gt(0)) {
+      result.push({ value: String(value), quantity: take.toNumber() });
+      remaining = remaining.minus(take.mul(value));
+    }
+  }
+  if (!remaining.eq(0)) throw new Error(`Nilai ${amount.toFixed(0)} tidak dapat diuraikan tepat menjadi pecahan baku ${currencyCode}.`);
+  return result;
+}
+
+/**
+ * Proposes an equal-value note exchange (e.g. 1x100,000 -> 1x50,000+2x20,000+2x5,000) to close a
+ * shortfall that suggestDenominationBreakdown couldn't fill from current stock alone — this is the
+ * "auto-convert pecahan" the teller needs when the till's recorded composition is lopsided (e.g. all
+ * 100,000s from an ATM withdrawal) but the aggregate cash on hand is genuinely enough. Never invents
+ * value: the receiving side always sums to exactly what's given up. Purely a proposal — nothing is
+ * written until recordDenominationExchange is called with it (or an edited version of it).
+ */
+export async function suggestDenominationExchange(input: { currencyId: number; shortfallAmount: string }) {
+  const db = await databaseOrThrow();
+  const currency = (await db.select({ code: currencies.code }).from(currencies).where(eq(currencies.id, input.currencyId)).limit(1))[0];
+  if (!currency) throw new Error("Mata uang tidak ditemukan.");
+  const shortfall = new Decimal(input.shortfallAmount);
+  if (shortfall.lte(0)) throw new Error("Nilai kekurangan harus lebih besar dari nol.");
+
+  const stockRowsRaw = await db.select({ value: cashDenominationBalances.denominationValue, quantity: cashDenominationBalances.quantity })
+    .from(cashDenominationBalances)
+    .where(and(eq(cashDenominationBalances.currencyId, input.currencyId), gt(cashDenominationBalances.quantity, 0)));
+  const stockRows = stockRowsRaw
+    .map((row) => ({ value: new Decimal(row.value).toFixed(0), quantity: row.quantity }))
+    .sort((a, b) => new Decimal(a.value).minus(new Decimal(b.value)).toNumber());
+
+  const breakable = stockRows.find((row) => new Decimal(row.value).gte(shortfall));
+  if (!breakable) throw new Error(`Tidak ada pecahan ${currency.code} di stok yang cukup besar untuk ditukar guna menutupi kekurangan Rp ${shortfall.toFixed(0)}. Perlu penambahan modal atau penukaran pecahan dari luar.`);
+
+  const receive = decomposeIntoCuratedDenominations(new Decimal(breakable.value), currency.code, breakable.value);
+  return { currencyCode: currency.code, give: [{ value: breakable.value, quantity: 1 }], receive };
+}
+
+/**
+ * Records a real, equal-value note exchange — physically, a teller trading e.g. one 100,000 note for
+ * smaller ones (with a bank, or another till). Never changes cashBalances.availableAmount (the
+ * currency total is unchanged by definition, enforced by the equal-value check below); only the
+ * denomination composition moves. Kept as two separate ledger movements (one OUT, one IN) so it reads
+ * the same way in stock history as any other denomination-affecting event, rather than inventing a new
+ * mixed-direction shape.
+ */
+export async function recordDenominationExchange(
+  input: { currencyId: number; give: DenominationEntryInput[]; receive: DenominationEntryInput[]; notes?: string },
+  actor: { id: number; role: StaffRole },
+) {
+  const db = await databaseOrThrow();
+  const currency = (await db.select({ code: currencies.code }).from(currencies).where(and(eq(currencies.id, input.currencyId), eq(currencies.active, true))).limit(1))[0];
+  if (!currency) throw new Error("Mata uang aktif tidak ditemukan.");
+  if (!input.give?.length || !input.receive?.length) throw new Error("Sisi yang ditukar dan diterima wajib diisi.");
+
+  const giveTotal = input.give.reduce((sum, entry) => sum.plus(new Decimal(entry.value).mul(entry.quantity)), new Decimal(0));
+  const receiveTotal = input.receive.reduce((sum, entry) => sum.plus(new Decimal(entry.value).mul(entry.quantity)), new Decimal(0));
+  if (giveTotal.lte(0)) throw new Error("Nilai tukar harus lebih besar dari nol.");
+  if (!giveTotal.eq(receiveTotal)) throw new Error("Nilai pecahan yang diberikan dan diterima harus sama persis — pertukaran pecahan tidak boleh mengubah nilai total.");
+
+  const giveRows = reconcileDenominations(input.give, giveTotal, currency.code);
+  const receiveRows = reconcileDenominations(input.receive, receiveTotal, currency.code);
+  const autoReason = `Tukar pecahan ${currency.code}: ${input.give.map((e) => `${e.quantity}x${e.value}`).join("+")} -> ${input.receive.map((e) => `${e.quantity}x${e.value}`).join("+")}`;
+  const reason = (input.notes?.trim() || autoReason).slice(0, 255);
+
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT ${cashBalances.id} FROM ${cashBalances} WHERE ${cashBalances.currencyId} = ${input.currencyId} FOR UPDATE`);
+    const balance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, input.currencyId)).limit(1))[0];
+    if (!balance) throw new Error("Saldo kas belum ada. Catat kas awal terlebih dahulu.");
+
+    for (const row of giveRows) {
+      const stock = (await tx.select({ quantity: cashDenominationBalances.quantity }).from(cashDenominationBalances).where(and(eq(cashDenominationBalances.currencyId, input.currencyId), eq(cashDenominationBalances.denominationValue, row.denominationValue))).limit(1))[0];
+      if (!stock || stock.quantity < row.quantity) throw new Error(`Stok pecahan ${currency.code} ${row.denominationValue} tidak mencukupi untuk ditukar (tersedia ${stock?.quantity ?? 0}, dibutuhkan ${row.quantity}).`);
+    }
+
+    const [outMovement] = await tx.insert(cashBalanceMovements).values({ cashBalanceId: balance.id, direction: "OUT", amount: giveTotal.toFixed(6), reason, category: "DENOMINATION_EXCHANGE", createdByUserId: actor.id }).$returningId();
+    if (outMovement) await tx.insert(cashDenominationEntries).values(giveRows.map((row) => ({ ...row, cashBalanceMovementId: outMovement.id })));
+    const [inMovement] = await tx.insert(cashBalanceMovements).values({ cashBalanceId: balance.id, direction: "IN", amount: receiveTotal.toFixed(6), reason, category: "DENOMINATION_EXCHANGE", createdByUserId: actor.id }).$returningId();
+    if (inMovement) await tx.insert(cashDenominationEntries).values(receiveRows.map((row) => ({ ...row, cashBalanceMovementId: inMovement.id })));
+
+    await applyDenominationBalanceDelta(tx, input.currencyId, giveRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })), -1);
+    await applyDenominationBalanceDelta(tx, input.currencyId, receiveRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })), 1);
+
+    await writeAudit({ actorUserId: actor.id, action: "DENOMINATION_EXCHANGE_RECORDED", entityType: "cash_balance", entityId: String(balance.id), beforeState: { give: giveRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })) }, afterState: { receive: receiveRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })) }, reason, metadata: { currencyCode: currency.code, amount: giveTotal.toFixed(6) } });
+    return { currencyCode: currency.code, give: giveRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })), receive: receiveRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })) };
   });
 }
 
