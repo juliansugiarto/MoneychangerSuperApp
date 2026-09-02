@@ -1502,6 +1502,12 @@ export async function recordReviewAction(input: { transactionId: number; action:
   const transaction = (await db.select().from(exchangeTransactions).where(and(eq(exchangeTransactions.id, input.transactionId), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false))).limit(1))[0];
   if (!transaction || transaction.status !== "PENDING_REVIEW") throw new Error("Hanya transaksi PENDING_REVIEW yang dapat ditinjau.");
   if (transaction.isDemo || transaction.isHistorical) throw new Error("Transaksi demo atau historis tidak dapat diproses pada operasi live.");
+  // Maker-checker: whoever created (made) the transaction cannot also be the one who reviews
+  // (checks) it — this is the control the review step exists to enforce. Only SHAREHOLDER may
+  // bypass it, since they sit above the maker/checker chain and outrank every other role.
+  if (transaction.tellerUserId === actor.id && actor.role !== "SHAREHOLDER") {
+    throw new Error("Pembuat transaksi (maker) tidak dapat meninjau transaksinya sendiri (checker) — minta Supervisor lain untuk meninjau.");
+  }
   const reviewedAt = new Date();
   const next = input.action === "APPROVED"
     ? { status: "APPROVED" as const, reviewStatus: "REVIEWED" as const }

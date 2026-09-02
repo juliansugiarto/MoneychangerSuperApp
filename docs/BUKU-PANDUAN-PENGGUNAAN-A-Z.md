@@ -127,6 +127,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 ### 5.5 Review Transaksi Terflag — Admin/Controller/Shareholder
 
 1. Buka **Pusat Kendali Outlet** (halaman awal setelah login). Transaksi berstatus "PERLU REVIEW" muncul di kartu **Worklist**, lengkap dengan lencana **TKM** bila transaksi tersebut ditandai mencurigakan. Staff biasa hanya melihat lencana "Menunggu Supervisor" di baris ini — tombol tindakan hanya tampil untuk Admin ke atas.
+   - **Maker-checker**: pembuat (maker) sebuah transaksi tidak bisa menjadi peninjau (checker) transaksi itu sendiri, walau perannya Admin/Controller. Baris tersebut menampilkan lencana "Transaksi Anda sendiri" alih-alih tombol Tinjau, dan server menolak upaya review-nya juga (bukan hanya disembunyikan di UI). **Hanya Shareholder** yang boleh melewati aturan ini — mis. saat tidak ada peninjau lain yang tersedia.
 2. Klik **Tinjau** pada transaksi yang ingin diputuskan. Sebuah jendela terbuka menampilkan: nomor kwitansi, jenis transaksi, nama nasabah, nilai Rupiah, rincian tiap baris mata uang (nominal dan kurs), alasan transaksi masuk antrian review (termasuk alasan ambang underlying bila ada), dan — bila transaksi ditandai TKM — daftar indikator kecurigaan beserta keterangan tambahan yang dipilih staf saat transaksi dibuat.
 3. Isi **catatan keputusan** (wajib, minimal 3 karakter) yang menjelaskan pertimbangan Anda, lalu pilih salah satu tindakan:
    - **Setujui** — transaksi langsung diposting: kas dan stok pecahan terpotong/bertambah otomatis.
