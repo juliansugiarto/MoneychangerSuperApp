@@ -96,3 +96,26 @@ export function findBestNameMatch(queryName: string, candidateNames: string[]): 
   }
   return best;
 }
+
+export type WatchlistNameListEntry = { name: string; note: string | null };
+
+/**
+ * Parses a pasted plain-text watchlist name list — one entry per line, optionally
+ * "Nama Lengkap, catatan" (e.g. a reference/ID number copied alongside the name). Deliberately not
+ * an Excel/XML parser: PPATK's SIPENDAR portal watchlist export column layout isn't documented in a
+ * sample we've verified (unlike DTTOT/PPPSM, where the user supplied real files — see
+ * server/sanctionsWatchlistImport.ts), so rather than guess at a schema, staff copy the names
+ * straight out of whatever export PPATK gives them. The note is carried through for display only —
+ * it never affects the match score.
+ */
+export function parseWatchlistNameList(raw: string): WatchlistNameListEntry[] {
+  return raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [namePart, ...rest] = line.split(",");
+      return { name: namePart.trim(), note: rest.join(",").trim() || null };
+    })
+    .filter((entry) => entry.name.length >= 2);
+}

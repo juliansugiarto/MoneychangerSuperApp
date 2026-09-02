@@ -33,6 +33,7 @@ import {
   getGoAmlLtkmExport,
   searchSanctionsWatchlist,
   listSanctionsWatchlistSummary,
+  checkSipendarWatchlistNames,
   getSipesatExport,
   getRateComparisonDashboard,
   getReviewThreshold,
@@ -555,6 +556,8 @@ export const appRouter = router({
     // Search is Staff+ (Staff onboards customers and needs the screening aid); importing/replacing the master list is Controller+ (same gate as financial-snapshot import).
     search: staffProcedure.input(z.object({ query: z.string().trim().min(3).max(200) })).query(({ input }) => searchSanctionsWatchlist(input)),
     summary: staffProcedure.query(() => listSanctionsWatchlistSummary()),
+    // Bulk SIPENDAR watchlist paste — a mutation (not query) since pasted lists can be long and shouldn't ride in a URL query string.
+    checkSipendarNames: staffProcedure.input(z.object({ names: z.string().trim().min(1).max(50000) })).mutation(({ input }) => checkSipendarWatchlistNames(input)),
   }),
 
   // TODO: add feature routers here, e.g.

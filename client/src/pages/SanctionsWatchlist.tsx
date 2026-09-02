@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { AlertTriangle, FileSpreadsheet, Search, ShieldAlert, Upload } from "lucide-react";
+import { AlertTriangle, FileSpreadsheet, ScanSearch, Search, ShieldAlert, Upload } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -100,5 +101,37 @@ export default function SanctionsWatchlist() {
         </div> : <p className="rounded-xl bg-[#f5f8fc] px-3 py-2.5 text-xs text-[#718297]"><Upload className="mr-1 inline size-3.5" />Hanya Controller atau Shareholder yang dapat mengimpor/memperbarui daftar.</p>}
       </CardContent>
     </Card>
+
+    <SipendarBulkCheckCard />
   </section>;
+}
+
+function SipendarBulkCheckCard() {
+  const [namesInput, setNamesInput] = useState("");
+  const checkNames = trpc.sanctionsWatchlist.checkSipendarNames.useMutation({ onError: (error) => toast.error(error.message) });
+
+  const runCheck = () => {
+    if (!namesInput.trim()) return toast.error("Tempelkan minimal satu nama watchlist SIPENDAR.");
+    checkNames.mutate({ names: namesInput });
+  };
+
+  return <Card className="border-[#dce6f0]">
+    <CardHeader><div className="flex gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700"><ScanSearch className="size-5" /></span><div><CardTitle className="font-display text-xl text-[#18395f]">Pemadanan Massal Watchlist SIPENDAR</CardTitle><CardDescription>Watchlist SIPENDAR (Peraturan PPATK No. 11 Tahun 2021) diunduh dari portal SIPENDAR sebagai Excel/XML setelah login VPN — bukan berkas yang bisa diimpor otomatis di sini. PPATK mewajibkan PJK memadankan <strong>setiap nama pada watchlist</strong> terhadap <strong>seluruh basis data nasabah</strong>, dengan ambang kemiripan diserahkan pada penilaian PJK sendiri. Tempelkan nama-nama dari berkas watchlist yang diunduh (satu nama per baris, boleh tambahkan catatan setelah koma, mis. nomor identitas) untuk dicocokkan otomatis terhadap nasabah aktif.</CardDescription></div></div></CardHeader>
+    <CardContent className="space-y-4">
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-900">Menemukan kecocokan di sini <strong>bukan berarti wajib memblokir nasabah atau melapor LTKM secara otomatis</strong> (Pasal 19 Peraturan PPATK No. 11 Tahun 2021) — petugas tetap menilai setiap kandidat secara manual. Bila memang cocok dan berlanjut, proses "pengayaan" tetap dilakukan langsung di portal SIPENDAR milik PPATK; aplikasi ini tidak mengirim data apa pun ke SIPENDAR.</div>
+      <Textarea className="min-h-32 bg-white font-mono text-xs leading-5" placeholder={"Queen Eva Mulyani\nBudi Santoso, KTP 3174000000000001\n..."} value={namesInput} onChange={(event) => setNamesInput(event.target.value)} />
+      <Button type="button" disabled={checkNames.isPending} onClick={runCheck} className="bg-[#183f70] text-white hover:bg-[#12345d]"><ScanSearch className="mr-2 size-4" />{checkNames.isPending ? "Mencocokkan…" : "Cocokkan dengan nasabah"}</Button>
+      {checkNames.data ? <div className="space-y-3">
+        {checkNames.data.map((result) => <div key={result.watchlistName} className="rounded-xl border border-[#e0e8f1] bg-white p-4">
+          <div className="flex flex-wrap items-center gap-2"><p className="font-bold text-[#294866]">{result.watchlistName}</p>{result.note ? <Badge variant="outline">{result.note}</Badge> : null}</div>
+          {result.matches.length ? <div className="mt-3 space-y-2">
+            {result.matches.map((match) => <div key={match.customerId} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-rose-50 px-3 py-2 text-xs">
+              <span><span className="font-bold text-[#294866]">{match.fullName}</span> — CIF {match.cifNumber} · {match.identityType} {match.identityNumber}</span>
+              <Badge className="bg-rose-600 text-white hover:bg-rose-600">Skor {(match.score * 100).toFixed(0)}%</Badge>
+            </div>)}
+          </div> : <p className="mt-2 text-xs text-emerald-700">Tidak ada nasabah aktif yang cukup mirip.</p>}
+        </div>)}
+      </div> : null}
+    </CardContent>
+  </Card>;
 }

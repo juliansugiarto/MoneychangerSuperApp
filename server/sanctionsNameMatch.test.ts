@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findBestNameMatch, nameTokens, normalizeNameForMatching, scoreNameMatch, splitAliasNames } from "../shared/sanctionsNameMatch";
+import { findBestNameMatch, nameTokens, normalizeNameForMatching, parseWatchlistNameList, scoreNameMatch, splitAliasNames } from "../shared/sanctionsNameMatch";
 
 describe("normalizeNameForMatching / nameTokens", () => {
   it("uppercases, strips punctuation and diacritics, and collapses whitespace", () => {
@@ -73,5 +73,24 @@ describe("findBestNameMatch", () => {
 
   it("skips blank candidate strings without throwing", () => {
     expect(findBestNameMatch("Budi Santoso", ["", "  ", "Budi Santoso"])?.score).toBe(1);
+  });
+});
+
+describe("parseWatchlistNameList", () => {
+  it("parses one name per line, trimming whitespace and skipping blank lines", () => {
+    expect(parseWatchlistNameList("Budi Santoso\n\n  Siti Rahayu  \n")).toEqual([
+      { name: "Budi Santoso", note: null },
+      { name: "Siti Rahayu", note: null },
+    ]);
+  });
+
+  it("splits an optional trailing note after the first comma, preserving commas within the note itself", () => {
+    expect(parseWatchlistNameList("Budi Santoso, KTP 12345, catatan tambahan")).toEqual([
+      { name: "Budi Santoso", note: "KTP 12345, catatan tambahan" },
+    ]);
+  });
+
+  it("drops entries whose name is shorter than 2 characters", () => {
+    expect(parseWatchlistNameList("A\nBudi Santoso")).toEqual([{ name: "Budi Santoso", note: null }]);
   });
 });

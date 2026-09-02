@@ -45,7 +45,7 @@ import { buildSipesatCsv, buildSipesatInitialFileName, buildSipesatTriwulanFileN
 import { buildGoAmlLtktReportXml, buildGoAmlLtkmReportXml, type GoAmlCustomer, type GoAmlLtktLine, type GoAmlLtkmLine } from "../shared/goAmlExport";
 import { isKnownGoAmlReportIndicator } from "../shared/goAmlReportIndicators";
 import { decodeSanctionsWatchlistUpload, parseSanctionsWatchlistWorkbook, cleanSanctionsWatchlistFileName } from "./sanctionsWatchlistImport";
-import { findBestNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
+import { findBestNameMatch, parseWatchlistNameList, scoreNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
 
 /** Rejects a denomination value that doesn't match a real banknote/coin for this currency (when we have a curated list — see shared/currencyDenominations.ts). Never trust the client alone here: this is exactly the check that stops a typo like "IDR 131250000 × 1 lembar" from being recorded as if it were a real note. */
 function assertKnownDenomination(value: Decimal, currencyCode: string | undefined, label: string) {
@@ -2156,6 +2156,50 @@ export async function searchSanctionsWatchlist(input: { query: string }): Promis
     }
     results.sort((a, b) => b.score - a.score);
     return results.slice(0, 25);
+  });
+}
+
+const MAX_SIPENDAR_WATCHLIST_NAMES = 500;
+
+export type SipendarWatchlistNameMatch = { customerId: number; cifNumber: string; fullName: string; identityType: "KTP" | "PASSPORT" | "OTHER"; identityNumber: string; score: number };
+export type SipendarWatchlistNameCheckResult = { watchlistName: string; note: string | null; matches: SipendarWatchlistNameMatch[] };
+
+/**
+ * Bulk screening aid for SIPENDAR watchlist "pemadanan data" (Peraturan PPATK No. 11 Tahun 2021,
+ * §C6-C9 of the FAQ): PPATK expects the PJK to check every watchlist record against its *entire*
+ * customer base itself, with the similarity threshold left to the PJK's own judgment — there is no
+ * fixed PPATK-mandated cutoff. This reuses the same fuzzy-matching engine as DTTOT/PPPSM screening,
+ * but runs in the opposite direction (many watchlist names against many customers) and never
+ * persists the pasted watchlist — SIPENDAR's own portal watchlist export column layout isn't
+ * something we've verified against a real sample (unlike DTTOT/PPPSM, where the user supplied real
+ * files), so this deliberately stays a plain-text paste rather than an XLSX/XML importer that would
+ * have to guess at an unconfirmed schema.
+ *
+ * A match here is only ever a screening candidate: per FAQ C14 (Pasal 19 Peraturan PPATK No. 11
+ * Tahun 2021), finding a name on the watchlist does NOT by itself require blocking the customer or
+ * filing an LTKM — the actual SIPENDAR "pengayaan" (enrichment) submission happens in PPATK's own
+ * portal, which this app never touches.
+ */
+export async function checkSipendarWatchlistNames(input: { names: string }): Promise<SipendarWatchlistNameCheckResult[]> {
+  const entries = parseWatchlistNameList(input.names);
+  if (!entries.length) throw new Error("Masukkan minimal satu nama watchlist untuk dicocokkan (satu nama per baris).");
+  if (entries.length > MAX_SIPENDAR_WATCHLIST_NAMES) throw new Error(`Maksimal ${MAX_SIPENDAR_WATCHLIST_NAMES} nama per pemeriksaan — pisahkan menjadi beberapa batch.`);
+
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const liveCustomers = await db.select({
+      id: customers.id, cifNumber: customers.cifNumber, fullName: customers.fullName, identityType: customers.identityType, identityNumber: customers.identityNumber,
+    }).from(customers).where(and(eq(customers.isDemo, false), eq(customers.isHistorical, false)));
+
+    return entries.map((entry) => {
+      const matches = liveCustomers
+        .map((customer) => ({ customer, score: scoreNameMatch(entry.name, customer.fullName) }))
+        .filter(({ score }) => score >= MATCH_THRESHOLD)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10)
+        .map(({ customer, score }): SipendarWatchlistNameMatch => ({ customerId: customer.id, cifNumber: customer.cifNumber, fullName: customer.fullName, identityType: customer.identityType, identityNumber: customer.identityNumber, score }));
+      return { watchlistName: entry.name, note: entry.note, matches };
+    });
   });
 }
 

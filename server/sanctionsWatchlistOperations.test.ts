@@ -1,7 +1,7 @@
 import * as XLSX from "xlsx";
 import { describe, expect, it, vi } from "vitest";
 import * as db from "./db";
-import { importSanctionsWatchlist, listSanctionsWatchlistSummary, searchSanctionsWatchlist } from "./operations";
+import { checkSipendarWatchlistNames, importSanctionsWatchlist, listSanctionsWatchlistSummary, searchSanctionsWatchlist } from "./operations";
 
 function makeReader(rows: unknown[]): Record<string, unknown> & PromiseLike<unknown[]> {
   return {
@@ -117,5 +117,48 @@ describe("searchSanctionsWatchlist", () => {
     const results = await searchSanctionsWatchlist({ query: "Ahmad Yusuf" });
     getDb.mockRestore();
     expect(results.map((r) => r.id)).toEqual([2, 1]);
+  });
+});
+
+describe("checkSipendarWatchlistNames", () => {
+  const liveCustomers = [
+    { id: 1, cifNumber: "CIF-0001", fullName: "Budi Santoso", identityType: "KTP" as const, identityNumber: "3174000000000001" },
+    { id: 2, cifNumber: "CIF-0002", fullName: "Siti Rahayu", identityType: "KTP" as const, identityNumber: "3174000000000002" },
+  ];
+
+  function mockCustomersDb() {
+    const fakeDb = { select: vi.fn(() => makeReader(liveCustomers)) };
+    return vi.spyOn(db, "getDb").mockResolvedValue(fakeDb as never);
+  }
+
+  it("rejects an empty name list before touching the database", async () => {
+    await expect(checkSipendarWatchlistNames({ names: "   \n  " })).rejects.toThrow(/minimal satu nama/);
+  });
+
+  it("rejects more than the maximum names per batch", async () => {
+    const names = Array.from({ length: 501 }, (_, i) => `Nama Uji ${i}`).join("\n");
+    await expect(checkSipendarWatchlistNames({ names })).rejects.toThrow(/Maksimal 500/);
+  });
+
+  it("returns one result per pasted watchlist name, each with its scored customer candidates", async () => {
+    const getDb = mockCustomersDb();
+    const results = await checkSipendarWatchlistNames({ names: "Budi Santoso, KTP 3174000000000001\nNama Tidak Dikenal Sama Sekali" });
+    getDb.mockRestore();
+    expect(results).toHaveLength(2);
+    expect(results[0].watchlistName).toBe("Budi Santoso");
+    expect(results[0].note).toBe("KTP 3174000000000001");
+    expect(results[0].matches).toHaveLength(1);
+    expect(results[0].matches[0].cifNumber).toBe("CIF-0001");
+    expect(results[0].matches[0].score).toBe(1);
+    expect(results[1].watchlistName).toBe("Nama Tidak Dikenal Sama Sekali");
+    expect(results[1].matches).toEqual([]);
+  });
+
+  it("caps candidates per watchlist name at 10, sorted by descending score", async () => {
+    const manyCustomers = Array.from({ length: 15 }, (_, i) => ({ id: i + 1, cifNumber: `CIF-${i}`, fullName: "Ahmad Yusuf", identityType: "KTP" as const, identityNumber: `NIK-${i}` }));
+    const getDb = vi.spyOn(db, "getDb").mockResolvedValue({ select: vi.fn(() => makeReader(manyCustomers)) } as never);
+    const results = await checkSipendarWatchlistNames({ names: "Ahmad Yusuf" });
+    getDb.mockRestore();
+    expect(results[0].matches).toHaveLength(10);
   });
 });
