@@ -1,10 +1,16 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { sumIdrDecimals } from "@/lib/money";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { formatPlainAmount, sumIdrDecimals } from "@/lib/money";
 import { trpc } from "@/lib/trpc";
-import { ArrowRight, CheckCircle2, CircleAlert, ClipboardList, Landmark, RefreshCw, ShieldCheck, UserPlus, UsersRound, WalletCards } from "lucide-react";
+import { SUSPICIOUS_TRANSACTION_INDICATOR_CATEGORIES } from "@shared/suspiciousTransactionIndicators";
+import { ArrowRight, CheckCircle2, CircleAlert, ClipboardList, Landmark, RefreshCw, ShieldCheck, TriangleAlert, UserPlus, UsersRound, WalletCards } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
+
+const suspiciousIndicatorLabel = (code: string) => SUSPICIOUS_TRANSACTION_INDICATOR_CATEGORIES.flatMap((category) => category.indicators).find((indicator) => indicator.code === code)?.label ?? code;
 
 function goTo(path: string) {
   window.history.pushState({}, "", path);
@@ -15,6 +21,8 @@ export default function OperationsDashboard() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
   const { data, isLoading, refetch } = trpc.dashboard.overview.useQuery(undefined, { enabled: Boolean(user) });
+  const canReview = user?.role === "ADMIN" || user?.role === "CONTROLLER" || user?.role === "SHAREHOLDER";
+  const { data: transactionsList } = trpc.transactions.list.useQuery(undefined, { enabled: Boolean(user) && canReview });
   const complete = trpc.transactions.complete.useMutation({
     onSuccess: () => {
       toast.success("Transaksi selesai dan saldo kas diperbarui secara atomik.");
@@ -23,6 +31,25 @@ export default function OperationsDashboard() {
     },
     onError: (error) => toast.error(error.message),
   });
+  const [reviewingId, setReviewingId] = useState<number | null>(null);
+  const [reviewNotes, setReviewNotes] = useState("");
+  const review = trpc.transactions.review.useMutation({
+    onSuccess: (_, variables) => {
+      toast.success(variables.action === "APPROVED" ? "Transaksi disetujui — kas dan stok langsung terposting." : variables.action === "RETURNED" ? "Transaksi dikembalikan ke teller." : "Transaksi dieskalasi.");
+      setReviewingId(null); setReviewNotes("");
+      utils.dashboard.overview.invalidate();
+      utils.transactions.list.invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const reviewingRow = transactionsList?.find((row) => row.transaction.id === reviewingId);
+  const reviewingTransaction = data?.pendingReview.find((transaction) => transaction.id === reviewingId) ?? reviewingRow?.transaction;
+  const reviewingLines = reviewingRow?.lines;
+  const submitReview = (action: "APPROVED" | "RETURNED" | "ESCALATED") => {
+    if (!reviewingId) return;
+    if (reviewNotes.trim().length < 3) return toast.error("Catatan keputusan wajib diisi (minimal 3 karakter).");
+    review.mutate({ transactionId: reviewingId, action, notes: reviewNotes.trim() });
+  };
 
   const today = data?.todayTransactions ?? [];
   const approved = today.filter(({ transaction }) => transaction.status === "APPROVED");
@@ -61,11 +88,64 @@ export default function OperationsDashboard() {
 
     <section className="mt-6 grid gap-6 xl:grid-cols-[1.36fr_0.64fr]">
       <article className="overflow-hidden rounded-[1.25rem] border border-[#dce2ec] bg-white shadow-[0_10px_32px_rgba(30,50,87,0.05)]"><div className="flex items-start justify-between gap-4 border-b border-[#e8edf4] px-5 py-5"><div><p className="text-[11px] font-bold tracking-[0.14em] text-[#6f819c] uppercase">Worklist</p><h2 className="mt-1 font-display text-lg text-[#293b58]">Antrian yang perlu tindakan</h2><p className="mt-1 text-xs leading-5 text-[#728198]">Transaksi terflag perlu direview; transaksi approved siap dicatat sebagai selesai.</p></div><Badge className="bg-[#eef2fb] text-[#526681] hover:bg-[#eef2fb]">{queueCount} item</Badge></div>
-        <div className="divide-y divide-[#edf0f5]">{isLoading ? <WorklistSkeleton /> : null}{!isLoading && data?.pendingReview.map((transaction) => <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between" key={transaction.id}><div><div className="flex items-center gap-2"><p className="font-semibold text-[#2b3e5c]">{transaction.transactionNumber}</p><Badge className="status-pending">PERLU REVIEW</Badge></div><p className="mt-1 text-xs text-[#728198]">{transaction.operation} · Rp {String(transaction.rupiahAmount)} · {transaction.reviewReason ?? "Memerlukan pemeriksaan"}</p></div><button onClick={() => goTo("/operasional/monitoring")} className="press-scale inline-flex w-fit items-center gap-2 rounded-xl border border-[#cbd6ed] bg-white px-3 py-2 text-xs font-bold text-[#405dbc] hover:bg-[#f2f5ff]">Tinjau <ArrowRight className="size-3.5" /></button></div>)}{!isLoading && approved.map(({ transaction, customer }) => <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between" key={transaction.id}><div><div className="flex items-center gap-2"><p className="font-semibold text-[#2b3e5c]">{transaction.transactionNumber}</p><Badge className="status-approved">SIAP SELESAI</Badge></div><p className="mt-1 text-xs text-[#728198]">{customer.fullName} · {transaction.operation === "BUY" ? "Beli" : "Jual"} · Rp {String(transaction.rupiahAmount)}</p></div><Button size="sm" disabled={complete.isPending} onClick={() => complete.mutate({ transactionId: transaction.id })} className="press-scale w-fit bg-[#2d4774] text-white hover:bg-[#22395e]"><CheckCircle2 className="mr-1.5 size-4" />Catat selesai</Button></div>)}{!isLoading && !data?.pendingReview.length && !approved.length ? <div className="px-5 py-14 text-center"><span className="mx-auto flex size-11 items-center justify-center rounded-2xl bg-[#eef6ed] text-[#5e9c59]"><CheckCircle2 className="size-5" /></span><p className="mt-4 font-semibold text-[#3a4d69]">Tidak ada antrian yang perlu ditindaklanjuti.</p><p className="mt-1 text-sm text-[#78869b]">Transaksi yang membutuhkan review atau penyelesaian akan muncul di sini.</p></div> : null}</div>
+        <div className="divide-y divide-[#edf0f5]">{isLoading ? <WorklistSkeleton /> : null}{!isLoading && data?.pendingReview.map((transaction) => <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between" key={transaction.id}><div><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-[#2b3e5c]">{transaction.transactionNumber}</p><Badge className="status-pending">PERLU REVIEW</Badge>{transaction.isSuspiciousTransaction ? <Badge className="bg-rose-700 text-white hover:bg-rose-700">TKM</Badge> : null}</div><p className="mt-1 text-xs text-[#728198]">{transaction.operation === "BUY" ? "Beli" : "Jual"} · Rp {formatPlainAmount(String(transaction.rupiahAmount))} · {transaction.reviewReason ?? "Memerlukan pemeriksaan"}</p></div>{canReview ? <button onClick={() => setReviewingId(transaction.id)} className="press-scale inline-flex w-fit items-center gap-2 rounded-xl border border-[#cbd6ed] bg-white px-3 py-2 text-xs font-bold text-[#405dbc] hover:bg-[#f2f5ff]">Tinjau <ArrowRight className="size-3.5" /></button> : <Badge variant="outline" className="w-fit border-[#cbd6ed] text-[#728198]">Menunggu Supervisor</Badge>}</div>)}{!isLoading && approved.map(({ transaction, customer }) => <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between" key={transaction.id}><div><div className="flex items-center gap-2"><p className="font-semibold text-[#2b3e5c]">{transaction.transactionNumber}</p><Badge className="status-approved">SIAP SELESAI</Badge></div><p className="mt-1 text-xs text-[#728198]">{customer.fullName} · {transaction.operation === "BUY" ? "Beli" : "Jual"} · Rp {String(transaction.rupiahAmount)}</p></div><Button size="sm" disabled={complete.isPending} onClick={() => complete.mutate({ transactionId: transaction.id })} className="press-scale w-fit bg-[#2d4774] text-white hover:bg-[#22395e]"><CheckCircle2 className="mr-1.5 size-4" />Catat selesai</Button></div>)}{!isLoading && !data?.pendingReview.length && !approved.length ? <div className="px-5 py-14 text-center"><span className="mx-auto flex size-11 items-center justify-center rounded-2xl bg-[#eef6ed] text-[#5e9c59]"><CheckCircle2 className="size-5" /></span><p className="mt-4 font-semibold text-[#3a4d69]">Tidak ada antrian yang perlu ditindaklanjuti.</p><p className="mt-1 text-sm text-[#78869b]">Transaksi yang membutuhkan review atau penyelesaian akan muncul di sini.</p></div> : null}</div>
       </article>
 
       <div className="grid gap-6"><article className="rounded-[1.25rem] border border-[#dce2ec] bg-white p-5 shadow-[0_10px_32px_rgba(30,50,87,0.05)]"><div className="flex items-center justify-between"><div><p className="text-[11px] font-bold tracking-[0.14em] text-[#6f819c] uppercase">Kesiapan outlet</p><h2 className="mt-1 font-display text-lg text-[#293b58]">Kontrol utama</h2></div><button onClick={() => goTo("/operasional/stock")} className="text-xs font-bold text-[#5570cf] hover:text-[#304eae]">Kelola</button></div><div className="mt-5 space-y-3"><ControlStatus label="Saldo kas" detail={data?.cashBalances.length ? `${data.cashBalances.length} mata uang tercatat.` : "Belum ada saldo kas tercatat."} ok={Boolean(data?.cashBalances.length)} /><ControlStatus label="Stock opname" detail={data?.variances.length ? `${data.variances.length} variance perlu rekonsiliasi.` : "Tidak ada variance aktif."} ok={!data?.variances.length} /><ControlStatus label="Review transaksi" detail={data?.pendingReview.length ? `${data.pendingReview.length} transaksi perlu keputusan.` : "Tidak ada transaksi tertunda."} ok={!data?.pendingReview.length} /></div></article><article className="rounded-[1.25rem] border border-[#dce2ec] bg-white p-5 shadow-[0_10px_32px_rgba(30,50,87,0.05)]"><p className="text-[11px] font-bold tracking-[0.14em] text-[#6f819c] uppercase">Saldo kas tercatat</p><div className="mt-4 space-y-2">{data?.cashBalances.length ? data.cashBalances.slice(0, 5).map(({ balance, currency }) => <div className="flex items-center justify-between rounded-xl bg-[#f7f9fc] px-3 py-2.5 text-sm" key={balance.id}><span className="font-semibold text-[#344965]">{currency.code}</span><span className="table-number text-[#607087]">{String(balance.availableAmount)}</span></div>) : <p className="rounded-xl bg-[#f7f9fc] px-3 py-4 text-sm text-[#76859a]">Belum ada saldo kas yang tercatat.</p>}</div></article></div>
     </section>
+
+    <Dialog open={Boolean(reviewingId)} onOpenChange={(open) => { if (!open) { setReviewingId(null); setReviewNotes(""); } }}>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-[#18395f]">Review transaksi {reviewingTransaction?.transactionNumber}</DialogTitle>
+          <DialogDescription>Periksa detail transaksi ini sebelum memutuskan. Keputusan akan langsung memposting kas &amp; stok (jika disetujui) atau mengembalikannya ke teller.</DialogDescription>
+        </DialogHeader>
+
+        {reviewingTransaction ? <div className="space-y-4 text-sm">
+          <div className="grid grid-cols-2 gap-3 rounded-xl bg-[#f7f9fc] p-4">
+            <div><p className="text-[11px] font-bold uppercase tracking-wide text-[#8190a4]">No. kwitansi</p><p className="mt-1 font-semibold text-[#2b3e5c]">{reviewingTransaction.receiptNumber ?? reviewingTransaction.transactionNumber}</p></div>
+            <div><p className="text-[11px] font-bold uppercase tracking-wide text-[#8190a4]">Jenis</p><p className="mt-1 font-semibold text-[#2b3e5c]">{reviewingTransaction.operation === "BUY" ? "Transaksi beli" : "Transaksi jual"}</p></div>
+            <div><p className="text-[11px] font-bold uppercase tracking-wide text-[#8190a4]">Nasabah</p><p className="mt-1 font-semibold text-[#2b3e5c]">{reviewingRow?.customer.fullName ?? "—"}</p></div>
+            <div><p className="text-[11px] font-bold uppercase tracking-wide text-[#8190a4]">Nilai Rupiah</p><p className="mt-1 font-semibold text-[#2b3e5c]">Rp {formatPlainAmount(String(reviewingTransaction.rupiahAmount))}</p></div>
+          </div>
+
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-[#8190a4]">Baris mata uang</p>
+            <div className="mt-2 space-y-1.5">
+              {reviewingLines?.length ? reviewingLines.map(({ line, currency }) => <div key={line.id} className="flex items-center justify-between rounded-lg bg-[#f7f9fc] px-3 py-2"><span className="font-semibold text-[#344965]">{currency.code}</span><span className="table-number text-[#607087]">{String(line.foreignAmount)} @ {String(line.agreedRate)}</span></div>) : <p className="text-xs text-[#8190a4]">Memuat rincian baris…</p>}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-amber-800">Alasan masuk antrian review</p>
+            <p className="mt-1 text-sm text-amber-900">{reviewingTransaction.reviewReason ?? "Memerlukan pemeriksaan"}</p>
+            {reviewingTransaction.thresholdReason ? <p className="mt-2 text-sm text-amber-900"><span className="font-semibold">Alasan ambang underlying:</span> {reviewingTransaction.thresholdReason}</p> : null}
+          </div>
+
+          {reviewingTransaction.isSuspiciousTransaction ? <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
+            <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-rose-800"><TriangleAlert className="size-3.5" />Ditandai Transaksi Keuangan Mencurigakan (TKM)</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-rose-900">
+              {(reviewingTransaction.suspiciousIndicators ?? []).map((code) => <li key={code}>{suspiciousIndicatorLabel(code)}</li>)}
+            </ul>
+            {reviewingTransaction.suspiciousNotes ? <p className="mt-2 text-sm text-rose-900"><span className="font-semibold">Keterangan:</span> {reviewingTransaction.suspiciousNotes}</p> : null}
+            <p className="mt-2 text-xs italic text-rose-700">Data ini bersifat internal — jangan diberitahukan kepada nasabah (larangan tipping-off).</p>
+          </div> : null}
+
+          <div>
+            <label className="text-[11px] font-bold uppercase tracking-wide text-[#8190a4]">Catatan keputusan (wajib)</label>
+            <Textarea value={reviewNotes} onChange={(event) => setReviewNotes(event.target.value)} placeholder="Tuliskan alasan keputusan Anda…" className="mt-1.5" rows={3} />
+          </div>
+        </div> : <p className="text-sm text-[#8190a4]">Transaksi tidak ditemukan atau sudah diproses.</p>}
+
+        <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
+          <Button variant="ghost" disabled={review.isPending} onClick={() => submitReview("ESCALATED")} className="text-amber-700 hover:bg-amber-50 hover:text-amber-800">Eskalasi</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" disabled={review.isPending} onClick={() => submitReview("RETURNED")} className="border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800">Kembalikan ke teller</Button>
+            <Button disabled={review.isPending} onClick={() => submitReview("APPROVED")} className="bg-[#2d4774] text-white hover:bg-[#22395e]">Setujui</Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>;
 }
 

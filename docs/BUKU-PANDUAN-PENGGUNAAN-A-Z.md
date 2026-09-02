@@ -124,12 +124,16 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 12. Buka **Daftar Transaksi** untuk melihat riwayat per jenis (tab Semua/Jual/Beli). Begitu bon disetujui (baik otomatis untuk bon berisiko rendah maupun oleh Supervisor untuk bon yang di-flag), kas dan stok pecahan **langsung terposting** — tidak perlu langkah konfirmasi tambahan. Tombol **Selesaikan** hanya muncul bila sebuah bon tertahan di status "Disetujui" (mis. stok sempat kurang saat posting otomatis) dan perlu diposting ulang secara manual. Cetak kwitansi (mengikuti format kertas resmi PT Ibukota Valasindo, termasuk teks aturan wajib di bagian bawah), cetak ulang, atau **Ekspor CSV** detail bon per jenis transaksi juga tersedia di halaman ini.
 13. Jangan memasukkan transaksi latihan di halaman ini. Gunakan **Simulasi Aman** untuk berlatih.
 
-### 5.5 Review Transaksi Terflag — Admin/Supervisor
+### 5.5 Review Transaksi Terflag — Admin/Controller/Shareholder
 
-1. Buka ringkasan atau monitoring untuk melihat antrian review.
-2. Tinjau alasan flag, data nasabah, nilai, kurs, dan informasi pendukung sesuai kebijakan internal.
-3. Setujui atau tindak lanjuti hanya bila bukti memadai. Bila perlu koreksi, gunakan jalur pengembalian atau pembatalan yang disediakan sebelum transaksi selesai.
-4. Jangan menghapus jejak agar transaksi tampak bersih. Keputusan dan perubahan harus dapat ditelusuri.
+1. Buka **Pusat Kendali Outlet** (halaman awal setelah login). Transaksi berstatus "PERLU REVIEW" muncul di kartu **Worklist**, lengkap dengan lencana **TKM** bila transaksi tersebut ditandai mencurigakan. Staff biasa hanya melihat lencana "Menunggu Supervisor" di baris ini — tombol tindakan hanya tampil untuk Admin ke atas.
+2. Klik **Tinjau** pada transaksi yang ingin diputuskan. Sebuah jendela terbuka menampilkan: nomor kwitansi, jenis transaksi, nama nasabah, nilai Rupiah, rincian tiap baris mata uang (nominal dan kurs), alasan transaksi masuk antrian review (termasuk alasan ambang underlying bila ada), dan — bila transaksi ditandai TKM — daftar indikator kecurigaan beserta keterangan tambahan yang dipilih staf saat transaksi dibuat.
+3. Isi **catatan keputusan** (wajib, minimal 3 karakter) yang menjelaskan pertimbangan Anda, lalu pilih salah satu tindakan:
+   - **Setujui** — transaksi langsung diposting: kas dan stok pecahan terpotong/bertambah otomatis.
+   - **Kembalikan ke teller** — transaksi dikirim balik ke status yang bisa diperbaiki dan dikirim ulang oleh staf.
+   - **Eskalasi** — menandai transaksi perlu perhatian lebih lanjut (mis. ke Direktur/Shareholder) tanpa memposting maupun mengembalikannya.
+4. Data indikator TKM dan keterangannya bersifat **internal** — tidak pernah tercetak di kwitansi maupun ikut ke ekspor CSV (larangan tipping-off ke nasabah tetap berlaku).
+5. Jangan menghapus jejak agar transaksi tampak bersih. Setiap keputusan review (siapa, kapan, catatan, tindakan) tercatat dan dapat ditelusuri.
 
 ### 5.6 Kas, Persediaan, dan Stock Opname — Staff dan Supervisor
 
