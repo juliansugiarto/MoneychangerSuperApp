@@ -151,10 +151,12 @@ function NavParent({ label, childItems, currentPath }: { label: string; childIte
   const [open, setOpen] = useState(holdsCurrentPage);
   const Icon = parentIcons[label] ?? LayoutDashboard;
 
-  return <Collapsible open={open || holdsCurrentPage} onOpenChange={setOpen} asChild>
+  return <Collapsible open={open || holdsCurrentPage} onOpenChange={setOpen} className="group/collapsible" asChild>
     <SidebarMenuItem>
       <CollapsibleTrigger asChild>
-        <SidebarMenuButton tooltip={label} className={leafClasses}>
+        {/* Marked active while it holds the current page so the collapsed icon rail — where the
+            active child is not rendered at all — still shows the user where they are. */}
+        <SidebarMenuButton isActive={holdsCurrentPage} tooltip={label} className={leafClasses}>
           <Icon className="size-[18px]" />
           <span className="text-[14px] font-medium">{label}</span>
           <ChevronRight className="ml-auto size-4 transition-transform duration-200 motion-reduce:transition-none group-data-[state=open]/collapsible:rotate-90" />
