@@ -132,6 +132,14 @@ export default function DashboardLayout({ children, minimumRole = "STAFF" }: { c
 
 const leafClasses = "h-11 rounded-xl px-3 text-[#cdd9ec] transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:ring-2 focus-visible:ring-[#d7ec75] focus-visible:ring-offset-0 data-[active=true]:bg-[#d7ec75] data-[active=true]:font-bold data-[active=true]:text-[#162642] data-[active=true]:shadow-sm";
 
+/**
+ * Expanded, the active child already carries the lime pill, so a second one on the parent would
+ * mark one location twice; the parent gets a quiet tint instead. Collapsed to icons the child is
+ * not rendered at all, so there the parent takes the full pill and becomes the only "you are here".
+ */
+const parentClasses = `${leafClasses} data-[active=true]:bg-white/[0.10] data-[active=true]:font-semibold data-[active=true]:text-white data-[active=true]:shadow-none group-data-[collapsible=icon]:data-[active=true]:bg-[#d7ec75] group-data-[collapsible=icon]:data-[active=true]:text-[#162642]`;
+
+
 function NavLeaf({ label, path, currentPath }: { label: string; path: string; currentPath: string }) {
   const Icon = iconFor(path);
   const isActive = currentPath === path;
@@ -156,7 +164,7 @@ function NavParent({ label, childItems, currentPath }: { label: string; childIte
       <CollapsibleTrigger asChild>
         {/* Marked active while it holds the current page so the collapsed icon rail — where the
             active child is not rendered at all — still shows the user where they are. */}
-        <SidebarMenuButton isActive={holdsCurrentPage} tooltip={label} className={leafClasses}>
+        <SidebarMenuButton isActive={holdsCurrentPage} tooltip={label} className={parentClasses}>
           <Icon className="size-[18px]" />
           <span className="text-[14px] font-medium">{label}</span>
           <ChevronRight className="ml-auto size-4 transition-transform duration-200 motion-reduce:transition-none group-data-[state=open]/collapsible:rotate-90" />
