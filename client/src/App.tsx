@@ -73,7 +73,7 @@ function Router() {
       <Route path="/operasional/stock/saat-ini"><OperationsRoute page={<StockControl />} /></Route>
       <Route path="/operasional/stock/opname"><OperationsRoute page={<StockControl />} /></Route>
       <Route path="/operasional/stock-opname"><OperationsRoute page={<StockControl />} /></Route>
-      <Route path="/operasional/stock/penyesuaian"><OperationsRoute page={<StockControl />} /></Route>
+      <Route path="/operasional/stock/penyesuaian"><OperationsRoute minimumRole="CONTROLLER" page={<StockControl />} /></Route>
       <Route path="/operasional/laporan"><OperationsRoute minimumRole="CONTROLLER" page={<Reports />} /></Route>
       <Route path="/operasional/pelaporan-regulator"><OperationsRoute minimumRole="CONTROLLER" page={<RegulatoryReporting />} /></Route>
       <Route path="/operasional/audit"><OperationsRoute minimumRole="CONTROLLER" page={<AuditLog />} /></Route>

@@ -1,76 +1,74 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { ArrowLeftRight, BadgeDollarSign, Banknote, BookOpenCheck, Building2, ChartNoAxesCombined, ClipboardCheck, ClipboardList, FileSearch, Gauge, Landmark, LayoutDashboard, LogOut, MessageSquareWarning, MessagesSquare, Receipt, ShieldCheck, ShieldQuestion, UsersRound, Vault, Wallet } from "lucide-react";
-import { backOfficeNavigationGroups, isRoleAllowed, roleRank, type BackOfficeRole } from "@shared/backOfficeNavigation";
+import { ArrowLeftRight, BadgeDollarSign, Banknote, BookOpenCheck, Building2, ChartNoAxesCombined, ChevronRight, ClipboardCheck, ClipboardList, FileSearch, Gauge, Landmark, LayoutDashboard, LogOut, MessageSquareWarning, MessagesSquare, Receipt, Rocket, ShieldAlert, ShieldCheck, ShieldQuestion, UsersRound, Vault, Wallet } from "lucide-react";
+import { useState } from "react";
+import { backOfficeNavigationGroups, isRoleAllowed, visibleBackOfficeNavigation, type BackOfficeRole } from "@shared/backOfficeNavigation";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 
 const navigationIcons: Record<string, typeof LayoutDashboard> = {
   "/operasional": LayoutDashboard,
-  "/operasional/checklist": ClipboardCheck,
   "/operasional/monitoring": Gauge,
-  "/operasional/kesiapan": ShieldCheck,
   "/operasional/transaksi": ArrowLeftRight,
   "/operasional/transaksi/daftar": ClipboardList,
-  "/operasional/simulasi": ShieldQuestion,
-  "/operasional/layanan": MessagesSquare,
   "/operasional/nasabah": UsersRound,
   "/operasional/nasabah/daftar": ClipboardList,
-  "/operasional/kurs": BadgeDollarSign,
-  "/operasional/perbandingan-kurs": ChartNoAxesCombined,
+  "/operasional/impor-nasabah": FileSearch,
+  "/operasional/simulasi": ShieldQuestion,
   "/operasional/stock": Wallet,
   "/operasional/stock/kas-awal": Banknote,
   "/operasional/stock/saat-ini": Wallet,
   "/operasional/stock/opname": ClipboardCheck,
   "/operasional/stock-opname": ClipboardCheck,
   "/operasional/stock/penyesuaian": Vault,
-  "/operasional/pengaduan": MessageSquareWarning,
+  "/operasional/kurs": BadgeDollarSign,
+  "/operasional/perbandingan-kurs": ChartNoAxesCombined,
   "/operasional/pengeluaran": Receipt,
+  "/operasional/checklist": ClipboardCheck,
+  "/operasional/layanan": MessagesSquare,
+  "/operasional/pengaduan": MessageSquareWarning,
+  "/operasional/watchlist": ShieldAlert,
   "/operasional/laporan": ChartNoAxesCombined,
   "/operasional/pelaporan-regulator": Landmark,
   "/operasional/audit": FileSearch,
+  "/operasional/kesiapan": ShieldCheck,
+  "/operasional/pengawasan-direksi": ShieldCheck,
   "/operasional/pengguna": UsersRound,
   "/operasional/profil-perusahaan": Building2,
-  "/operasional/pengawasan-direksi": ShieldCheck,
-  "/operasional/go-live": ClipboardCheck,
-  "/operasional/impor-nasabah": FileSearch,
+  "/operasional/go-live": Rocket,
 };
 
-const navigationGroups = backOfficeNavigationGroups.map((group) => ({ ...group, items: group.items.map((item) => ({ ...item, icon: navigationIcons[item.path] ?? LayoutDashboard })) }));
-
-const pageTitles: Record<string, { eyebrow: string; title: string }> = {
-  "/operasional": { eyebrow: "Ringkasan kerja", title: "Hari ini" },
-  "/operasional/checklist": { eyebrow: "Kontrol outlet", title: "Buka & tutup outlet" },
-  "/operasional/monitoring": { eyebrow: "Pengawasan", title: "Monitoring operasional" },
-  "/operasional/kesiapan": { eyebrow: "Pengawasan", title: "Kesiapan operasional" },
-  "/operasional/transaksi": { eyebrow: "Layanan & transaksi", title: "Buat transaksi" },
-  "/operasional/transaksi/daftar": { eyebrow: "Layanan & transaksi", title: "Daftar transaksi" },
-  "/operasional/simulasi": { eyebrow: "Layanan & transaksi", title: "Simulasi aman" },
-  "/operasional/layanan": { eyebrow: "Layanan & transaksi", title: "Permintaan layanan" },
-  "/operasional/nasabah": { eyebrow: "Layanan & transaksi", title: "Data nasabah" },
-  "/operasional/nasabah/daftar": { eyebrow: "Layanan & transaksi", title: "Daftar nasabah" },
-  "/operasional/kurs": { eyebrow: "Kontrol outlet", title: "Kurs operasional" },
-  "/operasional/perbandingan-kurs": { eyebrow: "Kontrol outlet", title: "Bandingkan kurs" },
-  "/operasional/stock": { eyebrow: "Kontrol outlet", title: "Kas & persediaan" },
-  "/operasional/stock/kas-awal": { eyebrow: "Kontrol outlet", title: "Kas awal" },
-  "/operasional/stock/saat-ini": { eyebrow: "Kontrol outlet", title: "Stok saat ini" },
-  "/operasional/stock/opname": { eyebrow: "Kontrol outlet", title: "Stock opname" },
-  "/operasional/stock-opname": { eyebrow: "Kontrol outlet", title: "Stock opname" },
-  "/operasional/stock/penyesuaian": { eyebrow: "Kontrol outlet", title: "Penyesuaian brankas" },
-  "/operasional/pengaduan": { eyebrow: "Kontrol outlet", title: "Keluhan nasabah" },
-  "/operasional/pengeluaran": { eyebrow: "Kontrol outlet", title: "Pencatatan pengeluaran" },
-  "/operasional/laporan": { eyebrow: "Pengawasan", title: "Laporan" },
-  "/operasional/pelaporan-regulator": { eyebrow: "Pengawasan", title: "Pelaporan regulator" },
-  "/operasional/audit": { eyebrow: "Pengawasan", title: "Jejak audit" },
-  "/operasional/pengguna": { eyebrow: "Pengawasan", title: "Akses staf" },
-  "/operasional/profil-perusahaan": { eyebrow: "Pengawasan", title: "Profil perusahaan" },
-  "/operasional/pengawasan-direksi": { eyebrow: "Pengawasan", title: "Direksi mengetahui" },
-  "/operasional/go-live": { eyebrow: "Pengawasan", title: "Mulai go-live" },
-  "/operasional/impor-nasabah": { eyebrow: "Pengawasan", title: "Impor nasabah" },
+/** Parents only expand, so they are keyed by label rather than by a path they do not have. */
+const parentIcons: Record<string, typeof LayoutDashboard> = {
+  "Nasabah": UsersRound,
+  "Uang Kas": Wallet,
+  "Kurs": BadgeDollarSign,
 };
+
+const iconFor = (path: string) => navigationIcons[path] ?? LayoutDashboard;
+
+/**
+ * Header eyebrow + title are derived from the sidebar tree instead of a parallel hand-kept map, so
+ * a renamed or regrouped menu entry can never leave the page header showing a stale name.
+ */
+const pageTitles: Record<string, { eyebrow: string; title: string }> = (() => {
+  const titles: Record<string, { eyebrow: string; title: string }> = {};
+  for (const group of backOfficeNavigationGroups) {
+    for (const item of group.items) {
+      for (const leaf of item.children ?? [item]) {
+        titles[leaf.path] = { eyebrow: group.label, title: leaf.label };
+      }
+    }
+  }
+  // Routes that are reachable but deliberately absent from the sidebar.
+  titles["/operasional/stock"] = { eyebrow: "Uang & Kurs", title: "Uang kas" };
+  titles["/operasional/stock-opname"] = { eyebrow: "Uang & Kurs", title: "Hitung fisik uang" };
+  return titles;
+})();
 
 function goTo(path: string) {
   window.history.pushState({}, "", path);
@@ -93,7 +91,7 @@ export default function DashboardLayout({ children, minimumRole = "STAFF" }: { c
 
   const currentPath = window.location.pathname;
   const page = pageTitles[currentPath] ?? { eyebrow: "Operasional", title: "Ibukota Valasindo" };
-  const visibleGroups = navigationGroups.map((group) => ({ ...group, items: group.items.filter((item) => isRoleAllowed(user.role as BackOfficeRole, item.minimumRole)) })).filter((group) => group.items.length);
+  const visibleGroups = visibleBackOfficeNavigation(user.role as BackOfficeRole);
 
   return <SidebarProvider>
     <div className="flex min-h-screen w-full bg-[#f4f6fb] text-[#243552]">
@@ -106,10 +104,16 @@ export default function DashboardLayout({ children, minimumRole = "STAFF" }: { c
         </SidebarHeader>
 
         <SidebarContent className="px-2 py-4">
-          {visibleGroups.map((group) => <section className="mb-5" key={group.label}>
-            <p className="mb-2 px-3 text-[10px] font-bold tracking-[0.16em] text-[#a9bad8]/60 uppercase group-data-[collapsible=icon]:hidden">{group.label}</p>
-            <SidebarMenu className="gap-1">{group.items.map((item) => <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={currentPath === item.path} tooltip={item.label} onClick={() => goTo(item.path)} className="h-10 rounded-xl px-3 text-[#d8e3f5]/70 hover:bg-white/[0.08] hover:text-white data-[active=true]:bg-[#d7ec75] data-[active=true]:font-bold data-[active=true]:text-[#162642] data-[active=true]:shadow-sm"><item.icon className="size-[17px]" /><span className="text-[13px] font-medium">{item.label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu>
-          </section>)}
+          {visibleGroups.map((group) => (
+            <section className="mb-5" key={group.label}>
+              <p className="mb-2 px-3 text-[11px] font-bold tracking-[0.14em] text-[#9fb2d2] uppercase group-data-[collapsible=icon]:hidden">{group.label}</p>
+              <SidebarMenu className="gap-1">
+                {group.items.map((item) => item.children
+                  ? <NavParent key={item.label} label={item.label} childItems={item.children} currentPath={currentPath} />
+                  : <NavLeaf key={item.path} label={item.label} path={item.path} currentPath={currentPath} />)}
+              </SidebarMenu>
+            </section>
+          ))}
           <div className="mx-2 mt-2 rounded-2xl border border-white/10 bg-white/[0.055] p-3 group-data-[collapsible=icon]:hidden"><BookOpenCheck className="size-4 text-[#d7ec75]" /><p className="mt-3 text-xs font-semibold text-white">Urutan kerja harian</p><p className="mt-1 text-[11px] leading-4 text-[#b9c9e3]">Catat kas awal, layani transaksi, kemudian cocokkan persediaan sebelum penutupan.</p></div>
         </SidebarContent>
 
@@ -124,6 +128,52 @@ export default function DashboardLayout({ children, minimumRole = "STAFF" }: { c
       </SidebarInset>
     </div>
   </SidebarProvider>;
+}
+
+const leafClasses = "h-11 rounded-xl px-3 text-[#cdd9ec] transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:ring-2 focus-visible:ring-[#d7ec75] focus-visible:ring-offset-0 data-[active=true]:bg-[#d7ec75] data-[active=true]:font-bold data-[active=true]:text-[#162642] data-[active=true]:shadow-sm";
+
+function NavLeaf({ label, path, currentPath }: { label: string; path: string; currentPath: string }) {
+  const Icon = iconFor(path);
+  const isActive = currentPath === path;
+  return <SidebarMenuItem>
+    <SidebarMenuButton isActive={isActive} tooltip={label} aria-current={isActive ? "page" : undefined} onClick={() => goTo(path)} className={leafClasses}>
+      <Icon className="size-[18px]" /><span className="text-[14px] font-medium">{label}</span>
+    </SidebarMenuButton>
+  </SidebarMenuItem>;
+}
+
+/**
+ * Expands by default when one of its children is the current page, so a deep link never lands the
+ * user on a page whose sidebar entry is hidden inside a collapsed section.
+ */
+function NavParent({ label, childItems, currentPath }: { label: string; childItems: { label: string; path: string }[]; currentPath: string }) {
+  const holdsCurrentPage = childItems.some((child) => child.path === currentPath);
+  const [open, setOpen] = useState(holdsCurrentPage);
+  const Icon = parentIcons[label] ?? LayoutDashboard;
+
+  return <Collapsible open={open || holdsCurrentPage} onOpenChange={setOpen} asChild>
+    <SidebarMenuItem>
+      <CollapsibleTrigger asChild>
+        <SidebarMenuButton tooltip={label} className={leafClasses}>
+          <Icon className="size-[18px]" />
+          <span className="text-[14px] font-medium">{label}</span>
+          <ChevronRight className="ml-auto size-4 transition-transform duration-200 motion-reduce:transition-none group-data-[state=open]/collapsible:rotate-90" />
+        </SidebarMenuButton>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <SidebarMenuSub className="mx-3 gap-1 border-white/12 px-0">
+          {childItems.map((child) => {
+            const isActive = currentPath === child.path;
+            return <SidebarMenuSubItem key={child.path}>
+              <SidebarMenuSubButton isActive={isActive} aria-current={isActive ? "page" : undefined} onClick={() => goTo(child.path)} className="h-10 cursor-pointer rounded-lg text-[#c3d1e8] transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:ring-2 focus-visible:ring-[#d7ec75] data-[active=true]:bg-[#d7ec75] data-[active=true]:font-bold data-[active=true]:text-[#162642]">
+                <span className="text-[14px] font-medium">{child.label}</span>
+              </SidebarMenuSubButton>
+            </SidebarMenuSubItem>;
+          })}
+        </SidebarMenuSub>
+      </CollapsibleContent>
+    </SidebarMenuItem>
+  </Collapsible>;
 }
 
 function AccessPanel({ title, detail, action, onAction }: { title: string; detail: string; action: string; onAction: () => void }) {

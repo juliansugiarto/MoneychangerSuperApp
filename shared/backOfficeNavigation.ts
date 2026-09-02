@@ -1,14 +1,24 @@
 export type BackOfficeRole = "STAFF" | "ADMIN" | "CONTROLLER" | "SHAREHOLDER";
 
+/** A leaf the sidebar can navigate to. Every one of these must have a matching <Route> in App.tsx. */
 export type BackOfficeDestination = {
   label: string;
   path: string;
   minimumRole: BackOfficeRole;
 };
 
+/**
+ * A sidebar row: either a leaf destination (`path`) or a parent that only expands (`children`).
+ * Exactly one of the two is set — a parent never navigates, so clicking it can't be mistaken for
+ * "go somewhere" when the user only meant to see what's underneath.
+ */
+export type BackOfficeNavigationEntry =
+  | (BackOfficeDestination & { children?: never })
+  | { label: string; children: BackOfficeDestination[]; path?: never; minimumRole?: never };
+
 export type BackOfficeNavigationGroup = {
   label: string;
-  items: BackOfficeDestination[];
+  items: BackOfficeNavigationEntry[];
 };
 
 export const roleRank: Record<BackOfficeRole, number> = {
@@ -21,46 +31,82 @@ export const roleRank: Record<BackOfficeRole, number> = {
 export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
   { label: "Ringkasan", items: [
     { label: "Hari Ini", path: "/operasional", minimumRole: "STAFF" },
-    { label: "Monitoring", path: "/operasional/monitoring", minimumRole: "CONTROLLER" },
+    { label: "Pantauan Harian", path: "/operasional/monitoring", minimumRole: "CONTROLLER" },
   ] },
-  { label: "Layanan & Transaksi", items: [
+  { label: "Transaksi & Nasabah", items: [
     { label: "Buat Transaksi", path: "/operasional/transaksi", minimumRole: "STAFF" },
     { label: "Daftar Transaksi", path: "/operasional/transaksi/daftar", minimumRole: "STAFF" },
-    { label: "Simulasi Aman", path: "/operasional/simulasi", minimumRole: "STAFF" },
-    { label: "Permintaan Layanan", path: "/operasional/layanan", minimumRole: "STAFF" },
-    { label: "Nasabah Baru", path: "/operasional/nasabah", minimumRole: "STAFF" },
-    { label: "Daftar Nasabah", path: "/operasional/nasabah/daftar", minimumRole: "STAFF" },
+    { label: "Nasabah", children: [
+      { label: "Nasabah Baru", path: "/operasional/nasabah", minimumRole: "STAFF" },
+      { label: "Daftar Nasabah", path: "/operasional/nasabah/daftar", minimumRole: "STAFF" },
+      { label: "Tambah dari Excel", path: "/operasional/impor-nasabah", minimumRole: "CONTROLLER" },
+    ] },
+    { label: "Latihan (Tanpa Data Asli)", path: "/operasional/simulasi", minimumRole: "STAFF" },
   ] },
-  { label: "Kontrol Outlet", items: [
+  { label: "Uang & Kurs", items: [
+    { label: "Uang Kas", children: [
+      { label: "Kas Awal Hari Ini", path: "/operasional/stock/kas-awal", minimumRole: "STAFF" },
+      { label: "Sisa Uang Saat Ini", path: "/operasional/stock/saat-ini", minimumRole: "STAFF" },
+      { label: "Hitung Fisik Uang", path: "/operasional/stock/opname", minimumRole: "STAFF" },
+      { label: "Penyesuaian Brankas", path: "/operasional/stock/penyesuaian", minimumRole: "CONTROLLER" },
+    ] },
+    { label: "Kurs", children: [
+      { label: "Kurs Hari Ini", path: "/operasional/kurs", minimumRole: "ADMIN" },
+      { label: "Bandingkan Kurs", path: "/operasional/perbandingan-kurs", minimumRole: "ADMIN" },
+    ] },
+    { label: "Catat Pengeluaran", path: "/operasional/pengeluaran", minimumRole: "STAFF" },
+  ] },
+  { label: "Kegiatan Harian", items: [
     { label: "Buka & Tutup Outlet", path: "/operasional/checklist", minimumRole: "STAFF" },
-    { label: "Kurs Operasional", path: "/operasional/kurs", minimumRole: "ADMIN" },
-    { label: "Bandingkan Kurs", path: "/operasional/perbandingan-kurs", minimumRole: "ADMIN" },
-    { label: "Kas & Persediaan", path: "/operasional/stock", minimumRole: "STAFF" },
+    { label: "Meja Konfirmasi", path: "/operasional/layanan", minimumRole: "STAFF" },
     { label: "Keluhan Nasabah", path: "/operasional/pengaduan", minimumRole: "STAFF" },
-    { label: "Pencatatan Pengeluaran", path: "/operasional/pengeluaran", minimumRole: "STAFF" },
-    { label: "Cek Watchlist DTTOT/PPPSM", path: "/operasional/watchlist", minimumRole: "STAFF" },
+    { label: "Cek Daftar Terduga (DTTOT)", path: "/operasional/watchlist", minimumRole: "STAFF" },
+  ] },
+  { label: "Laporan", items: [
+    { label: "Laporan Keuangan", path: "/operasional/laporan", minimumRole: "CONTROLLER" },
+    { label: "Laporan ke Regulator", path: "/operasional/pelaporan-regulator", minimumRole: "CONTROLLER" },
+    { label: "Riwayat Aktivitas", path: "/operasional/audit", minimumRole: "CONTROLLER" },
   ] },
   { label: "Pengawasan", items: [
-    { label: "Kesiapan Operasional", path: "/operasional/kesiapan", minimumRole: "CONTROLLER" },
-    { label: "Direksi Mengetahui", path: "/operasional/pengawasan-direksi", minimumRole: "CONTROLLER" },
-    { label: "Mulai Go-Live", path: "/operasional/go-live", minimumRole: "CONTROLLER" },
-    { label: "Laporan", path: "/operasional/laporan", minimumRole: "CONTROLLER" },
-    { label: "Pelaporan Regulator", path: "/operasional/pelaporan-regulator", minimumRole: "CONTROLLER" },
-    { label: "Jejak Audit", path: "/operasional/audit", minimumRole: "CONTROLLER" },
-    { label: "Impor Nasabah", path: "/operasional/impor-nasabah", minimumRole: "CONTROLLER" },
-    { label: "Akses Staf", path: "/operasional/pengguna", minimumRole: "CONTROLLER" },
+    { label: "Status Kesiapan", path: "/operasional/kesiapan", minimumRole: "CONTROLLER" },
+    { label: "Untuk Diketahui Direksi", path: "/operasional/pengawasan-direksi", minimumRole: "CONTROLLER" },
+  ] },
+  { label: "Pengaturan", items: [
+    { label: "Pengguna & Hak Akses", path: "/operasional/pengguna", minimumRole: "CONTROLLER" },
     { label: "Profil Perusahaan", path: "/operasional/profil-perusahaan", minimumRole: "CONTROLLER" },
+    { label: "Langkah Persiapan Awal", path: "/operasional/go-live", minimumRole: "CONTROLLER" },
   ] },
 ];
 
-export const backOfficeDestinations = backOfficeNavigationGroups.flatMap((group) => group.items);
+/** Every navigable leaf, parents flattened away — the set that must each have a route. */
+export const backOfficeDestinations: BackOfficeDestination[] = backOfficeNavigationGroups.flatMap((group) =>
+  group.items.flatMap((item) => (item.children ? item.children : [item])),
+);
 
 export function isRoleAllowed(role: BackOfficeRole, minimumRole: BackOfficeRole) {
   return roleRank[role] >= roleRank[minimumRole];
 }
 
-export function visibleBackOfficeNavigation(role: BackOfficeRole) {
+/**
+ * A parent is visible when at least one child is — its own authority is derived from the children
+ * rather than stored, so a parent can never drift into advertising a section the role cannot open.
+ */
+export function visibleBackOfficeNavigation(role: BackOfficeRole): BackOfficeNavigationGroup[] {
   return backOfficeNavigationGroups
-    .map((group) => ({ ...group, items: group.items.filter((item) => isRoleAllowed(role, item.minimumRole)) }))
+    .map((group) => ({
+      ...group,
+      items: group.items.flatMap((item): BackOfficeNavigationEntry[] => {
+        if (!item.children) return isRoleAllowed(role, item.minimumRole) ? [item] : [];
+        const children = item.children.filter((child) => isRoleAllowed(role, child.minimumRole));
+        return children.length ? [{ label: item.label, children }] : [];
+      }),
+    }))
     .filter((group) => group.items.length > 0);
+}
+
+/** Flat leaf paths a role can reach, in sidebar order — used by tests and access checks. */
+export function visibleBackOfficeDestinations(role: BackOfficeRole): string[] {
+  return visibleBackOfficeNavigation(role)
+    .flatMap((group) => group.items)
+    .flatMap((item) => (item.children ? item.children.map((child) => child.path) : [item.path]));
 }
