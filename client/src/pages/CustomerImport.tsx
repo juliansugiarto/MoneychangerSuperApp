@@ -18,6 +18,15 @@ type CustomerImportRow = {
   placeOfBirth: string;
   dateOfBirth: Date;
   address: string;
+  addressType: "RUMAH" | "KANTOR" | "DOMISILI" | "LAINNYA";
+  addressCountry: string;
+  addressProvince?: string;
+  addressCity: string;
+  addressDistrict?: string;
+  addressPostalCode?: string;
+  nationality: string;
+  npwp?: string;
+  gender: "MALE" | "FEMALE";
   occupation: string;
   sourceOfFunds: string;
   transactionPurpose: string;
@@ -25,7 +34,7 @@ type CustomerImportRow = {
   riskNotes?: string;
 };
 
-const templateHeaders = ["CIF", "NAMA LENGKAP", "TELEPON", "JENIS IDENTITAS", "NOMOR IDENTITAS", "BERLAKU HINGGA", "TEMPAT LAHIR", "TANGGAL LAHIR", "ALAMAT", "PEKERJAAN", "SUMBER DANA", "TUJUAN TRANSAKSI", "RISIKO", "CATATAN RISIKO"];
+const templateHeaders = ["CIF", "NAMA LENGKAP", "TELEPON", "JENIS IDENTITAS", "NOMOR IDENTITAS", "BERLAKU HINGGA", "TEMPAT LAHIR", "TANGGAL LAHIR", "JENIS KELAMIN", "KEWARGANEGARAAN", "ALAMAT", "JENIS ALAMAT", "NEGARA ALAMAT", "PROVINSI", "KOTA", "KECAMATAN", "KODE POS", "NPWP", "PEKERJAAN", "SUMBER DANA", "TUJUAN TRANSAKSI", "RISIKO", "CATATAN RISIKO"];
 
 const fieldAliases = {
   cifNumber: ["cif", "cifnumber", "nomorcif"],
@@ -36,7 +45,16 @@ const fieldAliases = {
   identityExpiryDate: ["berlakuhingga", "masa berlaku", "identityexpirydate"],
   placeOfBirth: ["tempatlahir", "placeofbirth"],
   dateOfBirth: ["tanggallahir", "dateofbirth"],
+  gender: ["jeniskelamin", "gender"],
+  nationality: ["kewarganegaraan", "nationality"],
   address: ["alamat", "address"],
+  addressType: ["jenisalamat", "addresstype"],
+  addressCountry: ["negaraalamat", "addresscountry"],
+  addressProvince: ["provinsi", "addressprovince"],
+  addressCity: ["kota", "addresscity"],
+  addressDistrict: ["kecamatan", "addressdistrict"],
+  addressPostalCode: ["kodepos", "addresspostalcode"],
+  npwp: ["npwp"],
   occupation: ["pekerjaan", "occupation"],
   sourceOfFunds: ["sumberdana", "sourceoffunds"],
   transactionPurpose: ["tujuantransaksi", "transactionpurpose"],
@@ -68,7 +86,8 @@ function parseRows(raw: unknown[][]) {
   if (raw.length < 2) return { rows: [] as CustomerImportRow[], errors: ["File belum memiliki baris data."] };
   const headers = raw[0].map(normalize);
   const columns = Object.fromEntries(Object.entries(fieldAliases).map(([field, aliases]) => [field, headerIndex(headers, aliases)])) as Record<keyof typeof fieldAliases, number>;
-  const required = Object.entries(columns).filter(([field, index]) => index < 0 && field !== "riskLevel" && field !== "riskNotes").map(([field]) => field);
+  const optionalFields = new Set(["riskLevel", "riskNotes", "addressProvince", "addressDistrict", "addressPostalCode", "npwp"]);
+  const required = Object.entries(columns).filter(([field, index]) => index < 0 && !optionalFields.has(field)).map(([field]) => field);
   if (required.length) return { rows: [] as CustomerImportRow[], errors: [`Kolom wajib tidak ditemukan: ${required.join(", ")}. Gunakan template yang disediakan.`] };
   const rows: CustomerImportRow[] = [];
   const errors: string[] = [];
@@ -81,14 +100,27 @@ function parseRows(raw: unknown[][]) {
       if (!["KTP", "PASSPORT", "OTHER"].includes(identityType)) throw new Error("Jenis identitas harus KTP, PASSPORT, atau OTHER.");
       const riskValue = valueAt(row, columns.riskLevel).toUpperCase() || "LOW";
       if (!["LOW", "MEDIUM", "HIGH"].includes(riskValue)) throw new Error("Risiko harus LOW, MEDIUM, atau HIGH.");
+      const genderValue = valueAt(row, columns.gender).toUpperCase();
+      if (!["MALE", "FEMALE"].includes(genderValue)) throw new Error("Jenis kelamin harus MALE atau FEMALE.");
+      const addressTypeValue = valueAt(row, columns.addressType).toUpperCase() || "RUMAH";
+      if (!["RUMAH", "KANTOR", "DOMISILI", "LAINNYA"].includes(addressTypeValue)) throw new Error("Jenis alamat harus RUMAH, KANTOR, DOMISILI, atau LAINNYA.");
+      const nationalityValue = valueAt(row, columns.nationality).toUpperCase();
+      const addressCountryValue = valueAt(row, columns.addressCountry).toUpperCase();
+      if (nationalityValue.length !== 2) throw new Error("Kewarganegaraan harus kode negara ISO 2 huruf (mis. ID).");
+      if (addressCountryValue.length !== 2) throw new Error("Negara alamat harus kode negara ISO 2 huruf (mis. ID).");
       const customer: CustomerImportRow = {
         cifNumber: valueAt(row, columns.cifNumber), fullName: valueAt(row, columns.fullName), phoneNumber: valueAt(row, columns.phoneNumber),
         identityType: identityType as CustomerImportRow["identityType"], identityNumber: valueAt(row, columns.identityNumber), identityExpiryDate: dateAt(row, columns.identityExpiryDate, "Berlaku hingga"),
-        placeOfBirth: valueAt(row, columns.placeOfBirth), dateOfBirth: dateAt(row, columns.dateOfBirth, "Tanggal lahir"), address: valueAt(row, columns.address),
+        placeOfBirth: valueAt(row, columns.placeOfBirth), dateOfBirth: dateAt(row, columns.dateOfBirth, "Tanggal lahir"),
+        gender: genderValue as CustomerImportRow["gender"], nationality: nationalityValue,
+        address: valueAt(row, columns.address), addressType: addressTypeValue as CustomerImportRow["addressType"], addressCountry: addressCountryValue,
+        addressProvince: valueAt(row, columns.addressProvince) || undefined, addressCity: valueAt(row, columns.addressCity),
+        addressDistrict: valueAt(row, columns.addressDistrict) || undefined, addressPostalCode: valueAt(row, columns.addressPostalCode) || undefined,
+        npwp: valueAt(row, columns.npwp) || undefined,
         occupation: valueAt(row, columns.occupation), sourceOfFunds: valueAt(row, columns.sourceOfFunds), transactionPurpose: valueAt(row, columns.transactionPurpose),
         riskLevel: riskValue as CustomerImportRow["riskLevel"], riskNotes: valueAt(row, columns.riskNotes) || undefined,
       };
-      const missing = ["cifNumber", "fullName", "phoneNumber", "identityNumber", "placeOfBirth", "address", "occupation", "sourceOfFunds", "transactionPurpose"].filter((key) => !String(customer[key as keyof CustomerImportRow] ?? "").trim());
+      const missing = ["cifNumber", "fullName", "phoneNumber", "identityNumber", "placeOfBirth", "address", "addressCity", "occupation", "sourceOfFunds", "transactionPurpose"].filter((key) => !String(customer[key as keyof CustomerImportRow] ?? "").trim());
       if (missing.length) throw new Error(`Data wajib kosong: ${missing.join(", ")}.`);
       rows.push(customer);
     } catch (error) {
@@ -100,7 +132,7 @@ function parseRows(raw: unknown[][]) {
 }
 
 function downloadTemplate() {
-  const example = ["CIF-001", "Nama Contoh", "081234567890", "KTP", "3203XXXX", "2030-12-31", "Cianjur", "1990-01-31", "Alamat lengkap", "Karyawan", "Gaji", "Perjalanan", "LOW", ""];
+  const example = ["CIF-001", "Nama Contoh", "081234567890", "KTP", "3203XXXX", "2030-12-31", "Cianjur", "1990-01-31", "MALE", "ID", "Alamat lengkap", "RUMAH", "ID", "Jawa Barat", "Cianjur", "Cianjur", "43211", "", "Karyawan", "Gaji", "Perjalanan", "LOW", ""];
   const csv = [templateHeaders, example].map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\n");
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   const anchor = document.createElement("a");

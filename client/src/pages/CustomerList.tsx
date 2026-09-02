@@ -12,12 +12,17 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
-type CustomerRow = { id: number; identityExpiryDate: string | Date | null; dateOfBirth: string | Date | null; fullName: string; phoneNumber: string | null; identityType: "KTP" | "PASSPORT" | "OTHER"; identityNumber: string; placeOfBirth: string | null; address: string; occupation: string | null; sourceOfFunds: string | null; transactionPurpose: string | null; profileStatus: "ACTIVE" | "RESTRICTED" | "INACTIVE"; riskLevel: "LOW" | "MEDIUM" | "HIGH"; riskNotes: string | null; pepStatus: "NONE" | "SELF" | "RELATED"; pepDetails: string | null; dttotPpsdmMatch: boolean; dttotPpsdmNotes: string | null };
+type CustomerRow = { id: number; identityExpiryDate: string | Date | null; dateOfBirth: string | Date | null; fullName: string; phoneNumber: string | null; identityType: "KTP" | "PASSPORT" | "OTHER"; identityNumber: string; placeOfBirth: string | null; address: string; addressType: "RUMAH" | "KANTOR" | "DOMISILI" | "LAINNYA" | null; addressCountry: string | null; addressProvince: string | null; addressCity: string | null; addressDistrict: string | null; addressPostalCode: string | null; nationality: string | null; npwp: string | null; gender: "MALE" | "FEMALE" | null; occupation: string | null; sourceOfFunds: string | null; transactionPurpose: string | null; profileStatus: "ACTIVE" | "RESTRICTED" | "INACTIVE"; riskLevel: "LOW" | "MEDIUM" | "HIGH"; riskNotes: string | null; pepStatus: "NONE" | "SELF" | "RELATED"; pepDetails: string | null; dttotPpsdmMatch: boolean; dttotPpsdmNotes: string | null };
 const toDateInputValue = (value: string | Date | null | undefined) => (value ? new Date(value).toISOString().slice(0, 10) : "");
 const editFormFromCustomer = (customer: CustomerRow) => ({
   fullName: customer.fullName, phoneNumber: customer.phoneNumber ?? "", identityType: customer.identityType, identityNumber: customer.identityNumber,
   identityExpiryDate: toDateInputValue(customer.identityExpiryDate), placeOfBirth: customer.placeOfBirth ?? "", dateOfBirth: toDateInputValue(customer.dateOfBirth),
-  address: customer.address, occupation: customer.occupation ?? "", sourceOfFunds: customer.sourceOfFunds ?? "", transactionPurpose: customer.transactionPurpose ?? "",
+  address: customer.address,
+  addressType: customer.addressType ?? "RUMAH" as "RUMAH" | "KANTOR" | "DOMISILI" | "LAINNYA",
+  addressCountry: customer.addressCountry ?? "ID", addressProvince: customer.addressProvince ?? "", addressCity: customer.addressCity ?? "",
+  addressDistrict: customer.addressDistrict ?? "", addressPostalCode: customer.addressPostalCode ?? "",
+  nationality: customer.nationality ?? "ID", npwp: customer.npwp ?? "", gender: customer.gender ?? "MALE" as "MALE" | "FEMALE",
+  occupation: customer.occupation ?? "", sourceOfFunds: customer.sourceOfFunds ?? "", transactionPurpose: customer.transactionPurpose ?? "",
   profileStatus: customer.profileStatus, riskLevel: customer.riskLevel, riskNotes: customer.riskNotes ?? "",
   pepStatus: customer.pepStatus, pepDetails: customer.pepDetails ?? "", dttotPpsdmMatch: customer.dttotPpsdmMatch, dttotPpsdmNotes: customer.dttotPpsdmNotes ?? "",
   changeReason: "",
@@ -232,9 +237,20 @@ export default function CustomerList() {
                 <div><Label className="text-xs">Berlaku hingga (kosongkan bila seumur hidup)</Label><Input className="mt-1" type="date" value={editForm.identityExpiryDate} onChange={(e) => setEditForm({ ...editForm, identityExpiryDate: e.target.value })} /></div>
                 <div><Label className="text-xs">Tempat lahir</Label><Input className="mt-1" value={editForm.placeOfBirth} onChange={(e) => setEditForm({ ...editForm, placeOfBirth: e.target.value })} /></div>
                 <div><Label className="text-xs">Tanggal lahir</Label><Input className="mt-1" type="date" required value={editForm.dateOfBirth} onChange={(e) => setEditForm({ ...editForm, dateOfBirth: e.target.value })} /></div>
+                <div><Label className="text-xs">Jenis kelamin</Label><Select value={editForm.gender} onValueChange={(v) => setEditForm({ ...editForm, gender: v as typeof editForm.gender })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="MALE">Laki-laki</SelectItem><SelectItem value="FEMALE">Perempuan</SelectItem></SelectContent></Select></div>
+                <div><Label className="text-xs">Kewarganegaraan (ISO 2 huruf)</Label><Input className="mt-1" value={editForm.nationality} maxLength={2} onChange={(e) => setEditForm({ ...editForm, nationality: e.target.value.toUpperCase() })} /></div>
                 <div><Label className="text-xs">Pekerjaan</Label><Input className="mt-1" value={editForm.occupation} onChange={(e) => setEditForm({ ...editForm, occupation: e.target.value })} /></div>
+                <div><Label className="text-xs">NPWP (bila ada)</Label><Input className="mt-1" value={editForm.npwp} onChange={(e) => setEditForm({ ...editForm, npwp: e.target.value })} /></div>
               </div>
               <div><Label className="text-xs">Alamat</Label><Input className="mt-1" value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} /></div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div><Label className="text-xs">Jenis alamat</Label><Select value={editForm.addressType} onValueChange={(v) => setEditForm({ ...editForm, addressType: v as typeof editForm.addressType })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="RUMAH">Rumah</SelectItem><SelectItem value="KANTOR">Kantor</SelectItem><SelectItem value="DOMISILI">Domisili</SelectItem><SelectItem value="LAINNYA">Lainnya</SelectItem></SelectContent></Select></div>
+                <div><Label className="text-xs">Negara (ISO 2 huruf)</Label><Input className="mt-1" value={editForm.addressCountry} maxLength={2} onChange={(e) => setEditForm({ ...editForm, addressCountry: e.target.value.toUpperCase() })} /></div>
+                <div><Label className="text-xs">Kota / kabupaten</Label><Input className="mt-1" value={editForm.addressCity} onChange={(e) => setEditForm({ ...editForm, addressCity: e.target.value })} /></div>
+                <div><Label className="text-xs">Provinsi</Label><Input className="mt-1" value={editForm.addressProvince} onChange={(e) => setEditForm({ ...editForm, addressProvince: e.target.value })} /></div>
+                <div><Label className="text-xs">Kecamatan</Label><Input className="mt-1" value={editForm.addressDistrict} onChange={(e) => setEditForm({ ...editForm, addressDistrict: e.target.value })} /></div>
+                <div><Label className="text-xs">Kode pos</Label><Input className="mt-1" value={editForm.addressPostalCode} onChange={(e) => setEditForm({ ...editForm, addressPostalCode: e.target.value })} /></div>
+              </div>
               <div><Label className="text-xs">Sumber dana</Label><Input className="mt-1" value={editForm.sourceOfFunds} onChange={(e) => setEditForm({ ...editForm, sourceOfFunds: e.target.value })} /></div>
               <div><Label className="text-xs">Tujuan transaksi</Label><Input className="mt-1" value={editForm.transactionPurpose} onChange={(e) => setEditForm({ ...editForm, transactionPurpose: e.target.value })} /></div>
               <div className="grid gap-3 sm:grid-cols-2">

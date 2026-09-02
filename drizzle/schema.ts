@@ -102,6 +102,18 @@ export const customers = mysqlTable("customers", {
   placeOfBirth: varchar("placeOfBirth", { length: 120 }),
   dateOfBirth: date("dateOfBirth"),
   address: text("address").notNull(),
+  /** Structured address fields required by goAML's t_address (address_type/city/country_code mandatory; province/district/postal optional) — the free-text `address` column above remains the street-level line. */
+  addressType: mysqlEnum("addressType", ["RUMAH", "KANTOR", "DOMISILI", "LAINNYA"]),
+  addressCountry: varchar("addressCountry", { length: 2 }),
+  addressProvince: varchar("addressProvince", { length: 120 }),
+  addressCity: varchar("addressCity", { length: 120 }),
+  addressDistrict: varchar("addressDistrict", { length: 120 }),
+  addressPostalCode: varchar("addressPostalCode", { length: 20 }),
+  /** ISO 3166-1 alpha-2 (mis. "ID") — kewarganegaraan, wajib untuk pelaporan goAML (t_person_my_client.nationality1), beda dari negara alamat/domisili. */
+  nationality: varchar("nationality", { length: 2 }),
+  /** NPWP nasabah (bukan milik perusahaan) — opsional (banyak individu tak wajib NPWP), tapi wajib diisi bila ada karena goAML membutuhkan tax_reg_number (Y/T) yang diturunkan dari kolom ini. */
+  npwp: varchar("npwp", { length: 20 }),
+  gender: mysqlEnum("gender", ["MALE", "FEMALE"]),
   occupation: varchar("occupation", { length: 160 }),
   sourceOfFunds: text("sourceOfFunds"),
   transactionPurpose: text("transactionPurpose"),

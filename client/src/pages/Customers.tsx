@@ -23,6 +23,15 @@ const initialForm = {
   placeOfBirth: "",
   dateOfBirth: "",
   address: "",
+  addressType: "RUMAH" as "RUMAH" | "KANTOR" | "DOMISILI" | "LAINNYA",
+  addressCountry: "ID",
+  addressProvince: "",
+  addressCity: "",
+  addressDistrict: "",
+  addressPostalCode: "",
+  nationality: "ID",
+  npwp: "",
+  gender: "MALE" as "MALE" | "FEMALE",
   occupation: "",
   sourceOfFunds: "",
   transactionPurpose: "",
@@ -151,6 +160,12 @@ export default function Customers() {
               <Field label="Tempat lahir" required><Input value={form.placeOfBirth} onChange={(event) => setForm({ ...form, placeOfBirth: event.target.value })} placeholder="Kota / kabupaten" /></Field>
               <Field label="Tanggal lahir" required><Input type="date" value={form.dateOfBirth} onChange={(event) => setForm({ ...form, dateOfBirth: event.target.value })} /></Field>
             </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Jenis kelamin" required>
+                <Select value={form.gender} onValueChange={(value) => setForm({ ...form, gender: value as typeof form.gender })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="MALE">Laki-laki</SelectItem><SelectItem value="FEMALE">Perempuan</SelectItem></SelectContent></Select>
+              </Field>
+              <Field label="Kewarganegaraan (kode negara ISO 2 huruf)" required><Input value={form.nationality} onChange={(event) => setForm({ ...form, nationality: event.target.value.toUpperCase() })} maxLength={2} placeholder="ID" /></Field>
+            </div>
             <Field label="Masa berlaku identitas" required={!identityNeverExpires}>
               <Input type="date" value={form.identityExpiryDate} disabled={identityNeverExpires} required={!identityNeverExpires} onChange={(event) => setForm({ ...form, identityExpiryDate: event.target.value })} />
               <label className="mt-2 flex items-center gap-2 text-xs text-[#476278]">
@@ -160,8 +175,19 @@ export default function Customers() {
             </Field>
             <Field label="Alamat" required><Textarea value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} rows={3} placeholder="Alamat domisili sesuai dokumen pendukung" /></Field>
             <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Jenis alamat" required>
+                <Select value={form.addressType} onValueChange={(value) => setForm({ ...form, addressType: value as typeof form.addressType })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="RUMAH">Rumah</SelectItem><SelectItem value="KANTOR">Kantor</SelectItem><SelectItem value="DOMISILI">Domisili</SelectItem><SelectItem value="LAINNYA">Lainnya</SelectItem></SelectContent></Select>
+              </Field>
+              <Field label="Negara alamat (kode ISO 2 huruf)" required><Input value={form.addressCountry} onChange={(event) => setForm({ ...form, addressCountry: event.target.value.toUpperCase() })} maxLength={2} placeholder="ID" /></Field>
+              <Field label="Kota / kabupaten" required><Input value={form.addressCity} onChange={(event) => setForm({ ...form, addressCity: event.target.value })} /></Field>
+              <Field label="Provinsi"><Input value={form.addressProvince} onChange={(event) => setForm({ ...form, addressProvince: event.target.value })} /></Field>
+              <Field label="Kecamatan"><Input value={form.addressDistrict} onChange={(event) => setForm({ ...form, addressDistrict: event.target.value })} /></Field>
+              <Field label="Kode pos"><Input value={form.addressPostalCode} onChange={(event) => setForm({ ...form, addressPostalCode: event.target.value })} /></Field>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Nomor HP" required><Input type="tel" value={form.phoneNumber} onChange={(event) => setForm({ ...form, phoneNumber: event.target.value })} placeholder="08xx atau +62" /></Field>
               <Field label="Pekerjaan" required><Input value={form.occupation} onChange={(event) => setForm({ ...form, occupation: event.target.value })} /></Field>
+              <Field label="NPWP (bila ada)"><Input value={form.npwp} onChange={(event) => setForm({ ...form, npwp: event.target.value })} /></Field>
               <Field label="Tingkat risiko">
                 <Select value={form.riskLevel} onValueChange={(value) => setForm({ ...form, riskLevel: value as typeof form.riskLevel })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="LOW">Rendah</SelectItem><SelectItem value="MEDIUM">Menengah</SelectItem><SelectItem value="HIGH">Tinggi</SelectItem></SelectContent></Select>
               </Field>

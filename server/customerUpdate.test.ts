@@ -4,7 +4,9 @@ import { updateCustomer } from "./operations";
 
 const existingCustomer = {
   id: 1, cifNumber: "CIF-0001", fullName: "Nasabah Lama", phoneNumber: "0811", identityType: "KTP" as const, identityNumber: "1234",
-  identityExpiryDate: null, placeOfBirth: "Jakarta", dateOfBirth: new Date("1990-01-01"), address: "Jl. Lama", occupation: "Pegawai",
+  identityExpiryDate: null, placeOfBirth: "Jakarta", dateOfBirth: new Date("1990-01-01"), gender: "MALE" as const, nationality: "ID",
+  address: "Jl. Lama", addressType: "RUMAH" as const, addressCountry: "ID", addressProvince: null, addressCity: "Jakarta", addressDistrict: null, addressPostalCode: null, npwp: null,
+  occupation: "Pegawai",
   sourceOfFunds: "Gaji", transactionPurpose: "Liburan", profileStatus: "ACTIVE" as const, riskLevel: "LOW" as const, riskNotes: null,
   pepStatus: "NONE" as const, pepDetails: null, dttotPpsdmMatch: false, dttotPpsdmNotes: null, isDemo: false, isHistorical: false,
 };
@@ -29,7 +31,8 @@ function mockDb() {
 
 const baseInput = {
   customerId: 1, fullName: "Nasabah Baru", phoneNumber: "0812", identityType: "KTP" as const, identityNumber: "5678",
-  placeOfBirth: "Bandung", dateOfBirth: new Date("1990-01-01"), address: "Jl. Baru", occupation: "Wiraswasta",
+  placeOfBirth: "Bandung", dateOfBirth: new Date("1990-01-01"), gender: "MALE" as const, nationality: "ID",
+  address: "Jl. Baru", addressType: "RUMAH" as const, addressCountry: "ID", addressCity: "Bandung", occupation: "Wiraswasta",
   sourceOfFunds: "Usaha", transactionPurpose: "Bisnis", profileStatus: "ACTIVE" as const, riskLevel: "LOW" as const,
   pepStatus: "NONE" as const, dttotPpsdmMatch: false,
 };

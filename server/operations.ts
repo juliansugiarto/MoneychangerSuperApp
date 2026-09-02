@@ -551,6 +551,17 @@ export type CustomerInput = {
   placeOfBirth: string;
   dateOfBirth: Date;
   address: string;
+  addressType: "RUMAH" | "KANTOR" | "DOMISILI" | "LAINNYA";
+  /** ISO 3166-1 alpha-2, mis. "ID" — dibutuhkan untuk pelaporan goAML (t_address.country_code). */
+  addressCountry: string;
+  addressProvince?: string;
+  addressCity: string;
+  addressDistrict?: string;
+  addressPostalCode?: string;
+  /** ISO 3166-1 alpha-2 — kewarganegaraan, dibutuhkan goAML (t_person_my_client.nationality1). */
+  nationality: string;
+  npwp?: string;
+  gender: "MALE" | "FEMALE";
   occupation: string;
   sourceOfFunds: string;
   transactionPurpose: string;
@@ -674,6 +685,15 @@ export async function createCustomer(input: CustomerInput, actorUserId: number) 
       placeOfBirth: input.placeOfBirth.trim(),
       dateOfBirth: input.dateOfBirth,
       address: input.address.trim(),
+      addressType: input.addressType,
+      addressCountry: input.addressCountry,
+      addressProvince: input.addressProvince?.trim() || null,
+      addressCity: input.addressCity.trim(),
+      addressDistrict: input.addressDistrict?.trim() || null,
+      addressPostalCode: input.addressPostalCode?.trim() || null,
+      nationality: input.nationality,
+      npwp: input.npwp?.trim() || null,
+      gender: input.gender,
       occupation: input.occupation.trim(),
       sourceOfFunds: input.sourceOfFunds.trim(),
       transactionPurpose: input.transactionPurpose.trim(),
@@ -734,6 +754,15 @@ export type CustomerUpdateInput = {
   placeOfBirth: string;
   dateOfBirth: Date;
   address: string;
+  addressType: "RUMAH" | "KANTOR" | "DOMISILI" | "LAINNYA";
+  addressCountry: string;
+  addressProvince?: string;
+  addressCity: string;
+  addressDistrict?: string;
+  addressPostalCode?: string;
+  nationality: string;
+  npwp?: string;
+  gender: "MALE" | "FEMALE";
   occupation: string;
   sourceOfFunds: string;
   transactionPurpose: string;
@@ -770,6 +799,15 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
     placeOfBirth: input.placeOfBirth.trim(),
     dateOfBirth: input.dateOfBirth,
     address: input.address.trim(),
+    addressType: input.addressType,
+    addressCountry: input.addressCountry,
+    addressProvince: input.addressProvince?.trim() || null,
+    addressCity: input.addressCity.trim(),
+    addressDistrict: input.addressDistrict?.trim() || null,
+    addressPostalCode: input.addressPostalCode?.trim() || null,
+    nationality: input.nationality,
+    npwp: input.npwp?.trim() || null,
+    gender: input.gender,
     occupation: input.occupation.trim(),
     sourceOfFunds: input.sourceOfFunds.trim(),
     transactionPurpose: input.transactionPurpose.trim(),
@@ -788,6 +826,8 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
     beforeState: {
       fullName: existing.fullName, phoneNumber: existing.phoneNumber, identityType: existing.identityType, identityNumber: existing.identityNumber,
       identityExpiryDate: existing.identityExpiryDate, placeOfBirth: existing.placeOfBirth, dateOfBirth: existing.dateOfBirth, address: existing.address,
+      addressType: existing.addressType, addressCountry: existing.addressCountry, addressProvince: existing.addressProvince, addressCity: existing.addressCity,
+      addressDistrict: existing.addressDistrict, addressPostalCode: existing.addressPostalCode, nationality: existing.nationality, npwp: existing.npwp, gender: existing.gender,
       occupation: existing.occupation, sourceOfFunds: existing.sourceOfFunds, transactionPurpose: existing.transactionPurpose, profileStatus: existing.profileStatus,
       riskLevel: existing.riskLevel, riskNotes: existing.riskNotes, pepStatus: existing.pepStatus, pepDetails: existing.pepDetails,
       dttotPpsdmMatch: existing.dttotPpsdmMatch, dttotPpsdmNotes: existing.dttotPpsdmNotes,
@@ -807,6 +847,9 @@ export async function importCustomers(rows: CustomerInput[], actorUserId: number
     ...row,
     cifNumber: row.cifNumber.trim().toUpperCase(), fullName: row.fullName.trim(), phoneNumber: row.phoneNumber.trim(),
     identityNumber: row.identityNumber.trim().toUpperCase(), placeOfBirth: row.placeOfBirth.trim(), address: row.address.trim(),
+    addressCountry: row.addressCountry.trim().toUpperCase(), addressCity: row.addressCity.trim(), addressProvince: row.addressProvince?.trim() || null,
+    addressDistrict: row.addressDistrict?.trim() || null, addressPostalCode: row.addressPostalCode?.trim() || null,
+    nationality: row.nationality.trim().toUpperCase(), npwp: row.npwp?.trim() || null,
     occupation: row.occupation.trim(), sourceOfFunds: row.sourceOfFunds.trim(), transactionPurpose: row.transactionPurpose.trim(), riskNotes: row.riskNotes?.trim() || null,
   }));
   const cifs = normalizedRows.map((row) => row.cifNumber);
