@@ -17,6 +17,10 @@ describe("pemetaan permintaan ke tenant", () => {
     // Tanpa label tenant: host telanjang, host lokal, dan alamat IP.
     expect(subdomainOf("solvinc.id")).toBeNull();
     expect(subdomainOf("localhost")).toBeNull();
+    // *.localhost menuju loopback di peramban modern, sehingga beberapa tenant dapat diuji pada
+    // satu mesin pengembangan.
+    expect(subdomainOf("abcvalas.localhost")).toBe("abcvalas");
+    expect(subdomainOf("abcvalas.localhost:3000")).toBe("abcvalas");
     expect(subdomainOf("127.0.0.1")).toBeNull();
     expect(subdomainOf(undefined)).toBeNull();
   });

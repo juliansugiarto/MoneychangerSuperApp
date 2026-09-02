@@ -48,8 +48,13 @@ export function subdomainOf(hostname: string | undefined): string | null {
   if (!hostname) return null;
   const host = hostname.split(":")[0].toLowerCase();
   const labels = host.split(".").filter(Boolean);
-  // A bare host or an IP address carries no tenant label.
-  if (labels.length < 3 || /^\d+$/.test(labels[labels.length - 1])) return null;
+  // An IP address carries no tenant label.
+  if (/^\d+$/.test(labels[labels.length - 1])) return null;
+  // `*.localhost` resolves to the loopback in every current browser, which is what makes several
+  // tenants testable on one development machine; there two labels are enough.
+  const minimumLabels = labels[labels.length - 1] === "localhost" ? 2 : 3;
+  // A bare host — solvinc.id, localhost — names no tenant.
+  if (labels.length < minimumLabels) return null;
   return labels[0];
 }
 
