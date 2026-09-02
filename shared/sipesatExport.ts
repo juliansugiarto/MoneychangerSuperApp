@@ -1,13 +1,16 @@
 /**
  * SIPESAT (Sistem Informasi Pengguna Jasa Terpadu, PPATK) CSV export — builds the file exactly as
  * specified in the PPATK "Buku Petunjuk Penggunaan Aplikasi SIPESAT Online v.3.1" (file naming) and
- * the PPATK-published sample data (column header/order). This module only builds a file for manual
- * upload at https://sipesat.ppatk.go.id — it never submits anything itself (per project policy, no
- * automatic regulator submission without verified credentials/authorization).
+ * the PPATK-published sample data (column header/order), and the underlying regulation Peraturan
+ * Kepala PPATK Nomor PER-02/1.02/PPATK/02/2014 Pasal 7 (which fields to report for individual vs.
+ * corporate customers). This module only builds a file for manual upload at
+ * https://sipesat.ppatk.go.id — it never submits anything itself (per project policy, no automatic
+ * regulator submission without verified credentials/authorization).
  *
  * KNOWN GAP: `customers` in this system has no dedicated corporate-customer type or NPWP field, so
- * "No.NPWP" is always left blank here even for corporate customers (e.g. "PT ..." names) — this is a
- * real limitation, not an oversight, and is surfaced in the UI/docs rather than silently guessed at.
+ * "No.NPWP" is always left blank here even for corporate customers (e.g. "PT ..." names) — Pasal 7
+ * requires NPWP for a Korporasi Pengguna Jasa, so this is a real, regulation-relevant limitation, not
+ * an oversight, and is surfaced in the UI/docs rather than silently guessed at.
  */
 
 export const SIPESAT_CSV_HEADER = ["IDPJK", "Kode Nasabah", "Nama Nasabah", "Tempat Lahir", "Tanggal Lahir", "Alamat", "No.KTP", "No.Identitas Lain", "No.CIF", "No.NPWP"] as const;

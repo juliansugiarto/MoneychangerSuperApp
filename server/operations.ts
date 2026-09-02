@@ -1799,11 +1799,14 @@ export async function getCompanyProfile() {
 
 /**
  * Builds a SIPESAT (PPATK) customer-data CSV file, ready for manual upload at sipesat.ppatk.go.id —
- * this never submits anything itself. INITIAL covers every live customer (first-ever report to
- * PPATK); TRIWULAN covers customers created or updated within the selected quarter — this quarterly
- * scope is this project's best-effort reading of the SIPESAT user manual, which documents file
- * naming but not the exact inclusion rule, so confirm against the current PPATK circular (SE) before
- * relying on it for a real submission.
+ * this never submits anything itself. Scope per Peraturan Kepala PPATK Nomor PER-02/1.02/PPATK/02/2014
+ * Pasal 12: INITIAL covers every live customer, including inactive/closed ones ("termasuk yang telah
+ * ditutup") — the one-time first report; TRIWULAN covers only customers newly added ("penambahan
+ * Pengguna Jasa baru") as of the end of the selected quarter (Maret/Juni/September/Desember per Pasal
+ * 12b), identified here by `createdAt` falling inside the quarter — NOT customers merely edited/updated
+ * during the quarter, which the regulation does not ask for. Per Pasal 14, the deadline for the
+ * quarterly submission is the 15th of the following month (or the next business day if that falls on
+ * a weekend/holiday) — this app does not track or enforce that deadline, it only builds the file.
  */
 export async function getSipesatExport(input: { type: "INITIAL" } | { type: "TRIWULAN"; triwulan: 1 | 2 | 3 | 4; tahun: number }) {
   return retryTransientDatabaseRead(async () => {
@@ -1820,7 +1823,7 @@ export async function getSipesatExport(input: { type: "INITIAL" } | { type: "TRI
     } else {
       const quarterStart = new Date(Date.UTC(input.tahun, (input.triwulan - 1) * 3, 1));
       const quarterEnd = new Date(Date.UTC(input.tahun, input.triwulan * 3, 1));
-      rows = await db.select().from(customers).where(and(liveCustomerFilter, gte(customers.updatedAt, quarterStart), lt(customers.updatedAt, quarterEnd))).orderBy(customers.id);
+      rows = await db.select().from(customers).where(and(liveCustomerFilter, gte(customers.createdAt, quarterStart), lt(customers.createdAt, quarterEnd))).orderBy(customers.id);
       fileName = buildSipesatTriwulanFileName(profile.sipesatIdPjk, input.triwulan, input.tahun, now);
     }
     return { csv: buildSipesatCsv(profile.sipesatIdPjk, rows), fileName, customerCount: rows.length };

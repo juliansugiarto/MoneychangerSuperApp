@@ -111,7 +111,7 @@ function SipesatExportCard() {
         </div> : null}
       </div>
       {exportType === "INITIAL" ? <p className="text-xs leading-5 text-[#647a92]">Data Initial mencakup <strong>seluruh nasabah live</strong> (bukan data latihan/arsip) — gunakan hanya bila outlet belum pernah melapor SIPESAT sama sekali.</p>
-        : <p className="text-xs leading-5 text-[#647a92]">Data Triwulan mencakup nasabah yang <strong>dibuat atau diperbarui</strong> pada periode terpilih — ini asumsi terbaik dari Buku Petunjuk SIPESAT (yang mendokumentasikan penamaan file, bukan aturan cakupan data persis). Konfirmasi ke Surat Edaran PPATK terbaru sebelum diunggah sebagai laporan resmi.</p>}
+        : <p className="text-xs leading-5 text-[#647a92]">Data Triwulan mencakup <strong>nasabah baru</strong> yang tercatat pada periode terpilih (Pasal 12 huruf b Peraturan Kepala PPATK Nomor PER-02/1.02/PPATK/02/2014) — bukan nasabah lama yang datanya sekadar diperbarui. Batas waktu unggah: tanggal 15 bulan berikutnya (mundur ke hari kerja berikutnya bila jatuh pada akhir pekan/libur nasional).</p>}
       <Button type="button" disabled={isExporting || !profile?.sipesatIdPjk} onClick={runExport} className="bg-[#183f70] text-white hover:bg-[#12345d]"><FileDown className="mr-2 size-4" />{isExporting ? "Menyiapkan…" : "Unduh CSV"}</Button>
       <p className="text-xs leading-5 text-[#647a92]">Nama file otomatis mengikuti konvensi <code>SIPESAT_IDPJK_IN/TW_...</code>. Ganti angka nomor urut di akhir nama file secara manual bila mengunggah lebih dari satu berkas untuk periode yang sama.</p>
     </CardContent>
