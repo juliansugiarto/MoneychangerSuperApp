@@ -224,7 +224,18 @@ Kartu **Ekspor data pengguna jasa (SIPESAT)** di halaman Pelaporan Regulator mem
 2. Pilih jenis: **Data Initial** (laporan pertama kali, mencakup **seluruh** nasabah live termasuk yang sudah tidak aktif/ditutup — Pasal 13 Peraturan Kepala PPATK Nomor PER-02/1.02/PPATK/02/2014) atau **Data Triwulan** (pilih triwulan dan tahun; mencakup **hanya nasabah baru** yang tercatat pada periode tsb, Pasal 12 huruf b — bukan nasabah lama yang sekadar diperbarui datanya).
 3. Klik **Unduh CSV** — file otomatis dinamai sesuai konvensi resmi SIPESAT (`SIPESAT_<IDPJK>_IN_<DDMMYYYY>_1.csv` untuk initial, `SIPESAT_<IDPJK>_TW_<Triwulan><Tahun>_<DDMMYYYY>_1.csv` untuk triwulan). Ganti angka nomor urut di akhir nama file secara manual bila mengunggah lebih dari satu berkas untuk periode yang sama.
 4. Login ke `sipesat.ppatk.go.id` dengan akun goAML PJK, buka menu **Upload → Upload Baru**, pilih jenis data yang sesuai, dan unggah file yang sudah diunduh — jangan mengubah nama file yang sudah dihasilkan. Batas waktu unggah Data Triwulan: tanggal **15 bulan berikutnya** setelah akhir triwulan (mundur ke hari kerja berikutnya bila jatuh pada akhir pekan/libur nasional — Pasal 14).
-5. **Batasan yang perlu diketahui**: kolom **No.NPWP** pada file yang dihasilkan **selalu kosong** karena sistem ini belum membedakan nasabah perorangan vs. korporasi dan belum menyimpan NPWP per nasabah — padahal Pasal 7 mewajibkan NPWP untuk nasabah berbentuk Korporasi. Isi manual di file sebelum unggah bila ada nasabah korporasi yang perlu dilaporkan.
+5. **Batasan yang perlu diketahui**: kolom **No.NPWP** pada file yang dihasilkan **selalu kosong** karena sistem ini belum membedakan nasabah perorangan vs. korporasi (NPWP nasabah kini tersimpan di profil, tapi kolom SIPESAT ini secara spesifik untuk NPWP Korporasi per Pasal 7 — belum dipetakan otomatis). Isi manual di file sebelum unggah bila ada nasabah korporasi yang perlu dilaporkan.
+
+### 7.4 Ekspor LTKT goAML (XML) — Controller ke atas
+
+Kartu **Ekspor LTKT goAML (XML)** di halaman Pelaporan Regulator membangun file XML LTKT (Laporan Transaksi Keuangan Tunai) siap unggah manual ke goAML — **tidak pernah** mengirim data secara otomatis dari aplikasi ini.
+
+1. Isi **ID Entitas Pelapor goAML (rentity_id)** dan **Kode User Pelapor goAML** di **Profil Perusahaan** terlebih dahulu (angka/kode dari registrasi goAML, berbeda dari IDPJK SIPESAT maupun sandi pelapor BI). Tombol ekspor tidak aktif sampai keduanya terisi.
+2. Pilih rentang tanggal dan **arah kas**: **Kas Masuk** (LTKTM — bon Jual, nasabah membayar Rupiah ke outlet) atau **Kas Keluar** (LTKTK — bon Beli, outlet membayar Rupiah ke nasabah).
+3. Klik **Unduh XML**. Hanya bon **tunai** berstatus **Selesai** yang memenuhi ambang LTKT (≥ Rp500 juta) yang diikutsertakan. Bon multi-mata uang dipecah menjadi beberapa baris transaksi XML (satu per baris mata uang), ditandai akhiran `-L1`, `-L2`, dst pada nomor transaksinya.
+4. Bila ada bon yang profil nasabahnya belum lengkap (jenis kelamin/kewarganegaraan/alamat terstruktur belum diisi), bon tsb **dilewati** dan namanya ditampilkan di pesan galat — lengkapi profil nasabah tsb lewat Edit, lalu ulangi ekspor.
+5. **Batasan yang perlu diketahui**: bon dengan `Cara bayar` **Transfer Bank** belum didukung ekspor ini — goAML mewajibkan kode institusi/SWIFT rekening lawan yang belum dicatat sistem untuk bank counterparty. Hanya transaksi tunai yang bisa diekspor untuk saat ini.
+6. Unggah file yang dihasilkan secara manual melalui aplikasi goAML sesuai prosedur yang berlaku di perusahaan.
 
 ## 8. Keluhan Nasabah
 

@@ -52,6 +52,8 @@ export default function RegulatoryReportingAdvanced() {
 
     <SipesatExportCard />
 
+    <GoAmlLtktExportCard />
+
     <Card className="border-[#dce6f0]"><CardHeader><div className="flex gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700"><FileWarning className="size-5" /></span><div><CardTitle className="font-display text-xl text-[#18395f]">4. Register laporan insidental</CardTitle><CardDescription>Catat kejadian dan bukti internal lebih dahulu. Petugas berwenang tetap menentukan apakah, kapan, dan dengan format apa kejadian harus dilaporkan.</CardDescription></div></div></CardHeader><CardContent><form onSubmit={submitIncident} className="grid gap-4 lg:grid-cols-2"><div><Label>Kategori</Label><select value={incident.category} onChange={(event) => setIncident((current) => ({ ...current, category: event.target.value as IncidentCategory }))} className="mt-2 flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><option value="GOVERNANCE">Perubahan tata kelola</option><option value="OFFICE_OR_OUTLET">Kantor / gerai</option><option value="BUSINESS_DISRUPTION">Gangguan usaha</option><option value="FORCE_MAJEURE">Force majeure</option><option value="COOPERATION">Kerja sama</option><option value="REGULATOR_REQUEST">Permintaan regulator</option><option value="OTHER">Lainnya</option></select></div><Field label="Judul kejadian" value={incident.title} onChange={(value) => setIncident((current) => ({ ...current, title: value }))} /><Field label="Tanggal kejadian" type="date" value={incident.incidentAt} onChange={(value) => setIncident((current) => ({ ...current, incidentAt: value }))} /><Field label="Tanggal diketahui" type="date" value={incident.discoveredAt} onChange={(value) => setIncident((current) => ({ ...current, discoveredAt: value }))} /><div className="lg:col-span-2"><RowField label="Uraian kejadian" value={incident.description} onChange={(value) => setIncident((current) => ({ ...current, description: value }))} placeholder="Kronologi singkat, fakta yang diketahui, dan dampak operasional." /></div><div><RowField label="Referensi bukti internal" value={incident.evidenceReference} onChange={(value) => setIncident((current) => ({ ...current, evidenceReference: value }))} placeholder="Nomor notulen, tiket, dokumen, atau folder bukti." /></div><div><RowField label="Tindakan awal" value={incident.initialAction} onChange={(value) => setIncident((current) => ({ ...current, initialAction: value }))} placeholder="Langkah pengamanan atau tindak lanjut yang telah dilakukan." /></div><div className="lg:col-span-2"><Button type="submit" disabled={createIncident.isPending} className="bg-[#183f70] text-white hover:bg-[#12345d]"><Plus className="mr-2 size-4" />Buat draf register</Button></div></form><div className="mt-6 space-y-3">{incidents.isLoading ? <div className="h-24 animate-pulse rounded-xl bg-[#f3f6fa]" /> : null}{!incidents.isLoading && !incidents.data?.length ? <p className="rounded-xl border border-dashed border-[#cfdbe7] p-4 text-sm text-[#718297]">Belum ada register insidental. Gunakan hanya untuk kejadian nyata yang perlu diperiksa petugas.</p> : null}{incidents.data?.map((item) => { const canApprove = user?.role === "SHAREHOLDER" && item.status === "PREPARED" && item.preparedByUserId !== user.id; return <article key={item.id} className="rounded-xl border border-[#e0e8f1] bg-white p-4"><div className="flex flex-col gap-3 xl:flex-row xl:justify-between"><div><div className="flex flex-wrap gap-2"><p className="font-bold text-[#294866]">{item.reportNumber}</p><Badge className={statusTone(item.status)}>{item.status}</Badge><Badge variant="outline">{incidentLabels[item.category]}</Badge></div><p className="mt-2 text-sm text-[#586f88]">{item.title}</p><p className="mt-1 text-xs text-[#718297]">Kejadian: {new Date(item.incidentAt).toLocaleString("id-ID")}</p></div><div className="flex flex-wrap gap-2">{item.status === "DRAFT" ? <Button size="sm" onClick={() => prepareIncident.mutate({ incidentId: item.id })}><ClipboardCheck className="mr-1.5 size-3.5" />Siapkan</Button> : null}{canApprove ? <Button size="sm" onClick={() => approveIncident.mutate({ incidentId: item.id, notes: notes[item.id] || undefined })} className="bg-emerald-700 text-white hover:bg-emerald-800"><ShieldCheck className="mr-1.5 size-3.5" />Setujui</Button> : null}{item.status === "PREPARED" && user?.role === "SHAREHOLDER" && item.preparedByUserId === user.id ? <Badge className="h-8 status-rejected">MAKER TIDAK DAPAT MENYETUJUI</Badge> : null}{item.status === "PREPARED" && user?.role !== "SHAREHOLDER" ? <Badge className="h-8 status-pending">MENUNGGU SHAREHOLDER</Badge> : null}{(item.status === "APPROVED" || item.status === "EXPORTED") ? <Button size="sm" variant="outline" onClick={() => { printIncident(item); exportIncident.mutate({ incidentId: item.id }); }}><FileDown className="mr-1.5 size-3.5" />Cetak / ekspor</Button> : null}</div></div>{canApprove ? <Textarea className="mt-4 min-h-20" placeholder="Catatan persetujuan Shareholder (opsional)" value={notes[item.id] ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [item.id]: event.target.value }))} /> : null}{item.status === "APPROVED" || item.status === "EXPORTED" ? <div className="mt-4 flex gap-2 rounded-xl bg-indigo-50 px-3 py-2 text-xs leading-5 text-indigo-900"><LockKeyhole className="mt-0.5 size-4 shrink-0" />Cetak ini adalah bukti paket internal; tidak berarti regulator telah menerima laporan.</div> : null}</article>;})}</div></CardContent></Card>
   </section>;
 }
@@ -67,6 +69,12 @@ function WorkbookBundleImport({ onImported }: { onImported: (value: { profitLoss
 
 function downloadCsv(fileName: string, csv: string) {
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const anchor = document.createElement("a");
+  anchor.href = url; anchor.download = fileName; anchor.click(); URL.revokeObjectURL(url);
+}
+
+function downloadXml(fileName: string, xml: string) {
+  const url = URL.createObjectURL(new Blob([xml], { type: "application/xml;charset=utf-8" }));
   const anchor = document.createElement("a");
   anchor.href = url; anchor.download = fileName; anchor.click(); URL.revokeObjectURL(url);
 }
@@ -114,6 +122,46 @@ function SipesatExportCard() {
         : <p className="text-xs leading-5 text-[#647a92]">Data Triwulan mencakup <strong>nasabah baru</strong> yang tercatat pada periode terpilih (Pasal 12 huruf b Peraturan Kepala PPATK Nomor PER-02/1.02/PPATK/02/2014) — bukan nasabah lama yang datanya sekadar diperbarui. Batas waktu unggah: tanggal 15 bulan berikutnya (mundur ke hari kerja berikutnya bila jatuh pada akhir pekan/libur nasional).</p>}
       <Button type="button" disabled={isExporting || !profile?.sipesatIdPjk} onClick={runExport} className="bg-[#183f70] text-white hover:bg-[#12345d]"><FileDown className="mr-2 size-4" />{isExporting ? "Menyiapkan…" : "Unduh CSV"}</Button>
       <p className="text-xs leading-5 text-[#647a92]">Nama file otomatis mengikuti konvensi <code>SIPESAT_IDPJK_IN/TW_...</code>. Ganti angka nomor urut di akhir nama file secara manual bila mengunggah lebih dari satu berkas untuk periode yang sama.</p>
+    </CardContent>
+  </Card>;
+}
+
+function GoAmlLtktExportCard() {
+  const utils = trpc.useUtils();
+  const { data: profile } = trpc.companyProfile.get.useQuery();
+  const [from, setFrom] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
+  const [to, setTo] = useState(() => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10));
+  const [direction, setDirection] = useState<"MASUK" | "KELUAR">("MASUK");
+  const [isExporting, setIsExporting] = useState(false);
+  const configured = Boolean(profile?.goamlRentityId && profile.goamlReportingUserCode);
+
+  const runExport = async () => {
+    if (!configured) return toast.error("Isi dulu ID Entitas Pelapor dan Kode User Pelapor goAML di Profil Perusahaan.");
+    setIsExporting(true);
+    try {
+      const result = await utils.regulatoryReports.goAmlLtktExport.fetch({ from: new Date(`${from}T00:00:00`), to: new Date(`${to}T00:00:00`), direction });
+      if (result.skipped.length) toast.error(`${result.skipped.length} transaksi dilewati karena profil nasabah belum lengkap: ${result.skipped.map((s) => s.transactionNumber).join(", ")}.`);
+      if (!result.xml || !result.fileName) { if (!result.skipped.length) toast.error("Tidak ada transaksi tunai ≥ Rp500 juta yang cocok pada periode/arah ini."); return; }
+      downloadXml(result.fileName, result.xml);
+      toast.success(`${result.fileName} diunduh — ${result.lineCount} baris transaksi dari ${result.transactionCount} bon. Unggah manual ke goAML.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Ekspor goAML LTKT gagal.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return <Card className="border-[#dce6f0]">
+    <CardHeader><div className="flex gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#eef2fb] text-[#526681]"><FileDown className="size-5" /></span><div><CardTitle className="font-display text-xl text-[#18395f]">Ekspor LTKT goAML (XML)</CardTitle><CardDescription>Membangun file XML LTKT (Laporan Transaksi Keuangan Tunai) siap unggah manual ke goAML — aplikasi ini tidak pernah mengirim data secara otomatis. Cakupan: hanya bon <strong>tunai</strong> berstatus <strong>Selesai</strong> yang memenuhi ambang LTKT (≥ Rp500 juta). Bon transfer bank belum didukung (butuh kode institusi/SWIFT rekening lawan yang belum dicatat sistem).</CardDescription></div></div></CardHeader>
+    <CardContent className="space-y-4">
+      {!configured ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-900">ID Entitas Pelapor (rentity_id) dan Kode User Pelapor goAML belum diisi. Lengkapi di <strong>Profil Perusahaan</strong> sebelum mengekspor.</div> : null}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div><Label className="text-xs">Dari</Label><Input className="mt-1 bg-white" type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></div>
+        <div><Label className="text-xs">Sampai (eksklusif)</Label><Input className="mt-1 bg-white" type="date" value={to} onChange={(event) => setTo(event.target.value)} /></div>
+        <div><Label className="text-xs">Arah kas</Label><select className="mt-1 flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm" value={direction} onChange={(event) => setDirection(event.target.value as "MASUK" | "KELUAR")}><option value="MASUK">Kas Masuk (LTKTM — bon Jual)</option><option value="KELUAR">Kas Keluar (LTKTK — bon Beli)</option></select></div>
+      </div>
+      <Button type="button" disabled={isExporting || !configured} onClick={runExport} className="bg-[#183f70] text-white hover:bg-[#12345d]"><FileDown className="mr-2 size-4" />{isExporting ? "Menyiapkan…" : "Unduh XML"}</Button>
+      <p className="text-xs leading-5 text-[#647a92]">Setiap bon multi-mata uang dipecah menjadi beberapa baris transaksi XML (satu per baris mata uang), ditandai dengan akhiran <code>-L1</code>, <code>-L2</code>, dst pada nomor transaksinya.</p>
     </CardContent>
   </Card>;
 }

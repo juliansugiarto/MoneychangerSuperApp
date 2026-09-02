@@ -517,6 +517,10 @@ export const companyProfile = mysqlTable("company_profile", {
   biReporterCode: varchar("biReporterCode", { length: 80 }),
   /** ID PJK yang ditetapkan PPATK untuk pelaporan SIPESAT — beda dari NPWP/nomor izin, ditemukan di pojok kanan halaman SIPESAT saat login. Wajib diisi untuk membangun nama file dan isi kolom IDPJK ekspor SIPESAT. */
   sipesatIdPjk: varchar("sipesatIdPjk", { length: 20 }),
+  /** ID entitas pelapor (rentity_id) yang ditetapkan PPATK untuk pelaporan goAML — angka, beda dari IDPJK SIPESAT maupun sandi pelapor BI. Wajib untuk header setiap file XML goAML (LTKT/LTKM). */
+  goamlRentityId: int("goamlRentityId"),
+  /** Kode user pelapor goAML (reporting_user_code) yang terdaftar di aplikasi goAML — dipakai di header laporan sebagai pengganti detail lengkap petugas pelapor. */
+  goamlReportingUserCode: varchar("goamlReportingUserCode", { length: 50 }),
   address: text("address"),
   phone: varchar("phone", { length: 60 }),
   email: varchar("email", { length: 200 }),

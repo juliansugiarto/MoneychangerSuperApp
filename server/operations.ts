@@ -41,6 +41,7 @@ import { getDb } from "./db";
 import { knownDenominationsFor } from "../shared/currencyDenominations";
 import { isKnownSuspiciousIndicatorCode } from "../shared/suspiciousTransactionIndicators";
 import { buildSipesatCsv, buildSipesatInitialFileName, buildSipesatTriwulanFileName } from "../shared/sipesatExport";
+import { buildGoAmlLtktReportXml, type GoAmlCustomer, type GoAmlLtktLine } from "../shared/goAmlExport";
 
 /** Rejects a denomination value that doesn't match a real banknote/coin for this currency (when we have a curated list — see shared/currencyDenominations.ts). Never trust the client alone here: this is exactly the check that stops a typo like "IDR 131250000 × 1 lembar" from being recorded as if it were a real note. */
 function assertKnownDenomination(value: Decimal, currencyCode: string | undefined, label: string) {
@@ -1873,11 +1874,109 @@ export async function getSipesatExport(input: { type: "INITIAL" } | { type: "TRI
   });
 }
 
+/**
+ * Builds a goAML LTKT (Laporan Transaksi Keuangan Tunai) XML report — ready for manual upload to
+ * goAML, never submitted automatically. Scope is deliberately narrow (see shared/goAmlExport.ts for
+ * the full rationale): only CASH-settled, COMPLETED bons at or above the Rp 500 juta LTKT threshold,
+ * modeled as Multiparty transactions with the customer as the sole reported party. BANK_TRANSFER
+ * bons need Biparty t_account fields (counterparty institution code/SWIFT) this system doesn't
+ * capture yet and are excluded, not guessed at.
+ *
+ * direction "MASUK" (kas masuk, report LTKTM) = SELL bons, where the customer pays Rupiah in;
+ * "KELUAR" (kas keluar, report LTKTK) = BUY bons, where the outlet pays Rupiah out — this mirrors
+ * the Rupiah cash leg direction already used elsewhere in this codebase (completeTransaction), not
+ * a new convention invented here.
+ */
+export async function getGoAmlLtktExport(input: { from: Date; to: Date; direction: "MASUK" | "KELUAR" }) {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const profile = (await db.select().from(companyProfile).orderBy(companyProfile.id).limit(1))[0];
+    if (!profile?.goamlRentityId) throw new Error("ID entitas pelapor goAML (rentity_id) belum diisi di Profil Perusahaan.");
+    if (!profile.goamlReportingUserCode?.trim()) throw new Error("Kode user pelapor goAML belum diisi di Profil Perusahaan.");
+
+    const operation = input.direction === "MASUK" ? "SELL" : "BUY";
+    const reportCode = input.direction === "MASUK" ? "LTKTM" : "LTKTK";
+
+    const qualifyingTransactions = await db.select({ transaction: exchangeTransactions, customer: customers })
+      .from(exchangeTransactions)
+      .innerJoin(customers, eq(exchangeTransactions.customerId, customers.id))
+      .where(and(
+        gte(exchangeTransactions.transactionAt, input.from), lt(exchangeTransactions.transactionAt, input.to),
+        eq(exchangeTransactions.status, "COMPLETED"), eq(exchangeTransactions.paymentMethod, "CASH"), eq(exchangeTransactions.operation, operation),
+        gte(exchangeTransactions.rupiahAmount, LTKT_CASH_THRESHOLD_IDR),
+        eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false),
+        eq(customers.isDemo, false), eq(customers.isHistorical, false),
+      ));
+
+    const skipped: { transactionNumber: string; reason: string }[] = [];
+    if (!qualifyingTransactions.length) return { xml: null as string | null, fileName: null as string | null, transactionCount: 0, lineCount: 0, skipped };
+
+    const transactionIds = qualifyingTransactions.map(({ transaction }) => transaction.id);
+    const lineRows = await db.select({ line: exchangeTransactionLines, currency: currencies }).from(exchangeTransactionLines)
+      .innerJoin(currencies, eq(exchangeTransactionLines.currencyId, currencies.id))
+      .where(inArray(exchangeTransactionLines.transactionId, transactionIds));
+    const linesByTransactionId = new Map<number, typeof lineRows>();
+    for (const row of lineRows) {
+      const list = linesByTransactionId.get(row.line.transactionId) ?? [];
+      list.push(row);
+      linesByTransactionId.set(row.line.transactionId, list);
+    }
+    // Legacy bons predating the multi-line feature store their single currency directly on the header.
+    const legacyCurrencyIds = qualifyingTransactions.filter(({ transaction }) => !linesByTransactionId.has(transaction.id) && transaction.currencyId).map(({ transaction }) => transaction.currencyId!);
+    const legacyCurrencies = legacyCurrencyIds.length ? await db.select().from(currencies).where(inArray(currencies.id, legacyCurrencyIds)) : [];
+    const legacyCurrencyById = new Map(legacyCurrencies.map((currency) => [currency.id, currency]));
+
+    const goAmlLines: GoAmlLtktLine[] = [];
+    for (const { transaction, customer } of qualifyingTransactions) {
+      const missingFields = [
+        !customer.gender && "jenis kelamin", !customer.nationality && "kewarganegaraan", !customer.addressType && "jenis alamat",
+        !customer.addressCountry && "negara alamat", !customer.addressCity && "kota",
+      ].filter((label): label is string => Boolean(label));
+      if (missingFields.length) {
+        skipped.push({ transactionNumber: transaction.transactionNumber, reason: `Profil nasabah belum lengkap: ${missingFields.join(", ")}.` });
+        continue;
+      }
+      const goAmlCustomer: GoAmlCustomer = {
+        fullName: customer.fullName, dateOfBirth: customer.dateOfBirth ?? new Date(0), placeOfBirth: customer.placeOfBirth ?? "",
+        gender: customer.gender!, nationality: customer.nationality!, address: customer.address, addressType: customer.addressType!,
+        addressCountry: customer.addressCountry!, addressProvince: customer.addressProvince, addressCity: customer.addressCity!,
+        addressDistrict: customer.addressDistrict, addressPostalCode: customer.addressPostalCode, phoneNumber: customer.phoneNumber,
+        occupation: customer.occupation ?? "", sourceOfFunds: customer.sourceOfFunds ?? "", npwp: customer.npwp,
+        identityType: customer.identityType, identityNumber: customer.identityNumber, identityExpiryDate: customer.identityExpiryDate,
+      };
+      const lines = linesByTransactionId.get(transaction.id);
+      if (lines?.length) {
+        for (const { line, currency } of lines) {
+          goAmlLines.push({
+            transactionNumber: `${transaction.transactionNumber}-L${line.lineNumber}`, dateTransaction: transaction.transactionAt, operation: transaction.operation,
+            amountLocalIdr: line.rupiahAmount, currencyCode: currency.code, foreignAmount: line.foreignAmount, agreedRate: line.agreedRate, customer: goAmlCustomer,
+          });
+        }
+      } else if (transaction.currencyId && legacyCurrencyById.has(transaction.currencyId)) {
+        const currency = legacyCurrencyById.get(transaction.currencyId)!;
+        goAmlLines.push({
+          transactionNumber: `${transaction.transactionNumber}-L1`, dateTransaction: transaction.transactionAt, operation: transaction.operation,
+          amountLocalIdr: transaction.rupiahAmount, currencyCode: currency.code, foreignAmount: transaction.foreignAmount ?? "0", agreedRate: transaction.rateSnapshot ?? "0", customer: goAmlCustomer,
+        });
+      } else {
+        skipped.push({ transactionNumber: transaction.transactionNumber, reason: "Tidak ditemukan baris mata uang untuk transaksi ini." });
+      }
+    }
+
+    if (!goAmlLines.length) return { xml: null as string | null, fileName: null as string | null, transactionCount: 0, lineCount: 0, skipped };
+
+    const xml = buildGoAmlLtktReportXml({ rentityId: profile.goamlRentityId, reportCode, reportDate: new Date(), currencyCodeLocal: "IDR", reportingUserCode: profile.goamlReportingUserCode, lines: goAmlLines });
+    const fileName = `${reportCode}_${input.from.toISOString().slice(0, 10)}_${input.to.toISOString().slice(0, 10)}.xml`;
+    return { xml, fileName, transactionCount: qualifyingTransactions.length - skipped.length, lineCount: goAmlLines.length, skipped };
+  });
+}
+
 /** Creates or updates the single company-profile row — Controller/Shareholder only (enforced at the router). Upsert-by-existence rather than a fixed id, since a fresh install has no row yet. */
 export async function updateCompanyProfile(
   input: {
     legalEntityName: string; tradingName: string; licenseNumber?: string; kupvaCode?: string; npwp?: string; nib?: string;
-    biReporterCode?: string; sipesatIdPjk?: string; address?: string; phone?: string; email?: string; website?: string; logoDocumentId?: number;
+    biReporterCode?: string; sipesatIdPjk?: string; goamlRentityId?: number; goamlReportingUserCode?: string;
+    address?: string; phone?: string; email?: string; website?: string; logoDocumentId?: number;
   },
   actor: { id: number; role: StaffRole },
 ) {
@@ -1891,6 +1990,8 @@ export async function updateCompanyProfile(
     licenseNumber: input.licenseNumber?.trim() || null, kupvaCode: input.kupvaCode?.trim() || null,
     npwp: input.npwp?.trim() || null, nib: input.nib?.trim() || null, biReporterCode: input.biReporterCode?.trim() || null,
     sipesatIdPjk: input.sipesatIdPjk?.trim() || null,
+    goamlRentityId: input.goamlRentityId ?? null,
+    goamlReportingUserCode: input.goamlReportingUserCode?.trim() || null,
     address: input.address?.trim() || null, phone: input.phone?.trim() || null, email: input.email?.trim() || null, website: input.website?.trim() || null,
     logoDocumentId: input.logoDocumentId ?? null, updatedByUserId: actor.id,
   };

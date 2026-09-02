@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 const fileToBase64 = (file: File) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
 
-const emptyForm = { legalEntityName: "", tradingName: "", licenseNumber: "", kupvaCode: "", npwp: "", nib: "", biReporterCode: "", sipesatIdPjk: "", address: "", phone: "", email: "", website: "" };
+const emptyForm = { legalEntityName: "", tradingName: "", licenseNumber: "", kupvaCode: "", npwp: "", nib: "", biReporterCode: "", sipesatIdPjk: "", goamlRentityId: "", goamlReportingUserCode: "", address: "", phone: "", email: "", website: "" };
 
 export default function CompanyProfile() {
   const utils = trpc.useUtils();
@@ -26,6 +26,7 @@ export default function CompanyProfile() {
     setForm({
       legalEntityName: profile.legalEntityName, tradingName: profile.tradingName, licenseNumber: profile.licenseNumber ?? "",
       kupvaCode: profile.kupvaCode ?? "", npwp: profile.npwp ?? "", nib: profile.nib ?? "", biReporterCode: profile.biReporterCode ?? "", sipesatIdPjk: profile.sipesatIdPjk ?? "",
+      goamlRentityId: profile.goamlRentityId ? String(profile.goamlRentityId) : "", goamlReportingUserCode: profile.goamlReportingUserCode ?? "",
       address: profile.address ?? "", phone: profile.phone ?? "", email: profile.email ?? "", website: profile.website ?? "",
     });
   }, [profile]);
@@ -39,9 +40,12 @@ export default function CompanyProfile() {
     onError: (error) => toast.error(error.message),
   });
 
+  const toPayload = () => ({ ...form, goamlRentityId: form.goamlRentityId.trim() ? Number(form.goamlRentityId) : undefined });
+
   const save = () => {
     if (!form.legalEntityName.trim() || !form.tradingName.trim()) return toast.error("Nama PT dan nama moneychanger wajib diisi.");
-    update.mutate({ ...form, logoDocumentId: profile?.logoDocumentId ?? undefined });
+    if (form.goamlRentityId.trim() && !Number.isInteger(Number(form.goamlRentityId))) return toast.error("ID entitas pelapor goAML harus berupa angka bulat.");
+    update.mutate({ ...toPayload(), logoDocumentId: profile?.logoDocumentId ?? undefined });
   };
 
   const uploadDocument = async (file: File, documentType: "COMPANY_LOGO" | "LICENSE_CERTIFICATE" | "LICENSE_ATTACHMENT") => {
@@ -56,7 +60,7 @@ export default function CompanyProfile() {
     setUploadingLogo(true);
     try {
       const document = await uploadDocument(file, "COMPANY_LOGO");
-      await update.mutateAsync({ ...form, logoDocumentId: document.id });
+      await update.mutateAsync({ ...toPayload(), logoDocumentId: document.id });
       utils.documents.forCompany.invalidate();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Logo gagal diunggah.");
@@ -123,6 +127,8 @@ export default function CompanyProfile() {
           <div><Label className="text-xs">NPWP</Label><Input className="mt-1" value={form.npwp} onChange={(e) => setForm({ ...form, npwp: e.target.value })} /></div>
           <div><Label className="text-xs">NIB</Label><Input className="mt-1" value={form.nib} onChange={(e) => setForm({ ...form, nib: e.target.value })} /></div>
           <div><Label className="text-xs">ID PJK SIPESAT</Label><Input className="mt-1" value={form.sipesatIdPjk} onChange={(e) => setForm({ ...form, sipesatIdPjk: e.target.value })} placeholder="Lihat pojok kanan halaman sipesat.ppatk.go.id" /></div>
+          <div><Label className="text-xs">ID Entitas Pelapor goAML (rentity_id)</Label><Input className="mt-1" type="number" min={1} value={form.goamlRentityId} onChange={(e) => setForm({ ...form, goamlRentityId: e.target.value })} placeholder="Angka dari registrasi goAML" /></div>
+          <div><Label className="text-xs">Kode User Pelapor goAML</Label><Input className="mt-1" value={form.goamlReportingUserCode} onChange={(e) => setForm({ ...form, goamlReportingUserCode: e.target.value })} placeholder="Kode akun pelapor terdaftar di goAML" /></div>
         </div>
         <div>
           <Label className="text-xs">Sandi pelapor BI (SINTA)</Label>

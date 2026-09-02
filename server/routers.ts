@@ -29,6 +29,7 @@ import {
   getHistoricalTransactionReport,
   getOperationalDashboard,
   getRegulatoryReportingReadiness,
+  getGoAmlLtktExport,
   getSipesatExport,
   getRateComparisonDashboard,
   getReviewThreshold,
@@ -366,6 +367,8 @@ export const appRouter = router({
       nib: z.string().trim().max(40).optional(),
       biReporterCode: z.string().trim().max(80).optional(),
       sipesatIdPjk: z.string().trim().max(20).optional(),
+      goamlRentityId: z.number().int().positive().optional(),
+      goamlReportingUserCode: z.string().trim().max(50).optional(),
       address: z.string().trim().max(2000).optional(),
       phone: z.string().trim().max(60).optional(),
       email: z.string().trim().max(200).optional(),
@@ -537,6 +540,7 @@ export const appRouter = router({
       z.object({ type: z.literal("INITIAL") }),
       z.object({ type: z.literal("TRIWULAN"), triwulan: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]), tahun: z.number().int().min(2016).max(2100) }),
     ])).query(({ input }) => getSipesatExport(input)),
+    goAmlLtktExport: controllerProcedure.input(z.object({ from: z.coerce.date(), to: z.coerce.date(), direction: z.enum(["MASUK", "KELUAR"]) })).query(({ input }) => getGoAmlLtktExport(input)),
   }),
 
   audit: router({
