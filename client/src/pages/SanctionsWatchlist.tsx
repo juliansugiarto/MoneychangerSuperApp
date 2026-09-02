@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { AlertTriangle, FileSpreadsheet, ScanSearch, Search, ShieldAlert, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, FileSpreadsheet, Radiation, ScanSearch, Search, ShieldAlert, Upload } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 const listTypeLabels: Record<string, string> = { DTTOT: "DTTOT (Terduga Teroris)", PPPSM: "PPPSM (Proliferasi Senjata Pemusnah Massal)" };
+const listTypeIcon: Record<string, typeof ShieldAlert> = { DTTOT: ShieldAlert, PPPSM: Radiation };
+const listTypeTint: Record<string, string> = { DTTOT: "bg-rose-100 text-rose-700", PPPSM: "bg-amber-100 text-amber-700" };
 
 function fileToBase64(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -21,6 +23,15 @@ function fileToBase64(file: File) {
   });
 }
 
+function relativeImportLabel(importedAt: string | Date) {
+  const days = Math.floor((Date.now() - new Date(importedAt).getTime()) / 86_400_000);
+  if (days <= 0) return "Hari ini";
+  if (days === 1) return "Kemarin";
+  if (days < 30) return `${days} hari lalu`;
+  const months = Math.floor(days / 30);
+  return `${months} bulan lalu`;
+}
+
 export default function SanctionsWatchlist() {
   const { user } = useAuth();
   const canImport = user?.role === "CONTROLLER" || user?.role === "SHAREHOLDER";
@@ -28,18 +39,22 @@ export default function SanctionsWatchlist() {
   const { data: summary, isLoading: summaryLoading } = trpc.sanctionsWatchlist.summary.useQuery();
   const [query, setQuery] = useState("");
   const [isImporting, setIsImporting] = useState(false);
+  const [lastImportSuccess, setLastImportSuccess] = useState<string | null>(null);
   const search = trpc.sanctionsWatchlist.search.useQuery({ query }, { enabled: query.trim().length >= 3 });
 
   const uploadFile = async (file: File | undefined) => {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) return toast.error("Ukuran berkas maksimal 5 MB.");
     setIsImporting(true);
+    setLastImportSuccess(null);
     try {
       const dataBase64 = await fileToBase64(file);
       const response = await fetch("/api/sanctions-watchlist-import", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dataBase64, originalFileName: file.name, mimeType: file.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", byteSize: file.size }) });
       const payload = await response.json() as { imported?: { listType: string; sourceLabel: string | null; recordCount: number }; message?: string };
       if (!response.ok || !payload.imported) throw new Error(payload.message || "Berkas tidak dapat diimpor.");
-      toast.success(`${listTypeLabels[payload.imported.listType] ?? payload.imported.listType}${payload.imported.sourceLabel ? ` (${payload.imported.sourceLabel})` : ""} diperbarui — ${payload.imported.recordCount} entri.`);
+      const label = `${listTypeLabels[payload.imported.listType] ?? payload.imported.listType}${payload.imported.sourceLabel ? ` (${payload.imported.sourceLabel})` : ""}`;
+      toast.success(`${label} diperbarui — ${payload.imported.recordCount} entri.`);
+      setLastImportSuccess(`"${file.name}" berhasil diimpor sebagai ${label}, ${payload.imported.recordCount} entri menggantikan daftar lama untuk sumber ini.`);
       void utils.sanctionsWatchlist.summary.invalidate();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Berkas tidak dapat diimpor.");
@@ -87,18 +102,32 @@ export default function SanctionsWatchlist() {
     <Card className="border-[#dce6f0]">
       <CardHeader><CardTitle className="font-display text-xl text-[#18395f]">Daftar yang sedang dimuat</CardTitle><CardDescription>Sumber dan kapan setiap daftar terakhir diperbarui. Perbarui secara berkala mengikuti rilis resmi PPATK — aplikasi ini tidak menarik data otomatis dari sumber mana pun.</CardDescription></CardHeader>
       <CardContent className="space-y-4">
-        {summaryLoading ? <div className="h-16 animate-pulse rounded-xl bg-[#f3f6fa]" /> : null}
-        {!summaryLoading && !summary?.length ? <p className="rounded-xl border border-dashed border-[#cfdbe7] p-4 text-sm text-[#718297]">Belum ada daftar yang diimpor. Pencarian di atas tidak akan menemukan apa pun sampai setidaknya satu daftar diimpor.</p> : null}
-        <div className="space-y-2">
-          {summary?.map((row) => <div key={`${row.listType}-${row.sourceLabel ?? ""}`} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#e0e8f1] bg-white p-3 text-sm">
-            <div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{listTypeLabels[row.listType] ?? row.listType}{row.sourceLabel ? ` — ${row.sourceLabel}` : ""}</Badge><span className="text-[#586f88]">{row.recordCount} entri</span></div>
-            <p className="text-xs text-[#718297]">Sumber: {row.sourceFileName} · Diimpor {new Date(row.importedAt).toLocaleString("id-ID")}</p>
-          </div>)}
-        </div>
+        {summaryLoading ? <div className="grid gap-3 sm:grid-cols-2">{[0, 1].map((key) => <div key={key} className="h-28 animate-pulse rounded-xl bg-[#f3f6fa]" />)}</div> : null}
+        {!summaryLoading && !summary?.length ? <div className="rounded-xl border border-dashed border-[#cfdbe7] bg-[#f8fbff] px-5 py-8 text-center"><FileSpreadsheet className="mx-auto size-6 text-[#94a7bb]" /><p className="mt-3 text-sm font-semibold text-[#425b76]">Belum ada daftar yang diimpor</p><p className="mt-1 text-xs leading-5 text-[#718297]">Pencarian di atas tidak akan menemukan apa pun sampai setidaknya satu daftar DTTOT atau PPPSM diimpor{canImport ? " — gunakan tombol unggah di bawah" : ", minta Controller/Shareholder mengunggahnya"}.</p></div> : null}
+        {summary?.length ? <div className="grid gap-3 sm:grid-cols-2">
+          {summary.map((row) => {
+            const Icon = listTypeIcon[row.listType] ?? ShieldAlert;
+            return <div key={`${row.listType}-${row.sourceLabel ?? ""}`} className="rounded-xl border border-[#e0e8f1] bg-white p-4">
+              <div className="flex items-start gap-3">
+                <span className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${listTypeTint[row.listType] ?? "bg-slate-100 text-slate-700"}`}><Icon className="size-5" /></span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-[#294866]" title={listTypeLabels[row.listType] ?? row.listType}>{listTypeLabels[row.listType] ?? row.listType}</p>
+                  {row.sourceLabel ? <Badge variant="outline" className="mt-1">Sumber: {row.sourceLabel}</Badge> : null}
+                </div>
+                <div className="shrink-0 text-right"><p className="font-display text-2xl font-bold leading-none text-[#18395f]">{row.recordCount}</p><p className="mt-1 text-[10px] uppercase tracking-wide text-[#94a7bb]">entri</p></div>
+              </div>
+              <div className="mt-3 space-y-1.5 border-t border-dashed border-[#eef2f7] pt-3 text-xs text-[#718297]">
+                <p className="flex items-center gap-1.5 truncate" title={row.sourceFileName}><FileSpreadsheet className="size-3.5 shrink-0" /><span className="truncate">{row.sourceFileName}</span></p>
+                <p className="flex items-center gap-1.5" title={new Date(row.importedAt).toLocaleString("id-ID")}><Clock className="size-3.5 shrink-0" />Diimpor {relativeImportLabel(row.importedAt)} · {new Date(row.importedAt).toLocaleDateString("id-ID")}</p>
+              </div>
+            </div>;
+          })}
+        </div> : null}
         {canImport ? <div className="flex flex-col gap-3 rounded-xl border border-dashed border-[#bcd1e5] bg-[#f8fbff] p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div><p className="text-sm font-bold text-[#315879]">Impor/perbarui daftar</p><p className="mt-1 text-xs leading-5 text-[#647a92]">Unggah workbook resmi DTTOT atau PPPSM (XLSX/XLS, maks 5 MB). Sistem mendeteksi jenis dan sumbernya secara otomatis dari struktur kolom dan kode referensi, lalu menggantikan seluruh entri lama untuk sumber yang sama.</p></div>
-          <label className="press-scale inline-flex h-9 cursor-pointer items-center justify-center rounded-md bg-[#e7f49a] px-3 text-sm font-semibold text-[#203a56] hover:bg-[#dff085]"><FileSpreadsheet className="mr-1.5 size-4" />{isImporting ? "Mengimpor…" : "Pilih XLSX / XLS"}<input type="file" className="sr-only" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" disabled={isImporting} onChange={(event) => { void uploadFile(event.target.files?.[0]); event.currentTarget.value = ""; }} /></label>
+          <div><p className="text-sm font-bold text-[#315879]">Impor/perbarui daftar</p><p className="mt-1 text-xs leading-5 text-[#647a92]">Unggah workbook resmi DTTOT atau PPPSM (XLSX/XLS, maks 5 MB). Sistem mendeteksi jenis dan sumbernya secara otomatis dari struktur kolom dan kode referensi, lalu menggantikan seluruh entri lama untuk sumber yang sama — daftar lain (mis. sumber PPPSM lainnya) tidak ikut terhapus.</p></div>
+          <label className={`press-scale inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-md px-3 text-sm font-semibold ${isImporting ? "bg-[#f1f4f8] text-[#94a7bb]" : "bg-[#e7f49a] text-[#203a56] hover:bg-[#dff085]"}`}>{isImporting ? <><Clock className="mr-1.5 size-4 animate-spin" />Mengimpor…</> : <><Upload className="mr-1.5 size-4" />Pilih XLSX / XLS</>}<input type="file" className="sr-only" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" disabled={isImporting} onChange={(event) => { void uploadFile(event.target.files?.[0]); event.currentTarget.value = ""; }} /></label>
         </div> : <p className="rounded-xl bg-[#f5f8fc] px-3 py-2.5 text-xs text-[#718297]"><Upload className="mr-1 inline size-3.5" />Hanya Controller atau Shareholder yang dapat mengimpor/memperbarui daftar.</p>}
+        {lastImportSuccess ? <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs leading-5 text-emerald-900"><CheckCircle2 className="size-4 shrink-0" />{lastImportSuccess}</div> : null}
       </CardContent>
     </Card>
 

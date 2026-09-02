@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { GOAML_REPORT_INDICATORS } from "@shared/goAmlReportIndicators";
-import { ClipboardCheck, FileDown, FileSpreadsheet, FileWarning, LockKeyhole, Plus, ShieldCheck, Users } from "lucide-react";
+import { Building2, CheckCircle2, ClipboardCheck, Compass, FileDown, FileSpreadsheet, FileWarning, LockKeyhole, Plus, ShieldCheck, Users, XCircle } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
+import { useLocation } from "wouter";
 
 type FinancialRow = { code: string; label: string; value: string };
 const incidentLabels = { GOVERNANCE: "Perubahan tata kelola", OFFICE_OR_OUTLET: "Kantor / gerai", BUSINESS_DISRUPTION: "Gangguan usaha", FORCE_MAJEURE: "Force majeure", COOPERATION: "Kerja sama", REGULATOR_REQUEST: "Permintaan regulator", OTHER: "Lainnya" } as const;
@@ -51,6 +52,8 @@ export default function RegulatoryReportingAdvanced() {
     <RoleWalkthroughGuide />
     <Card className="border-[#dce6f0]"><CardHeader><div className="flex gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#e9f1fb] text-[#35628f]"><FileSpreadsheet className="size-5" /></span><div><CardTitle className="font-display text-xl text-[#18395f]">3. Snapshot laporan keuangan terkendali</CardTitle><CardDescription>Impor berkas XLSX/XLS berisi FORM B0002, B0003, dan B0004, atau masukkan pos yang telah direkonsiliasi. Satu baris memakai format <strong>KODE | NAMA POS | NILAI</strong>.</CardDescription></div></div></CardHeader><CardContent><form onSubmit={submitFinancial} className="space-y-4"><div className="flex flex-col gap-3 rounded-xl border border-dashed border-[#bcd1e5] bg-[#f8fbff] p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-bold text-[#315879]">Impor FORM B0002 / B0003 / B0004</p><p className="mt-1 text-xs leading-5 text-[#647a92]">Maksimal 5 MB. Sistem memetakan kolom Record No, Pos Akun, dan Nilai; periksa hasilnya sebelum menyimpan.</p></div><label className="press-scale inline-flex h-9 cursor-pointer items-center justify-center rounded-md bg-[#e7f49a] px-3 text-sm font-semibold text-[#203a56] hover:bg-[#dff085]"><FileSpreadsheet className="mr-1.5 size-4" />{isImporting ? "Mengimpor…" : "Pilih XLSX / XLS"}<input type="file" className="sr-only" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" disabled={isImporting} onChange={(event) => { void uploadSpreadsheet(event.target.files?.[0]); event.currentTarget.value = ""; }} /></label></div><div className="grid gap-4 lg:grid-cols-4"><Field label="Awal periode" type="date" value={periodStart} onChange={setPeriodStart} /><Field label="Akhir periode" type="date" value={periodEnd} onChange={setPeriodEnd} /><Field label="Nama sumber" placeholder="Contoh: Trial balance direkonsiliasi" value={sourceLabel} onChange={setSourceLabel} /><Field label="Referensi sumber" placeholder="Nomor file / kertas kerja" value={sourceReference} onChange={setSourceReference} /></div><div className="grid gap-4 lg:grid-cols-3"><RowField label="Laba rugi — B0003" value={profitLoss} onChange={setProfitLoss} placeholder="01 | Penjualan UKA | 0" /><RowField label="Neraca — B0002" value={balanceSheet} onChange={setBalanceSheet} placeholder="101 | Kas Rupiah | 0" /><RowField label="Perubahan ekuitas — B0004" value={equity} onChange={setEquity} placeholder="01 | Saldo positif | 0" /></div><div className="flex flex-col gap-3 rounded-xl bg-[#f5f8fc] p-4 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-5 text-[#60758d]">Aplikasi memeriksa kode ganda, nilai desimal, dan kelengkapan tiga kelompok. Angka ini tidak menyesuaikan bon, kas, atau saldo produksi.</p><Button type="submit" disabled={createSnapshot.isPending} className="bg-[#183f70] text-white hover:bg-[#12345d]"><Plus className="mr-2 size-4" />Simpan snapshot</Button></div></form><div className="mt-5 space-y-3">{financialSnapshots.isLoading ? <div className="h-20 animate-pulse rounded-xl bg-[#f3f6fa]" /> : null}{!financialSnapshots.isLoading && !financialSnapshots.data?.length ? <p className="rounded-xl border border-dashed border-[#cfdbe7] p-4 text-sm text-[#718297]">Belum ada snapshot keuangan. Masukkan angka yang telah direkonsiliasi sebelum membuat paket laporan keuangan.</p> : null}{financialSnapshots.data?.map((snapshot) => { const summary = snapshot.validationSummary as { counts?: { profitLoss?: number; balanceSheet?: number; equity?: number }; warnings?: string[] }; return <div key={snapshot.id} className="flex flex-col gap-3 rounded-xl border border-[#e0e8f1] bg-white p-4 lg:flex-row lg:items-center lg:justify-between"><div><div className="flex flex-wrap gap-2"><p className="font-bold text-[#294866]">{snapshot.sourceLabel}</p><Badge variant="outline">{new Date(snapshot.periodStart).toLocaleDateString("id-ID")}–{new Date(snapshot.periodEnd).toLocaleDateString("id-ID")}</Badge>{snapshot.sourceFileName ? <Badge className="bg-[#edf4fb] text-[#386185] hover:bg-[#edf4fb]">{snapshot.sourceFileName}</Badge> : null}</div><p className="mt-2 text-xs text-[#718297]">{summary.counts?.profitLoss ?? 0} pos laba/rugi · {summary.counts?.balanceSheet ?? 0} pos neraca · {summary.counts?.equity ?? 0} pos ekuitas</p>{summary.warnings?.map((warning) => <p key={warning} className="mt-1 text-xs text-amber-700">{warning}</p>)}</div><Button size="sm" disabled={createFinancialDraft.isPending} onClick={() => createFinancialDraft.mutate({ snapshotId: snapshot.id })} className="bg-[#183f70] text-white hover:bg-[#12345d]"><FileDown className="mr-1.5 size-3.5" />Buat draf keuangan</Button></div>;})}</div></CardContent></Card>
 
+    <RegulatorSystemsOverview />
+
     <SipesatExportCard />
 
     <GoAmlLtktExportCard />
@@ -59,6 +62,20 @@ export default function RegulatoryReportingAdvanced() {
 
     <Card className="border-[#dce6f0]"><CardHeader><div className="flex gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700"><FileWarning className="size-5" /></span><div><CardTitle className="font-display text-xl text-[#18395f]">4. Register laporan insidental</CardTitle><CardDescription>Catat kejadian dan bukti internal lebih dahulu. Petugas berwenang tetap menentukan apakah, kapan, dan dengan format apa kejadian harus dilaporkan.</CardDescription></div></div></CardHeader><CardContent><form onSubmit={submitIncident} className="grid gap-4 lg:grid-cols-2"><div><Label>Kategori</Label><select value={incident.category} onChange={(event) => setIncident((current) => ({ ...current, category: event.target.value as IncidentCategory }))} className="mt-2 flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><option value="GOVERNANCE">Perubahan tata kelola</option><option value="OFFICE_OR_OUTLET">Kantor / gerai</option><option value="BUSINESS_DISRUPTION">Gangguan usaha</option><option value="FORCE_MAJEURE">Force majeure</option><option value="COOPERATION">Kerja sama</option><option value="REGULATOR_REQUEST">Permintaan regulator</option><option value="OTHER">Lainnya</option></select></div><Field label="Judul kejadian" value={incident.title} onChange={(value) => setIncident((current) => ({ ...current, title: value }))} /><Field label="Tanggal kejadian" type="date" value={incident.incidentAt} onChange={(value) => setIncident((current) => ({ ...current, incidentAt: value }))} /><Field label="Tanggal diketahui" type="date" value={incident.discoveredAt} onChange={(value) => setIncident((current) => ({ ...current, discoveredAt: value }))} /><div className="lg:col-span-2"><RowField label="Uraian kejadian" value={incident.description} onChange={(value) => setIncident((current) => ({ ...current, description: value }))} placeholder="Kronologi singkat, fakta yang diketahui, dan dampak operasional." /></div><div><RowField label="Referensi bukti internal" value={incident.evidenceReference} onChange={(value) => setIncident((current) => ({ ...current, evidenceReference: value }))} placeholder="Nomor notulen, tiket, dokumen, atau folder bukti." /></div><div><RowField label="Tindakan awal" value={incident.initialAction} onChange={(value) => setIncident((current) => ({ ...current, initialAction: value }))} placeholder="Langkah pengamanan atau tindak lanjut yang telah dilakukan." /></div><div className="lg:col-span-2"><Button type="submit" disabled={createIncident.isPending} className="bg-[#183f70] text-white hover:bg-[#12345d]"><Plus className="mr-2 size-4" />Buat draf register</Button></div></form><div className="mt-6 space-y-3">{incidents.isLoading ? <div className="h-24 animate-pulse rounded-xl bg-[#f3f6fa]" /> : null}{!incidents.isLoading && !incidents.data?.length ? <p className="rounded-xl border border-dashed border-[#cfdbe7] p-4 text-sm text-[#718297]">Belum ada register insidental. Gunakan hanya untuk kejadian nyata yang perlu diperiksa petugas.</p> : null}{incidents.data?.map((item) => { const canApprove = user?.role === "SHAREHOLDER" && item.status === "PREPARED" && item.preparedByUserId !== user.id; return <article key={item.id} className="rounded-xl border border-[#e0e8f1] bg-white p-4"><div className="flex flex-col gap-3 xl:flex-row xl:justify-between"><div><div className="flex flex-wrap gap-2"><p className="font-bold text-[#294866]">{item.reportNumber}</p><Badge className={statusTone(item.status)}>{item.status}</Badge><Badge variant="outline">{incidentLabels[item.category]}</Badge></div><p className="mt-2 text-sm text-[#586f88]">{item.title}</p><p className="mt-1 text-xs text-[#718297]">Kejadian: {new Date(item.incidentAt).toLocaleString("id-ID")}</p></div><div className="flex flex-wrap gap-2">{item.status === "DRAFT" ? <Button size="sm" onClick={() => prepareIncident.mutate({ incidentId: item.id })}><ClipboardCheck className="mr-1.5 size-3.5" />Siapkan</Button> : null}{canApprove ? <Button size="sm" onClick={() => approveIncident.mutate({ incidentId: item.id, notes: notes[item.id] || undefined })} className="bg-emerald-700 text-white hover:bg-emerald-800"><ShieldCheck className="mr-1.5 size-3.5" />Setujui</Button> : null}{item.status === "PREPARED" && user?.role === "SHAREHOLDER" && item.preparedByUserId === user.id ? <Badge className="h-8 status-rejected">MAKER TIDAK DAPAT MENYETUJUI</Badge> : null}{item.status === "PREPARED" && user?.role !== "SHAREHOLDER" ? <Badge className="h-8 status-pending">MENUNGGU SHAREHOLDER</Badge> : null}{(item.status === "APPROVED" || item.status === "EXPORTED") ? <Button size="sm" variant="outline" onClick={() => { printIncident(item); exportIncident.mutate({ incidentId: item.id }); }}><FileDown className="mr-1.5 size-3.5" />Cetak / ekspor</Button> : null}</div></div>{canApprove ? <Textarea className="mt-4 min-h-20" placeholder="Catatan persetujuan Shareholder (opsional)" value={notes[item.id] ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [item.id]: event.target.value }))} /> : null}{item.status === "APPROVED" || item.status === "EXPORTED" ? <div className="mt-4 flex gap-2 rounded-xl bg-indigo-50 px-3 py-2 text-xs leading-5 text-indigo-900"><LockKeyhole className="mt-0.5 size-4 shrink-0" />Cetak ini adalah bukti paket internal; tidak berarti regulator telah menerima laporan.</div> : null}</article>;})}</div></CardContent></Card>
   </section>;
+}
+
+/** Jump-to-Company-Profile CTA shown wherever an export is blocked on missing config, so "belum diisi" isn't a dead end. */
+function ConfigMissingNotice({ children }: { children: React.ReactNode }) {
+  const [, setLocation] = useLocation();
+  return <div className="flex flex-col gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+    <span>{children}</span>
+    <Button type="button" size="sm" variant="outline" className="shrink-0 border-amber-300 bg-white text-amber-900 hover:bg-amber-100" onClick={() => setLocation("/operasional/profil-perusahaan")}><Building2 className="mr-1.5 size-3.5" />Buka Profil Perusahaan</Button>
+  </div>;
+}
+
+/** Small uppercase step marker so each export card reads as a numbered wizard (pilih → unduh → unggah) instead of one wall of prose. */
+function StepLabel({ n, children }: { n: number; children: React.ReactNode }) {
+  return <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-[#94a7bb]"><span className="flex size-5 items-center justify-center rounded-full bg-[#e9f1fb] text-[10px] text-[#35628f]">{n}</span>{children}</p>;
 }
 
 function Field({ label, value, onChange, type = "text", placeholder }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string }) { return <div><Label>{label}</Label><Input type={type} placeholder={placeholder} className="mt-2 bg-white" value={value} onChange={(event) => onChange(event.target.value)} /></div>; }
@@ -110,7 +127,8 @@ function SipesatExportCard() {
   return <Card className="border-[#dce6f0]">
     <CardHeader><div className="flex gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#eaf6e7] text-[#4f914c]"><Users className="size-5" /></span><div><CardTitle className="font-display text-xl text-[#18395f]">Ekspor data pengguna jasa (SIPESAT)</CardTitle><CardDescription>Membangun file CSV siap unggah manual ke <strong>sipesat.ppatk.go.id</strong> — aplikasi ini tidak pernah mengirim data ke PPATK secara otomatis. Nama file dan header kolom mengikuti Buku Petunjuk Penggunaan SIPESAT v.3.1.</CardDescription></div></div></CardHeader>
     <CardContent className="space-y-4">
-      {!profile?.sipesatIdPjk ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-900">ID PJK SIPESAT belum diisi. Buka <strong>Profil Perusahaan</strong> dan isi field "ID PJK SIPESAT" (terlihat di pojok kanan atas halaman sipesat.ppatk.go.id setelah login) sebelum mengekspor.</div> : null}
+      {!profile?.sipesatIdPjk ? <ConfigMissingNotice>ID PJK SIPESAT belum diisi (terlihat di pojok kanan atas halaman sipesat.ppatk.go.id setelah login).</ConfigMissingNotice> : null}
+      <StepLabel n={1}>Pilih jenis dan periode</StepLabel>
       <div className="grid gap-4 sm:grid-cols-[auto_1fr]">
         <div className="flex gap-2">
           <Button type="button" variant={exportType === "INITIAL" ? "default" : "outline"} className={exportType === "INITIAL" ? "bg-[#183f70] text-white hover:bg-[#12345d]" : ""} onClick={() => setExportType("INITIAL")}>Data Initial</Button>
@@ -123,8 +141,11 @@ function SipesatExportCard() {
       </div>
       {exportType === "INITIAL" ? <p className="text-xs leading-5 text-[#647a92]">Data Initial mencakup <strong>seluruh nasabah live</strong> (bukan data latihan/arsip) — gunakan hanya bila outlet belum pernah melapor SIPESAT sama sekali.</p>
         : <p className="text-xs leading-5 text-[#647a92]">Data Triwulan mencakup <strong>nasabah baru</strong> yang tercatat pada periode terpilih (Pasal 12 huruf b Peraturan Kepala PPATK Nomor PER-02/1.02/PPATK/02/2014) — bukan nasabah lama yang datanya sekadar diperbarui. Batas waktu unggah: tanggal 15 bulan berikutnya (mundur ke hari kerja berikutnya bila jatuh pada akhir pekan/libur nasional).</p>}
-      <Button type="button" disabled={isExporting || !profile?.sipesatIdPjk} onClick={runExport} className="bg-[#183f70] text-white hover:bg-[#12345d]"><FileDown className="mr-2 size-4" />{isExporting ? "Menyiapkan…" : "Unduh CSV"}</Button>
+      <StepLabel n={2}>Unduh berkas CSV</StepLabel>
+      <div><Button type="button" disabled={isExporting || !profile?.sipesatIdPjk} onClick={runExport} className="bg-[#183f70] text-white hover:bg-[#12345d]"><FileDown className="mr-2 size-4" />{isExporting ? "Menyiapkan…" : "Unduh CSV"}</Button></div>
       <p className="text-xs leading-5 text-[#647a92]">Nama file otomatis mengikuti konvensi <code>SIPESAT_IDPJK_IN/TW_...</code>. Ganti angka nomor urut di akhir nama file secara manual bila mengunggah lebih dari satu berkas untuk periode yang sama.</p>
+      <StepLabel n={3}>Unggah manual ke SIPESAT</StepLabel>
+      <p className="text-xs leading-5 text-[#647a92]">Login ke <code>sipesat.ppatk.go.id</code> dengan akun goAML PJK, buka menu <strong>Upload → Upload Baru</strong>, pilih jenis data yang sesuai, lalu unggah berkas yang baru diunduh.</p>
     </CardContent>
   </Card>;
 }
@@ -157,14 +178,18 @@ function GoAmlLtktExportCard() {
   return <Card className="border-[#dce6f0]">
     <CardHeader><div className="flex gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#eef2fb] text-[#526681]"><FileDown className="size-5" /></span><div><CardTitle className="font-display text-xl text-[#18395f]">Ekspor LTKT goAML (XML)</CardTitle><CardDescription>Membangun file XML LTKT (Laporan Transaksi Keuangan Tunai) siap unggah manual ke goAML — aplikasi ini tidak pernah mengirim data secara otomatis. Cakupan: hanya bon <strong>tunai</strong> berstatus <strong>Selesai</strong> yang memenuhi ambang LTKT (≥ Rp500 juta). Bon transfer bank belum didukung (butuh kode institusi/SWIFT rekening lawan yang belum dicatat sistem).</CardDescription></div></div></CardHeader>
     <CardContent className="space-y-4">
-      {!configured ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-900">ID Entitas Pelapor (rentity_id) dan Kode User Pelapor goAML belum diisi. Lengkapi di <strong>Profil Perusahaan</strong> sebelum mengekspor.</div> : null}
+      {!configured ? <ConfigMissingNotice>ID Entitas Pelapor (rentity_id) dan/atau Kode User Pelapor goAML belum diisi.</ConfigMissingNotice> : null}
+      <StepLabel n={1}>Pilih periode dan arah kas</StepLabel>
       <div className="grid gap-4 sm:grid-cols-3">
         <div><Label className="text-xs">Dari</Label><Input className="mt-1 bg-white" type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></div>
         <div><Label className="text-xs">Sampai (eksklusif)</Label><Input className="mt-1 bg-white" type="date" value={to} onChange={(event) => setTo(event.target.value)} /></div>
         <div><Label className="text-xs">Arah kas</Label><select className="mt-1 flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm" value={direction} onChange={(event) => setDirection(event.target.value as "MASUK" | "KELUAR")}><option value="MASUK">Kas Masuk (LTKTM — bon Jual)</option><option value="KELUAR">Kas Keluar (LTKTK — bon Beli)</option></select></div>
       </div>
-      <Button type="button" disabled={isExporting || !configured} onClick={runExport} className="bg-[#183f70] text-white hover:bg-[#12345d]"><FileDown className="mr-2 size-4" />{isExporting ? "Menyiapkan…" : "Unduh XML"}</Button>
+      <StepLabel n={2}>Unduh berkas XML</StepLabel>
+      <div><Button type="button" disabled={isExporting || !configured} onClick={runExport} className="bg-[#183f70] text-white hover:bg-[#12345d]"><FileDown className="mr-2 size-4" />{isExporting ? "Menyiapkan…" : "Unduh XML"}</Button></div>
       <p className="text-xs leading-5 text-[#647a92]">Setiap bon multi-mata uang dipecah menjadi beberapa baris transaksi XML (satu per baris mata uang), ditandai dengan akhiran <code>-L1</code>, <code>-L2</code>, dst pada nomor transaksinya.</p>
+      <StepLabel n={3}>Unggah manual ke goAML</StepLabel>
+      <p className="text-xs leading-5 text-[#647a92]">Login ke portal goAML PPATK (butuh akses VPN terpisah), lalu unggah berkas XML yang baru diunduh sesuai prosedur yang berlaku di perusahaan.</p>
     </CardContent>
   </Card>;
 }
@@ -205,11 +230,13 @@ function GoAmlLtkmExportCard() {
   return <Card className="border-[#dce6f0]">
     <CardHeader><div className="flex gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#fbecec] text-[#a34848]"><FileWarning className="size-5" /></span><div><CardTitle className="font-display text-xl text-[#18395f]">Ekspor LTKM goAML (XML)</CardTitle><CardDescription>Membangun file XML LTKM (Laporan Transaksi Keuangan Mencurigakan) siap unggah manual ke goAML — aplikasi ini tidak pernah mengirim data secara otomatis. Cakupan: bon <strong>tunai</strong> berstatus <strong>Selesai</strong> yang ditandai mencurigakan (checklist TKM saat pembuatan bon). Anda WAJIB memilih sendiri kode indikator <code>report_indicator_type</code> goAML — daftar ini codebook terpisah dari checklist TKM internal dan tidak dipetakan otomatis.</CardDescription></div></div></CardHeader>
     <CardContent className="space-y-4">
-      {!configured ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-900">ID Entitas Pelapor (rentity_id) dan Kode User Pelapor goAML belum diisi. Lengkapi di <strong>Profil Perusahaan</strong> sebelum mengekspor.</div> : null}
+      {!configured ? <ConfigMissingNotice>ID Entitas Pelapor (rentity_id) dan/atau Kode User Pelapor goAML belum diisi.</ConfigMissingNotice> : null}
+      <StepLabel n={1}>Pilih periode</StepLabel>
       <div className="grid gap-4 sm:grid-cols-2">
         <div><Label className="text-xs">Dari</Label><Input className="mt-1 bg-white" type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></div>
         <div><Label className="text-xs">Sampai (eksklusif)</Label><Input className="mt-1 bg-white" type="date" value={to} onChange={(event) => setTo(event.target.value)} /></div>
       </div>
+      <StepLabel n={2}>Pilih kode indikator dan tulis alasan</StepLabel>
       <RowField label="Alasan / narasi (opsional, dikirim sebagai <reason>)" value={reason} onChange={setReason} placeholder="Ringkasan mengapa transaksi ini dianggap mencurigakan." />
       <div>
         <Label className="text-xs">Kode indikator goAML ({selectedCodes.length} dipilih)</Label>
@@ -222,8 +249,52 @@ function GoAmlLtkmExportCard() {
         </div>
         {selectedCodes.length ? <div className="mt-2 flex flex-wrap gap-1.5">{selectedCodes.map((code) => <Badge key={code} className="cursor-pointer bg-[#edf4fb] text-[#386185] hover:bg-[#dde9f6]" onClick={() => toggleCode(code)}>{code} ×</Badge>)}</div> : null}
       </div>
-      <Button type="button" disabled={isExporting || !configured} onClick={runExport} className="bg-[#183f70] text-white hover:bg-[#12345d]"><FileDown className="mr-2 size-4" />{isExporting ? "Menyiapkan…" : "Unduh XML"}</Button>
+      <StepLabel n={3}>Unduh berkas XML</StepLabel>
+      <div><Button type="button" disabled={isExporting || !configured} onClick={runExport} className="bg-[#183f70] text-white hover:bg-[#12345d]"><FileDown className="mr-2 size-4" />{isExporting ? "Menyiapkan…" : "Unduh XML"}</Button></div>
       <p className="text-xs leading-5 text-[#647a92]">Setiap bon multi-mata uang dipecah menjadi beberapa baris transaksi XML (satu per baris mata uang), ditandai dengan akhiran <code>-L1</code>, <code>-L2</code>, dst pada nomor transaksinya.</p>
+      <StepLabel n={4}>Unggah manual ke goAML</StepLabel>
+      <p className="text-xs leading-5 text-[#647a92]">Login ke portal goAML PPATK (butuh akses VPN terpisah), lalu unggah berkas XML yang baru diunduh sesuai prosedur yang berlaku di perusahaan.</p>
+    </CardContent>
+  </Card>;
+}
+
+/** Sits right before the SIPESAT/goAML export cards to answer the two questions people get stuck on: "which one do I need" and "why won't it let me export yet". */
+function RegulatorSystemsOverview() {
+  const { data: profile } = trpc.companyProfile.get.useQuery();
+  const items = [
+    { label: "ID PJK SIPESAT", ok: Boolean(profile?.sipesatIdPjk) },
+    { label: "ID Entitas Pelapor goAML (rentity_id)", ok: Boolean(profile?.goamlRentityId) },
+    { label: "Kode User Pelapor goAML", ok: Boolean(profile?.goamlReportingUserCode) },
+  ];
+  const allConfigured = items.every((item) => item.ok);
+
+  return <Card className="border-[#dce6f0]">
+    <CardHeader><div className="flex gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#eef2fb] text-[#35628f]"><Compass className="size-5" /></span><div><CardTitle className="font-display text-xl text-[#18395f]">Ekspor ke regulator: SIPESAT dan goAML</CardTitle><CardDescription>Dua sistem pelaporan PPATK yang <strong>terpisah</strong>. Kartu di bawah hanya membangun berkasnya — Anda tetap login dan unggah sendiri ke portal masing-masing; aplikasi ini tidak pernah mengirim apa pun secara otomatis.</CardDescription></div></div></CardHeader>
+    <CardContent className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-[#d9e7f4] bg-[#f8fbff] p-4">
+          <p className="text-sm font-bold text-[#4f914c]">SIPESAT — daftar nasabah</p>
+          <p className="mt-1 text-xs leading-5 text-[#647a92]">Melaporkan <strong>data nasabah (KYC)</strong>, bukan transaksi. Formatnya CSV, diunggah di <code>sipesat.ppatk.go.id</code>. Dua jenis: <strong>Data Initial</strong> (sekali di awal, seluruh nasabah) dan <strong>Data Triwulan</strong> (rutin tiap 3 bulan, hanya nasabah baru).</p>
+        </div>
+        <div className="rounded-xl border border-[#d9e7f4] bg-[#f8fbff] p-4">
+          <p className="text-sm font-bold text-[#526681]">goAML — transaksi</p>
+          <p className="mt-1 text-xs leading-5 text-[#647a92]">Melaporkan <strong>transaksi</strong>: tunai besar ≥Rp500jt (<strong>LTKT</strong>) atau yang ditandai mencurigakan (<strong>LTKM</strong>). Formatnya XML, diunggah di portal goAML PPATK — butuh login VPN terpisah dari SIPESAT.</p>
+        </div>
+      </div>
+      <div className="rounded-xl border border-[#e0e8f1] bg-white p-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-[#5d7188]">Status konfigurasi (Profil Perusahaan)</p>
+        <div className="mt-2.5 space-y-1.5">
+          {items.map((item) => <div key={item.label} className="flex items-center gap-2 text-xs">
+            {item.ok ? <CheckCircle2 className="size-4 shrink-0 text-emerald-600" /> : <XCircle className="size-4 shrink-0 text-rose-500" />}
+            <span className={item.ok ? "text-[#425b76]" : "font-semibold text-rose-700"}>{item.label}</span>
+          </div>)}
+        </div>
+        <div className="mt-3">
+          {allConfigured
+            ? <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700"><CheckCircle2 className="size-3.5" />Semua konfigurasi lengkap — kartu ekspor di bawah siap dipakai.</p>
+            : <ConfigMissingNotice>Lengkapi field yang bertanda ✕ di atas dulu — kartu ekspor di bawah akan menolak sampai ini terisi.</ConfigMissingNotice>}
+        </div>
+      </div>
     </CardContent>
   </Card>;
 }
