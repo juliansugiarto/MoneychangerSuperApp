@@ -54,6 +54,9 @@ export type GoAmlLtktLine = {
   customer: GoAmlCustomer;
 };
 
+/** Same shape as GoAmlLtktLine — LTKM reuses the identical Multiparty transaction structure. */
+export type GoAmlLtkmLine = GoAmlLtktLine;
+
 export function escapeXml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -221,6 +224,50 @@ export function buildGoAmlLtktReportXml(input: {
     `<currency_code_local>${escapeXml(input.currencyCodeLocal)}</currency_code_local>`,
     tag("reporting_user_code", input.reportingUserCode),
     transactions,
+    "</report>",
+  ];
+  return body.join("");
+}
+
+/**
+ * LTKM (Laporan Transaksi Keuangan Mencurigakan) uses the exact same Multiparty <transaction>
+ * shape as LTKT — same CASH-only, party/person_my_client structure, same BANK_TRANSFER gap. The
+ * one addition is <report_indicators>, a list of goAML report_indicator_type codes (a completely
+ * separate 197-entry codebook from this app's internal TKM checklist — see
+ * shared/goAmlReportIndicators.ts). There is no reliable automatic mapping from the internal
+ * checklist to these codes, so the compliance reviewer selects them manually at export time
+ * (confirmed decision, not a guess). Scoped to report_code "LTKM" only — LTKMP (percobaan) and
+ * LTKMT (terorisme) are out of scope until a concrete need for them is identified.
+ */
+export function buildLtkmTransactionXml(line: GoAmlLtkmLine): string {
+  return buildLtktTransactionXml(line);
+}
+
+export function buildGoAmlLtkmReportXml(input: {
+  rentityId: number;
+  reportDate: Date;
+  currencyCodeLocal: string;
+  reportingUserCode: string;
+  reason?: string;
+  lines: GoAmlLtkmLine[];
+  indicatorCodes: string[];
+}): string {
+  const transactions = input.lines.map(buildLtkmTransactionXml).join("");
+  const indicators = input.indicatorCodes
+    .map((code) => `<indicator>${escapeXml(code)}</indicator>`)
+    .join("");
+  const body = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    "<report>",
+    `<rentity_id>${input.rentityId}</rentity_id>`,
+    "<submission_code>E</submission_code>",
+    "<report_code>LTKM</report_code>",
+    `<report_date>${formatSqlDate(input.reportDate)}</report_date>`,
+    `<currency_code_local>${escapeXml(input.currencyCodeLocal)}</currency_code_local>`,
+    tag("reporting_user_code", input.reportingUserCode),
+    tag("reason", input.reason),
+    transactions,
+    `<report_indicators>${indicators}</report_indicators>`,
     "</report>",
   ];
   return body.join("");

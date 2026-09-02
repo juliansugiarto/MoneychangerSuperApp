@@ -30,6 +30,7 @@ import {
   getOperationalDashboard,
   getRegulatoryReportingReadiness,
   getGoAmlLtktExport,
+  getGoAmlLtkmExport,
   getSipesatExport,
   getRateComparisonDashboard,
   getReviewThreshold,
@@ -541,6 +542,7 @@ export const appRouter = router({
       z.object({ type: z.literal("TRIWULAN"), triwulan: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]), tahun: z.number().int().min(2016).max(2100) }),
     ])).query(({ input }) => getSipesatExport(input)),
     goAmlLtktExport: controllerProcedure.input(z.object({ from: z.coerce.date(), to: z.coerce.date(), direction: z.enum(["MASUK", "KELUAR"]) })).query(({ input }) => getGoAmlLtktExport(input)),
+    goAmlLtkmExport: controllerProcedure.input(z.object({ from: z.coerce.date(), to: z.coerce.date(), indicatorCodes: z.array(z.string().trim().min(1)).min(1).max(50), reason: z.string().trim().max(8000).optional() })).query(({ input }) => getGoAmlLtkmExport(input)),
   }),
 
   audit: router({

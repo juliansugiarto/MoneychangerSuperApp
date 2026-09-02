@@ -237,6 +237,19 @@ Kartu **Ekspor LTKT goAML (XML)** di halaman Pelaporan Regulator membangun file 
 5. **Batasan yang perlu diketahui**: bon dengan `Cara bayar` **Transfer Bank** belum didukung ekspor ini — goAML mewajibkan kode institusi/SWIFT rekening lawan yang belum dicatat sistem untuk bank counterparty. Hanya transaksi tunai yang bisa diekspor untuk saat ini.
 6. Unggah file yang dihasilkan secara manual melalui aplikasi goAML sesuai prosedur yang berlaku di perusahaan.
 
+### 7.5 Ekspor LTKM goAML (XML) — Controller ke atas
+
+Kartu **Ekspor LTKM goAML (XML)** di halaman Pelaporan Regulator membangun file XML LTKM (Laporan Transaksi Keuangan Mencurigakan) siap unggah manual ke goAML — **tidak pernah** mengirim data secara otomatis dari aplikasi ini.
+
+1. Membutuhkan konfigurasi **rentity_id** dan **Kode User Pelapor goAML** yang sama dengan LTKT (lihat §7.4).
+2. Cakupan: bon **tunai** berstatus **Selesai** yang ditandai **mencurigakan** lewat checklist TKM saat pembuatan bon — kedua arah kas (Beli maupun Jual) diikutsertakan, tidak seperti LTKT yang dipisah per arah.
+3. **Wajib pilih sendiri kode indikator goAML** (`report_indicator_type`, mis. `POLA-001`, `TEROR-003`, `TUNDA-002`) dari daftar pencarian di kartu ekspor. Daftar ini adalah **codebook resmi goAML yang terpisah** dari checklist TKM internal aplikasi — sistem **tidak** memetakan otomatis dari checklist TKM ke kode ini karena tidak ada korespondensi yang dapat diandalkan. Petugas kepatuhan yang menilai indikator mana yang berlaku untuk setiap laporan.
+4. Kolom **Alasan / narasi** (opsional) dikirim sebagai elemen `<reason>` pada XML — isi ringkasan mengapa transaksi dianggap mencurigakan bila diperlukan untuk audit trail internal.
+5. Bon multi-mata uang dipecah menjadi beberapa baris transaksi XML (satu per baris mata uang), ditandai akhiran `-L1`, `-L2`, dst — sama seperti LTKT.
+6. Bila ada bon yang profil nasabahnya belum lengkap, bon tsb **dilewati** dan namanya ditampilkan di pesan galat — lengkapi profil nasabah tsb lewat Edit, lalu ulangi ekspor.
+7. **Batasan yang perlu diketahui**: sama seperti LTKT, bon dengan `Cara bayar` **Transfer Bank** belum didukung; report_code yang dihasilkan selalu `LTKM` — varian `LTKMP` (percobaan) dan `LTKMT` (terorisme) belum didukung dan harus dilaporkan lewat kanal lain bila berlaku.
+8. Unggah file yang dihasilkan secara manual melalui aplikasi goAML sesuai prosedur yang berlaku di perusahaan.
+
 ## 8. Keluhan Nasabah
 
 1. Buka **Keluhan Nasabah** saat menerima pengaduan.

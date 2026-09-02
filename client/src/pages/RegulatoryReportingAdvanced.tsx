@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
+import { GOAML_REPORT_INDICATORS } from "@shared/goAmlReportIndicators";
 import { ClipboardCheck, FileDown, FileSpreadsheet, FileWarning, LockKeyhole, Plus, ShieldCheck, Users } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
@@ -53,6 +54,8 @@ export default function RegulatoryReportingAdvanced() {
     <SipesatExportCard />
 
     <GoAmlLtktExportCard />
+
+    <GoAmlLtkmExportCard />
 
     <Card className="border-[#dce6f0]"><CardHeader><div className="flex gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700"><FileWarning className="size-5" /></span><div><CardTitle className="font-display text-xl text-[#18395f]">4. Register laporan insidental</CardTitle><CardDescription>Catat kejadian dan bukti internal lebih dahulu. Petugas berwenang tetap menentukan apakah, kapan, dan dengan format apa kejadian harus dilaporkan.</CardDescription></div></div></CardHeader><CardContent><form onSubmit={submitIncident} className="grid gap-4 lg:grid-cols-2"><div><Label>Kategori</Label><select value={incident.category} onChange={(event) => setIncident((current) => ({ ...current, category: event.target.value as IncidentCategory }))} className="mt-2 flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><option value="GOVERNANCE">Perubahan tata kelola</option><option value="OFFICE_OR_OUTLET">Kantor / gerai</option><option value="BUSINESS_DISRUPTION">Gangguan usaha</option><option value="FORCE_MAJEURE">Force majeure</option><option value="COOPERATION">Kerja sama</option><option value="REGULATOR_REQUEST">Permintaan regulator</option><option value="OTHER">Lainnya</option></select></div><Field label="Judul kejadian" value={incident.title} onChange={(value) => setIncident((current) => ({ ...current, title: value }))} /><Field label="Tanggal kejadian" type="date" value={incident.incidentAt} onChange={(value) => setIncident((current) => ({ ...current, incidentAt: value }))} /><Field label="Tanggal diketahui" type="date" value={incident.discoveredAt} onChange={(value) => setIncident((current) => ({ ...current, discoveredAt: value }))} /><div className="lg:col-span-2"><RowField label="Uraian kejadian" value={incident.description} onChange={(value) => setIncident((current) => ({ ...current, description: value }))} placeholder="Kronologi singkat, fakta yang diketahui, dan dampak operasional." /></div><div><RowField label="Referensi bukti internal" value={incident.evidenceReference} onChange={(value) => setIncident((current) => ({ ...current, evidenceReference: value }))} placeholder="Nomor notulen, tiket, dokumen, atau folder bukti." /></div><div><RowField label="Tindakan awal" value={incident.initialAction} onChange={(value) => setIncident((current) => ({ ...current, initialAction: value }))} placeholder="Langkah pengamanan atau tindak lanjut yang telah dilakukan." /></div><div className="lg:col-span-2"><Button type="submit" disabled={createIncident.isPending} className="bg-[#183f70] text-white hover:bg-[#12345d]"><Plus className="mr-2 size-4" />Buat draf register</Button></div></form><div className="mt-6 space-y-3">{incidents.isLoading ? <div className="h-24 animate-pulse rounded-xl bg-[#f3f6fa]" /> : null}{!incidents.isLoading && !incidents.data?.length ? <p className="rounded-xl border border-dashed border-[#cfdbe7] p-4 text-sm text-[#718297]">Belum ada register insidental. Gunakan hanya untuk kejadian nyata yang perlu diperiksa petugas.</p> : null}{incidents.data?.map((item) => { const canApprove = user?.role === "SHAREHOLDER" && item.status === "PREPARED" && item.preparedByUserId !== user.id; return <article key={item.id} className="rounded-xl border border-[#e0e8f1] bg-white p-4"><div className="flex flex-col gap-3 xl:flex-row xl:justify-between"><div><div className="flex flex-wrap gap-2"><p className="font-bold text-[#294866]">{item.reportNumber}</p><Badge className={statusTone(item.status)}>{item.status}</Badge><Badge variant="outline">{incidentLabels[item.category]}</Badge></div><p className="mt-2 text-sm text-[#586f88]">{item.title}</p><p className="mt-1 text-xs text-[#718297]">Kejadian: {new Date(item.incidentAt).toLocaleString("id-ID")}</p></div><div className="flex flex-wrap gap-2">{item.status === "DRAFT" ? <Button size="sm" onClick={() => prepareIncident.mutate({ incidentId: item.id })}><ClipboardCheck className="mr-1.5 size-3.5" />Siapkan</Button> : null}{canApprove ? <Button size="sm" onClick={() => approveIncident.mutate({ incidentId: item.id, notes: notes[item.id] || undefined })} className="bg-emerald-700 text-white hover:bg-emerald-800"><ShieldCheck className="mr-1.5 size-3.5" />Setujui</Button> : null}{item.status === "PREPARED" && user?.role === "SHAREHOLDER" && item.preparedByUserId === user.id ? <Badge className="h-8 status-rejected">MAKER TIDAK DAPAT MENYETUJUI</Badge> : null}{item.status === "PREPARED" && user?.role !== "SHAREHOLDER" ? <Badge className="h-8 status-pending">MENUNGGU SHAREHOLDER</Badge> : null}{(item.status === "APPROVED" || item.status === "EXPORTED") ? <Button size="sm" variant="outline" onClick={() => { printIncident(item); exportIncident.mutate({ incidentId: item.id }); }}><FileDown className="mr-1.5 size-3.5" />Cetak / ekspor</Button> : null}</div></div>{canApprove ? <Textarea className="mt-4 min-h-20" placeholder="Catatan persetujuan Shareholder (opsional)" value={notes[item.id] ?? ""} onChange={(event) => setNotes((current) => ({ ...current, [item.id]: event.target.value }))} /> : null}{item.status === "APPROVED" || item.status === "EXPORTED" ? <div className="mt-4 flex gap-2 rounded-xl bg-indigo-50 px-3 py-2 text-xs leading-5 text-indigo-900"><LockKeyhole className="mt-0.5 size-4 shrink-0" />Cetak ini adalah bukti paket internal; tidak berarti regulator telah menerima laporan.</div> : null}</article>;})}</div></CardContent></Card>
   </section>;
@@ -159,6 +162,65 @@ function GoAmlLtktExportCard() {
         <div><Label className="text-xs">Dari</Label><Input className="mt-1 bg-white" type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></div>
         <div><Label className="text-xs">Sampai (eksklusif)</Label><Input className="mt-1 bg-white" type="date" value={to} onChange={(event) => setTo(event.target.value)} /></div>
         <div><Label className="text-xs">Arah kas</Label><select className="mt-1 flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm" value={direction} onChange={(event) => setDirection(event.target.value as "MASUK" | "KELUAR")}><option value="MASUK">Kas Masuk (LTKTM — bon Jual)</option><option value="KELUAR">Kas Keluar (LTKTK — bon Beli)</option></select></div>
+      </div>
+      <Button type="button" disabled={isExporting || !configured} onClick={runExport} className="bg-[#183f70] text-white hover:bg-[#12345d]"><FileDown className="mr-2 size-4" />{isExporting ? "Menyiapkan…" : "Unduh XML"}</Button>
+      <p className="text-xs leading-5 text-[#647a92]">Setiap bon multi-mata uang dipecah menjadi beberapa baris transaksi XML (satu per baris mata uang), ditandai dengan akhiran <code>-L1</code>, <code>-L2</code>, dst pada nomor transaksinya.</p>
+    </CardContent>
+  </Card>;
+}
+
+function GoAmlLtkmExportCard() {
+  const utils = trpc.useUtils();
+  const { data: profile } = trpc.companyProfile.get.useQuery();
+  const [from, setFrom] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
+  const [to, setTo] = useState(() => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10));
+  const [reason, setReason] = useState("");
+  const [filter, setFilter] = useState("");
+  const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const configured = Boolean(profile?.goamlRentityId && profile.goamlReportingUserCode);
+  const filteredIndicators = filter.trim()
+    ? GOAML_REPORT_INDICATORS.filter((indicator) => `${indicator.code} ${indicator.label}`.toLowerCase().includes(filter.trim().toLowerCase()))
+    : GOAML_REPORT_INDICATORS;
+
+  const toggleCode = (code: string) => setSelectedCodes((current) => current.includes(code) ? current.filter((value) => value !== code) : [...current, code]);
+
+  const runExport = async () => {
+    if (!configured) return toast.error("Isi dulu ID Entitas Pelapor dan Kode User Pelapor goAML di Profil Perusahaan.");
+    if (!selectedCodes.length) return toast.error("Pilih minimal satu kode indikator goAML (report_indicator_type).");
+    setIsExporting(true);
+    try {
+      const result = await utils.regulatoryReports.goAmlLtkmExport.fetch({ from: new Date(`${from}T00:00:00`), to: new Date(`${to}T00:00:00`), indicatorCodes: selectedCodes, reason: reason.trim() || undefined });
+      if (result.skipped.length) toast.error(`${result.skipped.length} transaksi dilewati karena profil nasabah belum lengkap: ${result.skipped.map((s) => s.transactionNumber).join(", ")}.`);
+      if (!result.xml || !result.fileName) { if (!result.skipped.length) toast.error("Tidak ada transaksi mencurigakan (tunai, Selesai) yang cocok pada periode ini."); return; }
+      downloadXml(result.fileName, result.xml);
+      toast.success(`${result.fileName} diunduh — ${result.lineCount} baris transaksi dari ${result.transactionCount} bon. Unggah manual ke goAML.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Ekspor goAML LTKM gagal.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  return <Card className="border-[#dce6f0]">
+    <CardHeader><div className="flex gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#fbecec] text-[#a34848]"><FileWarning className="size-5" /></span><div><CardTitle className="font-display text-xl text-[#18395f]">Ekspor LTKM goAML (XML)</CardTitle><CardDescription>Membangun file XML LTKM (Laporan Transaksi Keuangan Mencurigakan) siap unggah manual ke goAML — aplikasi ini tidak pernah mengirim data secara otomatis. Cakupan: bon <strong>tunai</strong> berstatus <strong>Selesai</strong> yang ditandai mencurigakan (checklist TKM saat pembuatan bon). Anda WAJIB memilih sendiri kode indikator <code>report_indicator_type</code> goAML — daftar ini codebook terpisah dari checklist TKM internal dan tidak dipetakan otomatis.</CardDescription></div></div></CardHeader>
+    <CardContent className="space-y-4">
+      {!configured ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-900">ID Entitas Pelapor (rentity_id) dan Kode User Pelapor goAML belum diisi. Lengkapi di <strong>Profil Perusahaan</strong> sebelum mengekspor.</div> : null}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div><Label className="text-xs">Dari</Label><Input className="mt-1 bg-white" type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></div>
+        <div><Label className="text-xs">Sampai (eksklusif)</Label><Input className="mt-1 bg-white" type="date" value={to} onChange={(event) => setTo(event.target.value)} /></div>
+      </div>
+      <RowField label="Alasan / narasi (opsional, dikirim sebagai <reason>)" value={reason} onChange={setReason} placeholder="Ringkasan mengapa transaksi ini dianggap mencurigakan." />
+      <div>
+        <Label className="text-xs">Kode indikator goAML ({selectedCodes.length} dipilih)</Label>
+        <Input className="mt-1 bg-white" placeholder="Cari kode atau kata kunci, contoh: POLA, TEROR, tunai" value={filter} onChange={(event) => setFilter(event.target.value)} />
+        <div className="mt-2 max-h-64 overflow-y-auto rounded-xl border border-[#e0e8f1] bg-white p-2">
+          {filteredIndicators.length ? filteredIndicators.map((indicator) => <label key={indicator.code} className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 text-xs leading-5 hover:bg-[#f4f9ff]">
+            <input type="checkbox" className="mt-0.5" checked={selectedCodes.includes(indicator.code)} onChange={() => toggleCode(indicator.code)} />
+            <span><span className="font-mono font-bold text-[#315879]">{indicator.code}</span> — {indicator.label}</span>
+          </label>) : <p className="p-2 text-xs text-[#718297]">Tidak ada kode yang cocok dengan pencarian.</p>}
+        </div>
+        {selectedCodes.length ? <div className="mt-2 flex flex-wrap gap-1.5">{selectedCodes.map((code) => <Badge key={code} className="cursor-pointer bg-[#edf4fb] text-[#386185] hover:bg-[#dde9f6]" onClick={() => toggleCode(code)}>{code} ×</Badge>)}</div> : null}
       </div>
       <Button type="button" disabled={isExporting || !configured} onClick={runExport} className="bg-[#183f70] text-white hover:bg-[#12345d]"><FileDown className="mr-2 size-4" />{isExporting ? "Menyiapkan…" : "Unduh XML"}</Button>
       <p className="text-xs leading-5 text-[#647a92]">Setiap bon multi-mata uang dipecah menjadi beberapa baris transaksi XML (satu per baris mata uang), ditandai dengan akhiran <code>-L1</code>, <code>-L2</code>, dst pada nomor transaksinya.</p>

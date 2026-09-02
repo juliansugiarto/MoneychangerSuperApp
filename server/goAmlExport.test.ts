@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildGoAmlLtkmReportXml,
   buildGoAmlLtktReportXml,
   buildPersonMyClientXml,
   escapeXml,
@@ -11,6 +12,7 @@ import {
   toGoAmlLtktReportCode,
   toGoAmlTransmodeCode,
   type GoAmlCustomer,
+  type GoAmlLtkmLine,
   type GoAmlLtktLine,
 } from "../shared/goAmlExport";
 
@@ -193,6 +195,65 @@ describe("buildGoAmlLtktReportXml", () => {
   });
 
   it("uses funds_code UT (Uang Tunai) for the cash leg", () => {
+    expect(xml).toContain("<funds_code>UT</funds_code>");
+  });
+
+  it("starts with a valid XML declaration", () => {
+    expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?><report>')).toBe(true);
+  });
+});
+
+describe("buildGoAmlLtkmReportXml", () => {
+  const line: GoAmlLtkmLine = {
+    transactionNumber: "FX-20260901-000002-L1",
+    dateTransaction: "2026-09-01T10:00:00.000Z",
+    operation: "BUY",
+    amountLocalIdr: "80000000.00",
+    currencyCode: "USD",
+    foreignAmount: "5000.000000",
+    agreedRate: "16000.000000",
+    customer: baseCustomer,
+  };
+
+  const xml = buildGoAmlLtkmReportXml({
+    rentityId: 1000031,
+    reportDate: new Date("2026-09-02T00:00:00.000Z"),
+    currencyCodeLocal: "IDR",
+    reportingUserCode: "sipendar_pelapor",
+    reason: "Pola transaksi terpecah menghindari ambang LTKT.",
+    lines: [line],
+    indicatorCodes: ["POLA-001", "TUNDA-002"],
+  });
+
+  it("always uses report_code LTKM (LTKMP/LTKMT are out of scope)", () => {
+    expect(xml).toContain("<report_code>LTKM</report_code>");
+  });
+
+  it("emits the report envelope fields in xs:sequence order, including reason before the transaction and report_indicators after it", () => {
+    const order = ["<rentity_id>", "<submission_code>", "<report_code>", "<report_date>", "<currency_code_local>", "<reporting_user_code>", "<reason>", "<transaction>", "<report_indicators>"];
+    let cursor = -1;
+    for (const tag of order) {
+      const index = xml.indexOf(tag);
+      expect(index, `${tag} should be present`).toBeGreaterThan(-1);
+      expect(index, `${tag} should come after the previous element`).toBeGreaterThan(cursor);
+      cursor = index;
+    }
+  });
+
+  it("omits <reason> entirely when not supplied, rather than emitting an empty tag", () => {
+    const xmlWithoutReason = buildGoAmlLtkmReportXml({
+      rentityId: 1000031, reportDate: new Date("2026-09-02T00:00:00.000Z"), currencyCodeLocal: "IDR",
+      reportingUserCode: "sipendar_pelapor", lines: [line], indicatorCodes: ["POLA-001"],
+    });
+    expect(xmlWithoutReason).not.toContain("<reason>");
+  });
+
+  it("wraps every selected indicator code in report_indicators/indicator", () => {
+    expect(xml).toContain("<report_indicators><indicator>POLA-001</indicator><indicator>TUNDA-002</indicator></report_indicators>");
+  });
+
+  it("reuses the same Multiparty transaction shape as LTKT (party/role/person_my_client/funds_code)", () => {
+    expect(xml).toContain("<involved_parties><party><role>PJS</role>");
     expect(xml).toContain("<funds_code>UT</funds_code>");
   });
 
