@@ -1,5 +1,5 @@
 import { and, desc, eq } from "drizzle-orm";
-import { customers, exchangeTransactions, operationalDocuments } from "../drizzle/schema";
+import { customers, exchangeTransactions, operationalDocuments, operationalExpenses } from "../drizzle/schema";
 import { getDb } from "./db";
 import { storageGetSignedUrl, storagePut } from "./storage";
 
@@ -11,13 +11,14 @@ const ACCEPTED_DOCUMENT_MIME_TYPES = new Set([
   "application/pdf",
 ]);
 
-export type OperationalDocumentType = "KTP_PHOTO" | "UNDERLYING" | "UNDERLYING_FORM" | "UNDERLYING_STATEMENT" | "UNDERLYING_INVOICE" | "COMPANY_LOGO" | "LICENSE_CERTIFICATE" | "LICENSE_ATTACHMENT";
+export type OperationalDocumentType = "KTP_PHOTO" | "UNDERLYING" | "UNDERLYING_FORM" | "UNDERLYING_STATEMENT" | "UNDERLYING_INVOICE" | "COMPANY_LOGO" | "LICENSE_CERTIFICATE" | "LICENSE_ATTACHMENT" | "EXPENSE_RECEIPT";
 const COMPANY_DOCUMENT_TYPES = new Set<OperationalDocumentType>(["COMPANY_LOGO", "LICENSE_CERTIFICATE", "LICENSE_ATTACHMENT"]);
 
 type UploadDocumentInput = {
   documentType: OperationalDocumentType;
   customerId?: number;
   transactionId?: number;
+  expenseId?: number;
   originalFileName: string;
   mimeType: string;
   byteSize: number;
@@ -55,10 +56,18 @@ export async function uploadOperationalDocument(input: UploadDocumentInput, acto
   assertAcceptedOperationalDocument(input.mimeType, input.data, input.byteSize);
   const isCompanyDoc = COMPANY_DOCUMENT_TYPES.has(input.documentType);
   const isKtp = input.documentType === "KTP_PHOTO";
-  if (!isCompanyDoc && (isKtp ? !input.customerId || input.transactionId : !input.transactionId || input.customerId)) {
+  const isExpenseReceipt = input.documentType === "EXPENSE_RECEIPT";
+  if (isExpenseReceipt) {
+    if (!input.expenseId || input.customerId || input.transactionId) throw new Error("Bukti pengeluaran harus terhubung ke satu catatan pengeluaran.");
+  } else if (!isCompanyDoc && (isKtp ? !input.customerId || input.transactionId : !input.transactionId || input.customerId)) {
     throw new Error(isKtp ? "Foto KTP harus terhubung ke satu nasabah." : "Underlying harus terhubung ke satu draft transaksi.");
   }
   if (isCompanyDoc && (input.customerId || input.transactionId)) throw new Error("Dokumen profil perusahaan tidak boleh terhubung ke nasabah atau transaksi.");
+
+  if (input.expenseId) {
+    const expense = (await db.select({ id: operationalExpenses.id }).from(operationalExpenses).where(eq(operationalExpenses.id, input.expenseId)).limit(1))[0];
+    if (!expense) throw new Error("Catatan pengeluaran tidak ditemukan.");
+  }
 
   if (input.customerId) {
     const customer = (await db.select({ id: customers.id }).from(customers).where(and(
@@ -78,13 +87,14 @@ export async function uploadOperationalDocument(input: UploadDocumentInput, acto
   }
 
   const fileName = cleanFileName(input.originalFileName);
-  const ownerPath = isCompanyDoc ? "perusahaan" : input.customerId ? `nasabah-${input.customerId}` : `transaksi-${input.transactionId}`;
+  const ownerPath = isCompanyDoc ? "perusahaan" : isExpenseReceipt ? `pengeluaran-${input.expenseId}` : input.customerId ? `nasabah-${input.customerId}` : `transaksi-${input.transactionId}`;
   const { key } = await storagePut(`operasional/${ownerPath}/${Date.now()}-${fileName}`, input.data, input.mimeType);
   await db.insert(operationalDocuments).values({
-    ownerType: isCompanyDoc ? "COMPANY" : isKtp ? "CUSTOMER" : "TRANSACTION",
+    ownerType: isCompanyDoc ? "COMPANY" : isExpenseReceipt ? "EXPENSE" : isKtp ? "CUSTOMER" : "TRANSACTION",
     documentType: input.documentType,
     customerId: input.customerId ?? null,
     transactionId: input.transactionId ?? null,
+    expenseId: input.expenseId ?? null,
     storageKey: key,
     originalFileName: fileName,
     mimeType: input.mimeType,
@@ -104,6 +114,11 @@ export async function listOperationalDocuments(input: { customerId?: number; tra
   return input.customerId
     ? db.select().from(operationalDocuments).where(eq(operationalDocuments.customerId, input.customerId)).orderBy(desc(operationalDocuments.createdAt))
     : db.select().from(operationalDocuments).where(eq(operationalDocuments.transactionId, input.transactionId!)).orderBy(desc(operationalDocuments.createdAt));
+}
+
+export async function listExpenseDocuments(expenseId: number) {
+  const db = await databaseOrThrow();
+  return db.select().from(operationalDocuments).where(eq(operationalDocuments.expenseId, expenseId)).orderBy(desc(operationalDocuments.createdAt));
 }
 
 export async function listCompanyDocuments() {

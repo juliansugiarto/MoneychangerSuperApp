@@ -283,11 +283,12 @@ export const exchangeTransactionPaymentDenominations = mysqlTable("exchange_tran
  */
 export const operationalDocuments = mysqlTable("operational_documents", {
   id: int("id").autoincrement().primaryKey(),
-  ownerType: mysqlEnum("ownerType", ["CUSTOMER", "TRANSACTION", "COMPANY"]).notNull(),
+  ownerType: mysqlEnum("ownerType", ["CUSTOMER", "TRANSACTION", "COMPANY", "EXPENSE"]).notNull(),
   /** UNDERLYING is kept only for bons predating the three-document split — new transactions requiring underlying use the three specific types instead (Formulir Underlying, Surat Pernyataan, Invoice), all required together. */
-  documentType: mysqlEnum("documentType", ["KTP_PHOTO", "UNDERLYING", "UNDERLYING_FORM", "UNDERLYING_STATEMENT", "UNDERLYING_INVOICE", "COMPANY_LOGO", "LICENSE_CERTIFICATE", "LICENSE_ATTACHMENT"]).notNull(),
+  documentType: mysqlEnum("documentType", ["KTP_PHOTO", "UNDERLYING", "UNDERLYING_FORM", "UNDERLYING_STATEMENT", "UNDERLYING_INVOICE", "COMPANY_LOGO", "LICENSE_CERTIFICATE", "LICENSE_ATTACHMENT", "EXPENSE_RECEIPT"]).notNull(),
   customerId: int("customerId"),
   transactionId: int("transactionId"),
+  expenseId: int("expenseId"),
   storageKey: varchar("storageKey", { length: 500 }).notNull(),
   originalFileName: varchar("originalFileName", { length: 255 }).notNull(),
   mimeType: varchar("mimeType", { length: 120 }).notNull(),
@@ -300,7 +301,32 @@ export const operationalDocuments = mysqlTable("operational_documents", {
   uniqueIndex("operational_documents_storage_key_uq").on(table.storageKey),
   index("operational_documents_customer_idx").on(table.customerId, table.createdAt),
   index("operational_documents_transaction_idx").on(table.transactionId, table.createdAt),
+  index("operational_documents_expense_idx").on(table.expenseId, table.createdAt),
   index("operational_documents_owner_type_idx").on(table.ownerType, table.documentType),
+]);
+
+export const expenseCategories = ["SEWA", "GAJI", "UTILITAS", "PERLENGKAPAN_OPERASIONAL", "PEMASARAN", "PEMELIHARAAN", "IZIN_DAN_PAJAK", "LAINNYA"] as const;
+
+/**
+ * Simple categorized operational expense log — day-to-day outlet costs (rent, payroll, utilities,
+ * etc.), deliberately kept separate from the FX transaction/cash-denomination system: an expense
+ * entry never touches exchangeTransactions, cashBalances, or bankAccounts. It is a record-keeping
+ * log for internal financial reporting, not a cash-movement ledger. Entries are append-only (no
+ * edit/delete) for audit integrity; a wrong entry is corrected with an offsetting entry, same
+ * convention as other financial records in this system.
+ */
+export const operationalExpenses = mysqlTable("operational_expenses", {
+  id: int("id").autoincrement().primaryKey(),
+  expenseDate: date("expenseDate").notNull(),
+  category: mysqlEnum("category", expenseCategories).notNull(),
+  amount: decimal("amount", { precision: 18, scale: 2 }).notNull(),
+  description: varchar("description", { length: 500 }).notNull(),
+  notes: text("notes"),
+  recordedByUserId: int("recordedByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("operational_expenses_date_idx").on(table.expenseDate),
+  index("operational_expenses_category_idx").on(table.category, table.expenseDate),
 ]);
 
 /** Every review/approval/return decision becomes a standalone immutable record. */

@@ -53,6 +53,7 @@ async function startServer() {
         documentType: req.body?.documentType,
         customerId: req.body?.customerId ? Number(req.body.customerId) : undefined,
         transactionId: req.body?.transactionId ? Number(req.body.transactionId) : undefined,
+        expenseId: req.body?.expenseId ? Number(req.body.expenseId) : undefined,
         originalFileName: String(req.body?.originalFileName ?? ""),
         mimeType: String(req.body?.mimeType ?? ""),
         byteSize: Number(req.body?.byteSize),

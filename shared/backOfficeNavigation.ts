@@ -37,6 +37,7 @@ export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
     { label: "Bandingkan Kurs", path: "/operasional/perbandingan-kurs", minimumRole: "ADMIN" },
     { label: "Kas & Persediaan", path: "/operasional/stock", minimumRole: "STAFF" },
     { label: "Keluhan Nasabah", path: "/operasional/pengaduan", minimumRole: "STAFF" },
+    { label: "Pencatatan Pengeluaran", path: "/operasional/pengeluaran", minimumRole: "STAFF" },
   ] },
   { label: "Pengawasan", items: [
     { label: "Kesiapan Operasional", path: "/operasional/kesiapan", minimumRole: "CONTROLLER" },

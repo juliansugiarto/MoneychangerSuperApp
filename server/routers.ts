@@ -14,6 +14,7 @@ import {
   createConsumerComplaint,
   createCurrency,
   ensureCurrency,
+  createExpense,
   createFinancialStatementSnapshot,
   createRegulatoryFinancialDraft,
   createRegulatoryIncidentReport,
@@ -40,6 +41,7 @@ import {
   listCashDenominationBalances,
   listConsumerComplaints,
   listDirectorAcknowledgements,
+  listExpenses,
   listFinancialStatementSnapshots,
   listMarketRateObservations,
   listOperationalRates,
@@ -88,7 +90,8 @@ import {
   updatePublicAnnouncement,
   updateServiceRequest,
 } from "./operations";
-import { deleteCompanyDocument, getOperationalDocumentDownloadUrl, listCompanyDocuments, listOperationalDocuments } from "./documentOperations";
+import { deleteCompanyDocument, getOperationalDocumentDownloadUrl, listCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
+import { expenseCategories } from "../drizzle/schema";
 import { simulateArchiveReadiness, simulateClosing, simulateExchange, simulateRateShock } from "./simulation";
 import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedure, router, staffProcedure } from "./_core/trpc";
 import { createInternalSession, hashPassword, internalSessionMaxAge, validateUsername, verifyInternalCredentials, verifyPassword } from "./internalAuth";
@@ -316,8 +319,20 @@ export const appRouter = router({
     forCustomer: staffProcedure.input(z.object({ customerId: z.number().int().positive() })).query(({ input }) => listOperationalDocuments({ customerId: input.customerId })),
     forTransaction: staffProcedure.input(z.object({ transactionId: z.number().int().positive() })).query(({ input }) => listOperationalDocuments({ transactionId: input.transactionId })),
     forCompany: staffProcedure.query(() => listCompanyDocuments()),
+    forExpense: staffProcedure.input(z.object({ expenseId: z.number().int().positive() })).query(({ input }) => listExpenseDocuments(input.expenseId)),
     downloadUrl: staffProcedure.input(z.object({ documentId: z.number().int().positive() })).query(({ input }) => getOperationalDocumentDownloadUrl(input.documentId)),
     deleteCompany: controllerProcedure.input(z.object({ documentId: z.number().int().positive() })).mutation(({ input }) => deleteCompanyDocument(input.documentId)),
+  }),
+
+  expenses: router({
+    list: staffProcedure.input(z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional() }).optional()).query(({ input }) => listExpenses(input)),
+    create: staffProcedure.input(z.object({
+      expenseDate: z.coerce.date(),
+      category: z.enum(expenseCategories),
+      amount: decimalString,
+      description: z.string().trim().min(1).max(500),
+      notes: z.string().trim().max(1000).optional(),
+    })).mutation(({ input, ctx }) => createExpense(input, ctx.user.id)),
   }),
 
   companyProfile: router({

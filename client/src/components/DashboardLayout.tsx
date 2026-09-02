@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { ArrowLeftRight, BadgeDollarSign, Banknote, BookOpenCheck, Building2, ChartNoAxesCombined, ClipboardCheck, ClipboardList, FileSearch, Gauge, Landmark, LayoutDashboard, LogOut, MessageSquareWarning, MessagesSquare, ShieldCheck, ShieldQuestion, UsersRound, Vault, Wallet } from "lucide-react";
+import { ArrowLeftRight, BadgeDollarSign, Banknote, BookOpenCheck, Building2, ChartNoAxesCombined, ClipboardCheck, ClipboardList, FileSearch, Gauge, Landmark, LayoutDashboard, LogOut, MessageSquareWarning, MessagesSquare, Receipt, ShieldCheck, ShieldQuestion, UsersRound, Vault, Wallet } from "lucide-react";
 import { backOfficeNavigationGroups, isRoleAllowed, roleRank, type BackOfficeRole } from "@shared/backOfficeNavigation";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 
@@ -28,6 +28,7 @@ const navigationIcons: Record<string, typeof LayoutDashboard> = {
   "/operasional/stock-opname": ClipboardCheck,
   "/operasional/stock/penyesuaian": Vault,
   "/operasional/pengaduan": MessageSquareWarning,
+  "/operasional/pengeluaran": Receipt,
   "/operasional/laporan": ChartNoAxesCombined,
   "/operasional/pelaporan-regulator": Landmark,
   "/operasional/audit": FileSearch,
@@ -60,6 +61,7 @@ const pageTitles: Record<string, { eyebrow: string; title: string }> = {
   "/operasional/stock-opname": { eyebrow: "Kontrol outlet", title: "Stock opname" },
   "/operasional/stock/penyesuaian": { eyebrow: "Kontrol outlet", title: "Penyesuaian brankas" },
   "/operasional/pengaduan": { eyebrow: "Kontrol outlet", title: "Keluhan nasabah" },
+  "/operasional/pengeluaran": { eyebrow: "Kontrol outlet", title: "Pencatatan pengeluaran" },
   "/operasional/laporan": { eyebrow: "Pengawasan", title: "Laporan" },
   "/operasional/pelaporan-regulator": { eyebrow: "Pengawasan", title: "Pelaporan regulator" },
   "/operasional/audit": { eyebrow: "Pengawasan", title: "Jejak audit" },

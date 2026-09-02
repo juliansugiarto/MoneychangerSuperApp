@@ -20,7 +20,9 @@ import {
   exchangeTransactionLines,
   exchangeTransactionPaymentDenominations,
   exchangeTransactions,
+  expenseCategories,
   financialStatementSnapshots,
+  operationalExpenses,
   operationalRates,
   operationalDocuments,
   operationalSettings,
@@ -1822,6 +1824,45 @@ export async function updateCompanyProfile(
   }
   await writeAudit({ actorUserId: actor.id, action: "COMPANY_PROFILE_UPDATED", entityType: "company_profile", entityId: String(existing?.id ?? "new"), afterState: values });
   return (await db.select().from(companyProfile).orderBy(companyProfile.id).limit(1))[0];
+}
+
+/**
+ * Simple categorized operational expense log (rent, payroll, utilities, etc.) — deliberately
+ * separate from the FX transaction/cash-denomination system: recording an expense never touches
+ * exchangeTransactions, cashBalances, or bankAccounts, it is a record-keeping log for internal
+ * financial reporting. Entries are append-only for audit integrity; a wrong entry is corrected
+ * with an offsetting entry rather than edited/deleted, same convention as cash movements.
+ */
+export async function createExpense(
+  input: { expenseDate: Date; category: (typeof expenseCategories)[number]; amount: string; description: string; notes?: string },
+  actorUserId: number,
+) {
+  if (!expenseCategories.includes(input.category)) throw new Error("Kategori pengeluaran tidak dikenal.");
+  const description = input.description.trim();
+  if (!description) throw new Error("Deskripsi pengeluaran wajib diisi.");
+  const amount = nonNegativeDecimal(input.amount, "Nominal pengeluaran");
+  const db = await databaseOrThrow();
+  const [created] = await db.insert(operationalExpenses).values({
+    expenseDate: input.expenseDate,
+    category: input.category,
+    amount: amount.toFixed(2),
+    description,
+    notes: input.notes?.trim() || null,
+    recordedByUserId: actorUserId,
+  }).$returningId();
+  await writeAudit({ actorUserId, action: "EXPENSE_RECORDED", entityType: "operational_expense", entityId: String(created.id), afterState: { category: input.category, amount: amount.toFixed(2), description } });
+  return (await db.select().from(operationalExpenses).where(eq(operationalExpenses.id, created.id)).limit(1))[0];
+}
+
+export async function listExpenses(input?: { from?: Date; to?: Date }) {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const conditions = [
+      input?.from ? gte(operationalExpenses.expenseDate, input.from) : undefined,
+      input?.to ? lte(operationalExpenses.expenseDate, input.to) : undefined,
+    ].filter((condition): condition is NonNullable<typeof condition> => Boolean(condition));
+    return db.select().from(operationalExpenses).where(conditions.length ? and(...conditions) : undefined).orderBy(desc(operationalExpenses.expenseDate), desc(operationalExpenses.id));
+  });
 }
 
 /** Every company bank account and its running balance — includes inactive accounts so Controller/Shareholder can still see history; the transaction form filters to active ones itself. */

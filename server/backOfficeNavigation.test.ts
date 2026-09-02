@@ -19,6 +19,7 @@ const pageByPath: Record<string, string> = {
   "/operasional/perbandingan-kurs": "RateComparison",
   "/operasional/stock": "StockControl",
   "/operasional/pengaduan": "ConsumerComplaints",
+  "/operasional/pengeluaran": "ExpenseEntry",
   "/operasional/laporan": "Reports",
   "/operasional/pelaporan-regulator": "RegulatoryReporting",
   "/operasional/audit": "AuditLog",

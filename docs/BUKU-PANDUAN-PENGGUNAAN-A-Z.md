@@ -164,6 +164,13 @@ Menu ini adalah **satu halaman** ("Kas & Persediaan") dengan tab di dalamnya —
 4. Unggah **sertifikat izin usaha** (scan/foto) dan **lampiran izin lainnya** (bisa lebih dari satu file) untuk arsip digital perusahaan.
 5. Nama moneychanger, alamat, dan telepon di sini otomatis dipakai di kwitansi cetak (menggantikan header baku bila sudah diisi).
 
+### 5.9 Pencatatan Pengeluaran — Staff ke atas
+
+1. Buka **Kontrol Outlet → Pencatatan Pengeluaran**. Halaman ini adalah log pengeluaran operasional sederhana (sewa, gaji, utilitas, perlengkapan, pemasaran, pemeliharaan, izin/pajak, lainnya) untuk pelaporan keuangan internal — **sepenuhnya terpisah** dari sistem transaksi valuta dan kas: mencatat pengeluaran di sini tidak pernah menyentuh saldo kas, stok pecahan, atau rekening bank.
+2. Isi tanggal, kategori, nominal (Rp), dan deskripsi; catatan tambahan dan bukti pengeluaran (foto/scan struk, JPG/PNG/WEBP/PDF, maksimal 8 MB) bersifat opsional dan bisa ditambahkan kapan saja setelah entri tersimpan.
+3. Setiap entri bersifat **permanen** (tidak dapat diedit atau dihapus) untuk menjaga jejak audit. Bila salah catat, tambahkan entri koreksi baru dengan keterangan yang jelas menjelaskan koreksinya — jangan mengandalkan edit/hapus yang memang sengaja tidak disediakan.
+4. Riwayat pengeluaran menampilkan total bulan berjalan dan daftar seluruh entri, terbaru di atas.
+
 ## 6. Pelaporan dan Pengawasan
 
 ### 6.1 Kesiapan Operasional — Controller

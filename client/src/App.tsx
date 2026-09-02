@@ -34,6 +34,7 @@ const SafeSimulation = lazy(() => import("./pages/SafeSimulation"));
 const OperationalReadiness = lazy(() => import("./pages/OperationalReadiness"));
 const RegulatoryReporting = lazy(() => import("./pages/RegulatoryReporting"));
 const CompanyProfile = lazy(() => import("./pages/CompanyProfile"));
+const ExpenseEntry = lazy(() => import("./pages/ExpenseEntry"));
 
 function RouteLoading() {
   return <div className="flex min-h-[40vh] items-center justify-center text-sm text-[#475569]">Memuat halaman…</div>;
@@ -77,6 +78,7 @@ function Router() {
       <Route path="/operasional/audit"><OperationsRoute minimumRole="CONTROLLER" page={<AuditLog />} /></Route>
       <Route path="/operasional/pengguna"><OperationsRoute minimumRole="CONTROLLER" page={<UserManagement />} /></Route>
       <Route path="/operasional/profil-perusahaan"><OperationsRoute minimumRole="CONTROLLER" page={<CompanyProfile />} /></Route>
+      <Route path="/operasional/pengeluaran"><OperationsRoute page={<ExpenseEntry />} /></Route>
       <Route path="/operasional/pengawasan-direksi"><OperationsRoute minimumRole="CONTROLLER" page={<DirectorAcknowledgements />} /></Route>
       <Route path="/operasional/go-live"><OperationsRoute minimumRole="CONTROLLER" page={<GoLiveSetup />} /></Route>
       <Route path="/operasional/impor-nasabah"><OperationsRoute minimumRole="CONTROLLER" page={<CustomerImport />} /></Route>
