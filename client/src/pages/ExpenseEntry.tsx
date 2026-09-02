@@ -59,10 +59,7 @@ export default function ExpenseEntry() {
   const totalThisMonth = sumIdrDecimals((expenses ?? []).filter((expense) => new Date(expense.expenseDate).toISOString().slice(0, 7) === today().slice(0, 7)).map((expense) => String(expense.amount)));
 
   return <div className="mx-auto max-w-4xl space-y-6">
-    <header>
-      <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-[#5c8f53]"><Receipt className="size-4" /> Keuangan internal</p>
-      <h1 className="mt-2 font-display text-3xl font-semibold text-[#18395f]">Pencatatan pengeluaran</h1>
-      <p className="mt-2 max-w-2xl text-sm text-[#334155]">Log pengeluaran operasional sederhana (sewa, gaji, utilitas, dll) untuk pelaporan keuangan internal. Terpisah sepenuhnya dari kas dan stok valuta — mencatat pengeluaran di sini tidak memengaruhi saldo kas atau stok pecahan.</p>
+    <header><p className="mt-2 max-w-2xl text-sm text-[#334155]">Log pengeluaran operasional sederhana (sewa, gaji, utilitas, dll) untuk pelaporan keuangan internal. Terpisah sepenuhnya dari kas dan stok valuta — mencatat pengeluaran di sini tidak memengaruhi saldo kas atau stok pecahan.</p>
     </header>
 
     <Card className="border-[#dce6f0]">

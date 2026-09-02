@@ -74,10 +74,7 @@ export default function Monitoring() {
     <div className="mx-auto max-w-[1320px] space-y-6">
       <header className="rounded-3xl bg-[radial-gradient(circle_at_85%_15%,rgba(148,233,133,0.25),transparent_24%),linear-gradient(120deg,#102f58,#1f5c8e)] px-6 py-7 text-white shadow-[0_20px_45px_rgba(16,47,88,0.18)] sm:px-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="flex items-center gap-2 text-xs font-bold tracking-[0.17em] text-[#bfe9d0] uppercase"><BarChart3 className="size-4" /> Konsol pengawasan</p>
-            <h1 className="mt-3 font-display text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Monitoring operasional.</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-100/80">Ringkasan bon jual-beli, screening, dan mata uang berdasarkan transaksi IBV yang tercatat. Tidak ada data simulasi atau angka perkiraan.</p>
+          <div><p className="mt-3 max-w-2xl text-sm leading-6 text-blue-100/80">Ringkasan bon jual-beli, screening, dan mata uang berdasarkan transaksi IBV yang tercatat. Tidak ada data simulasi atau angka perkiraan.</p>
           </div>
           <Button onClick={() => refetch()} disabled={isFetching} variant="outline" className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white">
             <RefreshCw className={isFetching ? "mr-2 size-4 animate-spin" : "mr-2 size-4"} /> Perbarui data

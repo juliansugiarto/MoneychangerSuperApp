@@ -129,10 +129,7 @@ export default function Customers() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <div className="mb-2 flex items-center gap-2 text-xs font-bold tracking-[0.16em] text-[#5c8f53] uppercase"><ShieldCheck className="size-4" /> KYC / CDD</div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-[#18395f]">Tambah nasabah baru</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#475569]">Simpan data identifikasi, pemilik manfaat, status PEP, dan pencocokan DTTOT/PPSPM sebelum nasabah digunakan pada transaksi valuta.</p>
+        <div><p className="mt-2 max-w-2xl text-sm leading-6 text-[#475569]">Simpan data identifikasi, pemilik manfaat, status PEP, dan pencocokan DTTOT/PPSPM sebelum nasabah digunakan pada transaksi valuta.</p>
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">
           <Badge variant="outline" className="w-fit border-[#cfe2d6] bg-[#f5fbf5] px-3 py-1.5 text-[#3c6f48]">{customers?.length ?? 0} profil tersimpan</Badge>

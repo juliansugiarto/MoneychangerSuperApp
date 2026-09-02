@@ -188,8 +188,14 @@ export async function ensureDevelopmentTestAccounts() {
     const existing = await getInternalUserByUsername(account.username);
     if (existing) {
       if (isDevelopmentTestAccount(existing)) {
-        await updateInternalUserPassword(existing.id, passwordHash, false);
-        synchronizedCount += 1;
+        // Re-hashing bumps sessionVersion, which invalidates every open session. Doing that on
+        // every boot logged the developer out on each hot restart, so only write when the stored
+        // password has actually drifted from the fixed development default.
+        const alreadySynchronized = await verifyPassword(DEVELOPMENT_TEST_DEFAULT_PASSWORD, existing.passwordHash);
+        if (!alreadySynchronized) {
+          await updateInternalUserPassword(existing.id, passwordHash, false);
+          synchronizedCount += 1;
+        }
       }
       continue;
     }

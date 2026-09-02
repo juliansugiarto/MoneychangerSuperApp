@@ -79,10 +79,7 @@ export default function TransactionList() {
   };
 
   return <div className="mx-auto max-w-6xl space-y-6">
-    <header>
-      <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-[#5c8f53]"><ClipboardList className="size-4" /> Kasir valuta</p>
-      <h1 className="mt-2 font-display text-3xl font-semibold text-[#18395f]">Daftar transaksi</h1>
-      <p className="mt-2 max-w-2xl text-sm text-[#475569]">Pisahkan riwayat transaksi jual dan beli, ekspor detail untuk pelaporan internal, atau cetak ulang kwitansi.</p>
+    <header><p className="mt-2 max-w-2xl text-sm text-[#475569]">Pisahkan riwayat transaksi jual dan beli, ekspor detail untuk pelaporan internal, atau cetak ulang kwitansi.</p>
     </header>
 
     <Card className="border-[#dce6f0]">

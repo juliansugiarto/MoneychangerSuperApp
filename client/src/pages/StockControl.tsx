@@ -32,10 +32,7 @@ export default function StockControl() {
   const canSeePenyesuaian = user?.role !== "STAFF" && user?.role !== "ADMIN";
 
   return <div className="mx-auto max-w-5xl space-y-6">
-    <header>
-      <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-[#5c8f53]"><Wallet className="size-4" /> Kontrol kas harian</p>
-      <h1 className="mt-2 font-display text-3xl font-semibold text-[#18395f]">Kas &amp; persediaan</h1>
-      <p className="mt-2 max-w-2xl text-sm text-[#334155]">Kas awal, stok saat ini, stock opname, dan penyesuaian brankas — semua di sini, pindah lewat tab tanpa ganti halaman.</p>
+    <header><p className="mt-2 max-w-2xl text-sm text-[#334155]">Kas awal, stok saat ini, stock opname, dan penyesuaian brankas — semua di sini, pindah lewat tab tanpa ganti halaman.</p>
     </header>
     <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
       <TabsList className="h-auto w-full flex-wrap gap-1.5 rounded-2xl border-2 border-[#183f70]/15 bg-[#eef3f9] p-1.5">

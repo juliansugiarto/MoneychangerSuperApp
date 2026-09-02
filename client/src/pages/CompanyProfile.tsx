@@ -110,10 +110,7 @@ export default function CompanyProfile() {
   if (isLoading) return <p className="text-sm text-[#475569]">Memuat profil perusahaan…</p>;
 
   return <div className="mx-auto max-w-4xl space-y-6">
-    <header>
-      <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-[#5c8f53]"><Building2 className="size-4" /> Identitas perusahaan</p>
-      <h1 className="mt-2 font-display text-3xl font-semibold text-[#18395f]">Profil perusahaan</h1>
-      <p className="mt-2 max-w-2xl text-sm text-[#334155]">Nama, izin usaha, dan logo di sini tampil di kwitansi cetak dan layar regulator.</p>
+    <header><p className="mt-2 max-w-2xl text-sm text-[#334155]">Nama, izin usaha, dan logo di sini tampil di kwitansi cetak dan layar regulator.</p>
     </header>
 
     <Card className="border-[#dce6f0]">

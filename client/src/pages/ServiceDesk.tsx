@@ -63,7 +63,7 @@ export default function ServiceDesk() {
 
   return <div className="mx-auto max-w-7xl space-y-6">
     <section className="flex flex-col justify-between gap-4 rounded-[1.5rem] border-2 border-[#b8d8bd] bg-[#eff8ed] p-5 sm:flex-row sm:items-end sm:p-7">
-      <div><div className="mb-2 flex items-center gap-2 text-xs font-extrabold tracking-[0.16em] text-[#0a6b52] uppercase"><ShieldCheck className="size-4" /> Layanan pelanggan</div><h1 className="font-display text-3xl font-bold text-[#102f25]">Meja konfirmasi outlet</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[#466253]">Tinjau kebutuhan awal, konfirmasi kurs dengan batas waktu, dan arahkan layanan tanpa membuat transaksi atau KYC otomatis.</p></div>
+      <div><div className="mb-2 flex items-center gap-2 text-xs font-extrabold tracking-[0.16em] text-[#0a6b52] uppercase"><ShieldCheck className="size-4" /> Layanan pelanggan</div><p className="mt-2 max-w-2xl text-sm leading-6 text-[#466253]">Tinjau kebutuhan awal, konfirmasi kurs dengan batas waktu, dan arahkan layanan tanpa membuat transaksi atau KYC otomatis.</p></div>
       <Badge className="w-fit border-0 bg-[#102f25] px-3 py-1.5 text-[#d9f45d] hover:bg-[#102f25]">{openCount} perlu tindak lanjut</Badge>
     </section>
 
