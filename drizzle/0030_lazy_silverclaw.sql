@@ -1,0 +1,1 @@
+ALTER TABLE `company_profile` ADD `sipesatIdPjk` varchar(20);

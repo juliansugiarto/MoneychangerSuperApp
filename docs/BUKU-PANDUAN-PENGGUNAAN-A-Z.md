@@ -216,6 +216,16 @@ Halaman **Pelaporan Regulator** adalah pusat persiapan internal. Halaman ini tid
 
 Impor workbook dibatasi untuk Controller/Shareholder, berukuran maksimal 5 MB, hanya menerima signature XLSX/XLS yang benar, dan tidak menyimpan bundle pemetaan sebelum snapshot disimpan. Audit dependency produksi pada finalisasi ini menyisakan dua temuan berprioritas tinggi pada parser SheetJS `xlsx` yang digunakan untuk **prototype pollution** dan **regular-expression denial of service (ReDoS)**; auditor paket tidak menyediakan versi perbaikan untuk jalur ini. Karena itu, impor hanya boleh memakai workbook yang berasal dari sumber internal tepercaya, disimpan di perangkat kerja perusahaan, telah diperiksa antivirus, dan benar-benar diperlukan. Jangan membuka atau mengimpor workbook dari email/sumber tidak dikenal. Bila sumber belum tepercaya, gunakan input manual dan minta Controller memverifikasi data sumber terlebih dahulu.
 
+### 7.3 Ekspor Data Pengguna Jasa (SIPESAT) — Controller ke atas
+
+Kartu **Ekspor data pengguna jasa (SIPESAT)** di halaman Pelaporan Regulator membangun file CSV siap unggah manual ke `sipesat.ppatk.go.id` — **tidak pernah** mengirim data ke PPATK secara otomatis dari aplikasi ini.
+
+1. Isi **ID PJK SIPESAT** di **Profil Perusahaan** terlebih dahulu (nomor ini terlihat di pojok kanan atas halaman SIPESAT setelah login, berbeda dari NPWP/nomor izin KUPVA). Tombol ekspor tidak aktif sampai field ini terisi.
+2. Pilih jenis: **Data Initial** (laporan pertama kali, mencakup seluruh nasabah live) atau **Data Triwulan** (pilih triwulan dan tahun; mencakup nasabah yang dibuat/diperbarui pada periode tsb).
+3. Klik **Unduh CSV** — file otomatis dinamai sesuai konvensi resmi SIPESAT (`SIPESAT_<IDPJK>_IN_<DDMMYYYY>_1.csv` untuk initial, `SIPESAT_<IDPJK>_TW_<Triwulan><Tahun>_<DDMMYYYY>_1.csv` untuk triwulan). Ganti angka nomor urut di akhir nama file secara manual bila mengunggah lebih dari satu berkas untuk periode yang sama.
+4. Login ke `sipesat.ppatk.go.id` dengan akun goAML PJK, buka menu **Upload → Upload Baru**, pilih jenis data yang sesuai, dan unggah file yang sudah diunduh — jangan mengubah nama file yang sudah dihasilkan.
+5. **Batasan yang perlu diketahui**: kolom **No.NPWP** pada file yang dihasilkan **selalu kosong** karena sistem ini belum membedakan nasabah perorangan vs. korporasi dan belum menyimpan NPWP per nasabah — isi manual di file sebelum unggah bila ada nasabah korporasi yang perlu dilaporkan dengan NPWP. Cakupan **Data Triwulan** (nasabah dibuat/diperbarui pada periode) adalah interpretasi terbaik dari buku petunjuk SIPESAT, yang mendokumentasikan penamaan file tapi tidak aturan cakupan data secara eksplisit — konfirmasi ke Surat Edaran PPATK terbaru sebelum dipakai sebagai laporan resmi.
+
 ## 8. Keluhan Nasabah
 
 1. Buka **Keluhan Nasabah** saat menerima pengaduan.

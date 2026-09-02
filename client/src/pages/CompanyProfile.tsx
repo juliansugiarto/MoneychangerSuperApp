@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 const fileToBase64 = (file: File) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
 
-const emptyForm = { legalEntityName: "", tradingName: "", licenseNumber: "", kupvaCode: "", npwp: "", nib: "", biReporterCode: "", address: "", phone: "", email: "", website: "" };
+const emptyForm = { legalEntityName: "", tradingName: "", licenseNumber: "", kupvaCode: "", npwp: "", nib: "", biReporterCode: "", sipesatIdPjk: "", address: "", phone: "", email: "", website: "" };
 
 export default function CompanyProfile() {
   const utils = trpc.useUtils();
@@ -25,7 +25,7 @@ export default function CompanyProfile() {
     if (!profile) return;
     setForm({
       legalEntityName: profile.legalEntityName, tradingName: profile.tradingName, licenseNumber: profile.licenseNumber ?? "",
-      kupvaCode: profile.kupvaCode ?? "", npwp: profile.npwp ?? "", nib: profile.nib ?? "", biReporterCode: profile.biReporterCode ?? "",
+      kupvaCode: profile.kupvaCode ?? "", npwp: profile.npwp ?? "", nib: profile.nib ?? "", biReporterCode: profile.biReporterCode ?? "", sipesatIdPjk: profile.sipesatIdPjk ?? "",
       address: profile.address ?? "", phone: profile.phone ?? "", email: profile.email ?? "", website: profile.website ?? "",
     });
   }, [profile]);
@@ -122,6 +122,7 @@ export default function CompanyProfile() {
           <div><Label className="text-xs">Kode KUPVA</Label><Input className="mt-1" value={form.kupvaCode} onChange={(e) => setForm({ ...form, kupvaCode: e.target.value })} /></div>
           <div><Label className="text-xs">NPWP</Label><Input className="mt-1" value={form.npwp} onChange={(e) => setForm({ ...form, npwp: e.target.value })} /></div>
           <div><Label className="text-xs">NIB</Label><Input className="mt-1" value={form.nib} onChange={(e) => setForm({ ...form, nib: e.target.value })} /></div>
+          <div><Label className="text-xs">ID PJK SIPESAT</Label><Input className="mt-1" value={form.sipesatIdPjk} onChange={(e) => setForm({ ...form, sipesatIdPjk: e.target.value })} placeholder="Lihat pojok kanan halaman sipesat.ppatk.go.id" /></div>
         </div>
         <div>
           <Label className="text-xs">Sandi pelapor BI (SINTA)</Label>

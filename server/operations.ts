@@ -40,6 +40,7 @@ import {
 import { getDb } from "./db";
 import { knownDenominationsFor } from "../shared/currencyDenominations";
 import { isKnownSuspiciousIndicatorCode } from "../shared/suspiciousTransactionIndicators";
+import { buildSipesatCsv, buildSipesatInitialFileName, buildSipesatTriwulanFileName } from "../shared/sipesatExport";
 
 /** Rejects a denomination value that doesn't match a real banknote/coin for this currency (when we have a curated list — see shared/currencyDenominations.ts). Never trust the client alone here: this is exactly the check that stops a typo like "IDR 131250000 × 1 lembar" from being recorded as if it were a real note. */
 function assertKnownDenomination(value: Decimal, currencyCode: string | undefined, label: string) {
@@ -1796,11 +1797,41 @@ export async function getCompanyProfile() {
   });
 }
 
+/**
+ * Builds a SIPESAT (PPATK) customer-data CSV file, ready for manual upload at sipesat.ppatk.go.id —
+ * this never submits anything itself. INITIAL covers every live customer (first-ever report to
+ * PPATK); TRIWULAN covers customers created or updated within the selected quarter — this quarterly
+ * scope is this project's best-effort reading of the SIPESAT user manual, which documents file
+ * naming but not the exact inclusion rule, so confirm against the current PPATK circular (SE) before
+ * relying on it for a real submission.
+ */
+export async function getSipesatExport(input: { type: "INITIAL" } | { type: "TRIWULAN"; triwulan: 1 | 2 | 3 | 4; tahun: number }) {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const profile = (await db.select().from(companyProfile).orderBy(companyProfile.id).limit(1))[0];
+    if (!profile?.sipesatIdPjk) throw new Error("ID PJK SIPESAT belum diisi di Profil Perusahaan — isi dulu sebelum mengekspor.");
+    const liveCustomerFilter = and(eq(customers.isDemo, false), eq(customers.isHistorical, false));
+    const now = new Date();
+    let rows: (typeof customers.$inferSelect)[];
+    let fileName: string;
+    if (input.type === "INITIAL") {
+      rows = await db.select().from(customers).where(liveCustomerFilter).orderBy(customers.id);
+      fileName = buildSipesatInitialFileName(profile.sipesatIdPjk, now);
+    } else {
+      const quarterStart = new Date(Date.UTC(input.tahun, (input.triwulan - 1) * 3, 1));
+      const quarterEnd = new Date(Date.UTC(input.tahun, input.triwulan * 3, 1));
+      rows = await db.select().from(customers).where(and(liveCustomerFilter, gte(customers.updatedAt, quarterStart), lt(customers.updatedAt, quarterEnd))).orderBy(customers.id);
+      fileName = buildSipesatTriwulanFileName(profile.sipesatIdPjk, input.triwulan, input.tahun, now);
+    }
+    return { csv: buildSipesatCsv(profile.sipesatIdPjk, rows), fileName, customerCount: rows.length };
+  });
+}
+
 /** Creates or updates the single company-profile row — Controller/Shareholder only (enforced at the router). Upsert-by-existence rather than a fixed id, since a fresh install has no row yet. */
 export async function updateCompanyProfile(
   input: {
     legalEntityName: string; tradingName: string; licenseNumber?: string; kupvaCode?: string; npwp?: string; nib?: string;
-    biReporterCode?: string; address?: string; phone?: string; email?: string; website?: string; logoDocumentId?: number;
+    biReporterCode?: string; sipesatIdPjk?: string; address?: string; phone?: string; email?: string; website?: string; logoDocumentId?: number;
   },
   actor: { id: number; role: StaffRole },
 ) {
@@ -1813,6 +1844,7 @@ export async function updateCompanyProfile(
     legalEntityName, tradingName,
     licenseNumber: input.licenseNumber?.trim() || null, kupvaCode: input.kupvaCode?.trim() || null,
     npwp: input.npwp?.trim() || null, nib: input.nib?.trim() || null, biReporterCode: input.biReporterCode?.trim() || null,
+    sipesatIdPjk: input.sipesatIdPjk?.trim() || null,
     address: input.address?.trim() || null, phone: input.phone?.trim() || null, email: input.email?.trim() || null, website: input.website?.trim() || null,
     logoDocumentId: input.logoDocumentId ?? null, updatedByUserId: actor.id,
   };

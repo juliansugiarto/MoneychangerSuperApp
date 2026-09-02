@@ -29,6 +29,7 @@ import {
   getHistoricalTransactionReport,
   getOperationalDashboard,
   getRegulatoryReportingReadiness,
+  getSipesatExport,
   getRateComparisonDashboard,
   getReviewThreshold,
   getStockOpnameReport,
@@ -346,6 +347,7 @@ export const appRouter = router({
       npwp: z.string().trim().max(40).optional(),
       nib: z.string().trim().max(40).optional(),
       biReporterCode: z.string().trim().max(80).optional(),
+      sipesatIdPjk: z.string().trim().max(20).optional(),
       address: z.string().trim().max(2000).optional(),
       phone: z.string().trim().max(60).optional(),
       email: z.string().trim().max(200).optional(),
@@ -513,6 +515,10 @@ export const appRouter = router({
       }),
       markExported: controllerProcedure.input(z.object({ incidentId: z.number().int().positive() })).mutation(({ input, ctx }) => markRegulatoryIncidentExported(input.incidentId, ctx.user.id)),
     }),
+    sipesatExport: controllerProcedure.input(z.discriminatedUnion("type", [
+      z.object({ type: z.literal("INITIAL") }),
+      z.object({ type: z.literal("TRIWULAN"), triwulan: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]), tahun: z.number().int().min(2016).max(2100) }),
+    ])).query(({ input }) => getSipesatExport(input)),
   }),
 
   audit: router({

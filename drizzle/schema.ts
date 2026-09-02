@@ -503,6 +503,8 @@ export const companyProfile = mysqlTable("company_profile", {
   nib: varchar("nib", { length: 40 }),
   /** Kredensial pelaporan ke sistem BI (mis. SINTA) — data sensitif operasional, bukan rahasia aplikasi ini, tapi tetap tidak boleh diekspos di tempat lain (log, dsb). */
   biReporterCode: varchar("biReporterCode", { length: 80 }),
+  /** ID PJK yang ditetapkan PPATK untuk pelaporan SIPESAT — beda dari NPWP/nomor izin, ditemukan di pojok kanan halaman SIPESAT saat login. Wajib diisi untuk membangun nama file dan isi kolom IDPJK ekspor SIPESAT. */
+  sipesatIdPjk: varchar("sipesatIdPjk", { length: 20 }),
   address: text("address"),
   phone: varchar("phone", { length: 60 }),
   email: varchar("email", { length: 200 }),
