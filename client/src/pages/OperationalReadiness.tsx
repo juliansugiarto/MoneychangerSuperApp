@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { calculateOperationalReadiness } from "@shared/operationalReadiness";
-import { getRegulatoryReportingReadiness } from "@shared/regulatoryActionQueue";
+import { DEFAULT_OPERATIONAL_TIMEZONE, getRegulatoryReportingReadiness } from "@shared/regulatoryActionQueue";
 import { ArrowRight, CheckCircle2, CircleAlert, ClipboardCheck, FileLock2, FileText, Landmark, RefreshCcw, ShieldCheck, WalletCards } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -22,7 +22,8 @@ export default function OperationalReadiness() {
   const activeRateRows = (comparison.data ?? []).filter((row) => row.outlet.midpointPerUnit !== null);
   const referenceRows = (comparison.data ?? []).filter((row) => Boolean(row.bi || row.jisdor || row.market));
   const directorOpen = (acknowledgements.data ?? []).filter((item) => !item.acknowledgedAt).length;
-  const reportingReadiness = getRegulatoryReportingReadiness(regulatoryPackages.data ?? [], regulatoryPackages.isError);
+  const companyTimezone = trpc.companyProfile.get.useQuery().data?.timezone ?? DEFAULT_OPERATIONAL_TIMEZONE;
+  const reportingReadiness = getRegulatoryReportingReadiness(regulatoryPackages.data ?? [], regulatoryPackages.isError, new Date(), companyTimezone);
   const reportingReady = reportingReadiness.ready;
   const readiness = calculateOperationalReadiness({ openingChecks: checklist.data?.openingChecks, closingChecks: checklist.data?.closingChecks, closingCompletedAt: checklist.data?.closingCompletedAt, cashBalanceCount: dashboard.data?.cashBalances.length ?? 0, activeRateCount: activeRateRows.length, referenceRateCount: referenceRows.length, pendingReviewCount: dashboard.data?.pendingReview.length ?? 0, varianceCount: dashboard.data?.variances.length ?? 0, directorOpenCount: directorOpen });
   const { openingReady, closingReady, cashReady, rateReady, pendingReviews, oversightReady, readyCount } = readiness; const totalReady = readyCount + (reportingReady ? 1 : 0);

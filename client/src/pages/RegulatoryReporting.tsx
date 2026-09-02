@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { getRegulatoryActionQueue } from "@shared/regulatoryActionQueue";
+import { DEFAULT_OPERATIONAL_TIMEZONE, getRegulatoryActionQueue } from "@shared/regulatoryActionQueue";
 import RegulatoryReportingAdvanced from "./RegulatoryReportingAdvanced";
 import { CalendarClock, CheckCircle2, CircleAlert, ClipboardCheck, FileDown, FileLock2, Landmark, LockKeyhole, RotateCcw, SendHorizonal, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -59,7 +59,8 @@ export default function RegulatoryReporting() {
   const lku = readiness.data?.lku.snapshot as LkuSnapshot | undefined;
   const lkuRows = lku?.rows ?? [];
   const packageList = packages.data ?? [];
-  const actionQueue = getRegulatoryActionQueue(packageList);
+  const companyTimezone = trpc.companyProfile.get.useQuery().data?.timezone ?? DEFAULT_OPERATIONAL_TIMEZONE;
+  const actionQueue = getRegulatoryActionQueue(packageList, new Date(), companyTimezone);
 
   return <div className="mx-auto max-w-7xl space-y-6">
     <section className="relative overflow-hidden rounded-[1.5rem] bg-[#182b49] px-6 py-7 text-white shadow-[0_18px_45px_rgba(23,40,71,0.16)] sm:px-8"><div className="public-grid absolute inset-0 opacity-35" /><div className="absolute -right-14 -top-20 size-64 rounded-full bg-[#d7ec75]/12 blur-3xl" /><div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><div><p className="mt-3 max-w-3xl text-sm leading-6 text-[#d6e0ee]">Bangun paket dari data operasional nyata, lakukan pemeriksaan berjenjang, lalu unggah sendiri melalui kanal regulator yang berwenang. Tidak ada pengiriman otomatis dari halaman ini.</p></div><Badge className="w-fit bg-amber-200 text-amber-950 hover:bg-amber-200">MANUAL · TIDAK TERHUBUNG KE BI</Badge></div></section>

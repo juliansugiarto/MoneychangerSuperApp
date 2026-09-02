@@ -4,13 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DEFAULT_OPERATIONAL_TIMEZONE, OPERATIONAL_TIMEZONES } from "@shared/regulatoryActionQueue";
 import { Building2, FileImage, Paperclip, ShieldCheck, Trash2, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const fileToBase64 = (file: File) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
 
-const emptyForm = { legalEntityName: "", tradingName: "", licenseNumber: "", kupvaCode: "", npwp: "", nib: "", biReporterCode: "", sipesatIdPjk: "", goamlRentityId: "", goamlReportingUserCode: "", address: "", phone: "", email: "", website: "" };
+const emptyForm = { legalEntityName: "", tradingName: "", licenseNumber: "", kupvaCode: "", npwp: "", nib: "", biReporterCode: "", sipesatIdPjk: "", goamlRentityId: "", goamlReportingUserCode: "", address: "", phone: "", email: "", website: "", timezone: "Asia/Jakarta" };
 
 export default function CompanyProfile() {
   const utils = trpc.useUtils();
@@ -27,7 +29,7 @@ export default function CompanyProfile() {
       legalEntityName: profile.legalEntityName, tradingName: profile.tradingName, licenseNumber: profile.licenseNumber ?? "",
       kupvaCode: profile.kupvaCode ?? "", npwp: profile.npwp ?? "", nib: profile.nib ?? "", biReporterCode: profile.biReporterCode ?? "", sipesatIdPjk: profile.sipesatIdPjk ?? "",
       goamlRentityId: profile.goamlRentityId ? String(profile.goamlRentityId) : "", goamlReportingUserCode: profile.goamlReportingUserCode ?? "",
-      address: profile.address ?? "", phone: profile.phone ?? "", email: profile.email ?? "", website: profile.website ?? "",
+      address: profile.address ?? "", phone: profile.phone ?? "", email: profile.email ?? "", website: profile.website ?? "", timezone: profile.timezone ?? DEFAULT_OPERATIONAL_TIMEZONE,
     });
   }, [profile]);
 
@@ -117,26 +119,34 @@ export default function CompanyProfile() {
       <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Data badan usaha</CardTitle><CardDescription>Nama PT dan nama moneychanger wajib diisi; sisanya opsional tapi disarankan untuk pelaporan regulator.</CardDescription></CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div><Label className="text-xs">Nama PT (badan hukum)</Label><Input className="mt-1" value={form.legalEntityName} onChange={(e) => setForm({ ...form, legalEntityName: e.target.value })} placeholder="PT Ibukota Valasindo" /></div>
-          <div><Label className="text-xs">Nama moneychanger (dagang)</Label><Input className="mt-1" value={form.tradingName} onChange={(e) => setForm({ ...form, tradingName: e.target.value })} placeholder="Ibukota Valasindo" /></div>
-          <div><Label className="text-xs">Nomor izin usaha (KUPVA BB)</Label><Input className="mt-1" value={form.licenseNumber} onChange={(e) => setForm({ ...form, licenseNumber: e.target.value })} /></div>
-          <div><Label className="text-xs">Kode KUPVA</Label><Input className="mt-1" value={form.kupvaCode} onChange={(e) => setForm({ ...form, kupvaCode: e.target.value })} /></div>
-          <div><Label className="text-xs">NPWP</Label><Input className="mt-1" value={form.npwp} onChange={(e) => setForm({ ...form, npwp: e.target.value })} /></div>
-          <div><Label className="text-xs">NIB</Label><Input className="mt-1" value={form.nib} onChange={(e) => setForm({ ...form, nib: e.target.value })} /></div>
-          <div><Label className="text-xs">ID PJK SIPESAT</Label><Input className="mt-1" value={form.sipesatIdPjk} onChange={(e) => setForm({ ...form, sipesatIdPjk: e.target.value })} placeholder="Lihat pojok kanan halaman sipesat.ppatk.go.id" /></div>
-          <div><Label className="text-xs">ID Entitas Pelapor goAML (rentity_id)</Label><Input className="mt-1" type="number" min={1} value={form.goamlRentityId} onChange={(e) => setForm({ ...form, goamlRentityId: e.target.value })} placeholder="Angka dari registrasi goAML" /></div>
-          <div><Label className="text-xs">Kode User Pelapor goAML</Label><Input className="mt-1" value={form.goamlReportingUserCode} onChange={(e) => setForm({ ...form, goamlReportingUserCode: e.target.value })} placeholder="Kode akun pelapor terdaftar di goAML" /></div>
+          <div><Label className="text-xs">Nama PT (badan hukum)</Label><Input autoComplete="off" className="mt-1" value={form.legalEntityName} onChange={(e) => setForm({ ...form, legalEntityName: e.target.value })} placeholder="PT Ibukota Valasindo" /></div>
+          <div><Label className="text-xs">Nama moneychanger (dagang)</Label><Input autoComplete="off" className="mt-1" value={form.tradingName} onChange={(e) => setForm({ ...form, tradingName: e.target.value })} placeholder="Ibukota Valasindo" /></div>
+          <div><Label className="text-xs">Nomor izin usaha (KUPVA BB)</Label><Input autoComplete="off" className="mt-1" value={form.licenseNumber} onChange={(e) => setForm({ ...form, licenseNumber: e.target.value })} /></div>
+          <div><Label className="text-xs">Kode KUPVA</Label><Input autoComplete="off" className="mt-1" value={form.kupvaCode} onChange={(e) => setForm({ ...form, kupvaCode: e.target.value })} /></div>
+          <div><Label className="text-xs">NPWP</Label><Input autoComplete="off" className="mt-1" value={form.npwp} onChange={(e) => setForm({ ...form, npwp: e.target.value })} /></div>
+          <div><Label className="text-xs">NIB</Label><Input autoComplete="off" className="mt-1" value={form.nib} onChange={(e) => setForm({ ...form, nib: e.target.value })} /></div>
+          <div><Label className="text-xs">ID PJK SIPESAT</Label><Input autoComplete="off" className="mt-1" value={form.sipesatIdPjk} onChange={(e) => setForm({ ...form, sipesatIdPjk: e.target.value })} placeholder="Lihat pojok kanan halaman sipesat.ppatk.go.id" /></div>
+          <div><Label className="text-xs">ID Entitas Pelapor goAML (rentity_id)</Label><Input autoComplete="off" className="mt-1" type="number" min={1} value={form.goamlRentityId} onChange={(e) => setForm({ ...form, goamlRentityId: e.target.value })} placeholder="Angka dari registrasi goAML" /></div>
+          <div><Label className="text-xs">Kode User Pelapor goAML</Label><Input autoComplete="off" className="mt-1" value={form.goamlReportingUserCode} onChange={(e) => setForm({ ...form, goamlReportingUserCode: e.target.value })} placeholder="Kode akun pelapor terdaftar di goAML" /></div>
         </div>
         <div>
           <Label className="text-xs">Sandi pelapor BI (SINTA)</Label>
-          <Input className="mt-1" type="password" value={form.biReporterCode} onChange={(e) => setForm({ ...form, biReporterCode: e.target.value })} />
+          <Input className="mt-1" type="password" autoComplete="new-password" name="bi-reporter-code" value={form.biReporterCode} onChange={(e) => setForm({ ...form, biReporterCode: e.target.value })} />
           <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-700"><ShieldCheck className="size-3" />Data sensitif — hanya untuk referensi internal, tidak ditampilkan di kwitansi maupun layar publik.</p>
         </div>
-        <div><Label className="text-xs">Alamat</Label><Input className="mt-1" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Alamat lengkap yang tampil di kwitansi" /></div>
+        <div><Label className="text-xs">Alamat</Label><Input autoComplete="off" className="mt-1" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Alamat lengkap yang tampil di kwitansi" /></div>
         <div className="grid gap-3 sm:grid-cols-3">
-          <div><Label className="text-xs">Telepon</Label><Input className="mt-1" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-          <div><Label className="text-xs">Email</Label><Input className="mt-1" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-          <div><Label className="text-xs">Website</Label><Input className="mt-1" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></div>
+          <div><Label className="text-xs">Telepon</Label><Input autoComplete="off" className="mt-1" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+          <div><Label className="text-xs">Email</Label><Input autoComplete="off" className="mt-1" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+          <div><Label className="text-xs">Website</Label><Input autoComplete="off" className="mt-1" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} /></div>
+          <div>
+            <Label className="text-xs">Zona waktu operasional</Label>
+            <Select value={form.timezone} onValueChange={(value) => setForm({ ...form, timezone: value })}>
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>{OPERATIONAL_TIMEZONES.map((zone) => <SelectItem key={zone.value} value={zone.value}>{zone.label}</SelectItem>)}</SelectContent>
+            </Select>
+            <p className="mt-1.5 text-xs leading-5 text-[#718398]">Menentukan batas &ldquo;hari ini&rdquo; untuk tenggat pelaporan. Server berjalan pada UTC, sehingga tanpa pengaturan ini tenggat pukul 23.59 waktu setempat terbaca sebagai hari berikutnya.</p>
+          </div>
         </div>
         <Button disabled={update.isPending} onClick={save} className="w-full bg-[#183f70] text-white hover:bg-[#12345d]">{update.isPending ? "Menyimpan…" : "Simpan profil"}</Button>
       </CardContent>

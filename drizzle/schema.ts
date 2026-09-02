@@ -558,6 +558,14 @@ export const companyProfile = mysqlTable("company_profile", {
   email: varchar("email", { length: 200 }),
   website: varchar("website", { length: 200 }),
   baseCurrencyCode: varchar("baseCurrencyCode", { length: 3 }).default("IDR").notNull(),
+  /**
+   * Zona waktu operasional outlet (nama IANA, mis. "Asia/Jakarta" = GMT+7/WIB). Server berjalan
+   * pada UTC sementara petugas dan regulator berada di zona lokal, sehingga batas "hari ini" untuk
+   * tenggat pelaporan harus dihitung memakai nilai ini — bukan zona waktu proses yang kebetulan
+   * menjalankan kode. Tanpa ini, tenggat 23:59 waktu Jakarta terbaca sebagai hari berikutnya di
+   * server, sehingga paket yang jatuh tempo hari ini tampil sebagai "mendatang".
+   */
+  timezone: varchar("timezone", { length: 64 }).default("Asia/Jakarta").notNull(),
   logoDocumentId: int("logoDocumentId"),
   updatedByUserId: int("updatedByUserId"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

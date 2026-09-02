@@ -99,6 +99,7 @@ import {
 } from "./operations";
 import { deleteCompanyDocument, getOperationalDocumentDownloadUrl, listCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
 import { expenseCategories } from "../drizzle/schema";
+import { OPERATIONAL_TIMEZONE_VALUES } from "../shared/regulatoryActionQueue";
 import { simulateArchiveReadiness, simulateClosing, simulateExchange, simulateRateShock } from "./simulation";
 import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedure, router, staffProcedure } from "./_core/trpc";
 import { createInternalSession, hashPassword, internalSessionMaxAge, validateUsername, verifyInternalCredentials, verifyPassword } from "./internalAuth";
@@ -378,6 +379,7 @@ export const appRouter = router({
       email: z.string().trim().max(200).optional(),
       website: z.string().trim().max(200).optional(),
       logoDocumentId: z.number().int().positive().optional(),
+      timezone: z.enum(OPERATIONAL_TIMEZONE_VALUES).optional(),
     })).mutation(({ input, ctx }) => updateCompanyProfile(input, ctx.user)),
   }),
 

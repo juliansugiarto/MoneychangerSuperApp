@@ -1,0 +1,1 @@
+ALTER TABLE `company_profile` ADD `timezone` varchar(64) DEFAULT 'Asia/Jakarta' NOT NULL;

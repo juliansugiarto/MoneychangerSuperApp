@@ -2208,7 +2208,7 @@ export async function updateCompanyProfile(
   input: {
     legalEntityName: string; tradingName: string; licenseNumber?: string; kupvaCode?: string; npwp?: string; nib?: string;
     biReporterCode?: string; sipesatIdPjk?: string; goamlRentityId?: number; goamlReportingUserCode?: string;
-    address?: string; phone?: string; email?: string; website?: string; logoDocumentId?: number;
+    address?: string; phone?: string; email?: string; website?: string; logoDocumentId?: number; timezone?: string;
   },
   actor: { id: number; role: StaffRole },
 ) {
@@ -2226,6 +2226,8 @@ export async function updateCompanyProfile(
     goamlReportingUserCode: input.goamlReportingUserCode?.trim() || null,
     address: input.address?.trim() || null, phone: input.phone?.trim() || null, email: input.email?.trim() || null, website: input.website?.trim() || null,
     logoDocumentId: input.logoDocumentId ?? null, updatedByUserId: actor.id,
+    // Dibiarkan apa adanya bila tidak dikirim, agar penyimpanan form lain tidak diam-diam mereset zona.
+    ...(input.timezone ? { timezone: input.timezone } : {}),
   };
   const existing = (await db.select({ id: companyProfile.id }).from(companyProfile).orderBy(companyProfile.id).limit(1))[0];
   if (existing) {
