@@ -38,6 +38,7 @@ export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
     { label: "Kas & Persediaan", path: "/operasional/stock", minimumRole: "STAFF" },
     { label: "Keluhan Nasabah", path: "/operasional/pengaduan", minimumRole: "STAFF" },
     { label: "Pencatatan Pengeluaran", path: "/operasional/pengeluaran", minimumRole: "STAFF" },
+    { label: "Cek Watchlist DTTOT/PPPSM", path: "/operasional/watchlist", minimumRole: "STAFF" },
   ] },
   { label: "Pengawasan", items: [
     { label: "Kesiapan Operasional", path: "/operasional/kesiapan", minimumRole: "CONTROLLER" },

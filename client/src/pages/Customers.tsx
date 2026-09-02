@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { WatchlistCheckButton } from "@/components/WatchlistCheck";
 import { trpc } from "@/lib/trpc";
 import { AlertTriangle, ShieldAlert, ShieldCheck, Upload, UserPlus, Users } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
@@ -255,6 +256,7 @@ export default function Customers() {
                   <br /><small className={dttotMatch ? "text-rose-700" : "text-[#475569]"}>Daftar Terduga Teroris dan Organisasi Teroris / Daftar Pendanaan Proliferasi Senjata Pemusnah Massal.</small>
                 </span>
               </label>
+              <WatchlistCheckButton name={form.fullName} />
               {dttotMatch ? (
                 <div className="mt-3 space-y-2">
                   <p className="flex items-start gap-2 rounded-xl bg-rose-100 px-3 py-2 text-xs text-rose-800"><AlertTriangle className="mt-0.5 size-4 shrink-0" />Profil ini otomatis disimpan dengan status <b>RESTRICTED</b> dan risiko <b>TINGGI</b>, serta <b>wajib dilaporkan sebagai LTKM (Laporan Transaksi Keuangan Mencurigakan) ke PPATK secara manual</b> sesuai prosedur resmi APU-PPT. Sistem ini tidak mengirim laporan secara otomatis.</p>

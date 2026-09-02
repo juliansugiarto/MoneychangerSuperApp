@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { WatchlistCheckButton } from "@/components/WatchlistCheck";
 import { trpc } from "@/lib/trpc";
 import { Download, IdCard, Pencil, Search, UserPlus, UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -263,6 +264,7 @@ export default function CustomerList() {
                 <div><Label className="text-xs">Cocok DTTOT/PPSPM</Label><Select value={editForm.dttotPpsdmMatch ? "yes" : "no"} onValueChange={(v) => setEditForm({ ...editForm, dttotPpsdmMatch: v === "yes" })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="no">Tidak</SelectItem><SelectItem value="yes">Ya</SelectItem></SelectContent></Select></div>
               </div>
               {editForm.pepStatus !== "NONE" ? <div><Label className="text-xs">Keterangan PEP</Label><Input className="mt-1" value={editForm.pepDetails} onChange={(e) => setEditForm({ ...editForm, pepDetails: e.target.value })} /></div> : null}
+              <WatchlistCheckButton name={editForm.fullName} />
               {editForm.dttotPpsdmMatch ? <div><Label className="text-xs">Catatan DTTOT/PPSPM</Label><Input className="mt-1" value={editForm.dttotPpsdmNotes} onChange={(e) => setEditForm({ ...editForm, dttotPpsdmNotes: e.target.value })} /></div> : null}
               <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-3">
                 <Label className="text-xs font-semibold text-amber-900">Alasan perubahan (wajib, tercatat di jejak audit)</Label>

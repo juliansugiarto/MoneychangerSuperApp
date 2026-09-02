@@ -7,6 +7,7 @@ import { ensureDevelopmentTestAccounts, ensureInitialShareholder } from "../inte
 import { authenticateInternalRequest } from "../internalAuth";
 import { decodeOperationalDocumentData, getOperationalDocumentDownloadUrl, uploadOperationalDocument } from "../documentOperations";
 import { importFinancialSnapshotBundle, importFinancialSnapshotFile } from "../financialImport";
+import { importSanctionsWatchlist } from "../operations";
 import { createFinancialWorkbookTemplate } from "../financialTemplate";
 import { appRouter } from "../routers";
 import { handleScheduledBiRateSync } from "../biRateSync";
@@ -87,6 +88,17 @@ async function startServer() {
       return res.status(201).json({ imported });
     } catch (error) {
       return res.status(400).json({ message: error instanceof Error ? error.message : "Tiga workbook snapshot keuangan tidak dapat diimpor." });
+    }
+  });
+  app.post("/api/sanctions-watchlist-import", async (req, res) => {
+    try {
+      const user = await authenticateInternalRequest(req);
+      if (user.mustChangePassword) return res.status(403).json({ message: "Ganti kata sandi terlebih dahulu sebelum mengimpor daftar watchlist." });
+      if (user.role !== "CONTROLLER" && user.role !== "SHAREHOLDER") return res.status(403).json({ message: "Hanya Controller atau Shareholder yang dapat mengimpor daftar watchlist." });
+      const imported = await importSanctionsWatchlist({ dataBase64: String(req.body?.dataBase64 ?? ""), originalFileName: String(req.body?.originalFileName ?? ""), mimeType: String(req.body?.mimeType ?? ""), byteSize: Number(req.body?.byteSize), actorUserId: user.id });
+      return res.status(201).json({ imported });
+    } catch (error) {
+      return res.status(400).json({ message: error instanceof Error ? error.message : "Berkas watchlist tidak dapat diimpor." });
     }
   });
   app.get("/api/financial-snapshot-template", async (req, res) => {

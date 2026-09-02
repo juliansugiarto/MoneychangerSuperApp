@@ -32,6 +32,7 @@ import {
   rateVolatilityAlerts,
   regulatoryReportPackages,
   regulatoryIncidentReports,
+  sanctionsWatchlistEntries,
   serviceRequests,
   stockOpnames,
   transactionReviewActions,
@@ -43,6 +44,8 @@ import { isKnownSuspiciousIndicatorCode } from "../shared/suspiciousTransactionI
 import { buildSipesatCsv, buildSipesatInitialFileName, buildSipesatTriwulanFileName } from "../shared/sipesatExport";
 import { buildGoAmlLtktReportXml, buildGoAmlLtkmReportXml, type GoAmlCustomer, type GoAmlLtktLine, type GoAmlLtkmLine } from "../shared/goAmlExport";
 import { isKnownGoAmlReportIndicator } from "../shared/goAmlReportIndicators";
+import { decodeSanctionsWatchlistUpload, parseSanctionsWatchlistWorkbook, cleanSanctionsWatchlistFileName } from "./sanctionsWatchlistImport";
+import { findBestNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
 
 /** Rejects a denomination value that doesn't match a real banknote/coin for this currency (when we have a curated list — see shared/currencyDenominations.ts). Never trust the client alone here: this is exactly the check that stops a typo like "IDR 131250000 × 1 lembar" from being recorded as if it were a real note. */
 function assertKnownDenomination(value: Decimal, currencyCode: string | undefined, label: string) {
@@ -2066,6 +2069,93 @@ export async function getGoAmlLtkmExport(input: { from: Date; to: Date; indicato
     const xml = buildGoAmlLtkmReportXml({ rentityId: profile.goamlRentityId, reportDate: new Date(), currencyCodeLocal: "IDR", reportingUserCode: profile.goamlReportingUserCode, reason: input.reason?.trim() || undefined, lines: goAmlLines, indicatorCodes });
     const fileName = `LTKM_${input.from.toISOString().slice(0, 10)}_${input.to.toISOString().slice(0, 10)}.xml`;
     return { xml, fileName, transactionCount: qualifyingTransactions.length - skipped.length, lineCount: goAmlLines.length, skipped };
+  });
+}
+
+/**
+ * Imports a DTTOT/PPPSM watchlist workbook — Controller/Shareholder only (enforced at the router,
+ * same gate as the financial-snapshot import). Public PPATK/DK PBB sanctions-list reference data,
+ * never customer/transaction data, so it's fine to hold in the database (unlike the hard rule
+ * against injecting real customer/transaction/cash data). Full-replaces every prior entry in the
+ * same (listType, sourceLabel) scope in one transaction — a fresh DTTOT upload replaces all DTTOT
+ * rows; a fresh PPPSM "DPRK" upload replaces only the DPRK rows, leaving other PPPSM sub-lists
+ * (e.g. "IR") untouched, since PPPSM is a family of independently-updated country/regime lists.
+ */
+export async function importSanctionsWatchlist(input: { dataBase64: string; originalFileName: string; mimeType: string; byteSize: number; actorUserId: number }) {
+  const data = decodeSanctionsWatchlistUpload(input);
+  const parsed = parseSanctionsWatchlistWorkbook(data);
+  const sourceFileName = cleanSanctionsWatchlistFileName(input.originalFileName);
+  const db = await databaseOrThrow();
+  await db.transaction(async (tx) => {
+    const scopeFilter = parsed.sourceLabel
+      ? and(eq(sanctionsWatchlistEntries.listType, parsed.listType), eq(sanctionsWatchlistEntries.sourceLabel, parsed.sourceLabel))
+      : and(eq(sanctionsWatchlistEntries.listType, parsed.listType), isNull(sanctionsWatchlistEntries.sourceLabel));
+    await tx.delete(sanctionsWatchlistEntries).where(scopeFilter);
+    if (parsed.entries.length) {
+      const importedAt = new Date();
+      await tx.insert(sanctionsWatchlistEntries).values(parsed.entries.map((entry) => ({
+        ...entry, listType: parsed.listType, sourceLabel: parsed.sourceLabel, sourceFileName, importedByUserId: input.actorUserId, importedAt,
+      })));
+    }
+    await tx.insert(auditLogs).values({
+      actorUserId: input.actorUserId, action: "WATCHLIST_IMPORT_COMPLETED", entityType: "sanctions_watchlist",
+      entityId: `${parsed.listType}${parsed.sourceLabel ? `:${parsed.sourceLabel}` : ""}`,
+      metadata: { recordCount: parsed.entries.length, sourceFileName },
+    });
+  });
+  return { listType: parsed.listType, sourceLabel: parsed.sourceLabel, recordCount: parsed.entries.length };
+}
+
+/** Summarizes what's currently loaded per (listType, sourceLabel) scope — record count, source file, who imported it and when — so staff can tell how stale the watchlist is before relying on it. */
+export async function listSanctionsWatchlistSummary() {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const rows = await db.select({
+      listType: sanctionsWatchlistEntries.listType, sourceLabel: sanctionsWatchlistEntries.sourceLabel,
+      sourceFileName: sanctionsWatchlistEntries.sourceFileName, importedByUserId: sanctionsWatchlistEntries.importedByUserId, importedAt: sanctionsWatchlistEntries.importedAt,
+    }).from(sanctionsWatchlistEntries);
+    const grouped = new Map<string, { listType: "DTTOT" | "PPPSM"; sourceLabel: string | null; sourceFileName: string; importedByUserId: number; importedAt: Date; recordCount: number }>();
+    for (const row of rows) {
+      const key = `${row.listType}:${row.sourceLabel ?? ""}`;
+      const existing = grouped.get(key);
+      if (existing) existing.recordCount += 1;
+      else grouped.set(key, { ...row, recordCount: 1 });
+    }
+    return Array.from(grouped.values()).sort((a, b) => a.listType.localeCompare(b.listType) || (a.sourceLabel ?? "").localeCompare(b.sourceLabel ?? ""));
+  });
+}
+
+export type SanctionsWatchlistMatch = {
+  id: number; listType: "DTTOT" | "PPPSM"; sourceLabel: string | null; entityType: "INDIVIDUAL" | "ENTITY";
+  referenceCode: string | null; fullName: string; matchedOn: string; score: number;
+  dateOfBirth: string | null; placeOfBirth: string | null; nationality: string | null; address: string | null; description: string | null;
+};
+
+/**
+ * Fuzzy name screening against the currently-loaded DTTOT/PPPSM entries — a screening aid only.
+ * It never sets `customers.dttotPpsdmMatch` itself; a human still reviews the candidates and ticks
+ * that checkbox (with notes) if they judge it a real match, exactly as before this tool existed.
+ */
+export async function searchSanctionsWatchlist(input: { query: string }): Promise<SanctionsWatchlistMatch[]> {
+  const query = input.query.trim();
+  if (query.length < 3) throw new Error("Masukkan minimal 3 karakter nama untuk pencarian.");
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const entries = await db.select().from(sanctionsWatchlistEntries);
+    const results: SanctionsWatchlistMatch[] = [];
+    for (const entry of entries) {
+      const candidateNames = [entry.fullName, ...(entry.aliases ? entry.aliases.split("\n") : [])];
+      const best = findBestNameMatch(query, candidateNames);
+      if (best && best.score >= MATCH_THRESHOLD) {
+        results.push({
+          id: entry.id, listType: entry.listType, sourceLabel: entry.sourceLabel, entityType: entry.entityType, referenceCode: entry.referenceCode,
+          fullName: entry.fullName, matchedOn: best.name, score: best.score,
+          dateOfBirth: entry.dateOfBirth, placeOfBirth: entry.placeOfBirth, nationality: entry.nationality, address: entry.address, description: entry.description,
+        });
+      }
+    }
+    results.sort((a, b) => b.score - a.score);
+    return results.slice(0, 25);
   });
 }
 

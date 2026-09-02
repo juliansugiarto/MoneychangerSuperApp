@@ -31,6 +31,8 @@ import {
   getRegulatoryReportingReadiness,
   getGoAmlLtktExport,
   getGoAmlLtkmExport,
+  searchSanctionsWatchlist,
+  listSanctionsWatchlistSummary,
   getSipesatExport,
   getRateComparisonDashboard,
   getReviewThreshold,
@@ -547,6 +549,12 @@ export const appRouter = router({
 
   audit: router({
     list: controllerProcedure.input(z.object({ limit: z.number().int().min(1).max(250).default(100) })).query(({ input }) => getAuditLog(input.limit)),
+  }),
+
+  sanctionsWatchlist: router({
+    // Search is Staff+ (Staff onboards customers and needs the screening aid); importing/replacing the master list is Controller+ (same gate as financial-snapshot import).
+    search: staffProcedure.input(z.object({ query: z.string().trim().min(3).max(200) })).query(({ input }) => searchSanctionsWatchlist(input)),
+    summary: staffProcedure.query(() => listSanctionsWatchlistSummary()),
   }),
 
   // TODO: add feature routers here, e.g.
