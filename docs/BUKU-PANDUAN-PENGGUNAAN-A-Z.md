@@ -185,6 +185,10 @@ Controller membuka **Direksi Mengetahui** untuk melihat informasi yang perlu dia
 
 Gunakan **Laporan** untuk melihat ringkasan yang disediakan dan **Jejak Audit** untuk menelusuri tindakan penting. Bila terjadi perbedaan, jangan mengubah data untuk mengejar tampilan laporan. Cocokkan bon, kas, stock opname, dan audit log; lalu eskalasi sesuai struktur perusahaan.
 
+**Rekap keuangan transaksi** (kartu di bagian atas halaman **Laporan**, Controller ke atas): pilih preset **Hari ini**/**Bulan ini** atau rentang tanggal bebas, lalu lihat:
+- Jumlah transaksi **Selesai**, turnover total, total beli dan total jual (Rupiah) untuk periode tsb — hanya bon yang sudah terposting ke kas/stok yang dihitung (DRAFT/PENDING_REVIEW/APPROVED/RETURNED/CANCELLED tidak masuk hitungan).
+- **Estimasi margin kotor** per mata uang dan totalnya, dihitung dengan metode **rata-rata tertimbang**: kurs jual rata-rata dikurangi kurs beli rata-rata, dikalikan volume yang lebih kecil di antara total beli/jual mata uang tsb pada periode itu. Ini **bukan** perhitungan laba akuntansi penuh berbasis FIFO (sistem belum melacak lot valuta mana yang terjual dari pembelian mana) — perlakukan sebagai indikasi kasar, bukan angka final untuk laporan keuangan resmi.
+
 ## 7. Pelaporan Regulator Internal
 
 Halaman **Pelaporan Regulator** adalah pusat persiapan internal. Halaman ini tidak terhubung untuk submit otomatis ke Bank Indonesia atau regulator lain.

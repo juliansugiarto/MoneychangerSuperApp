@@ -2355,6 +2355,67 @@ export async function getTransactionReport(input: { from: Date; to: Date }) {
   });
 }
 
+/**
+ * Financial recap of realized (COMPLETED) transactions in a period — volume/turnover per currency,
+ * plus a gross-margin *estimate* using the weighted-average-cost method: avgSellRate minus
+ * avgBuyRate, applied to the smaller of the two matched volumes. This is deliberately not a true
+ * FIFO cost-basis P&L (the system doesn't track which specific purchased lot was later sold) — it
+ * is a standard, defensible accounting approximation, and is labeled as an estimate everywhere it
+ * surfaces so it is never mistaken for audited profit.
+ */
+export async function getTransactionRecap(input: { from: Date; to: Date }) {
+  return retryTransientDatabaseRead(async () => {
+    const rows = await getTransactionReport(input);
+    const completed = rows.filter(({ transaction }) => transaction.status === "COMPLETED");
+
+    type CurrencyAccumulator = { currencyCode: string; buyForeign: Decimal; buyRupiah: Decimal; buyCount: number; sellForeign: Decimal; sellRupiah: Decimal; sellCount: number };
+    const byCurrency = new Map<string, CurrencyAccumulator>();
+    for (const { transaction, currency } of completed) {
+      const entry = byCurrency.get(currency.code) ?? { currencyCode: currency.code, buyForeign: new Decimal(0), buyRupiah: new Decimal(0), buyCount: 0, sellForeign: new Decimal(0), sellRupiah: new Decimal(0), sellCount: 0 };
+      const foreignAmount = new Decimal(String(transaction.foreignAmount ?? "0"));
+      const rupiahAmount = new Decimal(String(transaction.rupiahAmount));
+      if (transaction.operation === "BUY") {
+        entry.buyForeign = entry.buyForeign.plus(foreignAmount);
+        entry.buyRupiah = entry.buyRupiah.plus(rupiahAmount);
+        entry.buyCount += 1;
+      } else {
+        entry.sellForeign = entry.sellForeign.plus(foreignAmount);
+        entry.sellRupiah = entry.sellRupiah.plus(rupiahAmount);
+        entry.sellCount += 1;
+      }
+      byCurrency.set(currency.code, entry);
+    }
+
+    const currencies_ = Array.from(byCurrency.values()).sort((a, b) => a.currencyCode.localeCompare(b.currencyCode)).map((entry) => {
+      const avgBuyRate = entry.buyForeign.gt(0) ? entry.buyRupiah.div(entry.buyForeign) : null;
+      const avgSellRate = entry.sellForeign.gt(0) ? entry.sellRupiah.div(entry.sellForeign) : null;
+      const matchedVolume = avgBuyRate && avgSellRate ? Decimal.min(entry.buyForeign, entry.sellForeign) : null;
+      const grossMarginEstimate = avgBuyRate && avgSellRate && matchedVolume ? avgSellRate.minus(avgBuyRate).times(matchedVolume) : null;
+      return {
+        currencyCode: entry.currencyCode,
+        buyForeignTotal: entry.buyForeign.toFixed(6), buyRupiahTotal: entry.buyRupiah.toFixed(2), buyCount: entry.buyCount, avgBuyRate: avgBuyRate?.toFixed(6) ?? null,
+        sellForeignTotal: entry.sellForeign.toFixed(6), sellRupiahTotal: entry.sellRupiah.toFixed(2), sellCount: entry.sellCount, avgSellRate: avgSellRate?.toFixed(6) ?? null,
+        grossMarginEstimate: grossMarginEstimate?.toFixed(2) ?? null,
+      };
+    });
+
+    const totalBuyRupiah = currencies_.reduce((sum, row) => sum.plus(row.buyRupiahTotal), new Decimal(0));
+    const totalSellRupiah = currencies_.reduce((sum, row) => sum.plus(row.sellRupiahTotal), new Decimal(0));
+    const totalGrossMarginEstimate = currencies_.reduce((sum, row) => row.grossMarginEstimate ? sum.plus(row.grossMarginEstimate) : sum, new Decimal(0));
+
+    return {
+      transactionCount: completed.length,
+      buyCount: currencies_.reduce((sum, row) => sum + row.buyCount, 0),
+      sellCount: currencies_.reduce((sum, row) => sum + row.sellCount, 0),
+      totalBuyRupiah: totalBuyRupiah.toFixed(2),
+      totalSellRupiah: totalSellRupiah.toFixed(2),
+      totalTurnoverRupiah: totalBuyRupiah.plus(totalSellRupiah).toFixed(2),
+      totalGrossMarginEstimate: totalGrossMarginEstimate.toFixed(2),
+      currencies: currencies_,
+    };
+  });
+}
+
 export async function getStockOpnameReport(input: { from: Date; to: Date }) {
   return retryTransientDatabaseRead(async () => {
     const db = await databaseOrThrow();

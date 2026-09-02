@@ -32,6 +32,7 @@ import {
   getRateComparisonDashboard,
   getReviewThreshold,
   getStockOpnameReport,
+  getTransactionRecap,
   getTransactionReport,
   importCustomers,
   listCurrencies,
@@ -472,6 +473,7 @@ export const appRouter = router({
 
   reports: router({
     transactions: controllerProcedure.input(z.object({ from: z.coerce.date(), to: z.coerce.date() })).query(({ input }) => getTransactionReport(input)),
+    transactionRecap: controllerProcedure.input(z.object({ from: z.coerce.date(), to: z.coerce.date() })).query(({ input }) => getTransactionRecap(input)),
     stockOpnames: controllerProcedure.input(z.object({ from: z.coerce.date(), to: z.coerce.date() })).query(({ input }) => getStockOpnameReport(input)),
     historicalTransactions: controllerProcedure.input(z.object({ from: z.coerce.date(), to: z.coerce.date(), limit: z.number().int().min(1).max(1000).default(1000) })).query(({ input }) => getHistoricalTransactionReport(input)),
   }),
