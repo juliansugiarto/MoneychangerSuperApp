@@ -1,21 +1,65 @@
 import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { createPool } from "mysql2";
 import { InsertUser, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { TenantResolutionError, currentTenantBinding } from "./tenantContext";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+/**
+ * One connection per database URL, reused across requests. Keyed by URL rather than by tenant code
+ * so that two tenants pointed at the same database — which happens while a single money changer is
+ * being served — share one pool instead of opening two.
+ */
+const _pools = new Map<string, ReturnType<typeof drizzle>>();
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
-export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
+/**
+ * Connections each tenant may hold.
+ *
+ * mysql2 defaults to 10, which is fine for one database and a trap for many: fifteen tenants would
+ * ask for 150 against MySQL's default `max_connections` of 151, and the wall would show up as
+ * sporadic connection errors rather than an obvious limit. Outlet traffic is a handful of tellers
+ * per branch, so a small pool is ample and leaves headroom for backups and maintenance sessions.
+ */
+const CONNECTIONS_PER_TENANT = Number(process.env.TENANT_POOL_SIZE || 4);
+
+function poolFor(databaseUrl: string) {
+  const existing = _pools.get(databaseUrl);
+  if (existing) return existing;
+  try {
+    const created = drizzle(createPool({ uri: databaseUrl, connectionLimit: CONNECTIONS_PER_TENANT }));
+    _pools.set(databaseUrl, created);
+    return created;
+  } catch (error) {
+    console.warn("[Database] Failed to connect:", error);
+    return null;
   }
-  return _db;
+}
+
+/**
+ * The database for whichever tenant the current request belongs to.
+ *
+ * Callers pass no tenant argument; the binding travels with the async context established once per
+ * request. That is what lets every existing query stay as written while still being unable to read
+ * another tenant's data — the only database this returns is the bound one.
+ *
+ * Outside a request (migrations, tests, CLI tooling) there is no binding and `DATABASE_URL` is
+ * used. A request whose tenant could not be resolved is refused outright rather than falling
+ * through to that default, because falling through is precisely how one tenant would be served
+ * another's records.
+ */
+export async function getDb() {
+  const binding = currentTenantBinding();
+
+  if (binding?.kind === "unresolved") {
+    throw new TenantResolutionError(binding.reason);
+  }
+  if (binding?.kind === "resolved") {
+    return poolFor(binding.databaseUrl);
+  }
+
+  // Unbound: tooling, migrations, and tests.
+  if (!process.env.DATABASE_URL) return null;
+  return poolFor(process.env.DATABASE_URL);
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {

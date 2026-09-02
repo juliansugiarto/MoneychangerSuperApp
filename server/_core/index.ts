@@ -12,6 +12,8 @@ import { createFinancialWorkbookTemplate } from "../financialTemplate";
 import { appRouter } from "../routers";
 import { handleScheduledBiRateSync } from "../biRateSync";
 import { createContext } from "./context";
+import { runWithTenant } from "../tenantContext";
+import { resolveTenant } from "../tenantRegistry";
 import { serveStatic, setupVite } from "./vite";
 import { isRoleAllowed } from "../../shared/backOfficeNavigation";
 
@@ -40,6 +42,16 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // Bind the tenant before any route runs. This sits ahead of both the tRPC middleware and the
+  // handful of plain Express endpoints that query the database directly, because binding only
+  // inside the tRPC context would leave those endpoints unbound — and an unbound request is the
+  // one that could read the wrong money changer's data.
+  app.use((req, _res, next) => {
+    const binding = resolveTenant({ hostname: req.hostname, headers: req.headers });
+    runWithTenant(binding, () => next());
+  });
+
   if (await ensureInitialShareholder()) console.log("[Auth] Initial Shareholder account provisioned.");
   if (await ensureDevelopmentTestAccounts()) console.log("[Auth] Development-only test accounts provisioned.");
   app.post("/api/scheduled/bi-rate-sync", handleScheduledBiRateSync);
