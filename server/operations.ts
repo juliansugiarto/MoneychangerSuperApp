@@ -85,7 +85,7 @@ type AuditEntry = {
   metadata?: Record<string, unknown> | null;
 };
 
-async function databaseOrThrow() {
+export async function databaseOrThrow() {
   const db = await getDb();
   if (!db) {
     const error = new Error("Database tidak tersedia. Coba ulangi tindakan ini.") as Error & { code?: string };
@@ -134,7 +134,7 @@ export async function waitForConcurrentInitialization<T>(read: () => Promise<T |
   return undefined;
 }
 
-async function writeAudit(entry: AuditEntry) {
+export async function writeAudit(entry: AuditEntry) {
   const db = await databaseOrThrow();
   await db.insert(auditLogs).values({
     actorUserId: entry.actorUserId,

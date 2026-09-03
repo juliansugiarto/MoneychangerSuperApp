@@ -35,6 +35,7 @@ const navigationIcons: Record<string, typeof LayoutDashboard> = {
   "/operasional/laporan": ChartNoAxesCombined,
   "/operasional/pelaporan-regulator": Landmark,
   "/operasional/audit": FileSearch,
+  "/operasional/kepegawaian": UsersRound,
   "/operasional/kesiapan": ShieldCheck,
   "/operasional/pengawasan-direksi": ShieldCheck,
   "/operasional/pengguna": UsersRound,

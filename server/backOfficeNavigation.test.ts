@@ -27,6 +27,7 @@ const pageByPath: Record<string, string> = {
   "/operasional/laporan": "Reports",
   "/operasional/pelaporan-regulator": "RegulatoryReporting",
   "/operasional/audit": "AuditLog",
+  "/operasional/kepegawaian": "Kepegawaian",
   "/operasional/kesiapan": "OperationalReadiness",
   "/operasional/pengawasan-direksi": "DirectorAcknowledgements",
   "/operasional/pengguna": "UserManagement",

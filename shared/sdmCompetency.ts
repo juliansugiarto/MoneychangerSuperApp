@@ -218,6 +218,8 @@ export const JOB_LEVEL_BY_NAME: Record<string, JobLevel> = {
 export type EmployeeForReport = {
   id: number;
   jobLevel: keyof typeof JOB_LEVEL_BY_NAME;
+  /** Jenjang pelaporan bila berbeda dari struktur organisasi; lihat catatan pada skema. */
+  competencyLevel?: keyof typeof JOB_LEVEL_BY_NAME | null;
   competencyTrack: "PBK" | "SERTIFIKASI_KOMPETENSI" | "TIDAK_WAJIB";
   employmentStatus: "AKTIF" | "NONAKTIF";
   joinedAt: string;
@@ -271,7 +273,8 @@ export function deriveSdmCounts(input: {
 
   return competencyCodesForArea(area).map((entry) => {
     const obliged = active.filter((employee) => {
-      if (JOB_LEVEL_BY_NAME[employee.jobLevel] !== entry.level) return false;
+      const reportingLevel = JOB_LEVEL_BY_NAME[employee.competencyLevel ?? employee.jobLevel];
+      if (reportingLevel !== entry.level) return false;
       const base = TRACK_BASE[employee.competencyTrack];
       const maintenance = TRACK_MAINTENANCE[employee.competencyTrack];
       if (entry.type === base) return true;
@@ -303,4 +306,74 @@ export function deriveSdmCounts(input: {
 export function quarterStartDate(year: number, quarter: 1 | 2 | 3 | 4): string {
   const firstDay = { 1: "01-01", 2: "04-01", 3: "07-01", 4: "10-01" }[quarter];
   return `${year}-${firstDay}`;
+}
+
+
+// ---------------------------------------------------------------------------
+// Nomor sertifikat dan jenjang KKNI
+// ---------------------------------------------------------------------------
+
+/**
+ * Jenjang kualifikasi KKNI yang tercetak pada sertifikat PBK, dipetakan ke jenjang jabatan.
+ *
+ * Perhatikan bahwa penomorannya BERBEDA dari angka terakhir sandi kompetensi. Sertifikat menuliskan
+ * "Jenjang Kualifikasi PENYELIA (5)" sedangkan sandi laporan memakai angka 3 untuk penyelia.
+ * Menyamakan keduanya akan memasukkan sertifikat ke sandi yang salah.
+ */
+export const KKNI_LEVELS: Record<number, JobLevel> = {
+  4: 4, // PELAKSANA (4) -> sandi berakhiran 4
+  5: 3, // PENYELIA (5) -> sandi berakhiran 3
+  6: 2, // PEJABAT EKSEKUTIF (6) -> sandi berakhiran 2
+};
+
+export type ParsedCertificateNumber = {
+  area: WorkArea;
+  kkniLevel: number;
+  level: JobLevel;
+  issuedOn: string;
+  institution: string;
+  sequence: string;
+};
+
+/**
+ * Membaca nomor sertifikat LPK, misalnya `SPPUR - 05 - 04 - 09122024 - LPKLPPI - 0000637`:
+ * SPPUR, bidang, jenjang KKNI, tanggal DDMMYYYY, lembaga, nomor urut. Dipakai untuk menentukan
+ * sandi kompetensi yang tepat dari nomor yang tertera, alih-alih menebaknya dari jabatan pegawai.
+ */
+export function parseCertificateNumber(raw: string): ParsedCertificateNumber | null {
+  const parts = raw.split("-").map((part) => part.trim()).filter(Boolean);
+  if (parts.length < 6 || parts[0].toUpperCase() !== "SPPUR") return null;
+  const [, area, kkni, date, institution, sequence] = parts;
+  if (!(area in WORK_AREAS)) return null;
+  const kkniLevel = Number(kkni);
+  const level = KKNI_LEVELS[kkniLevel];
+  if (!level) return null;
+  if (!/^\d{8}$/.test(date)) return null;
+  const issuedOn = `${date.slice(4, 8)}-${date.slice(2, 4)}-${date.slice(0, 2)}`;
+  return { area: area as WorkArea, kkniLevel, level, issuedOn, institution, sequence };
+}
+
+/** Sandi kompetensi yang sesuai dengan sebuah nomor sertifikat PBK. */
+export function competencyCodeFromCertificate(raw: string, type: CertificationType = "PBKNK"): string | null {
+  const parsed = parseCertificateNumber(raw);
+  if (!parsed) return null;
+  if (!CERTIFICATION_TYPES[type].levels.includes(parsed.level)) return null;
+  return competencyCode(type, parsed.area, parsed.level);
+}
+
+/**
+ * Memeriksa kecocokan antara nomor sertifikat dan sandi yang dipilih. Ketidakcocokan dikembalikan
+ * sebagai pesan, bukan dilempar, agar layar dapat memperingatkan tanpa menghalangi pencatatan
+ * sertifikat yang penomorannya tidak mengikuti pola LPK.
+ */
+export function certificateNumberMismatch(raw: string | null | undefined, chosenCode: string): string | null {
+  if (!raw?.trim()) return null;
+  const parsed = parseCertificateNumber(raw);
+  if (!parsed) return null;
+  const suffix = chosenCode.slice(-3);
+  const expected = `${parsed.area}${parsed.level}`;
+  if (suffix !== expected) {
+    return `Nomor sertifikat menunjuk bidang ${parsed.area} jenjang KKNI ${parsed.kkniLevel}, sedangkan sandi ${chosenCode} berlaku untuk ${suffix.slice(0, 2)} jenjang ${suffix.slice(2)}.`;
+  }
+  return null;
 }

@@ -4,7 +4,10 @@ import {
   allCompetencyCodes,
   buildSdmReportRows,
   buildSdmTextFile,
+  certificateNumberMismatch,
+  competencyCodeFromCertificate,
   competencyCodesForArea,
+  parseCertificateNumber,
   formForPeriod,
   deriveSdmCounts,
   quarterEndDate,
@@ -319,5 +322,68 @@ describe("jenjang di luar SDM pelaku SK SP", () => {
       certifications: [],
     });
     expect(rows.every((row) => row.posisiKeseluruhanSDM === 0)).toBe(true);
+  });
+});
+
+describe("nomor sertifikat PBK", () => {
+  it("membaca bidang, jenjang KKNI, dan tanggal dari nomor sertifikat", () => {
+    // Contoh nyata dari sertifikat LPK LPPI perusahaan.
+    const parsed = parseCertificateNumber("SPPUR - 05 - 04 - 09122024 - LPKLPPI - 0000637");
+    expect(parsed).toMatchObject({ area: "05", kkniLevel: 4, level: 4, issuedOn: "2024-12-09", institution: "LPKLPPI", sequence: "0000637" });
+  });
+
+  it("memetakan jenjang KKNI ke angka sandi yang benar, bukan menyamakannya", () => {
+    // Sertifikat menulis PENYELIA (5) dan PEJABAT EKSEKUTIF (6), sedangkan sandi laporan memakai
+    // 3 dan 2. Menyamakan angkanya akan menaruh sertifikat pada baris yang salah.
+    expect(parseCertificateNumber("SPPUR-05-05-10022025-LPKLPPI-0000011")?.level).toBe(3);
+    expect(parseCertificateNumber("SPPUR-05-06-08052025-LPKLPPI-0000015")?.level).toBe(2);
+    expect(parseCertificateNumber("SPPUR-05-04-09122024-LPKLPPI-0000637")?.level).toBe(4);
+  });
+
+  it("menghasilkan sandi kompetensi langsung dari nomor sertifikat", () => {
+    expect(competencyCodeFromCertificate("SPPUR-05-05-10022025-LPKLPPI-0000011")).toBe("PBKNK66SPP053");
+    expect(competencyCodeFromCertificate("SPPUR-05-06-08052025-LPKLPPI-0000015")).toBe("PBKNK66SPP052");
+    expect(competencyCodeFromCertificate("SPPUR-05-04-09122024-LPKLPPI-0000637")).toBe("PBKNK66SPP054");
+  });
+
+  it("menolak nomor yang tidak mengikuti pola tanpa menebak", () => {
+    expect(parseCertificateNumber("bukan nomor sertifikat")).toBeNull();
+    expect(parseCertificateNumber("SPPUR-99-04-09122024-LPKLPPI-0000637")).toBeNull(); // bidang tak dikenal
+    expect(parseCertificateNumber("SPPUR-05-09-09122024-LPKLPPI-0000637")).toBeNull(); // jenjang tak dikenal
+  });
+
+  it("menandai ketidakcocokan antara nomor sertifikat dan sandi yang dipilih", () => {
+    // Sertifikat jenjang pelaksana dicatat pada sandi penyelia.
+    expect(certificateNumberMismatch("SPPUR-05-04-09122024-LPKLPPI-0000637", "PBKNK66SPP053")).toContain("PBKNK66SPP053");
+    expect(certificateNumberMismatch("SPPUR-05-04-09122024-LPKLPPI-0000637", "PBKNK66SPP054")).toBeNull();
+    // Nomor di luar pola tidak menghalangi pencatatan.
+    expect(certificateNumberMismatch("INTERNAL-2024-001", "PBKNK66SPP054")).toBeNull();
+  });
+});
+
+describe("jenjang pelaporan berbeda dari struktur organisasi", () => {
+  it("melaporkan direktur pada jenjang sertifikatnya, bukan jenjang jabatannya", () => {
+    // Direktur perusahaan ini bersertifikat PBK jenjang Pejabat Eksekutif (6), dan template memang
+    // tidak punya sandi PBK untuk direksi. Tanpa jenjang pelaporan, kewajiban dan sertifikatnya
+    // sama-sama hilang dari laporan.
+    const direktur = {
+      id: 7,
+      jobLevel: "DIREKSI" as const,
+      competencyLevel: "PEJABAT_EKSEKUTIF" as const,
+      competencyTrack: "PBK" as const,
+      employmentStatus: "AKTIF" as const,
+      joinedAt: "2020-01-01",
+    };
+    const rows = deriveSdmCounts({
+      area: KUPVA_WORK_AREA,
+      periodStart: quarterStartDate(2025, 2),
+      periodEnd: quarterEndDate(2025, 2),
+      employees: [direktur],
+      certifications: [{ employeeId: 7, competencyCode: "PBKNK66SPP052", issuedAt: "2025-05-08" }],
+    });
+    const pejabat = rows.find((row) => row.code === "PBKNK66SPP052")!;
+    expect(pejabat.posisiKeseluruhanSDM).toBe(1);
+    expect(pejabat.posisiSDMYangMemilikiSertifikat).toBe(1);
+    expect(pejabat.realisasiSertifikasiSDM).toBe(1);
   });
 });

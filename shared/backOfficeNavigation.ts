@@ -68,6 +68,7 @@ export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
     { label: "Riwayat Aktivitas", path: "/operasional/audit", minimumRole: "CONTROLLER" },
   ] },
   { label: "Pengawasan", items: [
+    { label: "Kepegawaian", path: "/operasional/kepegawaian", minimumRole: "CONTROLLER" },
     { label: "Status Kesiapan", path: "/operasional/kesiapan", minimumRole: "CONTROLLER" },
     { label: "Untuk Diketahui Direksi", path: "/operasional/pengawasan-direksi", minimumRole: "CONTROLLER" },
   ] },

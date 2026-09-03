@@ -99,6 +99,12 @@ import {
 } from "./operations";
 import { deleteCompanyDocument, getOperationalDocumentDownloadUrl, listCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
 import { expenseCategories } from "../drizzle/schema";
+import { competencyTracks, employmentStatuses, jobLevels, picRoles, screeningResults } from "../drizzle/schema";
+import { KUPVA_WORK_AREA, competencyCodesForArea } from "../shared/sdmCompetency";
+import {
+  assignPicRole, buildSdmQuarterlyReport, createEmployee, endEmployment, exportSdmTextFile,
+  listEmployeeCertifications, listEmployees, listPicAssignments, recordCertification, setCompetencyPlan,
+} from "./sdmOperations";
 import { OPERATIONAL_TIMEZONE_VALUES } from "../shared/regulatoryActionQueue";
 import { simulateArchiveReadiness, simulateClosing, simulateExchange, simulateRateShock } from "./simulation";
 import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedure, router, staffProcedure } from "./_core/trpc";
@@ -350,6 +356,77 @@ export const appRouter = router({
     deleteCompany: controllerProcedure.input(z.object({ documentId: z.number().int().positive() })).mutation(({ input }) => deleteCompanyDocument(input.documentId)),
   }),
 
+  sdm: router({
+    // Daftar pegawai dipakai juga oleh layar operasional, sehingga dibuka untuk staf; seluruh
+    // perubahan tetap dibatasi Controller karena menyangkut bukti kepatuhan.
+    employees: staffProcedure.query(() => listEmployees()),
+    certifications: staffProcedure.input(z.object({ employeeId: z.number().int().positive().optional() }).optional()).query(({ input }) => listEmployeeCertifications(input?.employeeId)),
+    picAssignments: staffProcedure.query(() => listPicAssignments()),
+    competencyCodes: staffProcedure.query(() => competencyCodesForArea(KUPVA_WORK_AREA)),
+
+    createEmployee: controllerProcedure.input(z.object({
+      fullName: z.string().trim().min(1).max(200),
+      position: z.string().trim().min(1).max(120),
+      jobLevel: z.enum(jobLevels),
+      competencyLevel: z.enum(jobLevels).optional(),
+      competencyTrack: z.enum(competencyTracks),
+      joinedAt: z.coerce.date(),
+      identityNumber: z.string().trim().max(40).optional(),
+      education: z.string().trim().max(120).optional(),
+      employmentAgreementNumber: z.string().trim().max(80).optional(),
+      employmentAgreementAt: z.coerce.date().optional(),
+      screeningResult: z.enum(screeningResults).optional(),
+      screenedAt: z.coerce.date().optional(),
+      screeningNotes: z.string().trim().max(1000).optional(),
+      notes: z.string().trim().max(1000).optional(),
+    })).mutation(({ input, ctx }) => createEmployee(input, ctx.user)),
+
+    endEmployment: controllerProcedure.input(z.object({
+      employeeId: z.number().int().positive(),
+      endedAt: z.coerce.date(),
+      notes: z.string().trim().max(1000).optional(),
+    })).mutation(({ input, ctx }) => endEmployment(input, ctx.user)),
+
+    recordCertification: controllerProcedure.input(z.object({
+      employeeId: z.number().int().positive(),
+      competencyCode: z.string().trim().min(1).max(20),
+      issuedAt: z.coerce.date(),
+      certificateNumber: z.string().trim().max(120).optional(),
+      expiresAt: z.coerce.date().optional(),
+      documentId: z.number().int().positive().optional(),
+      notes: z.string().trim().max(1000).optional(),
+    })).mutation(({ input, ctx }) => recordCertification(input, ctx.user)),
+
+    assignPicRole: controllerProcedure.input(z.object({
+      employeeId: z.number().int().positive(),
+      picRole: z.enum(picRoles),
+      assignedAt: z.coerce.date(),
+      decreeNumber: z.string().trim().max(120).optional(),
+      decreeAt: z.coerce.date().optional(),
+      documentId: z.number().int().positive().optional(),
+      notes: z.string().trim().max(1000).optional(),
+    })).mutation(({ input, ctx }) => assignPicRole(input, ctx.user)),
+
+    setPlan: controllerProcedure.input(z.object({
+      periodYear: z.number().int().min(2020).max(2100),
+      periodQuarter: z.number().int().min(1).max(4),
+      competencyCode: z.string().trim().min(1).max(20),
+      plannedCount: z.number().int().min(0),
+      plannedBudgetIdr: decimalString.optional(),
+      notes: z.string().trim().max(1000).optional(),
+    })).mutation(({ input, ctx }) => setCompetencyPlan(input, ctx.user)),
+
+    quarterlyReport: controllerProcedure.input(z.object({
+      year: z.number().int().min(2020).max(2100),
+      quarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+    })).query(({ input }) => buildSdmQuarterlyReport(input)),
+
+    exportTextFile: controllerProcedure.input(z.object({
+      year: z.number().int().min(2020).max(2100),
+      quarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+      idPelapor: z.string().trim().min(1).max(40),
+    })).mutation(({ input }) => exportSdmTextFile(input)),
+  }),
   expenses: router({
     list: staffProcedure.input(z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional() }).optional()).query(({ input }) => listExpenses(input)),
     create: staffProcedure.input(z.object({

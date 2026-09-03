@@ -1,0 +1,1 @@
+ALTER TABLE `employees` ADD `competencyLevel` enum('KOMISARIS','DIREKSI','PEJABAT_EKSEKUTIF','PENYELIA','PELAKSANA');

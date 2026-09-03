@@ -869,6 +869,13 @@ export const employees = mysqlTable("employees", {
   position: varchar("position", { length: 120 }).notNull(),
   jobLevel: mysqlEnum("jobLevel", jobLevels).notNull(),
   competencyTrack: mysqlEnum("competencyTrack", competencyTracks).default("TIDAK_WAJIB").notNull(),
+  /**
+   * Jenjang yang dipakai untuk pelaporan kompetensi, bila berbeda dari jenjang pada struktur
+   * organisasi. Sertifikat PBK direktur perusahaan ini terbit pada jenjang Pejabat Eksekutif (6),
+   * dan template PADG 17/2024 memang tidak memiliki sandi PBK untuk jenjang direksi. Tanpa kolom
+   * ini, kewajiban dan sertifikat direktur sama-sama hilang dari laporan.
+   */
+  competencyLevel: mysqlEnum("competencyLevel", jobLevels),
   employmentStatus: mysqlEnum("employmentStatus", employmentStatuses).default("AKTIF").notNull(),
   joinedAt: datetime("joinedAt").notNull(),
   endedAt: datetime("endedAt"),
