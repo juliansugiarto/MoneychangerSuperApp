@@ -147,6 +147,50 @@ describe("neraca saldo", () => {
   it("tidak memunculkan akun tanpa mutasi", () => {
     expect(buildTrialBalance(lines).rows.some((row) => row.accountCode === "8-1100")).toBe(false);
   });
+
+  it("menambahkan saldo sebelum periode ke saldo akhir", () => {
+    // Tanpa saldo awal, akun neraca hanya menunjukkan pergerakan sebulan: modal disetor bulan lalu
+    // lenyap dari neraca bulan ini dan angkanya tidak dapat dipakai sebagai isian B0002.
+    const sebelumnya = [
+      { accountCode: "1-1110", side: "DEBIT" as const, amount: parseAmount("500000000.00") },
+      { accountCode: "3-1100", side: "KREDIT" as const, amount: parseAmount("500000000.00") },
+    ];
+    const bulanIni = [
+      { accountCode: "6-1200", side: "DEBIT" as const, amount: parseAmount("12000000.00") },
+      { accountCode: "1-1110", side: "KREDIT" as const, amount: parseAmount("12000000.00") },
+    ];
+    const trial = buildTrialBalance(bulanIni, sebelumnya);
+    const kas = trial.rows.find((row) => row.accountCode === "1-1110")!;
+    expect(formatAmount(kas.openingBalance)).toBe("500000000.00");
+    expect(formatAmount(kas.totalCredit)).toBe("12000000.00");
+    expect(formatAmount(kas.debitBalance)).toBe("488000000.00");
+  });
+
+  it("tetap seimbang setelah saldo awal diikutkan", () => {
+    // Saldo awal diikutkan untuk seluruh akun, bukan hanya akun neraca; menyaringnya ke akun neraca
+    // saja membuat kedua sisi berselisih persis sebesar laba periode sebelumnya.
+    const sebelumnya = [
+      { accountCode: "1-1110", side: "DEBIT" as const, amount: parseAmount("500000000.00") },
+      { accountCode: "4-1100", side: "KREDIT" as const, amount: parseAmount("500000000.00") },
+    ];
+    const trial = buildTrialBalance(
+      [
+        { accountCode: "6-1200", side: "DEBIT" as const, amount: parseAmount("12000000.00") },
+        { accountCode: "1-1110", side: "KREDIT" as const, amount: parseAmount("12000000.00") },
+      ],
+      sebelumnya,
+    );
+    expect(trial.balanced).toBe(true);
+  });
+
+  it("memunculkan akun yang hanya bersaldo awal tanpa mutasi periode ini", () => {
+    const trial = buildTrialBalance([], [
+      { accountCode: "1-1110", side: "DEBIT" as const, amount: parseAmount("500000000.00") },
+      { accountCode: "3-1100", side: "KREDIT" as const, amount: parseAmount("500000000.00") },
+    ]);
+    expect(trial.rows.map((row) => row.accountCode)).toEqual(["1-1110", "3-1100"]);
+    expect(formatAmount(trial.totalDebit)).toBe("500000000.00");
+  });
 });
 
 describe("saldo awal periode berikutnya", () => {

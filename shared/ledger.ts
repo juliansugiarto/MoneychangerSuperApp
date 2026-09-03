@@ -100,9 +100,12 @@ export type TrialBalanceLineInput = { accountCode: string; side: JournalSide; am
 
 export type TrialBalanceRow = {
   accountCode: string;
+  /** Saldo sebelum periode, bertanda debit-positif. */
+  openingBalance: bigint;
+  /** Mutasi di dalam periode. */
   totalDebit: bigint;
   totalCredit: bigint;
-  /** Sisa saldo ditempatkan pada satu sisi saja, seperti neraca saldo di atas kertas. */
+  /** Saldo akhir ditempatkan pada satu sisi saja, seperti neraca saldo di atas kertas. */
   debitBalance: bigint;
   creditBalance: bigint;
 };
@@ -114,13 +117,7 @@ export type TrialBalance = {
   balanced: boolean;
 };
 
-/**
- * Neraca saldo: dasar penyusunan tiap pos laporan keuangan.
- *
- * Akun tanpa mutasi sengaja tidak muncul. Yang harus selalu benar adalah jumlah kedua sisinya sama;
- * bila tidak, ada jurnal yang lolos tanpa seimbang dan angka laporan tidak boleh dipakai.
- */
-export function buildTrialBalance(lines: TrialBalanceLineInput[]): TrialBalance {
+const netByAccount = (lines: TrialBalanceLineInput[]) => {
   const totals = new Map<string, { debit: bigint; credit: bigint }>();
   for (const line of lines) {
     const entry = totals.get(line.accountCode) ?? { debit: 0n, credit: 0n };
@@ -128,18 +125,46 @@ export function buildTrialBalance(lines: TrialBalanceLineInput[]): TrialBalance 
     else entry.credit += line.amount;
     totals.set(line.accountCode, entry);
   }
+  return totals;
+};
 
-  const rows: TrialBalanceRow[] = [...totals.entries()]
-    .map(([accountCode, entry]) => {
-      const net = entry.debit - entry.credit;
+/**
+ * Neraca saldo: dasar penyusunan tiap pos laporan keuangan.
+ *
+ * Saldo akhir dihitung kumulatif — mutasi di dalam periode ditambahkan ke saldo sebelum periode.
+ * Tanpa saldo awal, akun neraca hanya menunjukkan pergerakan sebulan: modal disetor bulan lalu
+ * lenyap dari neraca bulan ini, dan angkanya tidak dapat dipakai sebagai isian B0002.
+ *
+ * Saldo awal diikutkan untuk **seluruh** akun, bukan hanya akun neraca. Menyaringnya ke akun neraca
+ * saja membuat jumlah kedua sisi berselisih persis sebesar laba periode-periode sebelumnya, karena
+ * jurnal penutup yang memindahkan laba rugi ke laba ditahan belum ada. Selama jurnal penutup belum
+ * dibangun, akun laba rugi terbaca sejak awal pembukuan — dan itu jujur, bukan tersembunyi.
+ *
+ * Akun tanpa saldo awal maupun mutasi sengaja tidak muncul.
+ */
+export function buildTrialBalance(
+  lines: TrialBalanceLineInput[],
+  openingLines: TrialBalanceLineInput[] = [],
+): TrialBalance {
+  const movements = netByAccount(lines);
+  const openings = netByAccount(openingLines);
+
+  const rows: TrialBalanceRow[] = [...new Set([...openings.keys(), ...movements.keys()])]
+    .map((accountCode) => {
+      const opening = openings.get(accountCode) ?? { debit: 0n, credit: 0n };
+      const movement = movements.get(accountCode) ?? { debit: 0n, credit: 0n };
+      const openingBalance = opening.debit - opening.credit;
+      const net = openingBalance + movement.debit - movement.credit;
       return {
         accountCode,
-        totalDebit: entry.debit,
-        totalCredit: entry.credit,
+        openingBalance,
+        totalDebit: movement.debit,
+        totalCredit: movement.credit,
         debitBalance: net > 0n ? net : 0n,
         creditBalance: net < 0n ? -net : 0n,
       };
     })
+    .filter((row) => row.openingBalance !== 0n || row.totalDebit !== 0n || row.totalCredit !== 0n)
     .sort((a, b) => a.accountCode.localeCompare(b.accountCode));
 
   const totalDebit = rows.reduce((sum, row) => sum + row.debitBalance, 0n);

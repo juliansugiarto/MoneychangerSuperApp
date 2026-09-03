@@ -19,7 +19,7 @@ import {
   parseAmount,
   type JournalSide,
 } from "../shared/ledger";
-import { databaseOrThrow, retryTransientDatabaseRead, writeAudit } from "./operations";
+import { databaseOrThrow, jakartaBusinessDate, retryTransientDatabaseRead, writeAudit } from "./operations";
 
 type JournalSourceType = (typeof journalSourceTypes)[number];
 
@@ -65,7 +65,7 @@ const previousDayIso = (value: Date | string) =>
  * karena mungkin sudah dipakai baris jurnal, dan menghapusnya akan memutus penelusuran pos laporan
  * ke buku besarnya — persis yang menjadi temuan pemeriksaan.
  */
-export async function ensureChartOfAccounts() {
+export async function ensureChartOfAccounts(actor?: { id: number }) {
   const db = await databaseOrThrow();
   const existing = await db.select().from(chartOfAccounts);
   const byCode = new Map(existing.map((row) => [row.code, row]));
@@ -83,7 +83,7 @@ export async function ensureChartOfAccounts() {
     await db.insert(chartOfAccounts).values(missing.map((account) => ({ code: account.code, ...rowFor(account) })));
   }
 
-  let updated = 0;
+  const changed: { code: string; before: unknown; after: unknown }[] = [];
   for (const account of CHART_OF_ACCOUNTS) {
     const current = byCode.get(account.code);
     if (!current) continue;
@@ -96,9 +96,26 @@ export async function ensureChartOfAccounts() {
       JSON.stringify(current.forms) === JSON.stringify(values.forms);
     if (unchanged) continue;
     await db.update(chartOfAccounts).set(values).where(eq(chartOfAccounts.id, current.id));
-    updated += 1;
+    changed.push({
+      code: account.code,
+      before: { name: current.name, type: current.type, normalBalance: current.normalBalance, isContra: current.isContra },
+      after: { name: values.name, type: values.type, normalBalance: values.normalBalance, isContra: values.isContra },
+    });
   }
-  return { inserted: missing.length, updated, total: CHART_OF_ACCOUNTS.length };
+
+  // Akun yang sudah dipakai baris jurnal dapat berubah di sini, dan mengubah `normalBalance`
+  // membalik tanda seluruh saldo historis akun itu. Perubahan sebesar itu harus terbaca di jejak
+  // audit, bukan hanya di riwayat kode.
+  if (actor && (missing.length || changed.length)) {
+    await writeAudit({
+      actorUserId: actor.id,
+      action: "CHART_OF_ACCOUNTS_SEEDED",
+      entityType: "chart_of_accounts",
+      entityId: "*",
+      afterState: { inserted: missing.map((account) => account.code), changed },
+    });
+  }
+  return { inserted: missing.length, updated: changed.length, total: CHART_OF_ACCOUNTS.length };
 }
 
 export async function listAccounts() {
@@ -140,12 +157,24 @@ async function periodForDate(db: Awaited<ReturnType<typeof databaseOrThrow>>, en
     .limit(1);
   if (existing) return existing;
 
-  const [inserted] = await db.insert(accountingPeriods).values({
-    periodStart: dbDate(monthStartIso(entryDate)),
-    periodEnd: dbDate(monthEndIso(entryDate)),
-    createdByUserId: actorUserId,
-  }).$returningId();
-  const [created] = await db.select().from(accountingPeriods).where(eq(accountingPeriods.id, inserted.id)).limit(1);
+  // Dua pencatatan jurnal pertama pada bulan yang sama dapat sama-sama mendapati periodenya belum
+  // ada. Yang kalah menerima pelanggaran indeks unik — itu bukan galat yang perlu sampai ke
+  // pengguna, cukup baca ulang periode yang baru saja dibuat pihak lain.
+  try {
+    await db.insert(accountingPeriods).values({
+      periodStart: dbDate(monthStartIso(entryDate)),
+      periodEnd: dbDate(monthEndIso(entryDate)),
+      createdByUserId: actorUserId,
+    });
+  } catch (error) {
+    if (!isDuplicateKeyFor(error, "accounting_periods_range_uq")) throw error;
+  }
+
+  const [created] = await db
+    .select()
+    .from(accountingPeriods)
+    .where(and(lte(accountingPeriods.periodStart, day), gte(accountingPeriods.periodEnd, day)))
+    .limit(1);
   if (!created) throw new Error("Periode pembukuan untuk tanggal tersebut tidak dapat dibuat.");
   return created;
 }
@@ -156,11 +185,13 @@ export async function closeAccountingPeriod(input: { periodId: number; notes?: s
   if (!period) throw new Error("Periode pembukuan tidak ditemukan.");
   if (period.status === "DITUTUP") throw new Error("Periode ini sudah ditutup.");
 
-  // Menutup periode yang buku besarnya tidak seimbang akan mengunci angka yang tidak dapat
-  // dipertanggungjawabkan; lebih baik gagal di sini daripada di hadapan pemeriksa.
-  const trial = await buildTrialBalanceReport({ from: period.periodStart, to: period.periodEnd });
-  if (!trial.balanced) {
-    throw new Error(`Neraca saldo periode ini belum seimbang (selisih ${trial.difference}); periode tidak dapat ditutup.`);
+  // Menutup periode berarti mengunci angkanya; lebih baik gagal di sini daripada di hadapan
+  // pemeriksa. Yang diperiksa adalah keutuhan tiap jurnalnya, bukan keseimbangan neraca saldo —
+  // yang terakhir tidak pernah gagal selama tiap jurnal disimpan lewat aplikasi ini.
+  const integrity = await verifyLedgerIntegrity({ from: period.periodStart, to: period.periodEnd });
+  if (integrity.problems.length) {
+    const detail = integrity.problems.slice(0, 3).map((problem) => `${problem.entryNumber} (${problem.problem})`).join(", ");
+    throw new Error(`Periode tidak dapat ditutup: ${integrity.problems.length} jurnal tidak utuh — ${detail}.`);
   }
 
   const closedAt = new Date();
@@ -191,9 +222,15 @@ export async function reopenAccountingPeriod(input: { periodId: number; reason: 
   if (!period) throw new Error("Periode pembukuan tidak ditemukan.");
   if (period.status !== "DITUTUP") throw new Error("Periode ini sedang terbuka.");
 
+  // Alasan pembukaan ditambahkan, bukan menimpa: catatan yang dibuat saat periode ditutup adalah
+  // keterangan atas angka yang sudah dikunci, dan menghapusnya menghilangkan konteks itu selamanya.
+  const closingNotes = [period.closingNotes, `Dibuka kembali ${isoDay(new Date())}: ${reason}`]
+    .filter(Boolean)
+    .join("\n");
+
   await db
     .update(accountingPeriods)
-    .set({ status: "TERBUKA", closedByUserId: null, closedAt: null, closingNotes: reason })
+    .set({ status: "TERBUKA", closedByUserId: null, closedAt: null, closingNotes })
     .where(eq(accountingPeriods.id, input.periodId));
 
   await writeAudit({
@@ -201,7 +238,7 @@ export async function reopenAccountingPeriod(input: { periodId: number; reason: 
     action: "ACCOUNTING_PERIOD_REOPENED",
     entityType: "accounting_periods",
     entityId: String(input.periodId),
-    beforeState: { status: period.status, closedAt: period.closedAt },
+    beforeState: { status: period.status, closedAt: period.closedAt, closingNotes: period.closingNotes },
     afterState: { status: "TERBUKA", reason },
   });
   return { id: input.periodId };
@@ -409,7 +446,10 @@ export async function reverseJournalEntry(
   const entry = await insertJournal(
     db,
     {
-      entryDate: input.entryDate ?? new Date(),
+      // Hari operasional WIB, bukan hari UTC: antara pukul 00:00 dan 07:00 WIB, `new Date()` masih
+      // hari sebelumnya di UTC — dan bila bulan itu baru ditutup, jurnal baliknya justru ditolak
+      // periode tertutup, tepat pada satu-satunya mekanisme untuk mengoreksinya.
+      entryDate: input.entryDate ?? jakartaBusinessDate(),
       description: `Koreksi atas ${original.entryNumber}: ${original.description}`,
       sourceType: original.sourceType,
       // Kunci sumber hanya boleh dimiliki jurnal aslinya, supaya penjurnalan otomatis yang
@@ -514,28 +554,38 @@ async function loadLines(from?: Date | string, to?: Date | string, accountCode?:
  */
 export async function buildTrialBalanceReport(input: { from?: Date; to?: Date }) {
   return retryTransientDatabaseRead(async () => {
-    const [rows, accounts] = await Promise.all([loadLines(input.from, input.to), listAccounts()]);
+    const [priorRows, rows, accounts] = await Promise.all([
+      input.from ? loadLines(undefined, previousDayIso(input.from)) : Promise.resolve([]),
+      loadLines(input.from, input.to),
+      listAccounts(),
+    ]);
     const accountsByCode = new Map(accounts.map((account) => [account.code, account]));
+    const asTrialLine = (row: { accountCode: string; side: string; amount: string }) => ({
+      accountCode: row.accountCode,
+      side: row.side as JournalSide,
+      amount: parseAmount(row.amount),
+    });
 
-    const trial = buildTrialBalance(rows.map((row) => ({ accountCode: row.accountCode, side: row.side as JournalSide, amount: parseAmount(row.amount) })));
+    const trial = buildTrialBalance(rows.map(asTrialLine), priorRows.map(asTrialLine));
 
     return {
       from: input.from ? isoDay(input.from) : null,
       to: input.to ? isoDay(input.to) : null,
       rows: trial.rows.map((row) => {
-        const account = accountsByCode.get(row.accountCode);
-        const definition = findAccount(row.accountCode);
+        const account = accountsByCode.get(row.accountCode) ?? findAccount(row.accountCode);
+        const normalBalance = account?.normalBalance ?? "DEBIT";
         return {
           accountCode: row.accountCode,
-          accountName: account?.name ?? definition?.name ?? row.accountCode,
-          accountType: (account?.type ?? definition?.type ?? "ASET") as AccountType,
-          forms: (account?.forms ?? definition?.forms ?? []) as string[],
+          accountName: account?.name ?? row.accountCode,
+          accountType: (account?.type ?? "ASET") as AccountType,
+          forms: (account?.forms ?? []) as string[],
+          openingBalance: formatAmount(normalBalance === "DEBIT" ? row.openingBalance : -row.openingBalance),
           totalDebit: formatAmount(row.totalDebit),
           totalCredit: formatAmount(row.totalCredit),
           debitBalance: formatAmount(row.debitBalance),
           creditBalance: formatAmount(row.creditBalance),
           balance: formatAmount(
-            accountBalance(account?.normalBalance ?? definition?.normalBalance ?? "DEBIT", row.totalDebit, row.totalCredit),
+            accountBalance(normalBalance, row.debitBalance, row.creditBalance),
           ),
         };
       }),
@@ -545,6 +595,56 @@ export async function buildTrialBalanceReport(input: { from?: Date; to?: Date })
       balanced: trial.balanced,
       entryCount: new Set(rows.map((row) => row.entryId)).size,
     };
+  });
+}
+
+/**
+ * Pemeriksaan keutuhan buku besar: setiap jurnal harus punya jumlah debit sama dengan kredit, dan
+ * jumlah itu harus sama dengan total yang tersimpan pada kepala jurnalnya.
+ *
+ * Membandingkan jumlah kedua sisi neraca saldo tidak akan pernah gagal — angkanya diturunkan dari
+ * saldo bersih tiap akun, sehingga selalu seimbang selama tiap jurnal seimbang, dan `postJournalEntry`
+ * sudah menjaminnya saat menyimpan. Yang benar-benar perlu ditangkap adalah baris yang berubah di
+ * luar aplikasi: jurnal setengah tersimpan atau baris yang disunting langsung lewat SQL.
+ */
+export async function verifyLedgerIntegrity(input: { from?: Date; to?: Date }) {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const conditions = [
+      input.from ? gte(journalEntries.entryDate, dbDate(input.from)) : undefined,
+      input.to ? lte(journalEntries.entryDate, dbDate(input.to)) : undefined,
+    ].filter(Boolean);
+
+    const entries = await db
+      .select()
+      .from(journalEntries)
+      .where(conditions.length ? and(...conditions) : undefined);
+    if (!entries.length) return { checked: 0, problems: [] as { entryNumber: string; problem: string }[] };
+
+    const lines = await db
+      .select()
+      .from(journalEntryLines)
+      .where(inArray(journalEntryLines.entryId, entries.map((entry) => entry.id)));
+
+    const problems: { entryNumber: string; problem: string }[] = [];
+    for (const entry of entries) {
+      const own = lines.filter((line) => line.entryId === entry.id);
+      if (own.length < 2) {
+        problems.push({ entryNumber: entry.entryNumber, problem: `hanya ${own.length} baris` });
+        continue;
+      }
+      const debit = own.filter((line) => line.side === "DEBIT").reduce((sum, line) => sum + parseAmount(line.amount), 0n);
+      const credit = own.filter((line) => line.side === "KREDIT").reduce((sum, line) => sum + parseAmount(line.amount), 0n);
+      if (debit !== credit) {
+        problems.push({ entryNumber: entry.entryNumber, problem: `debit ${formatAmount(debit)} ≠ kredit ${formatAmount(credit)}` });
+      } else if (debit !== parseAmount(entry.totalDebit) || credit !== parseAmount(entry.totalCredit)) {
+        problems.push({
+          entryNumber: entry.entryNumber,
+          problem: `jumlah baris ${formatAmount(debit)} tidak sama dengan total tersimpan ${entry.totalDebit}`,
+        });
+      }
+    }
+    return { checked: entries.length, problems };
   });
 }
 

@@ -53,14 +53,23 @@ describe("aturan penyaringan", () => {
   });
 
   it("tidak membiarkan kegagalan pencocokan membatalkan pencatatan calon", () => {
-    const matcher = source.slice(source.indexOf("async function matchCandidateAgainstWatchlist"));
-    expect(matcher).toContain("} catch {");
-    expect(matcher).toContain("watchlistCheckedAt: null");
+    const matcher = source.slice(source.indexOf("async function matchCandidateAgainstWatchlist"), source.indexOf("export async function listCandidates"));
+    expect(matcher).toContain("} catch (error) {");
+    expect(matcher).toContain("return null;");
+  });
+
+  it("membedakan pencocokan yang gagal dari pencocokan yang nihil", () => {
+    // Menyamakan keduanya membuat penyaringan ulang yang kebetulan gagal menimpa kecocokan yang
+    // sudah tercatat — dan bukti itu hilang tanpa jejak. Karena itu hasilnya hanya ditimpa bila
+    // pencocokannya benar-benar berjalan.
+    expect(source).toContain("...(watchlist ?? {})");
+    const matcher = source.slice(source.indexOf("async function matchCandidateAgainstWatchlist"), source.indexOf("export async function listCandidates"));
+    expect(matcher).toContain("console.error");
   });
 
   it("melewati pencocokan untuk nama yang terlalu pendek, bukan melemparkan galat", () => {
     // searchSanctionsWatchlist menolak kueri di bawah tiga karakter.
-    const matcher = source.slice(source.indexOf("async function matchCandidateAgainstWatchlist"));
+    const matcher = source.slice(source.indexOf("async function matchCandidateAgainstWatchlist"), source.indexOf("export async function listCandidates"));
     expect(matcher).toContain("query.length < 3");
   });
 });

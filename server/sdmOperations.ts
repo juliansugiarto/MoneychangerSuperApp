@@ -563,20 +563,25 @@ export async function listProfileReviews(employeeId: number) {
  * Hasilnya hanya jejak — keputusan lulus/tidak lulus tetap penilaian manusia. Kegagalan
  * pencocokan tidak boleh membatalkan pencatatan calonnya: yang menjadi temuan pemeriksaan adalah
  * calon yang tidak tercatat sama sekali, bukan calon yang belum sempat dicocokkan.
+ *
+ * Mengembalikan `null` bila pencocokan tidak berjalan — dibedakan tegas dari "berjalan, nihil".
+ * Menyamakan keduanya membuat penyaringan ulang yang kebetulan gagal menimpa kecocokan yang sudah
+ * pernah tercatat, dan bukti itu hilang tanpa jejak.
  */
 async function matchCandidateAgainstWatchlist(fullName: string) {
   const query = fullName.trim();
-  if (query.length < 3) {
-    return { watchlistCheckedAt: null, watchlistMatchCount: 0, watchlistSummary: null };
-  }
+  if (query.length < 3) return null;
   try {
     const matches = await searchSanctionsWatchlist({ query });
     const summary = matches.length
       ? matches.slice(0, 5).map((match) => `${match.fullName} — ${match.listType} ${Math.round(match.score * 100)}%`).join("\n")
       : null;
     return { watchlistCheckedAt: new Date(), watchlistMatchCount: matches.length, watchlistSummary: summary };
-  } catch {
-    return { watchlistCheckedAt: null, watchlistMatchCount: 0, watchlistSummary: null };
+  } catch (error) {
+    // Dicatat, bukan ditelan diam-diam: pencocok yang selalu gagal akan melaporkan setiap calon
+    // sebagai "belum dicocokkan" tanpa seorang pun tahu penyebabnya.
+    console.error("Pencocokan calon terhadap daftar sanksi gagal:", error);
+    return null;
   }
 }
 
@@ -620,7 +625,7 @@ export async function recordCandidate(
     appliedPosition: input.appliedPosition.trim(),
     appliedAt: input.appliedAt,
     notes: input.notes?.trim() || null,
-    ...watchlist,
+    ...(watchlist ?? {}),
     createdByUserId: actor.id,
   }).$returningId();
 
@@ -631,7 +636,7 @@ export async function recordCandidate(
     entityId: String(candidate.id),
     // Nama calon tidak ditulis ke jejak audit; yang perlu terbukti adalah pencatatan dan
     // pencocokannya, bukan identitasnya, dan barisnya sendiri sudah menyimpan nama itu.
-    afterState: { appliedPosition: input.appliedPosition, appliedAt: input.appliedAt, watchlistMatchCount: watchlist.watchlistMatchCount },
+    afterState: { appliedPosition: input.appliedPosition, appliedAt: input.appliedAt, watchlistMatchCount: watchlist?.watchlistMatchCount ?? null },
   });
   return candidate;
 }
@@ -663,12 +668,14 @@ export async function screenCandidate(
     throw new Error("Calon ini sudah diterima; batalkan dahulu keputusannya sebelum mengubah hasil penyaringan.");
   }
 
+  // Hasil pencocokan hanya ditimpa bila pencocokannya benar-benar berjalan; bila gagal, jejak
+  // kecocokan yang sudah tercatat dipertahankan apa adanya.
   const watchlist = await matchCandidateAgainstWatchlist(candidate.fullName);
   await db.update(employeeCandidates).set({
     screeningResult: input.screeningResult,
     screenedAt: input.screeningResult === "DALAM_PROSES" ? null : input.screenedAt,
     screeningNotes: notes,
-    ...watchlist,
+    ...(watchlist ?? {}),
   }).where(eq(employeeCandidates.id, input.candidateId));
 
   await writeAudit({
@@ -677,7 +684,7 @@ export async function screenCandidate(
     entityType: "employee_candidates",
     entityId: String(input.candidateId),
     beforeState: { screeningResult: candidate.screeningResult },
-    afterState: { screeningResult: input.screeningResult, screenedAt: input.screenedAt, watchlistMatchCount: watchlist.watchlistMatchCount },
+    afterState: { screeningResult: input.screeningResult, screenedAt: input.screenedAt, watchlistMatchCount: watchlist?.watchlistMatchCount ?? candidate.watchlistMatchCount },
   });
   return { id: input.candidateId };
 }

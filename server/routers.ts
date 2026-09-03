@@ -104,7 +104,7 @@ import { journalSourceTypes } from "../drizzle/schema";
 import {
   buildAccountLedger, buildTrialBalanceReport, closeAccountingPeriod, ensureChartOfAccounts,
   listAccountingPeriods, listAccounts, listJournalEntries, postJournalEntry, reopenAccountingPeriod,
-  reverseJournalEntry,
+  reverseJournalEntry, verifyLedgerIntegrity,
 } from "./ledgerOperations";
 import { KUPVA_WORK_AREA, competencyCodesForArea } from "../shared/sdmCompetency";
 import {
@@ -505,7 +505,7 @@ export const appRouter = router({
    */
   ledger: router({
     accounts: controllerProcedure.query(() => listAccounts()),
-    seedAccounts: controllerProcedure.mutation(() => ensureChartOfAccounts()),
+    seedAccounts: controllerProcedure.mutation(({ ctx }) => ensureChartOfAccounts(ctx.user)),
     periods: controllerProcedure.query(() => listAccountingPeriods()),
     closePeriod: controllerProcedure.input(z.object({
       periodId: z.number().int().positive(),
@@ -544,6 +544,10 @@ export const appRouter = router({
       from: z.coerce.date().optional(),
       to: z.coerce.date().optional(),
     }).optional()).query(({ input }) => buildTrialBalanceReport(input ?? {})),
+    integrity: controllerProcedure.input(z.object({
+      from: z.coerce.date().optional(),
+      to: z.coerce.date().optional(),
+    }).optional()).query(({ input }) => verifyLedgerIntegrity(input ?? {})),
     accountLedger: controllerProcedure.input(z.object({
       accountCode: z.string().trim().min(1).max(12),
       from: z.coerce.date().optional(),
