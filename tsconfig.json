@@ -6,6 +6,9 @@
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
     "noEmit": true,
     "module": "ESNext",
+    // Buku besar menghitung uang sebagai bilangan bulat sen memakai bigint (lihat shared/ledger.ts).
+    // tsc di sini hanya memeriksa tipe (noEmit); target ini tidak mengubah keluaran build apa pun.
+    "target": "ES2022",
     "strict": true,
     "lib": ["esnext", "dom", "dom.iterable"],
     "jsx": "preserve",

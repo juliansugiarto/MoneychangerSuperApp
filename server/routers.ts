@@ -100,6 +100,12 @@ import {
 import { deleteCompanyDocument, getOperationalDocumentDownloadUrl, listCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
 import { expenseCategories } from "../drizzle/schema";
 import { candidateDecisions, competencyTracks, employmentStatuses, jobLevels, picRoles, screeningResults } from "../drizzle/schema";
+import { journalSourceTypes } from "../drizzle/schema";
+import {
+  buildAccountLedger, buildTrialBalanceReport, closeAccountingPeriod, ensureChartOfAccounts,
+  listAccountingPeriods, listAccounts, listJournalEntries, postJournalEntry, reopenAccountingPeriod,
+  reverseJournalEntry,
+} from "./ledgerOperations";
 import { KUPVA_WORK_AREA, competencyCodesForArea } from "../shared/sdmCompetency";
 import {
   assignPicRole, buildAnnualSdmPlan, buildProfileReviewSchedule, buildTrainingRecap, decideCandidate, listCandidates, listProfileReviews, listTrainingSessions, recordCandidate, recordProfileReview, recordTrainingSession, screenCandidate, buildSdmQuarterlyReport, buildSdmRealisasiReport, createEmployee, endEmployment, exportSdmTextFile,
@@ -491,6 +497,58 @@ export const appRouter = router({
       description: z.string().trim().min(1).max(500),
       notes: z.string().trim().max(1000).optional(),
     })).mutation(({ input, ctx }) => createExpense(input, ctx.user.id)),
+  }),
+
+  /**
+   * Buku besar (temuan pemeriksaan BI 7.1). Dibaca Controller ke atas — angka laporan keuangan
+   * bukan informasi operasional harian — dan seluruh pencatatannya juga dibatasi Controller.
+   */
+  ledger: router({
+    accounts: controllerProcedure.query(() => listAccounts()),
+    seedAccounts: controllerProcedure.mutation(() => ensureChartOfAccounts()),
+    periods: controllerProcedure.query(() => listAccountingPeriods()),
+    closePeriod: controllerProcedure.input(z.object({
+      periodId: z.number().int().positive(),
+      notes: z.string().trim().max(2000).optional(),
+    })).mutation(({ input, ctx }) => closeAccountingPeriod(input, ctx.user)),
+    reopenPeriod: controllerProcedure.input(z.object({
+      periodId: z.number().int().positive(),
+      reason: z.string().trim().min(5).max(2000),
+    })).mutation(({ input, ctx }) => reopenAccountingPeriod(input, ctx.user)),
+
+    entries: controllerProcedure.input(z.object({
+      from: z.coerce.date().optional(),
+      to: z.coerce.date().optional(),
+      sourceType: z.enum(journalSourceTypes).optional(),
+      limit: z.number().int().min(1).max(500).optional(),
+    }).optional()).query(({ input }) => listJournalEntries(input)),
+    post: controllerProcedure.input(z.object({
+      entryDate: z.coerce.date(),
+      description: z.string().trim().min(1).max(500),
+      lines: z.array(z.object({
+        accountCode: z.string().trim().min(1).max(12),
+        side: z.enum(["DEBIT", "KREDIT"]),
+        amount: decimalString,
+        currencyCode: z.string().trim().regex(/^[A-Za-z]{3}$/).optional(),
+        foreignAmount: decimalString.optional(),
+        memo: z.string().trim().max(500).optional(),
+      })).min(2).max(100),
+    })).mutation(({ input, ctx }) => postJournalEntry(input, ctx.user)),
+    reverse: controllerProcedure.input(z.object({
+      entryId: z.number().int().positive(),
+      reason: z.string().trim().min(5).max(2000),
+      entryDate: z.coerce.date().optional(),
+    })).mutation(({ input, ctx }) => reverseJournalEntry(input, ctx.user)),
+
+    trialBalance: controllerProcedure.input(z.object({
+      from: z.coerce.date().optional(),
+      to: z.coerce.date().optional(),
+    }).optional()).query(({ input }) => buildTrialBalanceReport(input ?? {})),
+    accountLedger: controllerProcedure.input(z.object({
+      accountCode: z.string().trim().min(1).max(12),
+      from: z.coerce.date().optional(),
+      to: z.coerce.date().optional(),
+    })).query(({ input }) => buildAccountLedger(input)),
   }),
 
   companyProfile: router({

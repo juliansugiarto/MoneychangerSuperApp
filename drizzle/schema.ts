@@ -1055,6 +1055,138 @@ export const employeeCandidates = mysqlTable("employee_candidates", {
   index("employee_candidates_decision_idx").on(table.decision, table.appliedAt),
 ]);
 
+/**
+ * Buku besar.
+ *
+ * Temuan pemeriksaan Bank Indonesia butir 7.1: penyelenggara tidak dapat menunjukkan buku besar
+ * sebagai dasar penyusunan masing-masing pos dalam laporan keuangan. Sampai sekarang angka laporan
+ * berasal dari snapshot yang diimpor dari luar (`financial_statement_snapshots`) — dapat dipercaya
+ * hanya sejauh berkas sumbernya, dan tidak dapat ditelusuri ke transaksi pendukungnya. Empat tabel
+ * berikut menggantikan dasar itu dengan pembukuan berpasangan.
+ *
+ * Bagan akunnya sendiri berada di `shared/chartOfAccounts.ts` dan disemai ke tabel ini; kolom
+ * `code` yang menjadi rujukan baris jurnal, bukan `id`, supaya jurnal tetap terbaca pada ekspor
+ * paket audit tanpa perlu menggabungkan tabel.
+ */
+export const accountTypes = ["ASET", "KEWAJIBAN", "EKUITAS", "PENDAPATAN", "HARGA_POKOK", "BEBAN", "LAIN_LAIN", "PAJAK"] as const;
+
+export const chartOfAccounts = mysqlTable("chart_of_accounts", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 12 }).notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  type: mysqlEnum("type", accountTypes).notNull(),
+  normalBalance: mysqlEnum("normalBalance", ["DEBIT", "KREDIT"]).notNull(),
+  /** Akun lawan: mengurangi pos induknya (akumulasi penyusutan, dividen, persediaan akhir). */
+  isContra: boolean("isContra").default(false).notNull(),
+  /** Baris form B0002/B0003/B0004 yang disusun dari akun ini — inti jawaban atas temuan 7.1. */
+  forms: json("forms").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("chart_of_accounts_code_uq").on(table.code),
+  index("chart_of_accounts_type_idx").on(table.type, table.code),
+]);
+
+export const accountingPeriodStatuses = ["TERBUKA", "DITUTUP"] as const;
+
+/**
+ * Periode pembukuan. Periode yang sudah ditutup tidak dapat menerima jurnal baru maupun perubahan;
+ * koreksi atasnya ditulis sebagai jurnal balik pada periode terbuka berikutnya. Ini sejalan dengan
+ * sifat append-only yang sudah dipakai bon, kas, dan pengeluaran.
+ */
+export const accountingPeriods = mysqlTable("accounting_periods", {
+  id: int("id").autoincrement().primaryKey(),
+  periodStart: date("periodStart").notNull(),
+  periodEnd: date("periodEnd").notNull(),
+  status: mysqlEnum("status", accountingPeriodStatuses).default("TERBUKA").notNull(),
+  closedByUserId: int("closedByUserId"),
+  closedAt: datetime("closedAt"),
+  closingNotes: text("closingNotes"),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("accounting_periods_range_uq").on(table.periodStart, table.periodEnd),
+  index("accounting_periods_status_idx").on(table.status, table.periodStart),
+]);
+
+/**
+ * Asal sebuah jurnal. `MANUAL` diketik manusia; sisanya dihasilkan sistem dari catatan operasional
+ * yang sudah ada, sehingga tidak ada entri ulang dan tidak ada kesempatan angka buku besar berbeda
+ * dari angka operasionalnya.
+ */
+export const journalSourceTypes = [
+  "MANUAL",
+  "SALDO_AWAL",
+  "TRANSAKSI_VALUTA",
+  "PENGELUARAN",
+  "MUTASI_KAS",
+  "MUTASI_BANK",
+  "PENYUSUTAN",
+  "REVALUASI_KURS",
+  "TUTUP_PERIODE",
+] as const;
+
+export const journalEntries = mysqlTable("journal_entries", {
+  id: int("id").autoincrement().primaryKey(),
+  entryNumber: varchar("entryNumber", { length: 40 }).notNull(),
+  entryDate: date("entryDate").notNull(),
+  description: varchar("description", { length: 500 }).notNull(),
+  sourceType: mysqlEnum("sourceType", journalSourceTypes).default("MANUAL").notNull(),
+  /**
+   * Rujukan ke catatan operasional asalnya (mis. nomor bon, id pengeluaran). Bersama `sourceType`
+   * membentuk kunci unik, sehingga penjurnalan otomatis yang dijalankan dua kali tidak pernah
+   * menghasilkan jurnal ganda. Jurnal manual mengisinya NULL — MySQL mengizinkan banyak NULL pada
+   * indeks unik, jadi jurnal manual tidak saling menghalangi.
+   */
+  sourceReference: varchar("sourceReference", { length: 120 }),
+  /** Dimensi cabang. Disediakan sejak awal agar penambahan cabang tidak menulis ulang jurnal. */
+  branchId: int("branchId"),
+  totalDebit: decimal("totalDebit", { precision: 24, scale: 2 }).notNull(),
+  totalCredit: decimal("totalCredit", { precision: 24, scale: 2 }).notNull(),
+  /** Terisi pada jurnal koreksi; menunjuk jurnal yang dibalik olehnya. */
+  reversesEntryId: int("reversesEntryId"),
+  reversalReason: text("reversalReason"),
+  postedByUserId: int("postedByUserId").notNull(),
+  postedAt: datetime("postedAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("journal_entries_number_uq").on(table.entryNumber),
+  uniqueIndex("journal_entries_source_uq").on(table.sourceType, table.sourceReference),
+  index("journal_entries_date_idx").on(table.entryDate, table.id),
+  index("journal_entries_reverses_idx").on(table.reversesEntryId),
+]);
+
+/**
+ * Baris jurnal. Tidak pernah diubah maupun dihapus setelah tersimpan; koreksi selalu berupa jurnal
+ * balik, sehingga buku besar yang ditunjukkan kepada pemeriksa memuat kekeliruannya sekaligus
+ * perbaikannya, bukan hanya hasil akhir yang rapi.
+ */
+export const journalEntryLines = mysqlTable("journal_entry_lines", {
+  id: int("id").autoincrement().primaryKey(),
+  entryId: int("entryId").notNull(),
+  lineNumber: int("lineNumber").notNull(),
+  accountCode: varchar("accountCode", { length: 12 }).notNull(),
+  side: mysqlEnum("side", ["DEBIT", "KREDIT"]).notNull(),
+  /** Selalu Rupiah — mata uang fungsional. Nilai valuta asingnya dicatat terpisah di bawah. */
+  amount: decimal("amount", { precision: 24, scale: 2 }).notNull(),
+  /** Terisi bila baris ini berasal dari pergerakan valuta asing, untuk penelusuran dan revaluasi. */
+  currencyCode: varchar("currencyCode", { length: 3 }),
+  foreignAmount: decimal("foreignAmount", { precision: 24, scale: 6 }),
+  branchId: int("branchId"),
+  memo: varchar("memo", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("journal_entry_lines_entry_line_uq").on(table.entryId, table.lineNumber),
+  index("journal_entry_lines_account_idx").on(table.accountCode, table.entryId),
+]);
+
+export type ChartOfAccount = typeof chartOfAccounts.$inferSelect;
+export type AccountingPeriod = typeof accountingPeriods.$inferSelect;
+export type JournalEntry = typeof journalEntries.$inferSelect;
+export type JournalEntryLine = typeof journalEntryLines.$inferSelect;
+
 export const profileReviewOutcomes = ["TIDAK_ADA_PERUBAHAN", "ADA_PERUBAHAN", "PERLU_TINDAK_LANJUT"] as const;
 
 /**
