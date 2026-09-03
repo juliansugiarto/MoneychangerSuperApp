@@ -282,7 +282,6 @@ async function insertJournal(
   }
 
   const postedAt = new Date();
-  let lastError: unknown = null;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const entryNumber = await nextEntryNumber(db, input.entryDate);
     try {
@@ -321,14 +320,19 @@ async function insertJournal(
       if (!saved) throw new Error("Jurnal tidak dapat dibaca kembali setelah disimpan.");
       return saved;
     } catch (error) {
+      // Sumber yang sama sudah pernah dijurnal — inilah sifat idempoten yang sengaja dibangun,
+      // dan pesannya harus terbaca manusia, bukan kueri SQL mentah dari driver.
+      if (isDuplicateKeyFor(error, "journal_entries_source_uq")) {
+        throw new Error(`${input.sourceType} ${input.sourceReference} sudah pernah dijurnal; tidak dijurnal ulang.`);
+      }
       // Hanya tabrakan nomor jurnal yang layak dicoba ulang: pencatatan lain merebut nomor itu
-      // lebih dulu. Tabrakan pada kunci sumber adalah hal berbeda — jurnalnya memang sudah ada,
-      // dan mengulangnya justru akan menyembunyikan sifat idempoten yang sengaja dibangun.
+      // lebih dulu.
       if (!isDuplicateKeyFor(error, "journal_entries_number_uq")) throw error;
-      lastError = error;
     }
   }
-  throw lastError instanceof Error ? lastError : new Error("Nomor jurnal tidak dapat dialokasikan.");
+  throw new Error(
+    `Nomor jurnal untuk ${isoDay(input.entryDate)} tidak dapat dialokasikan setelah tiga percobaan; coba ulangi pencatatan ini.`,
+  );
 }
 
 export async function postJournalEntry(
