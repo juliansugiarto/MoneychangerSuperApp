@@ -71,9 +71,9 @@ Selesai sesi ini:
 malam **UTC** (diperiksa: `2026-09-01T00:00:00.000Z` pada mesin GMT+7), jadi `toISOString()` saat
 membaca sudah benar. Yang perlu dinormalkan hanya arah kirim.
 
-Data uji yang tertinggal di tenant lokal `moneychanger`: satu sesi pelatihan 15 Okt 2025, satu
-peninjauan profil, dan satu calon "UJI CALON PELAMAR" beserta penyaringan dan keputusannya. Jurnal
-uji sudah dihapus; 42 baris `chart_of_accounts` yang tersemai adalah data acuan, bukan data uji.
+Tenant lokal `moneychanger` kini **bersih dari seluruh data uji** — pegawai, pelatihan, peninjauan,
+calon, nasabah, bon, kas, kurs, dan jurnal semuanya dihapus. Yang tersisa hanya 42 baris
+`chart_of_accounts` (data acuan, bukan data uji) dan tiga baris `audit_logs` dari sesi sebelumnya.
 
 ## Dua hal yang tidak boleh diturunkan ulang dari kode
 
@@ -130,6 +130,12 @@ Fase buku besar mengikuti rencana produk (artefak pada tautan di atas). Fase 03 
 
 ## Yang masih menggantung
 
+- **Kas awal dan mutasi kas belum dijurnal.** Akibatnya akun Kas Rupiah pada buku besar hanya memuat
+  pergerakan dari bon, dan pada outlet yang lebih banyak membeli daripada menjual saldonya tampil
+  negatif. Sudah dijelaskan di layar, tetapi tetap harus diselesaikan sebelum laporan keuangan dipakai:
+  perlu keputusan kebijakan untuk kas awal, setor/tarik brankas, penjualan di luar jam, dan selisih
+  kas awal — masing-masing berbeda, dan sisi kas bon sudah terjurnal lewat bonnya sendiri sehingga
+  menjurnal mutasinya sekaligus akan menghitung uang yang sama dua kali.
 - **Ambang underlying bulanan** (commit `3fb0e98`) mengubah perilaku harian: kasir kini diminta
   dokumen pendukung bagi nasabah yang akumulasi sebulannya melewati USD 10.000. Logikanya diuji,
   tetapi kuerinya belum pernah diuji terhadap transaksi nyata — tidak ada uji di repo ini yang

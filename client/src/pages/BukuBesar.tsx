@@ -407,12 +407,20 @@ export default function BukuBesar() {
                 </div>
               ) : null}
 
-              <p className="text-xs text-[#718398]">
-                Mutasi kas dan bank belum ikut dijurnal. Sisi kas bon sudah tercatat lewat bonnya sendiri, sehingga
-                menjurnal mutasinya sekaligus akan menghitung uang yang sama dua kali; kategori lainnya — setor dan
-                tarik brankas, penjualan di luar jam, selisih kas awal — masing-masing perlu keputusan tersendiri.
-                Pengeluaran dicatat sebagai kewajiban lebih dahulu, karena modul pengeluaran memang tidak menyentuh kas.
-              </p>
+              <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
+                <p>
+                  <strong>Kas awal dan mutasi kas belum ikut dijurnal.</strong> Selama itu belum ada, akun Kas Rupiah
+                  hanya memuat pergerakan dari bon — dan pada outlet yang lebih banyak membeli daripada menjual,
+                  saldonya akan tampil <em>negatif</em>. Itu bukan kekeliruan pembukuan, melainkan modal awalnya
+                  memang belum tercatat; catat saldo awal sebagai jurnal manual bila laporannya perlu dipakai.
+                </p>
+                <p>
+                  Mutasi kas sengaja belum dijurnal: sisi kas bon sudah tercatat lewat bonnya sendiri, sehingga
+                  menjurnal mutasinya sekaligus akan menghitung uang yang sama dua kali. Kategori lainnya — setor dan
+                  tarik brankas, penjualan di luar jam, selisih kas awal — masing-masing perlu keputusan tersendiri.
+                  Pengeluaran dicatat sebagai kewajiban lebih dahulu, karena modul pengeluaran memang tidak menyentuh kas.
+                </p>
+              </div>
             </CardContent>
           </Card>
 
