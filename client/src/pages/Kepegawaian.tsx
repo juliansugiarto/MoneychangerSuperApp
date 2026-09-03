@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
+import { printLampiranSdm } from "@/lib/lampiranSdm";
 import { PIC_ROLE_TITLES, printSuratKeputusan, suggestDecreeNumber } from "@/lib/suratKeputusan";
 import { Award, Download, FileCheck2, Printer, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -60,12 +61,14 @@ export default function Kepegawaian() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [quarter, setQuarter] = useState<1 | 2 | 3 | 4>(currentQuarter());
   const report = trpc.sdm.quarterlyReport.useQuery({ year, quarter }, { enabled: canManage });
+  const annualPlan = trpc.sdm.annualPlan.useQuery({ year }, { enabled: canManage });
 
   const refresh = () => {
     utils.sdm.employees.invalidate();
     utils.sdm.certifications.invalidate();
     utils.sdm.picAssignments.invalidate();
     utils.sdm.quarterlyReport.invalidate();
+    utils.sdm.annualPlan.invalidate();
   };
 
   const createEmployee = trpc.sdm.createEmployee.useMutation({
@@ -139,6 +142,20 @@ export default function Kepegawaian() {
     });
   };
 
+  const printAnnualPlan = () => {
+    if (!annualPlan.data) return;
+    if (!signatory) return toast.error("Belum ada direksi aktif yang dapat menandatangani lampiran.");
+    if (!companyProfile.data?.legalEntityName) return toast.error("Nama badan hukum belum diisi pada Profil Perusahaan.");
+    printLampiranSdm({
+      ...annualPlan.data,
+      lampiran: annualPlan.data.lampiran as "X" | "XI",
+      company: { legalEntityName: companyProfile.data.legalEntityName, address: companyProfile.data.address },
+      signatory: { fullName: signatory.fullName, position: signatory.position },
+      signedCity: (companyProfile.data.address ?? "").split(",").slice(-2)[0]?.trim() || "—",
+      signedAt: new Date().toISOString().slice(0, 10),
+    });
+  };
+
   const activeStaff = useMemo(() => (employees.data ?? []).filter((row) => row.employmentStatus === "AKTIF"), [employees.data]);
   const withoutAgreement = activeStaff.filter((row) => !row.employmentAgreementNumber && row.jobLevel !== "KOMISARIS" && row.jobLevel !== "DIREKSI");
   const withoutScreening = activeStaff.filter((row) => !row.screeningResult);
@@ -163,6 +180,7 @@ export default function Kepegawaian() {
           <TabsTrigger value="sertifikat" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><Award className="mr-1.5 size-4" />Sertifikat</TabsTrigger>
           <TabsTrigger value="pic" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><ShieldCheck className="mr-1.5 size-4" />Penanggung Jawab</TabsTrigger>
           <TabsTrigger value="laporan" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><Download className="mr-1.5 size-4" />Laporan Triwulan</TabsTrigger>
+          <TabsTrigger value="rencana" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><FileCheck2 className="mr-1.5 size-4" />Rencana Tahunan</TabsTrigger>
         </TabsList>
 
         {/* ------------------------------- Pegawai ------------------------------- */}
@@ -464,6 +482,58 @@ export default function Kepegawaian() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* --------------------------- Rencana tahunan --------------------------- */}
+        <TabsContent value="rencana" className="mt-5 space-y-4">
+          <Card className="border-[#dce6f0]">
+            <CardHeader>
+              <CardTitle className="font-display text-xl text-[#18395f]">Rencana tahunan pemenuhan sertifikat</CardTitle>
+              <CardDescription>
+                Lampiran {annualPlan.data?.lampiran ?? "X/XI"} PADG No. 17 Tahun 2024. Angka per triwulan diambil dari rencana
+                yang diisi pada tab Laporan Triwulan, sehingga rencana tahunan dan laporan triwulanan tidak dapat berbeda.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="w-32"><Label className="text-xs">Tahun</Label><Input autoComplete="off" className="mt-1" type="number" value={year} onChange={(event) => setYear(Number(event.target.value))} /></div>
+                {annualPlan.data ? <Badge className="mb-2 bg-[#e7f2fb] text-[#35628f] hover:bg-[#e7f2fb]">Lampiran {annualPlan.data.lampiran}</Badge> : null}
+                <Button className="mb-1 bg-[#183f70] text-white hover:bg-[#12345d]" disabled={!annualPlan.data} onClick={printAnnualPlan}><Printer className="mr-2 size-4" />Cetak lampiran</Button>
+              </div>
+
+              {annualPlan.isLoading ? <p className="py-8 text-sm text-[#475569]">Menyusun rencana…</p> : null}
+              {annualPlan.data ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[820px] text-left text-sm">
+                    <thead className="border-b border-[#dce6f0] bg-[#f5f8fc] text-xs uppercase tracking-wide text-[#475569]">
+                      <tr>
+                        <th className="px-3 py-3" rowSpan={2}>Jenjang</th>
+                        <th className="px-3 py-3 text-right" rowSpan={2}>Total SDM</th>
+                        <th className="px-3 py-2 text-center" colSpan={4}>Rencana PBK</th>
+                        <th className="px-3 py-2 text-center" colSpan={4}>Rencana Pemeliharaan</th>
+                      </tr>
+                      <tr>{["I", "II", "III", "IV", "I", "II", "III", "IV"].map((q, index) => <th key={index} className="px-3 py-2 text-center">Tw {q}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {annualPlan.data.rows.map((row) => (
+                        <tr key={row.name} className="border-b border-[#eef2f7] last:border-0">
+                          <td className="px-3 py-3 font-semibold text-[#213f63]">{row.label}</td>
+                          <td className="px-3 py-3 text-right tabular-nums text-[#213f63]">{row.totalSdm}</td>
+                          {row.rencanaPbk.map((value, index) => <td key={`p${index}`} className="px-3 py-3 text-center tabular-nums text-[#475569]">{value}</td>)}
+                          {row.rencanaPemeliharaan.map((value, index) => <td key={`m${index}`} className="px-3 py-3 text-center tabular-nums text-[#475569]">{value}</td>)}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="mt-3 text-sm text-[#64768d]">
+                    Rencana penyediaan dana PBK <strong>Rp {new Intl.NumberFormat("id-ID").format(annualPlan.data.totalDanaPbk)}</strong>,
+                    pemeliharaan <strong>Rp {new Intl.NumberFormat("id-ID").format(annualPlan.data.totalDanaPemeliharaan)}</strong>.
+                    Diisi bersama rencana per triwulan.
+                  </p>
                 </div>
               ) : null}
             </CardContent>

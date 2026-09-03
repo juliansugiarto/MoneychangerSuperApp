@@ -62,3 +62,35 @@ describe("isi surat keputusan", () => {
     expect(pageSource).toContain("Belum ada direksi aktif yang dapat menandatangani surat.");
   });
 });
+
+describe("Lampiran X / XI rencana tahunan", () => {
+  const lampiran = readFileSync(new URL("../client/src/lib/lampiranSdm.ts", import.meta.url), "utf8");
+
+  it("memuat judul dan rujukan peraturan seperti formulir resmi", () => {
+    expect(lampiran).toContain("PERATURAN ANGGOTA DEWAN GUBERNUR NOMOR 17 TAHUN 2024");
+    expect(lampiran).toContain("TANGGAL 19 NOVEMBER 2024");
+    expect(lampiran).toContain("Rencana Pemenuhan Kepemilikan dan Pemeliharaan Sertifikat PBK Sistem Pembayaran");
+    expect(lampiran).toContain("Nama Pelaku SK SP");
+  });
+
+  it("membedakan kalimat judul Lampiran XI masa peralihan dari Lampiran X", () => {
+    expect(lampiran).toContain("Masa Peralihan s.d 31 Desember 2026");
+    expect(lampiran).toContain("Untuk Seluruh SDM Pelaku SK SP yang Wajib Memiliki");
+  });
+
+  it("menyajikan dua total rencana penyediaan dana yang diminta formulir", () => {
+    expect(lampiran).toContain("Total Rencana Penyediaan Dana PBK Sistem Pembayaran Tahun Berikutnya");
+    expect(lampiran).toContain("Total Rencana Penyediaan Dana Pemeliharaan Sertifikat PBK Sistem Pembayaran Tahun Berikutnya");
+  });
+
+  it("menyusun kolom triwulan untuk kedua jenis rencana", () => {
+    // Formulir memakai delapan kolom triwulan: empat untuk PBK, empat untuk pemeliharaan.
+    expect(lampiran).toContain('["Tw I", "Tw II", "Tw III", "Tw IV"]');
+    expect(lampiran).toContain("quarterHeads.concat(quarterHeads)");
+    expect(lampiran).toContain('colspan="4"');
+  });
+
+  it("dicetak mendatar karena tabelnya lebar", () => {
+    expect(lampiran).toContain("size: A4 landscape");
+  });
+});

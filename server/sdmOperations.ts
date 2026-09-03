@@ -12,6 +12,7 @@ import {
 } from "../drizzle/schema";
 import {
   KUPVA_WORK_AREA,
+  WORK_AREAS,
   buildSdmTextFile,
   certificateNumberMismatch,
   competencyCodesForArea,
@@ -240,4 +241,64 @@ export async function exportSdmTextFile(input: { year: number; quarter: 1 | 2 | 
     form: report.form,
     periodEnd: report.periodEnd,
   };
+}
+
+/**
+ * Menyusun Laporan Rencana Pemenuhan (Lampiran X/XI PADG 17/2024) untuk satu tahun.
+ *
+ * Berbeda dari RAP01/RAS01 yang melaporkan posisi per triwulan, lampiran ini adalah rencana
+ * tahunan: jumlah SDM per jenjang, rencana PBK dan rencana pemeliharaan sertifikat untuk tiap
+ * triwulan, serta dua total rencana penyediaan dana. Seluruhnya sudah tersimpan pada tabel rencana
+ * dan catatan pegawai, jadi lampiran ini menyajikan ulang, bukan meminta pengetikan kedua kali.
+ */
+export async function buildAnnualSdmPlan(input: { year: number }) {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const [staff, plans] = await Promise.all([
+      db.select().from(employees),
+      db.select().from(sdmCompetencyPlans).where(eq(sdmCompetencyPlans.periodYear, input.year)),
+    ]);
+
+    const yearEnd = `${input.year}-12-31`;
+    const activeAtYearEnd = staff.filter((row) =>
+      row.employmentStatus === "AKTIF" &&
+      asIsoDate(row.joinedAt)! <= yearEnd &&
+      (!row.endedAt || asIsoDate(row.endedAt)! >= yearEnd));
+
+    const planFor = (code: string, quarter: number) =>
+      plans.find((plan) => plan.competencyCode === code && plan.periodQuarter === quarter);
+
+    // Lampiran hanya mengenal tiga jenjang; PBK memang tidak memiliki sandi untuk direksi.
+    const levels = [
+      { level: 4 as const, name: "PELAKSANA", label: "Pelaksana" },
+      { level: 3 as const, name: "PENYELIA", label: "Penyelia" },
+      { level: 2 as const, name: "PEJABAT_EKSEKUTIF", label: "Pejabat Eksekutif" },
+    ];
+
+    const rows = levels.map((entry) => {
+      const pbkCode = `PBKNK66SPP${KUPVA_WORK_AREA}${entry.level}`;
+      const maintenanceCode = `PBKPK66SPP${KUPVA_WORK_AREA}${entry.level}`;
+      const quarters = [1, 2, 3, 4] as const;
+      return {
+        ...entry,
+        totalSdm: activeAtYearEnd.filter((row) => (row.competencyLevel ?? row.jobLevel) === entry.name).length,
+        rencanaPbk: quarters.map((quarter) => planFor(pbkCode, quarter)?.plannedCount ?? 0),
+        rencanaPemeliharaan: quarters.map((quarter) => planFor(maintenanceCode, quarter)?.plannedCount ?? 0),
+      };
+    });
+
+    const budgetFor = (prefix: string) => plans
+      .filter((plan) => plan.competencyCode.startsWith(prefix))
+      .reduce((total, plan) => total + Number(plan.plannedBudgetIdr ?? 0), 0);
+
+    return {
+      year: input.year,
+      // Masa peralihan berakhir 31 Desember 2026, jadi lampiran untuk tahun itu masih Lampiran XI.
+      lampiran: formForPeriod(yearEnd) === "rap01" ? "XI" : "X",
+      bidang: WORK_AREAS[KUPVA_WORK_AREA],
+      rows,
+      totalDanaPbk: budgetFor("PBKNK"),
+      totalDanaPemeliharaan: budgetFor("PBKPK"),
+    };
+  });
 }
