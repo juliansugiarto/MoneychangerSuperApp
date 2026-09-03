@@ -288,6 +288,13 @@
       "when": 1788417795679,
       "tag": "0040_worthless_medusa",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "5",
+      "when": 1788418958966,
+      "tag": "0041_cold_nuke",
+      "breakpoints": true
     }
   ]
 }

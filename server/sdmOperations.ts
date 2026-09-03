@@ -4,6 +4,7 @@ import {
   apuTrainingSessions,
   employeeCertifications,
   employeePicAssignments,
+  employeeProfileReviews,
   employees,
   sdmCompetencyPlans,
   type jobLevels,
@@ -28,6 +29,7 @@ import {
   type EmployeeForReport,
   type RealisasiTrack,
 } from "../shared/sdmCompetency";
+import { profileReviewStatus } from "../shared/employeeProfileReview";
 import { databaseOrThrow, retryTransientDatabaseRead, writeAudit } from "./operations";
 
 type JobLevel = (typeof jobLevels)[number];
@@ -36,6 +38,7 @@ type CompetencyTrack = (typeof competencyTracks)[number];
 type EmploymentStatus = (typeof employmentStatuses)[number];
 type ScreeningResult = (typeof screeningResults)[number];
 type TrainingMethod = "IN_HOUSE" | "EKSTERNAL" | "DARING";
+type ProfileReviewOutcome = "TIDAK_ADA_PERUBAHAN" | "ADA_PERUBAHAN" | "PERLU_TINDAK_LANJUT";
 
 const asIsoDate = (value: Date | string | null | undefined) =>
   value ? new Date(value).toISOString().slice(0, 10) : null;
@@ -449,5 +452,100 @@ export async function buildTrainingRecap(input: { from: Date; to: Date }) {
       sessions: sessions.sort((a, b) => Number(new Date(a.heldAt)) - Number(new Date(b.heldAt))),
       untrained: rows.filter((row) => !row.lastTrainedAt).length,
     };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Peninjauan berkala profil pegawai
+// ---------------------------------------------------------------------------
+
+/**
+ * Jadwal peninjauan seluruh pegawai aktif, diurutkan dari yang paling terlambat.
+ *
+ * Yang belum pernah ditinjau dihitung dari tanggal masuk, sehingga pegawai lama yang profilnya
+ * tidak pernah dikinikan muncul paling atas — persis keadaan yang menjadi temuan pemeriksaan.
+ */
+export async function buildProfileReviewSchedule(now = new Date()) {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const [staff, reviews] = await Promise.all([
+      db.select().from(employees).where(eq(employees.employmentStatus, "AKTIF")),
+      db.select().from(employeeProfileReviews).orderBy(desc(employeeProfileReviews.reviewedAt)),
+    ]);
+
+    const rows = staff.map((employee) => {
+      const history = reviews.filter((review) => review.employeeId === employee.id);
+      const latest = history[0] ?? null;
+      const status = profileReviewStatus({
+        joinedAt: new Date(employee.joinedAt),
+        lastReviewedAt: latest ? new Date(latest.reviewedAt) : null,
+        now,
+      });
+      return {
+        employeeId: employee.id,
+        fullName: employee.fullName,
+        position: employee.position,
+        joinedAt: asIsoDate(employee.joinedAt),
+        lastReviewedAt: latest ? asIsoDate(latest.reviewedAt) : null,
+        lastOutcome: latest?.outcome ?? null,
+        lastNotes: latest?.notes ?? null,
+        reviewCount: history.length,
+        dueAt: asIsoDate(status.dueAt)!,
+        status: status.status,
+        daysUntilDue: status.daysUntilDue,
+        neverReviewed: status.neverReviewed,
+      };
+    });
+
+    rows.sort((a, b) => a.daysUntilDue - b.daysUntilDue);
+    return {
+      rows,
+      overdue: rows.filter((row) => row.status === "TERLAMBAT").length,
+      dueSoon: rows.filter((row) => row.status === "SEGERA").length,
+      neverReviewed: rows.filter((row) => row.neverReviewed).length,
+    };
+  });
+}
+
+export async function recordProfileReview(
+  input: { employeeId: number; reviewedAt: Date; outcome: ProfileReviewOutcome; notes?: string },
+  actor: { id: number },
+) {
+  const notes = input.notes?.trim() || null;
+  // Hasil selain "tidak ada perubahan" tanpa keterangan tidak dapat ditindaklanjuti siapa pun,
+  // dan pada berkas pemeriksaan hanya akan terbaca sebagai peninjauan yang tidak selesai.
+  if (input.outcome !== "TIDAK_ADA_PERUBAHAN" && !notes) {
+    throw new Error("Jelaskan perubahan atau tindak lanjut yang ditemukan pada peninjauan ini.");
+  }
+
+  const db = await databaseOrThrow();
+  const [employee] = await db.select().from(employees).where(eq(employees.id, input.employeeId));
+  if (!employee) throw new Error("Pegawai tidak ditemukan.");
+  if (employee.employmentStatus !== "AKTIF") throw new Error("Pegawai yang sudah tidak aktif tidak perlu ditinjau.");
+
+  const [review] = await db.insert(employeeProfileReviews).values({
+    employeeId: input.employeeId,
+    reviewedAt: input.reviewedAt,
+    outcome: input.outcome,
+    notes,
+    reviewedByUserId: actor.id,
+  }).$returningId();
+
+  await writeAudit({
+    actorUserId: actor.id,
+    action: "EMPLOYEE_PROFILE_REVIEWED",
+    entityType: "employee_profile_reviews",
+    entityId: String(review.id),
+    afterState: { employeeId: input.employeeId, reviewedAt: input.reviewedAt, outcome: input.outcome },
+  });
+  return review;
+}
+
+export async function listProfileReviews(employeeId: number) {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    return db.select().from(employeeProfileReviews)
+      .where(eq(employeeProfileReviews.employeeId, employeeId))
+      .orderBy(desc(employeeProfileReviews.reviewedAt));
   });
 }

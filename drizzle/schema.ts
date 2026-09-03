@@ -1018,10 +1018,34 @@ export const apuTrainingAttendance = mysqlTable("apu_training_attendance", {
   index("apu_training_attendance_employee_idx").on(table.employeeId),
 ]);
 
+export const profileReviewOutcomes = ["TIDAK_ADA_PERUBAHAN", "ADA_PERUBAHAN", "PERLU_TINDAK_LANJUT"] as const;
+
+/**
+ * Peninjauan berkala profil pegawai.
+ *
+ * Pemeriksaan menemukan profil pegawai tidak pernah dikinikan setelah perekrutan, sehingga
+ * perubahan keadaan pegawai - termasuk yang menaikkan risiko - tidak pernah terlihat. Satu baris
+ * per peninjauan, bukan satu kolom "terakhir ditinjau" pada tabel pegawai, karena yang diminta
+ * pemeriksa adalah jejak peninjauannya beserta hasilnya, bukan sekadar tanggal terakhir.
+ */
+export const employeeProfileReviews = mysqlTable("employee_profile_reviews", {
+  id: int("id").autoincrement().primaryKey(),
+  employeeId: int("employeeId").notNull(),
+  reviewedAt: datetime("reviewedAt").notNull(),
+  outcome: mysqlEnum("outcome", profileReviewOutcomes).notNull(),
+  /** Ringkasan perubahan yang ditemukan; wajib diisi bila hasilnya bukan "tidak ada perubahan". */
+  notes: text("notes"),
+  reviewedByUserId: int("reviewedByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("employee_profile_reviews_employee_idx").on(table.employeeId, table.reviewedAt),
+]);
+
 export type Employee = typeof employees.$inferSelect;
 export type EmployeeCertification = typeof employeeCertifications.$inferSelect;
 export type EmployeePicAssignment = typeof employeePicAssignments.$inferSelect;
 export type ApuTrainingSession = typeof apuTrainingSessions.$inferSelect;
+export type EmployeeProfileReview = typeof employeeProfileReviews.$inferSelect;
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;

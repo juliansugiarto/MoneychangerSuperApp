@@ -8,12 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { PROFILE_REVIEW_INTERVAL_MONTHS, PROFILE_REVIEW_OUTCOME_LABELS, type ProfileReviewStatus } from "@shared/employeeProfileReview";
 import { trpc } from "@/lib/trpc";
 import { printLampiranRealisasi } from "@/lib/lampiranRealisasi";
 import { printLampiranSdm } from "@/lib/lampiranSdm";
 import { PIC_ROLE_TITLES, printSuratKeputusan, suggestDecreeNumber } from "@/lib/suratKeputusan";
 import { TRAINING_METHOD_LABELS, printSuratPelatihan, suggestTrainingLetterNumber } from "@/lib/suratPelatihan";
-import { Award, Download, FileCheck2, GraduationCap, Printer, ShieldCheck, UserPlus, Users } from "lucide-react";
+import { Award, CalendarCheck, Download, FileCheck2, GraduationCap, Printer, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -82,6 +83,8 @@ export default function Kepegawaian() {
   const competencyCodes = trpc.sdm.competencyCodes.useQuery();
   const companyProfile = trpc.companyProfile.get.useQuery();
 
+  const emptyReview = { employeeId: "", reviewedAt: new Date().toISOString().slice(0, 10), outcome: "TIDAK_ADA_PERUBAHAN", notes: "" };
+  const [reviewForm, setReviewForm] = useState(emptyReview);
   const emptyTraining = { heldAt: "", topic: "", method: "IN_HOUSE", facilitator: "", materials: "", notes: "", attendeeIds: [] as number[] };
   const [trainingForm, setTrainingForm] = useState(emptyTraining);
   const [trainingPeriod, setTrainingPeriod] = useState(defaultTrainingPeriod);
@@ -93,6 +96,7 @@ export default function Kepegawaian() {
   const annualPlan = trpc.sdm.annualPlan.useQuery({ year }, { enabled: canManage });
   const [track, setTrack] = useState<"PBK" | "KOMPETENSI">("PBK");
   const realisasi = trpc.sdm.realisasiReport.useQuery({ year, quarter, track }, { enabled: canManage });
+  const profileReviewSchedule = trpc.sdm.profileReviewSchedule.useQuery();
   const trainingSessions = trpc.sdm.trainingSessions.useQuery();
   const trainingRecap = trpc.sdm.trainingRecap.useQuery(
     { from: trainingPeriod.from, to: trainingPeriod.to },
@@ -106,6 +110,7 @@ export default function Kepegawaian() {
     utils.sdm.quarterlyReport.invalidate();
     utils.sdm.annualPlan.invalidate();
     utils.sdm.realisasiReport.invalidate();
+    utils.sdm.profileReviewSchedule.invalidate();
     utils.sdm.trainingSessions.invalidate();
     utils.sdm.trainingRecap.invalidate();
   };
@@ -124,6 +129,10 @@ export default function Kepegawaian() {
   });
   const setPlan = trpc.sdm.setPlan.useMutation({
     onSuccess: () => { toast.success("Rencana disimpan."); refresh(); },
+    onError: (error) => toast.error(error.message),
+  });
+  const recordProfileReview = trpc.sdm.recordProfileReview.useMutation({
+    onSuccess: () => { toast.success("Peninjauan tercatat."); refresh(); setReviewForm(emptyReview); },
     onError: (error) => toast.error(error.message),
   });
   const recordTraining = trpc.sdm.recordTraining.useMutation({
@@ -251,10 +260,11 @@ export default function Kepegawaian() {
         Angka laporan triwulanan ke pelaporan.bi.go.id disusun dari catatan di halaman ini, bukan diketik terpisah.
       </p>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryTile icon={<Users className="size-5" />} label="Pegawai aktif" value={activeStaff.length} loading={employees.isLoading} />
         <SummaryTile icon={<FileCheck2 className="size-5" />} label="Tanpa Perjanjian Kerja" value={withoutAgreement.length} tone={withoutAgreement.length ? "warn" : "ok"} loading={employees.isLoading} />
         <SummaryTile icon={<ShieldCheck className="size-5" />} label="Tanpa hasil penyaringan" value={withoutScreening.length} tone={withoutScreening.length ? "warn" : "ok"} loading={employees.isLoading} />
+        <SummaryTile icon={<CalendarCheck className="size-5" />} label="Profil terlambat ditinjau" value={profileReviewSchedule.data?.overdue ?? 0} tone={profileReviewSchedule.data?.overdue ? "warn" : "ok"} loading={profileReviewSchedule.isLoading} />
       </div>
 
       <Tabs defaultValue="pegawai">
@@ -344,6 +354,69 @@ export default function Kepegawaian() {
                           <td className="px-3 py-3">{row.employmentAgreementNumber ? <span className="text-[#475569]">{row.employmentAgreementNumber}</span> : <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Belum ada</Badge>}</td>
                           <td className="px-3 py-3">{row.screeningResult ? <Badge variant="outline">{SCREENING_LABELS[row.screeningResult]}</Badge> : <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Belum</Badge>}</td>
                           <td className="px-3 py-3 text-[#475569]">{certificationCount(row.id)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          <Card className="border-[#dce6f0]">
+            <CardHeader>
+              <CardTitle className="font-display text-xl text-[#18395f]">Peninjauan berkala profil pegawai</CardTitle>
+              <CardDescription>
+                Profil pegawai ditinjau ulang setiap {PROFILE_REVIEW_INTERVAL_MONTHS} bulan. Pegawai yang belum pernah ditinjau
+                dihitung sejak tanggal masuk, sehingga yang paling lama terlewat berada di urutan teratas.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {canManage ? (
+                <form
+                  className="grid gap-4 rounded-xl border border-[#e6edf5] bg-[#fafcff] p-4 lg:grid-cols-2"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (!reviewForm.employeeId || !reviewForm.reviewedAt) return toast.error("Pegawai dan tanggal peninjauan wajib diisi.");
+                    recordProfileReview.mutate({
+                      employeeId: Number(reviewForm.employeeId),
+                      reviewedAt: new Date(reviewForm.reviewedAt),
+                      outcome: reviewForm.outcome as "TIDAK_ADA_PERUBAHAN" | "ADA_PERUBAHAN" | "PERLU_TINDAK_LANJUT",
+                      notes: reviewForm.notes || undefined,
+                    });
+                  }}
+                >
+                  <Picker label="Pegawai" value={reviewForm.employeeId} options={Object.fromEntries(activeStaff.map((row) => [String(row.id), `${row.fullName} — ${row.position}`]))} onChange={(v) => setReviewForm({ ...reviewForm, employeeId: v })} placeholder="Pilih pegawai" />
+                  <Field label="Tanggal peninjauan" type="date" value={reviewForm.reviewedAt} onChange={(v) => setReviewForm({ ...reviewForm, reviewedAt: v })} required />
+                  <Picker label="Hasil" value={reviewForm.outcome} options={PROFILE_REVIEW_OUTCOME_LABELS} onChange={(v) => setReviewForm({ ...reviewForm, outcome: v })} />
+                  <div>
+                    <Label className="text-xs">Keterangan{reviewForm.outcome === "TIDAK_ADA_PERUBAHAN" ? "" : " *"}</Label>
+                    <Textarea className="mt-1" rows={2} value={reviewForm.notes} onChange={(event) => setReviewForm({ ...reviewForm, notes: event.target.value })} />
+                    <p className="mt-1 text-xs text-[#718398]">Wajib diisi bila ada perubahan atau tindak lanjut.</p>
+                  </div>
+                  <div className="lg:col-span-2">
+                    <Button type="submit" disabled={recordProfileReview.isPending} className="bg-[#183f70] text-white hover:bg-[#12345d]"><CalendarCheck className="mr-2 size-4" />Simpan peninjauan</Button>
+                  </div>
+                </form>
+              ) : null}
+
+              {profileReviewSchedule.isLoading ? <p className="py-8 text-sm text-[#475569]">Memuat jadwal peninjauan…</p> : null}
+              {!profileReviewSchedule.isLoading && !profileReviewSchedule.data?.rows.length ? <EmptyNote text="Belum ada pegawai aktif yang perlu ditinjau." /> : null}
+
+              {profileReviewSchedule.data?.rows.length ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[720px] text-left text-sm">
+                    <thead className="border-b border-[#dce6f0] bg-[#f5f8fc] text-xs uppercase tracking-wide text-[#475569]">
+                      <tr><th className="px-3 py-3">Nama</th><th className="px-3 py-3">Ditinjau terakhir</th><th className="px-3 py-3">Hasil terakhir</th><th className="px-3 py-3">Jatuh tempo</th><th className="px-3 py-3">Status</th></tr>
+                    </thead>
+                    <tbody>
+                      {profileReviewSchedule.data.rows.map((row) => (
+                        <tr key={row.employeeId} className="border-b border-[#eef2f7] last:border-0">
+                          <td className="px-3 py-3 font-semibold text-[#213f63]">{row.fullName}<span className="ml-2 font-normal text-[#8194aa]">{row.position}</span></td>
+                          <td className="px-3 py-3 text-[#475569]">{row.lastReviewedAt ? formatDate(row.lastReviewedAt) : <span className="text-[#8194aa]">Belum pernah</span>}</td>
+                          <td className="px-3 py-3 text-[#475569]">{row.lastOutcome ? PROFILE_REVIEW_OUTCOME_LABELS[row.lastOutcome] ?? row.lastOutcome : "—"}</td>
+                          <td className="px-3 py-3 text-[#475569]">{formatDate(row.dueAt)}</td>
+                          <td className="px-3 py-3"><ReviewStatusBadge status={row.status} daysUntilDue={row.daysUntilDue} /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -568,7 +641,7 @@ export default function Kepegawaian() {
               <CardDescription>Pegawai yang belum pernah mengikuti pelatihan tetap ditampilkan, karena merekalah yang perlu terlihat.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Field label="Periode mulai" type="date" value={trainingPeriod.from} onChange={(v) => setTrainingPeriod({ ...trainingPeriod, from: v })} />
                 <Field label="Periode sampai" type="date" value={trainingPeriod.to} onChange={(v) => setTrainingPeriod({ ...trainingPeriod, to: v })} />
                 <Field label="Nomor surat keterangan" value={trainingLetterNumber} onChange={setTrainingLetterNumber} hint={`Usulan: ${suggestedTrainingLetterNumber}`} />
@@ -862,6 +935,12 @@ function SummaryTile({ icon, label, value, tone = "neutral", loading }: { icon: 
       <p className="mt-3 font-display text-3xl tabular-nums text-[#18395f]">{loading ? "—" : value}</p>
     </div>
   );
+}
+
+function ReviewStatusBadge({ status, daysUntilDue }: { status: ProfileReviewStatus; daysUntilDue: number }) {
+  if (status === "TERLAMBAT") return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Terlambat {Math.abs(daysUntilDue)} hari</Badge>;
+  if (status === "SEGERA") return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Jatuh tempo {daysUntilDue} hari lagi</Badge>;
+  return <Badge className="bg-[#eef6ed] text-[#4d8548] hover:bg-[#eef6ed]">Terkini</Badge>;
 }
 
 function EmptyNote({ text }: { text: string }) {

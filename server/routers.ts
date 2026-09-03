@@ -102,7 +102,7 @@ import { expenseCategories } from "../drizzle/schema";
 import { competencyTracks, employmentStatuses, jobLevels, picRoles, screeningResults } from "../drizzle/schema";
 import { KUPVA_WORK_AREA, competencyCodesForArea } from "../shared/sdmCompetency";
 import {
-  assignPicRole, buildAnnualSdmPlan, buildTrainingRecap, listTrainingSessions, recordTrainingSession, buildSdmQuarterlyReport, buildSdmRealisasiReport, createEmployee, endEmployment, exportSdmTextFile,
+  assignPicRole, buildAnnualSdmPlan, buildProfileReviewSchedule, buildTrainingRecap, listProfileReviews, listTrainingSessions, recordProfileReview, recordTrainingSession, buildSdmQuarterlyReport, buildSdmRealisasiReport, createEmployee, endEmployment, exportSdmTextFile,
   listEmployeeCertifications, listEmployees, listPicAssignments, recordCertification, setCompetencyPlan,
 } from "./sdmOperations";
 import { OPERATIONAL_TIMEZONE_VALUES } from "../shared/regulatoryActionQueue";
@@ -429,6 +429,15 @@ export const appRouter = router({
       notes: z.string().trim().max(1000).optional(),
       attendeeIds: z.array(z.number().int().positive()).min(1),
     })).mutation(({ input, ctx }) => recordTrainingSession(input, ctx.user)),
+
+    profileReviewSchedule: staffProcedure.query(() => buildProfileReviewSchedule()),
+    profileReviews: staffProcedure.input(z.object({ employeeId: z.number().int().positive() })).query(({ input }) => listProfileReviews(input.employeeId)),
+    recordProfileReview: controllerProcedure.input(z.object({
+      employeeId: z.number().int().positive(),
+      reviewedAt: z.coerce.date(),
+      outcome: z.enum(["TIDAK_ADA_PERUBAHAN", "ADA_PERUBAHAN", "PERLU_TINDAK_LANJUT"]),
+      notes: z.string().trim().max(2000).optional(),
+    })).mutation(({ input, ctx }) => recordProfileReview(input, ctx.user)),
 
     realisasiReport: controllerProcedure.input(z.object({
       year: z.number().int().min(2020).max(2100),
