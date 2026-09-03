@@ -22,7 +22,7 @@ export default function TransactionList() {
   const companyBranding = async () => {
     if (!companyProfile) return null;
     const logoUrl = companyProfile.logoDocumentId ? await utils.documents.downloadUrl.fetch({ documentId: companyProfile.logoDocumentId }).catch(() => null) : null;
-    return { tradingName: companyProfile.tradingName, address: companyProfile.address, phone: companyProfile.phone, logoUrl };
+    return { legalEntityName: companyProfile.legalEntityName, tradingName: companyProfile.tradingName, kupvaCode: companyProfile.kupvaCode, licenseNumber: companyProfile.licenseNumber, address: companyProfile.address, phone: companyProfile.phone, logoUrl };
   };
 
   const submit = trpc.transactions.submit.useMutation({
@@ -45,7 +45,7 @@ export default function TransactionList() {
     ? denominations.map((denomination) => {
       const foreignAmount = Number(denomination.denominationValue) * denomination.quantity;
       const agreedRate = denomination.agreedRate ?? line.agreedRate;
-      return { currencyCode: currency.code, foreignAmount: String(foreignAmount), agreedRate: String(agreedRate), rupiahAmount: (foreignAmount * Number(agreedRate) / Number(line.quoteUnit)).toFixed(2) };
+      return { currencyCode: currency.code, denominationValue: String(denomination.denominationValue), quantity: denomination.quantity, foreignAmount: String(foreignAmount), agreedRate: String(agreedRate), rupiahAmount: (foreignAmount * Number(agreedRate) / Number(line.quoteUnit)).toFixed(2) };
     })
     : [{ currencyCode: currency.code, foreignAmount: String(line.foreignAmount), agreedRate: String(line.agreedRate), rupiahAmount: String(line.rupiahAmount) }]);
 

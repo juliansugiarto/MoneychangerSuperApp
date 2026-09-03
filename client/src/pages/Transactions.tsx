@@ -5,8 +5,12 @@ import { toast } from "sonner";
 
 export type Customer = { id: number; fullName: string; cifNumber: string; phoneNumber?: string | null; identityType: string; identityNumber: string; address?: string | null; occupation?: string | null; sourceOfFunds?: string | null; transactionPurpose: string | null; hasBeneficialOwner?: boolean; beneficialOwnerCustomerId?: number | null };
 export type DenominationRow = { value: string; quantity: string };
-/** One row of the printed kwitansi's table (NO. / MATA UANG / JUMLAH / KURS / TOTAL). */
-export type PrintableLine = { currencyCode: string; foreignAmount: string; agreedRate: string; rupiahAmount: string };
+/**
+ * One row of the printed kwitansi's table. `denominationValue` and `quantity` carry the pecahan and
+ * lembar that produced the row: the examination asked for the nota to serve as bukti transaksi UKA,
+ * and a receipt that states only a total cannot evidence which notes changed hands.
+ */
+export type PrintableLine = { currencyCode: string; foreignAmount: string; agreedRate: string; rupiahAmount: string; denominationValue?: string; quantity?: number };
 
 export const transactionStatusClass: Record<string, string> = { DRAFT: "status-pending", PENDING_REVIEW: "status-pending", APPROVED: "status-approved", COMPLETED: "status-approved", RETURNED: "status-rejected", CANCELLED: "status-rejected" };
 export const transactionStatusLabel: Record<string, string> = { DRAFT: "Draft", PENDING_REVIEW: "Perlu review", APPROVED: "Disetujui", COMPLETED: "Selesai", RETURNED: "Dikembalikan", CANCELLED: "Dibatalkan" };
@@ -14,7 +18,10 @@ export const toBase64 = (file: File) => new Promise<string>((resolve, reject) =>
 export const escapeHtml = (value: unknown) => String(value ?? "-").replace(/[&<>\"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" })[character] ?? character);
 export const csvCell = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
 
-export type CompanyBranding = { tradingName?: string | null; address?: string | null; phone?: string | null; logoUrl?: string | null };
+export type CompanyBranding = { legalEntityName?: string | null; tradingName?: string | null; kupvaCode?: string | null; licenseNumber?: string | null; address?: string | null; phone?: string | null; logoUrl?: string | null };
+
+/** Cara bayar as a customer reads it, rather than the stored enum. */
+const paymentMethodLabel: Record<string, string> = { CASH: "Tunai", BANK_TRANSFER: "Transfer bank", OTHER: "Lainnya" };
 
 /**
  * Renders a print window that matches the physical KWITANSI JUAL/BELI receipt book — same fields,
@@ -33,13 +40,21 @@ export type CompanyBranding = { tradingName?: string | null; address?: string | 
  */
 export function printBon(transaction: any, customer: Customer | null, lines: PrintableLine[], company?: CompanyBranding | null) {
   const win = window.open("", "_blank"); if (!win) return toast.error("Izinkan pop-up browser untuk menyimpan PDF atau mencetak kwitansi.");
-  const companyName = company?.tradingName || "IBUKOTA VALASINDO";
+  // Finding 4 of the 2026 examination: the nota did not show the identity of the penyelenggara
+  // KUPVA BB. The legal entity name leads, with the trading name and the licence identifiers
+  // beneath it, because those are what identify the licence holder rather than the shopfront.
+  const legalName = company?.legalEntityName || company?.tradingName || "IBUKOTA VALASINDO";
+  const companyName = company?.tradingName || legalName;
   const companyAddress = company?.address || "Jl. Mangun Sarkoro No 35, Cianjur, Jawa Barat 43214";
   const companyPhone = company?.phone || "+62 263-265500 / +62 263-265600";
   const hasLogo = Boolean(company?.logoUrl);
   const logoImg = hasLogo ? `<img id="bon-logo" src="${escapeHtml(company!.logoUrl)}" alt="Logo" onload="window.__bonPrint()" onerror="window.__bonPrint()">` : `<div class="logo-fallback">${escapeHtml(companyName.slice(0, 1))}</div>`;
   const isSell = transaction.operation === "SELL"; // SELL = kita jual valuta ke nasabah = KWITANSI JUAL
   const title = isSell ? "KWITANSI JUAL" : "KWITANSI BELI";
+  // BNS/BNB are the codes the transaction is reported under; printing them keeps the paper trail
+  // and the LKU speaking the same language.
+  const typeCode = isSell ? "BNS" : "BNB";
+  const licenceBits = [company?.kupvaCode ? `Kode KUPVA ${company.kupvaCode}` : "", company?.licenseNumber ? `Izin ${company.licenseNumber}` : ""].filter(Boolean).join(" &middot; ");
   const subtitle = isSell ? "SALES RECEIPT" : "PURCHASE RECEIPT";
   const accent = isSell ? "#1f7a44" : "#18395f";
   const accentSoft = isSell ? "#eaf6ee" : "#eaf1fb";
@@ -52,7 +67,7 @@ export function printBon(transaction: any, customer: Customer | null, lines: Pri
   const bankTransferLine = transaction.paymentMethod === "BANK_TRANSFER" && transaction.counterpartyAccountHolderName
     ? `<div class="row"><span class="label">Rekening ${isSell ? "pengirim" : "tujuan"}</span><span class="value">${escapeHtml(transaction.counterpartyBankName)} ${escapeHtml(transaction.counterpartyAccountNumber)} a.n. ${escapeHtml(transaction.counterpartyAccountHolderName)}${transaction.counterpartyNameMismatchReason ? ` (berbeda dari nama nasabah — ${escapeHtml(transaction.counterpartyNameMismatchReason)})` : ""}</span></div>`
     : "";
-  const rows = lines.map((line, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(line.currencyCode)}</td><td class=r>${escapeHtml(line.foreignAmount)}</td><td class=r>${escapeHtml(line.agreedRate)}</td><td class=r>${escapeHtml(formatIdrDecimal(line.rupiahAmount))}</td></tr>`).join("");
+  const rows = lines.map((line, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(line.currencyCode)}</td><td class=r>${escapeHtml(line.denominationValue ?? "-")}</td><td class=r>${escapeHtml(line.quantity ?? "-")}</td><td class=r>${escapeHtml(line.foreignAmount)}</td><td class=r>${escapeHtml(line.agreedRate)}</td><td class=r>${escapeHtml(formatIdrDecimal(line.rupiahAmount))}</td></tr>`).join("");
   const printScript = hasLogo
     ? `<script>var __bonPrinted=false;window.__bonPrint=function(){if(__bonPrinted)return;__bonPrinted=true;window.print();};setTimeout(window.__bonPrint,1500);</script>`
     : `<script>window.print()</script>`;
@@ -93,11 +108,11 @@ export function printBon(transaction: any, customer: Customer | null, lines: Pri
     @media print{body{background:#fff;padding:0}.sheet{border:none;border-radius:0;max-width:none;padding:0}}
   </style><div class="sheet">
     <div class="head">
-      <div class="brand"><div class="logo-box">${logoImg}</div><div><h2>${escapeHtml(companyName)}</h2><p class="tagline">Money Changer</p></div></div>
-      <div class="doc"><p class="title">${title}</p><p class="subtitle">${subtitle}</p></div>
+      <div class="brand"><div class="logo-box">${logoImg}</div><div><h2>${escapeHtml(legalName)}</h2><p class="tagline">${escapeHtml(companyName)} &middot; Penyelenggara KUPVA Bukan Bank</p></div></div>
+      <div class="doc"><p class="title">${title}</p><p class="subtitle">${subtitle} &middot; ${typeCode}</p></div>
       <div class="no-box"><span class="no-value">No: ${escapeHtml(transaction.receiptNumber ?? "-")}</span><span class="no-date">${escapeHtml(new Date(transaction.transactionAt).toLocaleDateString("id-ID"))}</span></div>
     </div>
-    <p class="contact">${escapeHtml(companyAddress)} &middot; ${escapeHtml(companyPhone)}</p>
+    <p class="contact">${escapeHtml(companyAddress)} &middot; ${escapeHtml(companyPhone)}${licenceBits ? ` &middot; ${licenceBits}` : ""}</p>
     <div class="details">
       <div>
         <div class="row"><span class="label">Nama</span><span class="value">${escapeHtml(name)}</span></div>
@@ -109,11 +124,11 @@ export function printBon(transaction: any, customer: Customer | null, lines: Pri
       <div>
         <div class="row"><span class="label">Sumber Dana</span><span class="value">${escapeHtml(sourceOfFunds)}</span></div>
         <div class="row"><span class="label">Tujuan Transaksi</span><span class="value">${escapeHtml(transaction.transactionPurposeSnapshot)}</span></div>
-        <div class="row"><span class="label">Cara Bayar</span><span class="value">${escapeHtml(transaction.paymentMethod)}</span></div>
+        <div class="row"><span class="label">Cara Bayar</span><span class="value">${escapeHtml(paymentMethodLabel[transaction.paymentMethod] ?? transaction.paymentMethod)}</span></div>
         ${bankTransferLine}
       </div>
     </div>
-    <table><thead><tr><td>No.</td><td>Mata Uang</td><td class=r>Jumlah</td><td class=r>Kurs</td><td class=r>Total</td></tr></thead><tbody>${rows}<tr class="total-row"><td colspan=4>Jumlah Total</td><td class=r>${escapeHtml(formatIdrDecimal(String(transaction.rupiahAmount)))}</td></tr></tbody></table>
+    <table><thead><tr><td>No.</td><td>Mata Uang</td><td class=r>Pecahan</td><td class=r>Lembar</td><td class=r>Jumlah</td><td class=r>Kurs</td><td class=r>Total</td></tr></thead><tbody>${rows}<tr class="total-row"><td colspan=6>Jumlah Total</td><td class=r>${escapeHtml(formatIdrDecimal(String(transaction.rupiahAmount)))}</td></tr></tbody></table>
     <p class="notice">* Harap hitung kembali uang anda sebelum meninggalkan loket.<br>Komplain setelah meninggalkan loket tidak akan dilayani.<br>* wajib melengkapi semua data</p>
     <div class="rule">Sesuai Ketentuan Bank Indonesia PBI No. 18/20/PBI/2016, Customer wajib memberikan fotocopy kartu Identitas diri, dan setiap transaksi minimum 10.000 USD Customer wajib memberikan informasi tujuan transaksi (underlying). Dengan ini Saya Menyatakan Bahwa transaksi ini belum mencapai senilai 10.000 USD</div>
     <div class="sign"><div class="sign-slot"><span class="sign-line"></span><span class="sign-label">Teller</span></div><div class="sign-slot"><span class="sign-line"></span><span class="sign-label">Nasabah</span></div></div>

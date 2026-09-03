@@ -43,7 +43,7 @@ export default function TransactionCreate() {
   const companyBranding = async () => {
     if (!companyProfile) return null;
     const logoUrl = companyProfile.logoDocumentId ? await utils.documents.downloadUrl.fetch({ documentId: companyProfile.logoDocumentId }).catch(() => null) : null;
-    return { tradingName: companyProfile.tradingName, address: companyProfile.address, phone: companyProfile.phone, logoUrl };
+    return { legalEntityName: companyProfile.legalEntityName, tradingName: companyProfile.tradingName, kupvaCode: companyProfile.kupvaCode, licenseNumber: companyProfile.licenseNumber, address: companyProfile.address, phone: companyProfile.phone, logoUrl };
   };
 
   const [operation, setOperation] = useState<"BUY" | "SELL">("BUY");
@@ -219,6 +219,8 @@ export default function TransactionCreate() {
         if (underlyingRequired) await uploadUnderlying(transaction.id);
         const printableLines: PrintableLine[] = lines.flatMap((line) => line.denominations.map((row) => ({
           currencyCode: line.currency?.code ?? "",
+          denominationValue: row.value,
+          quantity: Number(row.quantity) || 0,
           foreignAmount: ((Number(row.value) || 0) * (Number(row.quantity) || 0)).toString(),
           agreedRate: row.rate,
           rupiahAmount: (((Number(row.value) || 0) * (Number(row.quantity) || 0) * (Number(row.rate) || 0)) / (Number(line.quoteUnit) || 1)).toFixed(2),
