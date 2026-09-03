@@ -130,7 +130,7 @@ export function printBon(transaction: any, customer: Customer | null, lines: Pri
     </div>
     <table><thead><tr><td>No.</td><td>Mata Uang</td><td class=r>Pecahan</td><td class=r>Lembar</td><td class=r>Jumlah</td><td class=r>Kurs</td><td class=r>Total</td></tr></thead><tbody>${rows}<tr class="total-row"><td colspan=6>Jumlah Total</td><td class=r>${escapeHtml(formatIdrDecimal(String(transaction.rupiahAmount)))}</td></tr></tbody></table>
     <p class="notice">* Harap hitung kembali uang anda sebelum meninggalkan loket.<br>Komplain setelah meninggalkan loket tidak akan dilayani.<br>* wajib melengkapi semua data</p>
-    <div class="rule">Sesuai Ketentuan Bank Indonesia PBI No. 18/20/PBI/2016, Customer wajib memberikan fotocopy kartu Identitas diri, dan setiap transaksi minimum 10.000 USD Customer wajib memberikan informasi tujuan transaksi (underlying). Dengan ini Saya Menyatakan Bahwa transaksi ini belum mencapai senilai 10.000 USD</div>
+    <div class="rule">Sesuai Ketentuan Bank Indonesia PBI No. 18/20/PBI/2016, Customer wajib memberikan fotocopy kartu Identitas diri, dan akumulasi transaksi Customer dalam satu bulan yang mencapai 10.000 USD atau ekuivalennya wajib disertai dokumen pendukung (underlying). Dengan ini Saya Menyatakan Bahwa akumulasi transaksi saya dalam bulan ini belum mencapai senilai 10.000 USD</div>
     <div class="sign"><div class="sign-slot"><span class="sign-line"></span><span class="sign-label">Teller</span></div><div class="sign-slot"><span class="sign-line"></span><span class="sign-label">Nasabah</span></div></div>
   </div>${printScript}`);
   win.document.close();

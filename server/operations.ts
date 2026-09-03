@@ -222,15 +222,37 @@ export function assessReviewRequirement(input: {
   usdSellRate?: string | null;
   usdQuoteUnit?: string | null;
   cashDailyRupiahTotal?: string | null;
+  /**
+   * Total Rupiah transaksi nasabah ini sepanjang bulan kalender berjalan, sudah termasuk transaksi
+   * yang sedang dibuat. Ambang underlying berlaku atas akumulasi sebulan per pelaku transaksi,
+   * bukan atas satu transaksi.
+   */
+  monthlyRupiahTotal?: string | null;
   eddCashDailyThresholdIdr?: string | null;
   isCashPayment?: boolean;
   profileStatus: "ACTIVE" | "INACTIVE" | "RESTRICTED";
   riskLevel: "LOW" | "MEDIUM" | "HIGH";
 }) {
-  const usdEquivalent = input.usdSellRate && input.usdQuoteUnit
-    ? new Decimal(input.rupiahAmount).mul(input.usdQuoteUnit).div(input.usdSellRate)
+  const toUsd = (rupiah: string) => input.usdSellRate && input.usdQuoteUnit
+    ? new Decimal(rupiah).mul(input.usdQuoteUnit).div(input.usdSellRate)
     : null;
-  const exceedsThreshold = usdEquivalent ? usdEquivalent.gte(new Decimal(input.thresholdUsd)) : false;
+  const usdEquivalent = toUsd(input.rupiahAmount);
+  /**
+   * Ketentuan batasnya adalah maksimal USD 10.000 atau ekuivalennya **per pelaku transaksi dalam
+   * satu bulan** tanpa dokumen pendukung. Sebelumnya nilai ini dibandingkan per transaksi, sehingga
+   * empat transaksi USD 3.000 dalam sebulan - seluruhnya di bawah ambang - tidak pernah meminta
+   * underlying padahal akumulasinya sudah USD 12.000.
+   *
+   * Akumulasi dijumlahkan dalam Rupiah lalu dikonversi sekali memakai kurs referensi yang sama
+   * dengan transaksi berjalan, bukan kurs masing-masing transaksi lama; satu dasar konversi membuat
+   * angka ambang dapat ditelusuri ulang dan tidak berubah-ubah karena kurs harian.
+   */
+  const monthlyUsdEquivalent = input.monthlyRupiahTotal ? toUsd(input.monthlyRupiahTotal) : null;
+  const assessedUsd = monthlyUsdEquivalent ?? usdEquivalent;
+  const exceedsThreshold = assessedUsd ? assessedUsd.gte(new Decimal(input.thresholdUsd)) : false;
+  const exceedsOnAccumulation = Boolean(
+    exceedsThreshold && usdEquivalent && !usdEquivalent.gte(new Decimal(input.thresholdUsd)),
+  );
   const exceedsCashDailyEdd = input.isCashPayment && input.cashDailyRupiahTotal && input.eddCashDailyThresholdIdr
     ? new Decimal(input.cashDailyRupiahTotal).gte(new Decimal(input.eddCashDailyThresholdIdr))
     : false;
@@ -241,13 +263,13 @@ export function assessReviewRequirement(input: {
   );
   const profileMismatch = input.profileStatus === "RESTRICTED" || input.riskLevel === "HIGH";
   const reviewReason = [
-    exceedsThreshold ? "NILAI_SETARA_USD_MELEBIHI_AMBANG" : null,
+    exceedsThreshold ? (exceedsOnAccumulation ? "AKUMULASI_BULANAN_SETARA_USD_MELEBIHI_AMBANG" : "NILAI_SETARA_USD_MELEBIHI_AMBANG") : null,
     exceedsCashDailyEdd ? "AKUMULASI_TRANSAKSI_TUNAI_HARIAN_MEMENUHI_AMBANG_EDD" : null,
     meetsLtktThreshold ? "MEMENUHI_AMBANG_LTKT_PPATK" : null,
     input.profileStatus === "RESTRICTED" ? "PROFIL_NASABAH_RESTRICTED" : null,
     input.riskLevel === "HIGH" ? "RISIKO_NASABAH_TINGGI" : null,
   ].filter(Boolean).join("; ") || null;
-  return { requiresReview: exceedsThreshold || exceedsCashDailyEdd || profileMismatch, reviewReason, usdEquivalent: usdEquivalent?.toFixed(6) ?? null, meetsLtktThreshold, exceedsThreshold };
+  return { requiresReview: exceedsThreshold || exceedsCashDailyEdd || profileMismatch, reviewReason, usdEquivalent: usdEquivalent?.toFixed(6) ?? null, monthlyUsdEquivalent: monthlyUsdEquivalent?.toFixed(6) ?? null, meetsLtktThreshold, exceedsThreshold, exceedsOnAccumulation };
 }
 
 export function submissionTransition(status: "DRAFT" | "RETURNED", requiresReview: boolean) {
@@ -1413,7 +1435,23 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     )))[0]?.total ?? "0"
     : "0";
   const cashDailyRupiahTotal = new Decimal(dailyCashTotal).plus(rupiahAmount).toFixed(2);
-  const assessment = assessReviewRequirement({ rupiahAmount, thresholdUsd: thresholds.reviewThresholdUsd, usdSellRate: usdBiReferenceRate?.sellRate, usdQuoteUnit: usdBiReferenceRate?.quoteUnit, cashDailyRupiahTotal, eddCashDailyThresholdIdr: thresholds.eddCashDailyThresholdIdr, isCashPayment: input.paymentMethod === "CASH", profileStatus: customer.profileStatus, riskLevel: customer.riskLevel });
+
+  // Akumulasi sebulan berjalan untuk pelaku transaksi yang sama, seluruh metode pembayaran:
+  // ketentuan underlying berlaku atas akumulasi per bulan, bukan per transaksi.
+  const monthStart = new Date(businessDate.getFullYear(), businessDate.getMonth(), 1);
+  const nextMonth = new Date(businessDate.getFullYear(), businessDate.getMonth() + 1, 1);
+  const monthlyRupiahBefore = (await db.select({ total: sql<string>`COALESCE(SUM(${exchangeTransactions.rupiahAmount}), 0)` }).from(exchangeTransactions).where(and(
+    eq(exchangeTransactions.customerId, input.customerId),
+    gte(exchangeTransactions.transactionAt, monthStart),
+    lt(exchangeTransactions.transactionAt, nextMonth),
+    // Transaksi batal tidak menambah akumulasi; sisanya dihitung meski belum selesai, karena
+    // kewajiban underlying muncul saat transaksi dibuat, bukan saat disetujui.
+    inArray(exchangeTransactions.status, ["DRAFT", "PENDING_REVIEW", "APPROVED", "RETURNED", "COMPLETED"]),
+    eq(exchangeTransactions.isDemo, false),
+    eq(exchangeTransactions.isHistorical, false),
+  )))[0]?.total ?? "0";
+  const monthlyRupiahTotal = new Decimal(monthlyRupiahBefore).plus(rupiahAmount).toFixed(2);
+  const assessment = assessReviewRequirement({ rupiahAmount, thresholdUsd: thresholds.reviewThresholdUsd, usdSellRate: usdBiReferenceRate?.sellRate, usdQuoteUnit: usdBiReferenceRate?.quoteUnit, cashDailyRupiahTotal, monthlyRupiahTotal, eddCashDailyThresholdIdr: thresholds.eddCashDailyThresholdIdr, isCashPayment: input.paymentMethod === "CASH", profileStatus: customer.profileStatus, riskLevel: customer.riskLevel });
 
   // Underlying stops being optional once the >=10,000 USD-equivalent threshold is met — PBI
   // 18/20/PBI/2016 requires it, so the teller's checkbox choice is overridden, not just defaulted.
