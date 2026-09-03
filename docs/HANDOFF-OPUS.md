@@ -18,7 +18,7 @@ Diperbarui 3 September 2026 (sesi kedua hari itu). Menggantikan isi sebelumnya.
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
 export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 ./node_modules/.bin/tsc --noEmit
-./node_modules/.bin/vitest run          # 440 lulus, 2 dilewati
+./node_modules/.bin/vitest run          # 445 lulus, 2 dilewati
 ./node_modules/.bin/vite build
 ```
 
@@ -61,6 +61,14 @@ Selesai sesi ini:
   `shared/chartOfAccounts.ts` (42 akun, tiap akun terpetakan ke baris B0002/B0003/B0004),
   `shared/ledger.ts` (aritmetika sen memakai `bigint`), `server/ledgerOperations.ts`, rute
   `ledger.*`. **Antarmukanya belum ada** — seluruh verifikasi lewat skrip uji asap.
+- **Peninjauan kode atas keduanya** (`385e5e0`) — delapan temuan diperbaiki, satu ditolak setelah
+  diperiksa langsung. Yang paling berarti: neraca saldo kini kumulatif (memuat saldo awal, jadi
+  layak menjadi isian B0002), penjaga tutup periode diganti `verifyLedgerIntegrity` yang benar-benar
+  dapat gagal, dan penyaringan ulang tidak lagi menghapus bukti kecocokan daftar sanksi.
+
+**Yang ditolak, jangan "diperbaiki" lagi:** kolom `date` kembali dari Drizzle sebagai `Date` tengah
+malam **UTC** (diperiksa: `2026-09-01T00:00:00.000Z` pada mesin GMT+7), jadi `toISOString()` saat
+membaca sudah benar. Yang perlu dinormalkan hanya arah kirim.
 
 Data uji yang tertinggal di tenant lokal `moneychanger`: satu sesi pelatihan 15 Okt 2025, satu
 peninjauan profil, dan satu calon "UJI CALON PELAMAR" beserta penyaringan dan keputusannya. Jurnal
