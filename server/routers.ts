@@ -106,6 +106,7 @@ import {
   listAccountingPeriods, listAccounts, listJournalEntries, postJournalEntry, reopenAccountingPeriod,
   reverseJournalEntry, verifyLedgerIntegrity,
 } from "./ledgerOperations";
+import { postOperationsToLedger } from "./ledgerPosting";
 import { KUPVA_WORK_AREA, competencyCodesForArea } from "../shared/sdmCompetency";
 import {
   assignPicRole, buildAnnualSdmPlan, buildProfileReviewSchedule, buildTrainingRecap, decideCandidate, listCandidates, listProfileReviews, listTrainingSessions, recordCandidate, recordProfileReview, recordTrainingSession, screenCandidate, buildSdmQuarterlyReport, buildSdmRealisasiReport, createEmployee, endEmployment, exportSdmTextFile,
@@ -548,6 +549,13 @@ export const appRouter = router({
       from: z.coerce.date().optional(),
       to: z.coerce.date().optional(),
     }).optional()).query(({ input }) => verifyLedgerIntegrity(input ?? {})),
+
+    // Penjurnalan otomatis dijalankan atas rentang tanggal yang dipilih, bukan berjalan sendiri di
+    // latar belakang: yang menentukan kapan pembukuan sebuah periode dikerjakan adalah manusia.
+    postOperations: controllerProcedure.input(z.object({
+      from: z.coerce.date(),
+      to: z.coerce.date(),
+    })).mutation(({ input, ctx }) => postOperationsToLedger(input, ctx.user)),
     accountLedger: controllerProcedure.input(z.object({
       accountCode: z.string().trim().min(1).max(12),
       from: z.coerce.date().optional(),

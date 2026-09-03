@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { ACCOUNT_TYPE_LABELS, type AccountType } from "@shared/chartOfAccounts";
-import { BookOpen, CalendarCheck, CheckCircle2, Lock, LockOpen, Plus, Scale, ShieldAlert, Trash2, Undo2 } from "lucide-react";
+import { BookOpen, CalendarCheck, CheckCircle2, Lock, LockOpen, Plus, RefreshCw, Scale, ShieldAlert, Trash2, Undo2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -56,6 +56,15 @@ const currentMonthRange = () => {
 
 type LineDraft = { accountCode: string; side: "DEBIT" | "KREDIT"; amount: string; memo: string };
 
+type SkippedItem = { reference: string; reason: string };
+type PostingSummary = {
+  postedCount: number;
+  alreadyPostedCount: number;
+  skippedCount: number;
+  transactions: { skipped: SkippedItem[] };
+  expenses: { skipped: SkippedItem[] };
+};
+
 const emptyLine = (): LineDraft => ({ accountCode: "", side: "DEBIT", amount: "", memo: "" });
 
 export default function BukuBesar() {
@@ -65,6 +74,7 @@ export default function BukuBesar() {
   const [lines, setLines] = useState<LineDraft[]>([emptyLine(), { ...emptyLine(), side: "KREDIT" }]);
   const [ledgerAccount, setLedgerAccount] = useState("");
   const [reversalReason, setReversalReason] = useState<Record<number, string>>({});
+  const [postingResult, setPostingResult] = useState<PostingSummary | null>(null);
 
   const accounts = trpc.ledger.accounts.useQuery();
   const periods = trpc.ledger.periods.useQuery();
@@ -102,6 +112,14 @@ export default function BukuBesar() {
   });
   const reverseEntry = trpc.ledger.reverse.useMutation({
     onSuccess: (entry) => { toast.success(`Jurnal balik ${entry.entryNumber} tersimpan.`); refresh(); setReversalReason({}); },
+    onError: (error) => toast.error(error.message),
+  });
+  const postOperations = trpc.ledger.postOperations.useMutation({
+    onSuccess: (result) => {
+      setPostingResult(result);
+      toast.success(`${result.postedCount} jurnal dibuat, ${result.alreadyPostedCount} sudah pernah dijurnal.`);
+      refresh();
+    },
     onError: (error) => toast.error(error.message),
   });
   const closePeriod = trpc.ledger.closePeriod.useMutation({
@@ -354,6 +372,49 @@ export default function BukuBesar() {
             </CardContent>
           </Card>
         </TabsContent>
+
+          <Card className="border-[#dce6f0]">
+            <CardHeader>
+              <CardTitle className="font-display text-xl text-[#18395f]">Jurnal otomatis dari operasi</CardTitle>
+              <CardDescription>
+                Menjurnal bon valuta yang sudah selesai dan pengeluaran pada periode di atas, tanpa entri ulang.
+                Aman dijalankan berkali-kali: sumber yang sudah pernah dijurnal dilewati, bukan dijurnal ulang.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                onClick={() => postOperations.mutate({ from: range.from, to: range.to })}
+                disabled={postOperations.isPending}
+                className="bg-[#183f70] text-white hover:bg-[#12345d]"
+              >
+                <RefreshCw className="mr-2 size-4" />Jurnalkan {formatDate(range.from)} — {formatDate(range.to)}
+              </Button>
+
+              {postingResult ? (
+                <div className="rounded-xl border border-[#e6edf5] bg-[#fafcff] p-4 text-sm">
+                  <p className="text-[#475569]">
+                    <strong className="text-[#18395f]">{postingResult.postedCount}</strong> jurnal baru ·{" "}
+                    <strong className="text-[#18395f]">{postingResult.alreadyPostedCount}</strong> sudah pernah dijurnal ·{" "}
+                    <strong className="text-[#18395f]">{postingResult.skippedCount}</strong> dilewati
+                  </p>
+                  {postingResult.skippedCount ? (
+                    <ul className="mt-2 space-y-1 text-xs text-amber-800">
+                      {[...postingResult.transactions.skipped, ...postingResult.expenses.skipped].map((item) => (
+                        <li key={item.reference}>{item.reference} — {item.reason}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <p className="text-xs text-[#718398]">
+                Mutasi kas dan bank belum ikut dijurnal. Sisi kas bon sudah tercatat lewat bonnya sendiri, sehingga
+                menjurnal mutasinya sekaligus akan menghitung uang yang sama dua kali; kategori lainnya — setor dan
+                tarik brankas, penjualan di luar jam, selisih kas awal — masing-masing perlu keputusan tersendiri.
+                Pengeluaran dicatat sebagai kewajiban lebih dahulu, karena modul pengeluaran memang tidak menyentuh kas.
+              </p>
+            </CardContent>
+          </Card>
 
         {/* ----------------------------- Neraca saldo ----------------------------- */}
         <TabsContent value="neraca" className="mt-5 space-y-4">
