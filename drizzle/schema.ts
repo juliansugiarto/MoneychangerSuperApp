@@ -975,9 +975,53 @@ export const employeePicAssignments = mysqlTable("employee_pic_assignments", {
   index("employee_pic_assignments_employee_idx").on(table.employeeId),
 ]);
 
+export const trainingMethods = ["IN_HOUSE", "EKSTERNAL", "DARING"] as const;
+
+/**
+ * Pelatihan APU PPT PPPSPM bagi pegawai.
+ *
+ * Berbeda dari sertifikasi kompetensi Sistem Pembayaran: itu kualifikasi jenjang yang diterbitkan
+ * lembaga pelatihan, sedangkan ini penyegaran internal yang wajib diselenggarakan penyelenggara
+ * sendiri. Penilaian risiko menanyakannya terpisah, temuan pemeriksaan butir 12 memintanya
+ * terdokumentasi, dan surat keterangannya dipakai sebagai dokumen pendukung perpanjangan izin
+ * pada e-Licensing Bank Indonesia - tiga alasan berbeda untuk catatan yang sama.
+ */
+export const apuTrainingSessions = mysqlTable("apu_training_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  heldAt: datetime("heldAt").notNull(),
+  topic: text("topic").notNull(),
+  method: mysqlEnum("method", trainingMethods).default("IN_HOUSE").notNull(),
+  /** Pemateri; boleh pihak internal maupun lembaga luar. */
+  facilitator: varchar("facilitator", { length: 200 }).notNull(),
+  materials: text("materials"),
+  notes: text("notes"),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("apu_training_sessions_held_idx").on(table.heldAt),
+]);
+
+/**
+ * Daftar hadir. Bukti yang diminta penilaian risiko adalah daftar hadir beserta dokumentasinya,
+ * sehingga kehadiran dicatat per pegawai per sesi - bukan sekadar jumlah peserta.
+ */
+export const apuTrainingAttendance = mysqlTable("apu_training_attendance", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: int("sessionId").notNull(),
+  employeeId: int("employeeId").notNull(),
+  /** Hasil evaluasi bila ada; lampiran surat keterangan menyebut daftar hadir dan evaluasi. */
+  evaluation: varchar("evaluation", { length: 120 }),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("apu_training_attendance_session_employee_uq").on(table.sessionId, table.employeeId),
+  index("apu_training_attendance_employee_idx").on(table.employeeId),
+]);
+
 export type Employee = typeof employees.$inferSelect;
 export type EmployeeCertification = typeof employeeCertifications.$inferSelect;
 export type EmployeePicAssignment = typeof employeePicAssignments.$inferSelect;
+export type ApuTrainingSession = typeof apuTrainingSessions.$inferSelect;
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;

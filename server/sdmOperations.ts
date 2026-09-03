@@ -1,5 +1,7 @@
 import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
 import {
+  apuTrainingAttendance,
+  apuTrainingSessions,
   employeeCertifications,
   employeePicAssignments,
   employees,
@@ -33,6 +35,7 @@ type PicRole = (typeof picRoles)[number];
 type CompetencyTrack = (typeof competencyTracks)[number];
 type EmploymentStatus = (typeof employmentStatuses)[number];
 type ScreeningResult = (typeof screeningResults)[number];
+type TrainingMethod = "IN_HOUSE" | "EKSTERNAL" | "DARING";
 
 const asIsoDate = (value: Date | string | null | undefined) =>
   value ? new Date(value).toISOString().slice(0, 10) : null;
@@ -361,6 +364,90 @@ export async function buildSdmRealisasiReport(input: { year: number; quarter: 1 
       quarter: input.quarter,
       realisasiDanaSertifikasi: spendUpTo(spec.base),
       realisasiDanaPemeliharaan: spendUpTo(spec.maintenance),
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Pelatihan APU PPT PPPSPM
+// ---------------------------------------------------------------------------
+
+export async function listTrainingSessions() {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const [sessions, attendance] = await Promise.all([
+      db.select().from(apuTrainingSessions).orderBy(desc(apuTrainingSessions.heldAt)),
+      db.select().from(apuTrainingAttendance),
+    ]);
+    return sessions.map((session) => ({
+      ...session,
+      attendeeIds: attendance.filter((row) => row.sessionId === session.id).map((row) => row.employeeId),
+    }));
+  });
+}
+
+export async function recordTrainingSession(
+  input: { heldAt: Date; topic: string; method: TrainingMethod; facilitator: string; materials?: string; notes?: string; attendeeIds: number[] },
+  actor: { id: number },
+) {
+  const topic = input.topic.trim();
+  const facilitator = input.facilitator.trim();
+  if (!topic || !facilitator) throw new Error("Topik dan pemateri pelatihan wajib diisi.");
+  // Bukti yang diminta penilaian risiko adalah daftar hadir; pelatihan tanpa peserta tidak
+  // membuktikan apa pun dan hanya akan menggelembungkan angka kepatuhan.
+  if (!input.attendeeIds.length) throw new Error("Pilih minimal satu pegawai yang hadir.");
+
+  const db = await databaseOrThrow();
+  const [session] = await db.insert(apuTrainingSessions).values({
+    heldAt: input.heldAt, topic, method: input.method, facilitator,
+    materials: input.materials?.trim() || null,
+    notes: input.notes?.trim() || null,
+    createdByUserId: actor.id,
+  }).$returningId();
+
+  const unique = Array.from(new Set(input.attendeeIds));
+  await db.insert(apuTrainingAttendance).values(unique.map((employeeId) => ({ sessionId: session.id, employeeId })));
+  await writeAudit({ actorUserId: actor.id, action: "APU_TRAINING_RECORDED", entityType: "apu_training_sessions", entityId: String(session.id), afterState: { heldAt: input.heldAt, topic, attendees: unique.length } });
+  return session;
+}
+
+/**
+ * Rekapitulasi daftar hadir untuk satu rentang periode, sesuai lampiran Surat Keterangan
+ * Pelaksanaan Pelatihan Internal: satu baris per pegawai berisi tanggal pelatihan terakhirnya.
+ *
+ * Pegawai aktif yang belum pernah mengikuti pelatihan tetap ditampilkan tanpa tanggal — justru
+ * merekalah yang perlu terlihat, karena rekap yang hanya memuat peserta akan tampak lengkap.
+ */
+export async function buildTrainingRecap(input: { from: Date; to: Date }) {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const [staff, sessions, attendance] = await Promise.all([
+      db.select().from(employees).where(eq(employees.employmentStatus, "AKTIF")),
+      db.select().from(apuTrainingSessions).where(and(gte(apuTrainingSessions.heldAt, input.from), lte(apuTrainingSessions.heldAt, input.to))),
+      db.select().from(apuTrainingAttendance),
+    ]);
+    const sessionById = new Map(sessions.map((session) => [session.id, session]));
+
+    const rows = staff.map((employee) => {
+      const attended = attendance
+        .filter((row) => row.employeeId === employee.id && sessionById.has(row.sessionId))
+        .map((row) => sessionById.get(row.sessionId)!)
+        .sort((a, b) => Number(new Date(b.heldAt)) - Number(new Date(a.heldAt)));
+      return {
+        employeeId: employee.id,
+        fullName: employee.fullName,
+        position: employee.position,
+        lastTrainedAt: attended[0] ? asIsoDate(attended[0].heldAt) : null,
+        sessionCount: attended.length,
+      };
+    });
+
+    return {
+      from: asIsoDate(input.from)!,
+      to: asIsoDate(input.to)!,
+      rows,
+      sessions: sessions.sort((a, b) => Number(new Date(a.heldAt)) - Number(new Date(b.heldAt))),
+      untrained: rows.filter((row) => !row.lastTrainedAt).length,
     };
   });
 }

@@ -102,7 +102,7 @@ import { expenseCategories } from "../drizzle/schema";
 import { competencyTracks, employmentStatuses, jobLevels, picRoles, screeningResults } from "../drizzle/schema";
 import { KUPVA_WORK_AREA, competencyCodesForArea } from "../shared/sdmCompetency";
 import {
-  assignPicRole, buildAnnualSdmPlan, buildSdmQuarterlyReport, buildSdmRealisasiReport, createEmployee, endEmployment, exportSdmTextFile,
+  assignPicRole, buildAnnualSdmPlan, buildTrainingRecap, listTrainingSessions, recordTrainingSession, buildSdmQuarterlyReport, buildSdmRealisasiReport, createEmployee, endEmployment, exportSdmTextFile,
   listEmployeeCertifications, listEmployees, listPicAssignments, recordCertification, setCompetencyPlan,
 } from "./sdmOperations";
 import { OPERATIONAL_TIMEZONE_VALUES } from "../shared/regulatoryActionQueue";
@@ -417,6 +417,18 @@ export const appRouter = router({
       realisasiBudgetIdr: decimalString.optional(),
       notes: z.string().trim().max(1000).optional(),
     })).mutation(({ input, ctx }) => setCompetencyPlan(input, ctx.user)),
+
+    trainingSessions: staffProcedure.query(() => listTrainingSessions()),
+    trainingRecap: controllerProcedure.input(z.object({ from: z.coerce.date(), to: z.coerce.date() })).query(({ input }) => buildTrainingRecap(input)),
+    recordTraining: controllerProcedure.input(z.object({
+      heldAt: z.coerce.date(),
+      topic: z.string().trim().min(1).max(1000),
+      method: z.enum(["IN_HOUSE", "EKSTERNAL", "DARING"]),
+      facilitator: z.string().trim().min(1).max(200),
+      materials: z.string().trim().max(4000).optional(),
+      notes: z.string().trim().max(1000).optional(),
+      attendeeIds: z.array(z.number().int().positive()).min(1),
+    })).mutation(({ input, ctx }) => recordTrainingSession(input, ctx.user)),
 
     realisasiReport: controllerProcedure.input(z.object({
       year: z.number().int().min(2020).max(2100),
