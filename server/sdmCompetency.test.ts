@@ -3,6 +3,7 @@ import {
   KUPVA_WORK_AREA,
   allCompetencyCodes,
   buildSdmReportRows,
+  buildRealisasiReport,
   buildSdmTextFile,
   certificateNumberMismatch,
   competencyCodeFromCertificate,
@@ -385,5 +386,63 @@ describe("jenjang pelaporan berbeda dari struktur organisasi", () => {
     expect(pejabat.posisiKeseluruhanSDM).toBe(1);
     expect(pejabat.posisiSDMYangMemilikiSertifikat).toBe(1);
     expect(pejabat.realisasiSertifikasiSDM).toBe(1);
+  });
+});
+
+describe("laporan realisasi Lampiran X/XI B.II dan B.IV", () => {
+  const period = { periodStart: quarterStartDate(2026, 3), periodEnd: quarterEndDate(2026, 3) };
+  const teller = { id: 1, jobLevel: "PELAKSANA" as const, competencyTrack: "PBK" as const, employmentStatus: "AKTIF" as const, joinedAt: "2024-01-05" };
+  const direktur = { id: 2, jobLevel: "DIREKSI" as const, competencyTrack: "SERTIFIKASI_KOMPETENSI" as const, employmentStatus: "AKTIF" as const, joinedAt: "2020-01-01" };
+
+  it("bagian B.II untuk PBK hanya memiliki tiga jenjang, tanpa direksi", () => {
+    const report = buildRealisasiReport({ track: "PBK", area: KUPVA_WORK_AREA, ...period, employees: [teller], certifications: [] });
+    expect(report.section).toBe("B.II");
+    expect(report.columns.map((column) => column.label)).toEqual(["Pelaksana", "Penyelia", "Pejabat Eksekutif"]);
+  });
+
+  it("bagian B.IV untuk Sertifikasi Kompetensi memiliki kolom Direksi", () => {
+    // Hanya sandi SKNK/SKPK yang mengenal jenjang direksi, dan formulir B.IV memang menampilkannya.
+    const report = buildRealisasiReport({ track: "KOMPETENSI", area: KUPVA_WORK_AREA, ...period, employees: [direktur], certifications: [] });
+    expect(report.section).toBe("B.IV");
+    expect(report.columns.map((column) => column.label)).toEqual(["Pelaksana", "Penyelia", "Pejabat Eksekutif", "Direksi"]);
+    expect(report.columns.find((column) => column.label === "Direksi")?.totalSdm).toBe(1);
+  });
+
+  it("menghitung akumulasi dan persentasenya terhadap seluruh SDM wajib", () => {
+    const dua = [teller, { ...teller, id: 3 }];
+    const report = buildRealisasiReport({
+      track: "PBK", area: KUPVA_WORK_AREA, ...period,
+      employees: dua,
+      certifications: [{ employeeId: 1, competencyCode: "PBKNK66SPP054", issuedAt: "2025-02-01" }],
+    });
+    expect(report.totalSdm).toBe(2);
+    expect(report.totalAkumulasi).toBe(1);
+    expect(report.persentaseAkumulasi).toBe(50);
+  });
+
+  it("melaporkan nol persen ketika belum ada kewajiban, bukan NaN", () => {
+    const report = buildRealisasiReport({ track: "PBK", area: KUPVA_WORK_AREA, ...period, employees: [], certifications: [] });
+    expect(report.persentaseAkumulasi).toBe(0);
+    expect(Number.isNaN(report.persentaseAkumulasi)).toBe(false);
+  });
+
+  it("memakai Lampiran XI selama masa peralihan dan X sesudahnya", () => {
+    const peralihan = buildRealisasiReport({ track: "PBK", area: KUPVA_WORK_AREA, periodStart: quarterStartDate(2026, 4), periodEnd: quarterEndDate(2026, 4), employees: [], certifications: [] });
+    const sesudah = buildRealisasiReport({ track: "PBK", area: KUPVA_WORK_AREA, periodStart: quarterStartDate(2027, 1), periodEnd: quarterEndDate(2027, 1), employees: [], certifications: [] });
+    expect(peralihan.lampiran).toBe("XI");
+    expect(sesudah.lampiran).toBe("X");
+  });
+
+  it("memisahkan rencana dari realisasi pada baris yang sama", () => {
+    const report = buildRealisasiReport({
+      track: "PBK", area: KUPVA_WORK_AREA, ...period,
+      employees: [teller],
+      certifications: [{ employeeId: 1, competencyCode: "PBKNK66SPP054", issuedAt: "2026-08-01" }],
+      plans: { PBKNK66SPP054: 1 },
+    });
+    const pelaksana = report.columns.find((column) => column.label === "Pelaksana")!;
+    expect(pelaksana.rencanaBase).toBe(1);
+    expect(pelaksana.realisasiBase).toBe(1);
+    expect(pelaksana.akumulasi).toBe(1);
   });
 });

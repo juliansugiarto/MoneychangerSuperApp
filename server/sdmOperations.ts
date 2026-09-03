@@ -13,6 +13,7 @@ import {
 import {
   KUPVA_WORK_AREA,
   WORK_AREAS,
+  buildRealisasiReport,
   buildSdmTextFile,
   certificateNumberMismatch,
   competencyCodesForArea,
@@ -23,6 +24,7 @@ import {
   validateSdmReport,
   type CertificationForReport,
   type EmployeeForReport,
+  type RealisasiTrack,
 } from "../shared/sdmCompetency";
 import { databaseOrThrow, retryTransientDatabaseRead, writeAudit } from "./operations";
 
@@ -159,7 +161,7 @@ export async function assignPicRole(
 }
 
 export async function setCompetencyPlan(
-  input: { periodYear: number; periodQuarter: number; competencyCode: string; plannedCount: number; plannedBudgetIdr?: string; notes?: string },
+  input: { periodYear: number; periodQuarter: number; competencyCode: string; plannedCount: number; plannedBudgetIdr?: string; realisasiBudgetIdr?: string; notes?: string },
   actor: { id: number },
 ) {
   const db = await databaseOrThrow();
@@ -172,6 +174,7 @@ export async function setCompetencyPlan(
   const values = {
     periodYear: input.periodYear, periodQuarter: input.periodQuarter, competencyCode: input.competencyCode,
     plannedCount: input.plannedCount, plannedBudgetIdr: input.plannedBudgetIdr ?? null,
+    realisasiBudgetIdr: input.realisasiBudgetIdr ?? null,
     notes: input.notes?.trim() || null, updatedByUserId: actor.id,
   };
   if (existing) await db.update(sdmCompetencyPlans).set(values).where(eq(sdmCompetencyPlans.id, existing.id));
@@ -299,6 +302,65 @@ export async function buildAnnualSdmPlan(input: { year: number }) {
       rows,
       totalDanaPbk: budgetFor("PBKNK"),
       totalDanaPemeliharaan: budgetFor("PBKPK"),
+    };
+  });
+}
+
+/**
+ * Laporan realisasi per triwulan (Lampiran X/XI bagian B.II untuk PBK, B.IV untuk Sertifikasi
+ * Kompetensi), lengkap dengan realisasi penggunaan dana tahun berjalan.
+ */
+export async function buildSdmRealisasiReport(input: { year: number; quarter: 1 | 2 | 3 | 4; track: RealisasiTrack }) {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const periodStart = quarterStartDate(input.year, input.quarter);
+    const periodEnd = quarterEndDate(input.year, input.quarter);
+
+    const [staff, certificates, yearPlans] = await Promise.all([
+      db.select().from(employees),
+      db.select().from(employeeCertifications),
+      db.select().from(sdmCompetencyPlans).where(eq(sdmCompetencyPlans.periodYear, input.year)),
+    ]);
+
+    const forReport: EmployeeForReport[] = staff.map((row) => ({
+      id: row.id,
+      jobLevel: row.jobLevel,
+      competencyLevel: row.competencyLevel,
+      competencyTrack: row.competencyTrack,
+      employmentStatus: row.employmentStatus,
+      joinedAt: asIsoDate(row.joinedAt)!,
+      endedAt: asIsoDate(row.endedAt),
+    }));
+    const certificationsForReport: CertificationForReport[] = certificates.map((row) => ({
+      employeeId: row.employeeId,
+      competencyCode: row.competencyCode,
+      issuedAt: asIsoDate(row.issuedAt)!,
+      expiresAt: asIsoDate(row.expiresAt),
+    }));
+
+    const report = buildRealisasiReport({
+      track: input.track,
+      area: KUPVA_WORK_AREA,
+      periodStart,
+      periodEnd,
+      employees: forReport,
+      certifications: certificationsForReport,
+      plans: Object.fromEntries(yearPlans.filter((plan) => plan.periodQuarter === input.quarter).map((plan) => [plan.competencyCode, plan.plannedCount])),
+    });
+
+    // Dana dilaporkan sebagai realisasi tahun berjalan, jadi dijumlahkan sejak triwulan pertama
+    // sampai triwulan pelaporan - bukan hanya triwulan ini.
+    const spendUpTo = (prefix: string) => yearPlans
+      .filter((plan) => plan.competencyCode.startsWith(prefix) && plan.periodQuarter <= input.quarter)
+      .reduce((total, plan) => total + Number(plan.realisasiBudgetIdr ?? 0), 0);
+
+    const spec = { PBK: { base: "PBKNK", maintenance: "PBKPK" }, KOMPETENSI: { base: "SKNK", maintenance: "SKPK" } }[input.track];
+    return {
+      ...report,
+      year: input.year,
+      quarter: input.quarter,
+      realisasiDanaSertifikasi: spendUpTo(spec.base),
+      realisasiDanaPemeliharaan: spendUpTo(spec.maintenance),
     };
   });
 }

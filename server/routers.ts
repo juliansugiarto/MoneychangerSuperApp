@@ -102,7 +102,7 @@ import { expenseCategories } from "../drizzle/schema";
 import { competencyTracks, employmentStatuses, jobLevels, picRoles, screeningResults } from "../drizzle/schema";
 import { KUPVA_WORK_AREA, competencyCodesForArea } from "../shared/sdmCompetency";
 import {
-  assignPicRole, buildAnnualSdmPlan, buildSdmQuarterlyReport, createEmployee, endEmployment, exportSdmTextFile,
+  assignPicRole, buildAnnualSdmPlan, buildSdmQuarterlyReport, buildSdmRealisasiReport, createEmployee, endEmployment, exportSdmTextFile,
   listEmployeeCertifications, listEmployees, listPicAssignments, recordCertification, setCompetencyPlan,
 } from "./sdmOperations";
 import { OPERATIONAL_TIMEZONE_VALUES } from "../shared/regulatoryActionQueue";
@@ -414,8 +414,15 @@ export const appRouter = router({
       competencyCode: z.string().trim().min(1).max(20),
       plannedCount: z.number().int().min(0),
       plannedBudgetIdr: decimalString.optional(),
+      realisasiBudgetIdr: decimalString.optional(),
       notes: z.string().trim().max(1000).optional(),
     })).mutation(({ input, ctx }) => setCompetencyPlan(input, ctx.user)),
+
+    realisasiReport: controllerProcedure.input(z.object({
+      year: z.number().int().min(2020).max(2100),
+      quarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+      track: z.enum(["PBK", "KOMPETENSI"]),
+    })).query(({ input }) => buildSdmRealisasiReport(input)),
 
     annualPlan: controllerProcedure.input(z.object({ year: z.number().int().min(2020).max(2100) })).query(({ input }) => buildAnnualSdmPlan(input)),
 

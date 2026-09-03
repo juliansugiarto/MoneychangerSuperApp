@@ -1,0 +1,1 @@
+ALTER TABLE `sdm_competency_plans` ADD `realisasiBudgetIdr` decimal(18,2);

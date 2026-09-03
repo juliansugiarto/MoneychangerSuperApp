@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
+import { printLampiranRealisasi } from "@/lib/lampiranRealisasi";
 import { printLampiranSdm } from "@/lib/lampiranSdm";
 import { PIC_ROLE_TITLES, printSuratKeputusan, suggestDecreeNumber } from "@/lib/suratKeputusan";
 import { Award, Download, FileCheck2, Printer, ShieldCheck, UserPlus, Users } from "lucide-react";
@@ -62,6 +63,8 @@ export default function Kepegawaian() {
   const [quarter, setQuarter] = useState<1 | 2 | 3 | 4>(currentQuarter());
   const report = trpc.sdm.quarterlyReport.useQuery({ year, quarter }, { enabled: canManage });
   const annualPlan = trpc.sdm.annualPlan.useQuery({ year }, { enabled: canManage });
+  const [track, setTrack] = useState<"PBK" | "KOMPETENSI">("PBK");
+  const realisasi = trpc.sdm.realisasiReport.useQuery({ year, quarter, track }, { enabled: canManage });
 
   const refresh = () => {
     utils.sdm.employees.invalidate();
@@ -69,6 +72,7 @@ export default function Kepegawaian() {
     utils.sdm.picAssignments.invalidate();
     utils.sdm.quarterlyReport.invalidate();
     utils.sdm.annualPlan.invalidate();
+    utils.sdm.realisasiReport.invalidate();
   };
 
   const createEmployee = trpc.sdm.createEmployee.useMutation({
@@ -156,6 +160,20 @@ export default function Kepegawaian() {
     });
   };
 
+  const printRealisasi = () => {
+    if (!realisasi.data) return;
+    if (!signatory) return toast.error("Belum ada direksi aktif yang dapat menandatangani laporan.");
+    if (!companyProfile.data?.legalEntityName) return toast.error("Nama badan hukum belum diisi pada Profil Perusahaan.");
+    printLampiranRealisasi({
+      ...realisasi.data,
+      lampiran: realisasi.data.lampiran as "X" | "XI",
+      company: { legalEntityName: companyProfile.data.legalEntityName },
+      signatory: { fullName: signatory.fullName, position: signatory.position },
+      signedCity: (companyProfile.data.address ?? "").split(",").slice(-2)[0]?.trim() || "—",
+      signedAt: new Date().toISOString().slice(0, 10),
+    });
+  };
+
   const activeStaff = useMemo(() => (employees.data ?? []).filter((row) => row.employmentStatus === "AKTIF"), [employees.data]);
   const withoutAgreement = activeStaff.filter((row) => !row.employmentAgreementNumber && row.jobLevel !== "KOMISARIS" && row.jobLevel !== "DIREKSI");
   const withoutScreening = activeStaff.filter((row) => !row.screeningResult);
@@ -180,6 +198,7 @@ export default function Kepegawaian() {
           <TabsTrigger value="sertifikat" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><Award className="mr-1.5 size-4" />Sertifikat</TabsTrigger>
           <TabsTrigger value="pic" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><ShieldCheck className="mr-1.5 size-4" />Penanggung Jawab</TabsTrigger>
           <TabsTrigger value="laporan" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><Download className="mr-1.5 size-4" />Laporan Triwulan</TabsTrigger>
+          <TabsTrigger value="realisasi" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><Award className="mr-1.5 size-4" />Realisasi</TabsTrigger>
           <TabsTrigger value="rencana" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><FileCheck2 className="mr-1.5 size-4" />Rencana Tahunan</TabsTrigger>
         </TabsList>
 
@@ -535,6 +554,83 @@ export default function Kepegawaian() {
                     Diisi bersama rencana per triwulan.
                   </p>
                 </div>
+              ) : null}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ---------------------------- Realisasi ---------------------------- */}
+        <TabsContent value="realisasi" className="mt-5 space-y-4">
+          <Card className="border-[#dce6f0]">
+            <CardHeader>
+              <CardTitle className="font-display text-xl text-[#18395f]">Laporan realisasi sertifikat</CardTitle>
+              <CardDescription>
+                Lampiran {realisasi.data?.lampiran ?? "X/XI"} bagian {realisasi.data?.section ?? "B.II / B.IV"}. Bagian B.II melaporkan
+                sertifikat PBK, bagian B.IV melaporkan Sertifikasi Kompetensi — hanya B.IV yang memiliki kolom Direksi.
+                Dana dilaporkan sebagai realisasi tahun berjalan, dijumlahkan sejak triwulan pertama.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="w-32"><Label className="text-xs">Tahun</Label><Input autoComplete="off" className="mt-1" type="number" value={year} onChange={(event) => setYear(Number(event.target.value))} /></div>
+                <div className="w-36">
+                  <Label className="text-xs">Triwulan</Label>
+                  <Select value={String(quarter)} onValueChange={(value) => setQuarter(Number(value) as 1 | 2 | 3 | 4)}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>{[1, 2, 3, 4].map((q) => <SelectItem key={q} value={String(q)}>Triwulan {q}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="w-56">
+                  <Label className="text-xs">Jenis sertifikat</Label>
+                  <Select value={track} onValueChange={(value) => setTrack(value as "PBK" | "KOMPETENSI")}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PBK">B.II — Sertifikat PBK</SelectItem>
+                      <SelectItem value="KOMPETENSI">B.IV — Sertifikasi Kompetensi</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button className="mb-1 bg-[#183f70] text-white hover:bg-[#12345d]" disabled={!realisasi.data} onClick={printRealisasi}><Printer className="mr-2 size-4" />Cetak laporan</Button>
+              </div>
+
+              {realisasi.isLoading ? <p className="py-8 text-sm text-[#475569]">Menyusun laporan…</p> : null}
+              {realisasi.data ? (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[760px] text-left text-sm">
+                      <thead className="border-b border-[#dce6f0] bg-[#f5f8fc] text-xs uppercase tracking-wide text-[#475569]">
+                        <tr>
+                          <th className="px-3 py-3">Jenjang</th>
+                          <th className="px-3 py-3 text-right">Total SDM</th>
+                          <th className="px-3 py-3 text-right">Rencana</th>
+                          <th className="px-3 py-3 text-right">Rencana pemeliharaan</th>
+                          <th className="px-3 py-3 text-right">Realisasi</th>
+                          <th className="px-3 py-3 text-right">Realisasi pemeliharaan</th>
+                          <th className="px-3 py-3 text-right">Akumulasi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {realisasi.data.columns.map((column) => (
+                          <tr key={column.level} className="border-b border-[#eef2f7] last:border-0">
+                            <td className="px-3 py-3 font-semibold text-[#213f63]">{column.label}</td>
+                            <td className="px-3 py-3 text-right tabular-nums text-[#213f63]">{column.totalSdm}</td>
+                            <td className="px-3 py-3 text-right tabular-nums text-[#475569]">{column.rencanaBase}</td>
+                            <td className="px-3 py-3 text-right tabular-nums text-[#475569]">{column.rencanaMaintenance}</td>
+                            <td className="px-3 py-3 text-right tabular-nums text-[#475569]">{column.realisasiBase}</td>
+                            <td className="px-3 py-3 text-right tabular-nums text-[#475569]">{column.realisasiMaintenance}</td>
+                            <td className="px-3 py-3 text-right tabular-nums text-[#213f63]">{column.akumulasi}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex flex-wrap gap-4 rounded-xl border border-[#e0e8f1] bg-[#f8fbff] p-4 text-sm text-[#475569]">
+                    <span>Akumulasi realisasi <strong className="text-[#213f63]">{realisasi.data.totalAkumulasi} dari {realisasi.data.totalSdm} SDM</strong></span>
+                    <span>Persentase <strong className="text-[#213f63]">{realisasi.data.persentaseAkumulasi}%</strong></span>
+                    <span>Realisasi dana <strong className="text-[#213f63]">Rp {new Intl.NumberFormat("id-ID").format(realisasi.data.realisasiDanaSertifikasi)}</strong></span>
+                    <span>Realisasi dana pemeliharaan <strong className="text-[#213f63]">Rp {new Intl.NumberFormat("id-ID").format(realisasi.data.realisasiDanaPemeliharaan)}</strong></span>
+                  </div>
+                </>
               ) : null}
             </CardContent>
           </Card>

@@ -377,3 +377,106 @@ export function certificateNumberMismatch(raw: string | null | undefined, chosen
   }
   return null;
 }
+
+
+// ---------------------------------------------------------------------------
+// Laporan realisasi (Lampiran X/XI bagian B.II dan B.IV)
+// ---------------------------------------------------------------------------
+
+/**
+ * Jalur pelaporan pada lampiran realisasi. Keduanya berbentuk sama tetapi tidak sama isinya:
+ * bagian B.II melaporkan sertifikat PBK, bagian B.IV melaporkan Sertifikasi Kompetensi — dan hanya
+ * B.IV yang memiliki kolom Direksi, karena hanya sandi SKNK/SKPK yang mengenal jenjang itu.
+ */
+export const REALISASI_SECTIONS = {
+  PBK: { section: "B.II", base: "PBKNK", maintenance: "PBKPK", title: "Sertifikat PBK Sistem Pembayaran" },
+  KOMPETENSI: { section: "B.IV", base: "SKNK", maintenance: "SKPK", title: "Sertifikat Kompetensi Sistem Pembayaran" },
+} as const;
+export type RealisasiTrack = keyof typeof REALISASI_SECTIONS;
+
+export type RealisasiLevelColumn = {
+  level: JobLevel;
+  label: string;
+  totalSdm: number;
+  rencanaBase: number;
+  rencanaMaintenance: number;
+  realisasiBase: number;
+  realisasiMaintenance: number;
+  /** SDM yang telah memiliki sertifikat dasar sampai dengan akhir periode. */
+  akumulasi: number;
+};
+
+export type RealisasiReport = {
+  track: RealisasiTrack;
+  section: string;
+  title: string;
+  bidang: string;
+  periodStart: string;
+  periodEnd: string;
+  lampiran: "X" | "XI";
+  columns: RealisasiLevelColumn[];
+  totalSdm: number;
+  totalAkumulasi: number;
+  /** Persentase akumulasi terhadap seluruh SDM yang wajib; kolom 10 pada formulir. */
+  persentaseAkumulasi: number;
+};
+
+const LEVEL_LABELS: Record<JobLevel, string> = { 1: "Direksi", 2: "Pejabat Eksekutif", 3: "Penyelia", 4: "Pelaksana" };
+
+/**
+ * Menyusun satu baris laporan realisasi untuk bidang KUPVA, terpecah per jenjang.
+ *
+ * Bentuk formulirnya satu baris per bidang dengan kolom terbagi menurut jenjang — bukan satu baris
+ * per sandi seperti RAP01/RAS01. Angkanya diturunkan dari catatan yang sama, sehingga laporan
+ * realisasi dan laporan triwulanan tidak dapat saling bertentangan.
+ */
+export function buildRealisasiReport(input: {
+  track: RealisasiTrack;
+  area: WorkArea;
+  periodStart: string;
+  periodEnd: string;
+  employees: EmployeeForReport[];
+  certifications: CertificationForReport[];
+  plans?: Record<string, number>;
+}): RealisasiReport {
+  const { track, area, periodStart, periodEnd, employees, certifications, plans = {} } = input;
+  const spec = REALISASI_SECTIONS[track];
+  // Urutan kolom mengikuti formulir: jenjang terendah lebih dahulu.
+  const levels = (CERTIFICATION_TYPES[spec.base as CertificationType].levels as JobLevel[]).slice().sort((a, b) => b - a);
+
+  const rows = deriveSdmCounts({ area, periodStart, periodEnd, employees, certifications, plans });
+  const at = (type: string, level: JobLevel) => rows.find((row) => row.code === competencyCode(type as CertificationType, area, level));
+
+  const columns: RealisasiLevelColumn[] = levels.map((level) => {
+    const base = at(spec.base, level);
+    const maintenance = at(spec.maintenance, level);
+    return {
+      level,
+      label: LEVEL_LABELS[level],
+      totalSdm: base?.posisiKeseluruhanSDM ?? 0,
+      rencanaBase: base?.rencanaSertifikasiSDM ?? 0,
+      rencanaMaintenance: maintenance?.rencanaSertifikasiSDM ?? 0,
+      realisasiBase: base?.realisasiSertifikasiSDM ?? 0,
+      realisasiMaintenance: maintenance?.realisasiSertifikasiSDM ?? 0,
+      akumulasi: base?.posisiSDMYangMemilikiSertifikat ?? 0,
+    };
+  });
+
+  const totalSdm = columns.reduce((sum, column) => sum + column.totalSdm, 0);
+  const totalAkumulasi = columns.reduce((sum, column) => sum + column.akumulasi, 0);
+
+  return {
+    track,
+    section: spec.section,
+    title: spec.title,
+    bidang: WORK_AREAS[area],
+    periodStart,
+    periodEnd,
+    lampiran: formForPeriod(periodEnd) === "rap01" ? "XI" : "X",
+    columns,
+    totalSdm,
+    totalAkumulasi,
+    // Nol dibagi nol tidak dilaporkan sebagai NaN; belum ada kewajiban berarti nol persen.
+    persentaseAkumulasi: totalSdm ? Math.round((totalAkumulasi / totalSdm) * 1000) / 10 : 0,
+  };
+}

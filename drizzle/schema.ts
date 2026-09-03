@@ -938,6 +938,12 @@ export const sdmCompetencyPlans = mysqlTable("sdm_competency_plans", {
   plannedCount: int("plannedCount").default(0).notNull(),
   /** Rencana penyediaan dana, rupiah penuh - diminta Lampiran X/XI PADG 17/2024. */
   plannedBudgetIdr: decimal("plannedBudgetIdr", { precision: 18, scale: 2 }),
+  /**
+   * Realisasi penggunaan dana, rupiah penuh. Laporan realisasi (Lampiran X/XI bagian B.II dan B.IV)
+   * meminta dana yang benar-benar terpakai, terpisah dari yang direncanakan; tanpa kolom ini
+   * angkanya harus diketik ulang dari kwitansi pelatihan setiap triwulan.
+   */
+  realisasiBudgetIdr: decimal("realisasiBudgetIdr", { precision: 18, scale: 2 }),
   notes: text("notes"),
   updatedByUserId: int("updatedByUserId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
