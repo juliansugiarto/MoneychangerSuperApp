@@ -2305,12 +2305,23 @@ export async function createExpense(
   return (await db.select().from(operationalExpenses).where(eq(operationalExpenses.id, created.id)).limit(1))[0];
 }
 
+/**
+ * Batas rentang untuk kolom `date`: tengah malam **waktu lokal proses** pada hari yang dimaksud.
+ *
+ * mysql2 memformat `Date` memakai zona waktu proses. Sebuah `Date` tengah malam UTC terkirim
+ * sebagai "2026-09-01 07:00:00" di GMT+7, sehingga `expenseDate >= ...` menyingkirkan pengeluaran
+ * bertanggal 1 September dari laporan September itu sendiri. Kesalahannya tidak terlihat di
+ * produksi (prosesnya berjalan pada UTC) tetapi nyata di setiap mesin pengembangan WIB — dan
+ * bentuk ini benar pada keduanya.
+ */
+const dateColumnBound = (value: Date) => new Date(`${value.toISOString().slice(0, 10)}T00:00:00`);
+
 export async function listExpenses(input?: { from?: Date; to?: Date }) {
   return retryTransientDatabaseRead(async () => {
     const db = await databaseOrThrow();
     const conditions = [
-      input?.from ? gte(operationalExpenses.expenseDate, input.from) : undefined,
-      input?.to ? lte(operationalExpenses.expenseDate, input.to) : undefined,
+      input?.from ? gte(operationalExpenses.expenseDate, dateColumnBound(input.from)) : undefined,
+      input?.to ? lte(operationalExpenses.expenseDate, dateColumnBound(input.to)) : undefined,
     ].filter((condition): condition is NonNullable<typeof condition> => Boolean(condition));
     return db.select().from(operationalExpenses).where(conditions.length ? and(...conditions) : undefined).orderBy(desc(operationalExpenses.expenseDate), desc(operationalExpenses.id));
   });

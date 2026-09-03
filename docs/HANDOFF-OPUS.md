@@ -18,7 +18,7 @@ Diperbarui 3 September 2026 (sesi kedua hari itu). Menggantikan isi sebelumnya.
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
 export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 ./node_modules/.bin/tsc --noEmit
-./node_modules/.bin/vitest run          # 402 lulus, 2 dilewati
+./node_modules/.bin/vitest run          # 440 lulus, 2 dilewati
 ./node_modules/.bin/vite build
 ```
 
@@ -77,9 +77,23 @@ uji sudah dihapus; 42 baris `chart_of_accounts` yang tersemai adalah data acuan,
    sendiri. Aritmetika bulan selalu atas teks `YYYY-MM-DD` (`isoDay`/`monthStartIso`/`monthEndIso`
    di `shared/ledger.ts`), tidak pernah atas getter UTC sebuah tanggal tengah malam lokal.
 
-   **`listExpenses` di `server/operations.ts` memakai pola lama yang sama** (`gte(expenseDate, from)`
-   dengan `Date` mentah) dan kemungkinan besar menyingkirkan pengeluaran bertanggal batas awal
-   periode. Belum diperiksa dan belum diperbaiki — layak dicek lebih dulu di sesi berikutnya.
+   **Kesalahan ini bergantung zona waktu proses, dan itulah sebabnya tidak pernah tertangkap.**
+   `jakartaBusinessDate` (`server/operations.ts`) mengembalikan tengah malam UTC: benar di produksi
+   yang berjalan pada UTC, meleset tujuh jam di setiap mesin pengembangan WIB. `dbDate`/
+   `dateColumnBound` benar pada keduanya.
+
+   `listExpenses` memakai pola lama itu dan **sudah diperbaiki** (`dateColumnBound`), dibuktikan
+   dengan probe: sebelumnya pengeluaran bertanggal 1 September hilang dari rentang 1–30 September,
+   sesudahnya kedua batas ikut terbaca.
+
+   **Yang belum diperbaiki:** perbandingan `eq()` atas kolom `date` yang memakai
+   `jakartaBusinessDate` — `dailyOperationalChecklists.businessDate` dan `stockOpnames.opnameDate`
+   (`server/operations.ts` baris ~1733, ~1817, ~2716). Di mesin WIB, pencarian checklist/opname hari
+   berjalan tidak menemukan baris yang sudah ada, sehingga berisiko menyisipkan duplikat — komentar
+   di `jakartaBusinessDate` menunjukkan gejala ini pernah muncul sekali dan "diperbaiki" dengan
+   memindahkan tengah hari ke tengah malam, yang hanya memperkecil selisihnya. Sengaja tidak
+   disentuh di sesi ini: menyentuh `jakartaBusinessDate` mengubah perilaku tutup buku, opname, dan
+   checklist sekaligus, jadi perlu rencana tersendiri lebih dulu.
 
 ## Sesudah itu
 
