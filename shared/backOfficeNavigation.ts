@@ -63,6 +63,7 @@ export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
     { label: "Cek Daftar Terduga (DTTOT)", path: "/operasional/watchlist", minimumRole: "STAFF" },
   ] },
   { label: "Laporan", items: [
+    { label: "Buku Besar", path: "/operasional/buku-besar", minimumRole: "CONTROLLER" },
     { label: "Laporan Transaksi", path: "/operasional/laporan", minimumRole: "CONTROLLER" },
     { label: "Laporan ke Regulator", path: "/operasional/pelaporan-regulator", minimumRole: "CONTROLLER" },
     { label: "Riwayat Aktivitas", path: "/operasional/audit", minimumRole: "CONTROLLER" },

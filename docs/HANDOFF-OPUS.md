@@ -60,7 +60,8 @@ Selesai sesi ini:
   `journal_entries`, `journal_entry_lines` (migrasi `0043`, murni penambahan);
   `shared/chartOfAccounts.ts` (42 akun, tiap akun terpetakan ke baris B0002/B0003/B0004),
   `shared/ledger.ts` (aritmetika sen memakai `bigint`), `server/ledgerOperations.ts`, rute
-  `ledger.*`. **Antarmukanya belum ada** — seluruh verifikasi lewat skrip uji asap.
+  `ledger.*`, dan halaman **Buku Besar** (`/operasional/buku-besar`, Laporan → Buku Besar) dengan
+  empat tab: Jurnal, Neraca Saldo, Buku Besar Akun, Periode. Diuji ujung ke ujung di peramban.
 - **Peninjauan kode atas keduanya** (`385e5e0`) — delapan temuan diperbaiki, satu ditolak setelah
   diperiksa langsung. Yang paling berarti: neraca saldo kini kumulatif (memuat saldo awal, jadi
   layak menjadi isian B0002), penjaga tutup periode diganti `verifyLedgerIntegrity` yang benar-benar
@@ -107,15 +108,14 @@ uji sudah dihapus; 42 baris `chart_of_accounts` yang tersemai adalah data acuan,
 
 Fase buku besar mengikuti rencana produk (artefak pada tautan di atas). Fase 03 selesai; sisanya:
 
-1. **Antarmuka buku besar** — jurnal manual, daftar jurnal, neraca saldo, buku besar per akun,
-   dan penutupan periode. Rutenya (`ledger.*`) sudah ada dan sudah diuji, tinggal layarnya.
-2. **Fase 01 dimensi cabang**, lalu **fase 04 penjurnalan otomatis** dari transaksi valuta,
+1. **Fase 01 dimensi cabang**, lalu **fase 04 penjurnalan otomatis** dari transaksi valuta,
    pengeluaran, dan mutasi kas/bank. Urutan ini penting: penjurnalan otomatis membaca tepat
    tabel-tabel yang diubah oleh cabang, dan dibalik urutannya fase itu ditulis dua kali.
-   Kunci unik `(sourceType, sourceReference)` sudah disiapkan supaya proses itu idempoten.
-3. Temuan 3 (arsip dokumen), 6 (stock opname termasuk Rupiah), 10 (pemantauan berbasis profil).
-4. IRA — perlu tabel penilaian SRA.
-5. Perbaiki penamaan `dttotPpsdmMatch` / "PPPSM" menjadi **DPPSPM/PPPSPM**.
+   Kunci unik `(sourceType, sourceReference)` sudah disiapkan supaya proses itu idempoten dan sudah
+   dibuktikan menolak penjurnalan sumber yang sama dua kali.
+2. Temuan 3 (arsip dokumen), 6 (stock opname termasuk Rupiah), 10 (pemantauan berbasis profil).
+3. IRA — perlu tabel penilaian SRA.
+4. Perbaiki penamaan `dttotPpsdmMatch` / "PPPSM" menjadi **DPPSPM/PPPSPM**.
 
 ## Aturan kerja
 

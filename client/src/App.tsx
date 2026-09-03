@@ -37,6 +37,7 @@ const CompanyProfile = lazy(() => import("./pages/CompanyProfile"));
 const ExpenseEntry = lazy(() => import("./pages/ExpenseEntry"));
 const SanctionsWatchlist = lazy(() => import("./pages/SanctionsWatchlist"));
 const Kepegawaian = lazy(() => import("./pages/Kepegawaian"));
+const BukuBesar = lazy(() => import("./pages/BukuBesar"));
 
 function RouteLoading() {
   return <div className="flex min-h-[40vh] items-center justify-center text-sm text-[#475569]">Memuat halaman…</div>;
@@ -83,6 +84,7 @@ function Router() {
       <Route path="/operasional/pengeluaran"><OperationsRoute page={<ExpenseEntry />} /></Route>
       <Route path="/operasional/watchlist"><OperationsRoute page={<SanctionsWatchlist />} /></Route>
       <Route path="/operasional/kepegawaian"><OperationsRoute minimumRole="CONTROLLER" page={<Kepegawaian />} /></Route>
+      <Route path="/operasional/buku-besar"><OperationsRoute minimumRole="CONTROLLER" page={<BukuBesar />} /></Route>
       <Route path="/operasional/pengawasan-direksi"><OperationsRoute minimumRole="CONTROLLER" page={<DirectorAcknowledgements />} /></Route>
       <Route path="/operasional/go-live"><OperationsRoute minimumRole="CONTROLLER" page={<GoLiveSetup />} /></Route>
       <Route path="/operasional/impor-nasabah"><OperationsRoute minimumRole="CONTROLLER" page={<CustomerImport />} /></Route>

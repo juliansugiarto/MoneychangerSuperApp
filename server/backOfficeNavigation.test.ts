@@ -25,6 +25,7 @@ const pageByPath: Record<string, string> = {
   "/operasional/pengaduan": "ConsumerComplaints",
   "/operasional/watchlist": "SanctionsWatchlist",
   "/operasional/laporan": "Reports",
+  "/operasional/buku-besar": "BukuBesar",
   "/operasional/pelaporan-regulator": "RegulatoryReporting",
   "/operasional/audit": "AuditLog",
   "/operasional/kepegawaian": "Kepegawaian",
