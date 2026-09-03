@@ -1,63 +1,80 @@
 # Handoff — baca ini dulu
 
-Diperbarui 3 September 2026. Menggantikan isi sebelumnya yang sudah usang.
+Diperbarui 3 September 2026, menjelang pemadatan konteks. Menggantikan isi sebelumnya.
 
 ## Baca dulu, jangan diturunkan ulang dari kode
 
-1. **`CLAUDE.md`** — aturan keras operasional dan gerbang mutu (`pnpm test && pnpm check && pnpm build`).
-   Catatan: `pnpm` tidak ada di PATH mesin ini; pakai `./node_modules/.bin/*` langsung.
+1. **`CLAUDE.md`** — aturan keras operasional dan gerbang mutu.
+   `pnpm` tidak ada di PATH; pakai `./node_modules/.bin/*`. MySQL client di `/opt/homebrew/opt/mysql/bin`.
 2. **Rencana produk** — https://claude.ai/code/artifact/b7f62d68-3a12-419e-b507-2e1345260a6b
-   Berisi dua belas temuan pemeriksaan BI yang dipetakan ke kode, peta 35 tabel ke lapisan
-   tenant/cabang, bagan akun, sembilan fase, dan pemeriksaan silang. **Ini dokumen pengarah utama.**
-3. `docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md` dan `docs/SKEMA-DATABASE-PROJECT.md` untuk perilaku
-   pengguna dan alasan struktur data.
+   Memuat dua belas temuan pemeriksaan BI yang dipetakan ke kode, peta 35 tabel ke lapisan
+   tenant/cabang, bagan akun, fase, dan pemeriksaan silang. **Dokumen pengarah utama.**
+3. Memori sesi (`~/.claude/projects/.../memory/`) — SAK EP, aturan penyusutan, struktur IRA,
+   struktur RAP01/RAS01, temuan SINTA. Semuanya sudah diverifikasi dari dokumen asli.
 
-## Keputusan yang sudah diambil (jangan dibuka ulang tanpa alasan baru)
+## Cara menjalankan
 
-- Produk ini dijual berlangganan lewat **SOLVINC.ID**; aplikasi money changer adalah salah satu
-  produknya. Empat lapisan: `solvinc_platform`, `mc_reference`, `mc_t_<kode>`, dan kolom `branchId`.
-- **Satu database per tenant**, bukan kolom `tenantId`. Alasannya ada di rencana.
-- **Cabang adalah kolom di dalam database tenant**, bukan database terpisah.
-- Hanya **pemilik usaha** yang punya akun SOLVINC (serah-terima token); staf masuk langsung ke
-  aplikasi. Langganan berhenti: data disimpan 5 tahun, pemilik dapat memilih mode baca-saja.
-- **MySQL dipertahankan**, bukan pindah ke Supabase. Alasan ada di riwayat percakapan: RLS tidak
-  dibutuhkan pada model satu database per tenant, dan biaya port 223 query tidak sebanding.
-- Akuntan opsional bagi pelanggan, tetapi **bagan akun produk perlu ditinjau akuntan satu kali**.
+```bash
+export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
+export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
+./node_modules/.bin/tsc --noEmit
+./node_modules/.bin/vitest run          # 375 lulus
+./node_modules/.bin/vite build
+nohup ./node_modules/.bin/tsx watch server/_core/index.ts > /tmp/dev.log 2>&1 &
+```
 
-## Yang sudah selesai (7 commit belum di-push)
+Login pengembangan: `test-shareholder` / `123456` (**minta pengguna yang mengetik sandi**).
+Migrasi ke seluruh tenant lokal: `node scripts/tenant.mjs migrate-all` dengan `TENANT_REGISTRY` diisi.
 
-- Menu bertingkat dengan bahasa sehari-hari, satu nama per halaman (23 halaman), zona waktu
-  operasional dapat dipilih di Profil Perusahaan, sesi pengembangan tidak putus tiap hot reload.
-- **Fase 00 multi-tenant**: `server/tenantContext.ts` (AsyncLocalStorage), `server/tenantRegistry.ts`,
-  `getDb()` yang memilih koneksi per tenant dan **gagal tertutup**, middleware mendahului seluruh
-  rute, kolam koneksi dibatasi 4 per tenant.
-- `scripts/tenant.mjs` — `list`, `provision <kode>`, `migrate-all`.
-- Uji isolasi terhadap dua database sungguhan (`tenantIsolation.live.test.ts`), lewat sendiri bila
-  `TENANT_TEST_SECONDARY_URL` tidak diatur. **315 uji lulus**, tsc dan build bersih.
+**Verifikasi cetakan tanpa membekukan alat uji:** render di iframe memakai kode yang sama, tetapi
+buang dulu skrip cetaknya — `html.replace(/<script>[\s\S]*?<\/script>/g, "")`. Memanggil
+`window.print()` membuka dialog bawaan yang memblokir ekstensi peramban sampai pengguna menutupnya.
 
-## Rencana besok
+## Yang sudah selesai sesi ini (17 commit, belum di-push)
 
-1. **Tangkap format nota SINTA.** Aplikasi Bank Indonesia di https://app.sipuka.id (akun demo ada
-   pada pengguna; **minta pengguna yang memasukkan sandi**, Claude tidak mengisi formulir sandi).
-   Buat nasabah uji — SINTA mewajibkan unggah satu dokumen identitas, jadi siapkan berkas gambar
-   sederhana — lalu satu transaksi penjualan, lalu cetak notanya. Nota itu penerapan resmi BI atas
-   SE BI 18/41/DKSP dan menjadi acuan untuk **temuan 4**. Jangan tekan Escape saat modal terbuka;
-   modalnya tertutup dan isian hilang.
-2. **Fase 01 — dimensi cabang.** Tabel `branches`, kolom `branchId` pada tujuh tabel, dan empat
-   indeks unik disusun ulang (`cash_balances_currency_uq`, `cash_denomination_balances_currency_value_uq`,
-   `stock_opnames_date_currency_uq`, `daily_operational_checklist_date_uq`). Harus mendahului buku
-   besar karena penjurnalan otomatis membaca tepat tabel-tabel itu.
-3. **Fase 02–03 — fondasi buku besar.** Menjawab temuan 7.1 secara langsung.
+- **Menu bertingkat** bahasa sehari-hari, satu nama per halaman (23 halaman), zona waktu operasional.
+- **Fase 00 multi-tenant**: `tenantContext.ts` (AsyncLocalStorage), `tenantRegistry.ts`, `getDb()`
+  gagal-tertutup, middleware mendahului seluruh rute, kolam koneksi 4 per tenant,
+  `scripts/tenant.mjs`, uji isolasi terhadap dua database sungguhan.
+- **Nota** memuat identitas penyelenggara, kode KUPVA, nomor izin, kode BNS/BNB, pecahan dan lembar.
+- **Bagian SDM lengkap**: pegawai (Perjanjian Kerja, penyaringan), sertifikat (penguraian nomor
+  KKNI), penunjukan PIC + cetak SK, RAP01/RAS01 + berkas pipa, Lampiran rencana, Lampiran realisasi
+  B.II/B.IV.
+- **Ambang underlying** kini atas akumulasi sebulan per nasabah, bukan per transaksi.
 
-Pekerjaan kecil bernilai tinggi yang bisa disisipkan kapan saja: aturan pengkinian profil nasabah
-≤6 bulan, daftar pekerjaan terkendali yang menurunkan status PEP, kewajiban unggah dokumen
-identitas, dan penomoran halaman pada daftar (jejak audit kini terpotong di 100 baris).
+## Yang sedang dikerjakan — SELESAIKAN INI DULU
 
-## Cara kerja yang diminta pengguna
+**Pelatihan APU PPT** (commit `8466987`). Sisi server dan skema sudah selesai:
+`apu_training_sessions`, `apu_training_attendance` (migrasi 0040, sudah diterapkan lokal),
+`listTrainingSessions`, `recordTrainingSession`, `buildTrainingRecap`, dan rute tRPC
+`sdm.trainingSessions` / `sdm.trainingRecap` / `sdm.recordTraining`.
 
-- Verifikasi klaim regulasi ke naskah aslinya, jangan dari ingatan. Naskah SAK EP dan aturan
-  penyusutan DJP sudah dibaca; ringkasannya tersimpan di memori.
+Yang belum ada:
+1. Tab **Pelatihan** pada `client/src/pages/Kepegawaian.tsx` — formulir sesi (tanggal, topik,
+   metode, pemateri, materi, pilih peserta) dan daftar rekapitulasi.
+2. `client/src/lib/suratPelatihan.ts` — cetak **Surat Keterangan Pelaksanaan Pelatihan Internal**
+   mengikuti berkas contoh `~/Downloads/Pelatihan APUPPT Pegawai 2025-2026.docx`:
+   nomor `SKP-APUPPT/{bulan romawi}/{tahun}/{urut}`, kalimat "Yang bertanda tangan di bawah ini,
+   Direksi …", baris Topik/Metode/Pemateri, penutup yang menyebut e-Licensing Bank Indonesia,
+   lalu **LAMPIRAN: REKAPITULASI DAFTAR HADIR DAN EVALUASI** berisi No./Nama/Jabatan/Tanggal.
+   Ikuti pola `suratKeputusan.ts` — jendela cetak peramban, tanpa pustaka PDF.
+3. Ujinya, seperti `server/suratKeputusan.test.ts`.
+
+## Sesudah itu, urutan yang sudah disepakati
+
+1. **Pemantauan profil pegawai berkala** — temuan 12(b); perlu tanggal jatuh tempo dan penanda
+   terlambat, seperti aturan ≤6 bulan pada SINTA.
+2. **Penyaringan calon pegawai** — tabel kecil (nama, identitas, cek DTTOT memakai
+   `shared/sanctionsNameMatch.ts`, hasil, diterima/tidak, tautan ke pegawai bila diterima).
+   Bukan sistem rekrutmen; temuan menyebut rekrutmen selama ini dari lingkungan keluarga, sehingga
+   yang perlu dibuktikan adalah calon yang **tidak** diterima pun disaring.
+3. **Buku besar** — temuan 7.1, yang diminta BI secara tertulis dan prioritas utama pengguna.
+
+## Aturan kerja
+
+- Verifikasi klaim regulasi ke naskah aslinya. Setiap dokumen yang diberikan pengguna sesi ini
+  mengoreksi sebuah asumsi — urutan sandi, jenjang KKNI, kolom Direksi, ambang bulanan.
 - Jangan menebak skema; minta contoh berkas nyata.
-- Konfirmasi lingkup sebelum perubahan lintas modul, dan **jangan pernah push atau deploy tanpa
-  persetujuan pada giliran itu juga**.
-- Jangan menyentuh produksi. Migrasi dijalankan di basis data lokal lebih dahulu.
+- **Jangan push atau deploy tanpa persetujuan pada giliran itu juga.** Produksi belum tersentuh
+  sama sekali sepanjang sesi ini; seluruh migrasi hanya diterapkan ke basis data lokal.
+- Jangan menaruh nama pegawai, NIK, atau data nasabah pada commit, dokumen, maupun log.
