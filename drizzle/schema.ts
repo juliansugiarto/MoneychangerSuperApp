@@ -1018,6 +1018,43 @@ export const apuTrainingAttendance = mysqlTable("apu_training_attendance", {
   index("apu_training_attendance_employee_idx").on(table.employeeId),
 ]);
 
+export const candidateDecisions = ["DALAM_PROSES", "DITERIMA", "TIDAK_DITERIMA"] as const;
+
+/**
+ * Penyaringan calon pegawai (pre-employee screening).
+ *
+ * Pemeriksaan mencatat perekrutan selama ini berasal dari lingkungan keluarga tanpa penyaringan
+ * yang terdokumentasi. Yang perlu dibuktikan bukan hanya bahwa pegawai yang diterima telah
+ * disaring, melainkan bahwa setiap calon disaring — termasuk yang akhirnya tidak diterima.
+ * Karena itu calon dicatat pada tabelnya sendiri dan tetap tersimpan meskipun tidak jadi bekerja;
+ * kolom penyaringan pada tabel pegawai hanya menyimpan hasil akhir bagi yang diterima.
+ */
+export const employeeCandidates = mysqlTable("employee_candidates", {
+  id: int("id").autoincrement().primaryKey(),
+  fullName: varchar("fullName", { length: 200 }).notNull(),
+  identityNumber: varchar("identityNumber", { length: 40 }),
+  appliedPosition: varchar("appliedPosition", { length: 120 }).notNull(),
+  appliedAt: datetime("appliedAt").notNull(),
+  /** Hasil penilaian manusia atas penyaringan, bukan hasil pencocokan otomatis. */
+  screeningResult: mysqlEnum("screeningResult", screeningResults).default("DALAM_PROSES").notNull(),
+  screenedAt: datetime("screenedAt"),
+  screeningNotes: text("screeningNotes"),
+  /** Jejak pencocokan otomatis terhadap daftar DTTOT/DPPSPM yang sedang termuat. */
+  watchlistCheckedAt: datetime("watchlistCheckedAt"),
+  watchlistMatchCount: int("watchlistMatchCount").default(0).notNull(),
+  watchlistSummary: text("watchlistSummary"),
+  decision: mysqlEnum("decision", candidateDecisions).default("DALAM_PROSES").notNull(),
+  decidedAt: datetime("decidedAt"),
+  /** Terisi bila calon diterima dan sudah tercatat sebagai pegawai. */
+  employeeId: int("employeeId"),
+  notes: text("notes"),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("employee_candidates_decision_idx").on(table.decision, table.appliedAt),
+]);
+
 export const profileReviewOutcomes = ["TIDAK_ADA_PERUBAHAN", "ADA_PERUBAHAN", "PERLU_TINDAK_LANJUT"] as const;
 
 /**
@@ -1046,6 +1083,7 @@ export type EmployeeCertification = typeof employeeCertifications.$inferSelect;
 export type EmployeePicAssignment = typeof employeePicAssignments.$inferSelect;
 export type ApuTrainingSession = typeof apuTrainingSessions.$inferSelect;
 export type EmployeeProfileReview = typeof employeeProfileReviews.$inferSelect;
+export type EmployeeCandidate = typeof employeeCandidates.$inferSelect;
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;

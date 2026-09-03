@@ -295,6 +295,13 @@
       "when": 1788418958966,
       "tag": "0041_cold_nuke",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "5",
+      "when": 1788419273690,
+      "tag": "0042_typical_kang",
+      "breakpoints": true
     }
   ]
 }
