@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,7 +12,8 @@ import { trpc } from "@/lib/trpc";
 import { printLampiranRealisasi } from "@/lib/lampiranRealisasi";
 import { printLampiranSdm } from "@/lib/lampiranSdm";
 import { PIC_ROLE_TITLES, printSuratKeputusan, suggestDecreeNumber } from "@/lib/suratKeputusan";
-import { Award, Download, FileCheck2, Printer, ShieldCheck, UserPlus, Users } from "lucide-react";
+import { TRAINING_METHOD_LABELS, printSuratPelatihan, suggestTrainingLetterNumber } from "@/lib/suratPelatihan";
+import { Award, Download, FileCheck2, GraduationCap, Printer, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -46,6 +48,27 @@ const SCREENING_LABELS: Record<string, string> = {
 const formatDate = (value: string | Date | null | undefined) =>
   value ? new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
+/** Sebutan ringkas metode pelatihan untuk daftar riwayat. */
+const TRAINING_METHOD_SHORT: Record<string, string> = {
+  IN_HOUSE: "Tatap muka",
+  EKSTERNAL: "Eksternal",
+  DARING: "Daring",
+};
+
+const monthYear = (value: string) => new Date(value).toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+
+/**
+ * Periode pemenuhan tahunan: dua belas bulan penuh yang berakhir pada bulan berjalan, sehingga
+ * rekap yang tercetak selalu mencakup satu tahun pelatihan, bukan sisa tahun kalender.
+ */
+const defaultTrainingPeriod = (() => {
+  const today = new Date();
+  const from = new Date(today.getFullYear(), today.getMonth() - 11, 1);
+  const to = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const iso = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  return { from: iso(from), to: iso(to) };
+})();
+
 const currentQuarter = () => (Math.floor(new Date().getMonth() / 3) + 1) as 1 | 2 | 3 | 4;
 
 export default function Kepegawaian() {
@@ -59,12 +82,22 @@ export default function Kepegawaian() {
   const competencyCodes = trpc.sdm.competencyCodes.useQuery();
   const companyProfile = trpc.companyProfile.get.useQuery();
 
+  const emptyTraining = { heldAt: "", topic: "", method: "IN_HOUSE", facilitator: "", materials: "", notes: "", attendeeIds: [] as number[] };
+  const [trainingForm, setTrainingForm] = useState(emptyTraining);
+  const [trainingPeriod, setTrainingPeriod] = useState(defaultTrainingPeriod);
+  const [trainingLetterNumber, setTrainingLetterNumber] = useState("");
+
   const [year, setYear] = useState(new Date().getFullYear());
   const [quarter, setQuarter] = useState<1 | 2 | 3 | 4>(currentQuarter());
   const report = trpc.sdm.quarterlyReport.useQuery({ year, quarter }, { enabled: canManage });
   const annualPlan = trpc.sdm.annualPlan.useQuery({ year }, { enabled: canManage });
   const [track, setTrack] = useState<"PBK" | "KOMPETENSI">("PBK");
   const realisasi = trpc.sdm.realisasiReport.useQuery({ year, quarter, track }, { enabled: canManage });
+  const trainingSessions = trpc.sdm.trainingSessions.useQuery();
+  const trainingRecap = trpc.sdm.trainingRecap.useQuery(
+    { from: trainingPeriod.from, to: trainingPeriod.to },
+    { enabled: canManage && Boolean(trainingPeriod.from && trainingPeriod.to) },
+  );
 
   const refresh = () => {
     utils.sdm.employees.invalidate();
@@ -73,6 +106,8 @@ export default function Kepegawaian() {
     utils.sdm.quarterlyReport.invalidate();
     utils.sdm.annualPlan.invalidate();
     utils.sdm.realisasiReport.invalidate();
+    utils.sdm.trainingSessions.invalidate();
+    utils.sdm.trainingRecap.invalidate();
   };
 
   const createEmployee = trpc.sdm.createEmployee.useMutation({
@@ -89,6 +124,10 @@ export default function Kepegawaian() {
   });
   const setPlan = trpc.sdm.setPlan.useMutation({
     onSuccess: () => { toast.success("Rencana disimpan."); refresh(); },
+    onError: (error) => toast.error(error.message),
+  });
+  const recordTraining = trpc.sdm.recordTraining.useMutation({
+    onSuccess: () => { toast.success("Pelatihan tercatat."); refresh(); setTrainingForm(emptyTraining); },
     onError: (error) => toast.error(error.message),
   });
   const exportFile = trpc.sdm.exportTextFile.useMutation({
@@ -174,6 +213,32 @@ export default function Kepegawaian() {
     });
   };
 
+  const suggestedTrainingLetterNumber = suggestTrainingLetterNumber(new Date().toISOString().slice(0, 10), 1);
+
+  const printTrainingLetter = () => {
+    const recap = trainingRecap.data;
+    if (!recap?.sessions.length) return toast.error("Belum ada pelatihan pada periode ini.");
+    if (!signatory) return toast.error("Belum ada direksi aktif yang dapat menandatangani surat.");
+    if (!companyProfile.data?.legalEntityName) return toast.error("Nama badan hukum belum diisi pada Profil Perusahaan.");
+    printSuratPelatihan({
+      letterNumber: trainingLetterNumber.trim() || suggestedTrainingLetterNumber,
+      periodLabel: `${monthYear(recap.from)} - ${monthYear(recap.to)}`,
+      topics: recap.sessions.map((session) => session.topic),
+      methods: recap.sessions.map((session) => TRAINING_METHOD_LABELS[session.method] ?? session.method),
+      facilitators: recap.sessions.map((session) => session.facilitator),
+      materials: recap.sessions.flatMap((session) => (session.materials ?? "").split("\n").map((line) => line.trim()).filter(Boolean)),
+      signedCity: (companyProfile.data.address ?? "").split(",").slice(-2)[0]?.trim() || "—",
+      signedAt: new Date().toISOString().slice(0, 10),
+      signatory: { fullName: signatory.fullName, position: signatory.position },
+      company: {
+        legalEntityName: companyProfile.data.legalEntityName,
+        address: companyProfile.data.address,
+        phone: companyProfile.data.phone,
+      },
+      rows: recap.rows.map((row) => ({ fullName: row.fullName, position: row.position, lastTrainedAt: row.lastTrainedAt })),
+    });
+  };
+
   const activeStaff = useMemo(() => (employees.data ?? []).filter((row) => row.employmentStatus === "AKTIF"), [employees.data]);
   const withoutAgreement = activeStaff.filter((row) => !row.employmentAgreementNumber && row.jobLevel !== "KOMISARIS" && row.jobLevel !== "DIREKSI");
   const withoutScreening = activeStaff.filter((row) => !row.screeningResult);
@@ -197,6 +262,7 @@ export default function Kepegawaian() {
           <TabsTrigger value="pegawai" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><Users className="mr-1.5 size-4" />Pegawai</TabsTrigger>
           <TabsTrigger value="sertifikat" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><Award className="mr-1.5 size-4" />Sertifikat</TabsTrigger>
           <TabsTrigger value="pic" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><ShieldCheck className="mr-1.5 size-4" />Penanggung Jawab</TabsTrigger>
+          <TabsTrigger value="pelatihan" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><GraduationCap className="mr-1.5 size-4" />Pelatihan</TabsTrigger>
           <TabsTrigger value="laporan" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><Download className="mr-1.5 size-4" />Laporan Triwulan</TabsTrigger>
           <TabsTrigger value="realisasi" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><Award className="mr-1.5 size-4" />Realisasi</TabsTrigger>
           <TabsTrigger value="rencana" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><FileCheck2 className="mr-1.5 size-4" />Rencana Tahunan</TabsTrigger>
@@ -422,6 +488,151 @@ export default function Kepegawaian() {
                   </div>
                 );
               })}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ---------------------------- Pelatihan ---------------------------- */}
+        <TabsContent value="pelatihan" className="mt-5 space-y-4">
+          {canManage ? (
+            <Card className="border-[#dce6f0]">
+              <CardHeader>
+                <CardTitle className="font-display text-xl text-[#18395f]">Catat pelatihan APU PPT</CardTitle>
+                <CardDescription>
+                  Pelatihan berkala wajib dibuktikan dengan daftar hadir. Yang dicatat di sini menjadi isi Surat Keterangan
+                  Pelaksanaan Pelatihan Internal beserta lampirannya, sehingga surat dan buktinya tidak pernah berbeda.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form
+                  className="grid gap-4 lg:grid-cols-2"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (!trainingForm.heldAt) return toast.error("Tanggal pelatihan wajib diisi.");
+                    if (!trainingForm.attendeeIds.length) return toast.error("Pilih minimal satu pegawai yang hadir.");
+                    recordTraining.mutate({
+                      heldAt: new Date(trainingForm.heldAt),
+                      topic: trainingForm.topic,
+                      method: trainingForm.method as "IN_HOUSE" | "EKSTERNAL" | "DARING",
+                      facilitator: trainingForm.facilitator,
+                      materials: trainingForm.materials || undefined,
+                      notes: trainingForm.notes || undefined,
+                      attendeeIds: trainingForm.attendeeIds,
+                    });
+                  }}
+                >
+                  <Field label="Tanggal pelatihan" type="date" value={trainingForm.heldAt} onChange={(v) => setTrainingForm({ ...trainingForm, heldAt: v })} required />
+                  <Picker label="Metode" value={trainingForm.method} options={TRAINING_METHOD_LABELS} onChange={(v) => setTrainingForm({ ...trainingForm, method: v })} />
+                  <Field label="Pemateri / fasilitator" value={trainingForm.facilitator} onChange={(v) => setTrainingForm({ ...trainingForm, facilitator: v })} required hint="Nama dan kapasitasnya, mis. Direktur Utama pemegang sertifikat KUPVA BB." />
+                  <Field label="Topik pelatihan" value={trainingForm.topic} onChange={(v) => setTrainingForm({ ...trainingForm, topic: v })} required hint="Ditulis pada badan surat keterangan." />
+                  <div className="lg:col-span-2">
+                    <Label className="text-xs">Materi yang disesuaikan dengan jobdesk</Label>
+                    <Textarea className="mt-1" rows={3} value={trainingForm.materials} onChange={(event) => setTrainingForm({ ...trainingForm, materials: event.target.value })} />
+                    <p className="mt-1 text-xs text-[#718398]">Satu baris satu materi. Dicetak sebagai halaman terakhir surat keterangan.</p>
+                  </div>
+                  <div className="lg:col-span-2">
+                    <Label className="text-xs">Pegawai yang hadir *</Label>
+                    {activeStaff.length ? (
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                        {activeStaff.map((row) => {
+                          const checked = trainingForm.attendeeIds.includes(row.id);
+                          return (
+                            <label key={row.id} className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-[#e0e8f1] bg-white px-3 py-2 text-sm">
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={(value) =>
+                                  setTrainingForm({
+                                    ...trainingForm,
+                                    attendeeIds: value ? [...trainingForm.attendeeIds, row.id] : trainingForm.attendeeIds.filter((id) => id !== row.id),
+                                  })
+                                }
+                              />
+                              <span><span className="font-semibold text-[#213f63]">{row.fullName}</span> <span className="text-[#64768d]">— {row.position}</span></span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : <EmptyNote text="Belum ada pegawai aktif yang dapat dicatat kehadirannya." />}
+                  </div>
+                  <div className="lg:col-span-2">
+                    <Button type="submit" disabled={recordTraining.isPending} className="bg-[#183f70] text-white hover:bg-[#12345d]"><GraduationCap className="mr-2 size-4" />Simpan pelatihan</Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          <Card className="border-[#dce6f0]">
+            <CardHeader>
+              <CardTitle className="font-display text-xl text-[#18395f]">Rekapitulasi periode pelatihan</CardTitle>
+              <CardDescription>Pegawai yang belum pernah mengikuti pelatihan tetap ditampilkan, karena merekalah yang perlu terlihat.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field label="Periode mulai" type="date" value={trainingPeriod.from} onChange={(v) => setTrainingPeriod({ ...trainingPeriod, from: v })} />
+                <Field label="Periode sampai" type="date" value={trainingPeriod.to} onChange={(v) => setTrainingPeriod({ ...trainingPeriod, to: v })} />
+                <Field label="Nomor surat keterangan" value={trainingLetterNumber} onChange={setTrainingLetterNumber} hint={`Usulan: ${suggestedTrainingLetterNumber}`} />
+              </div>
+
+              {trainingRecap.isLoading ? <p className="py-8 text-sm text-[#475569]">Memuat rekapitulasi…</p> : null}
+              {!trainingRecap.isLoading && !trainingRecap.data?.rows.length ? <EmptyNote text="Belum ada pegawai aktif pada periode ini." /> : null}
+
+              {trainingRecap.data?.rows.length ? (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[520px] text-sm">
+                      <thead>
+                        <tr className="border-b border-[#e0e8f1] text-left text-xs uppercase tracking-wide text-[#718398]">
+                          <th className="py-2 pr-3">Nama pegawai</th>
+                          <th className="py-2 pr-3">Jabatan</th>
+                          <th className="py-2 pr-3">Pelatihan terakhir</th>
+                          <th className="py-2">Jumlah pelatihan</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {trainingRecap.data.rows.map((row) => (
+                          <tr key={row.employeeId} className="border-b border-[#eef3f9]">
+                            <td className="py-2 pr-3 font-semibold text-[#213f63]">{row.fullName}</td>
+                            <td className="py-2 pr-3 text-[#64768d]">{row.position}</td>
+                            <td className="py-2 pr-3">
+                              {row.lastTrainedAt ? formatDate(row.lastTrainedAt) : <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Belum mengikuti</Badge>}
+                            </td>
+                            <td className="py-2 tabular-nums text-[#64768d]">{row.sessionCount}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button variant="outline" onClick={printTrainingLetter} disabled={!trainingRecap.data.sessions.length}>
+                      <Printer className="mr-1.5 size-3.5" />Cetak surat keterangan
+                    </Button>
+                    <p className="text-xs text-[#718398]">
+                      {trainingRecap.data.sessions.length
+                        ? `${trainingRecap.data.sessions.length} pelatihan pada periode ini; ${trainingRecap.data.untrained} pegawai belum mengikuti.`
+                        : "Belum ada pelatihan pada periode ini, sehingga surat keterangan belum dapat dicetak."}
+                    </p>
+                  </div>
+                </>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          <Card className="border-[#dce6f0]">
+            <CardHeader><CardTitle className="font-display text-xl text-[#18395f]">Riwayat pelatihan</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {trainingSessions.isLoading ? <p className="py-8 text-sm text-[#475569]">Memuat riwayat…</p> : null}
+              {!trainingSessions.isLoading && !trainingSessions.data?.length ? <EmptyNote text="Belum ada pelatihan tercatat." /> : null}
+              {(trainingSessions.data ?? []).map((session) => (
+                <div key={session.id} className="rounded-xl border border-[#e0e8f1] bg-white p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold text-[#213f63]">{formatDate(session.heldAt)}</p>
+                    <Badge variant="outline" className="border-[#cdd9e5] text-[#4a5f7a]">{TRAINING_METHOD_SHORT[session.method] ?? session.method}</Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-[#475569]">{session.topic}</p>
+                  <p className="mt-1 text-xs text-[#718398]">Pemateri: {session.facilitator} · {session.attendeeIds.length} peserta</p>
+                </div>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
