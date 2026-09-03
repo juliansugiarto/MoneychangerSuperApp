@@ -864,8 +864,10 @@ export const competencyTracks = ["PBK", "SERTIFIKASI_KOMPETENSI", "TIDAK_WAJIB"]
 export const employees = mysqlTable("employees", {
   id: int("id").autoincrement().primaryKey(),
   fullName: varchar("fullName", { length: 200 }).notNull(),
-  /** Nomor identitas untuk penyaringan terhadap daftar DTTOT/DPPSPM. */
+  /** Nomor identitas untuk penyaringan terhadap daftar DTTOT/DPPSPM, dan dicetak pada SK penunjukan. */
   identityNumber: varchar("identityNumber", { length: 40 }),
+  /** Alamat pegawai; tercetak pada surat keputusan penunjukan. */
+  address: text("address"),
   position: varchar("position", { length: 120 }).notNull(),
   jobLevel: mysqlEnum("jobLevel", jobLevels).notNull(),
   competencyTrack: mysqlEnum("competencyTrack", competencyTracks).default("TIDAK_WAJIB").notNull(),

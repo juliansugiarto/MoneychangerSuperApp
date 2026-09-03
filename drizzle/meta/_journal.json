@@ -267,6 +267,13 @@
       "when": 1788416042158,
       "tag": "0037_lonely_ultimates",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "5",
+      "when": 1788416340308,
+      "tag": "0038_small_imperial_guard",
+      "breakpoints": true
     }
   ]
 }

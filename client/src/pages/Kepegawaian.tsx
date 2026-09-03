@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Award, Download, FileCheck2, ShieldCheck, UserPlus, Users } from "lucide-react";
+import { PIC_ROLE_TITLES, printSuratKeputusan, suggestDecreeNumber } from "@/lib/suratKeputusan";
+import { Award, Download, FileCheck2, Printer, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -95,12 +96,48 @@ export default function Kepegawaian() {
     onError: (error) => toast.error(error.message),
   });
 
-  const emptyEmployee = { fullName: "", position: "", jobLevel: "PELAKSANA", competencyTrack: "TIDAK_WAJIB", competencyLevel: "", joinedAt: "", education: "", employmentAgreementNumber: "", employmentAgreementAt: "", screeningResult: "", screeningNotes: "" };
+  const emptyEmployee = { fullName: "", position: "", jobLevel: "PELAKSANA", competencyTrack: "TIDAK_WAJIB", competencyLevel: "", joinedAt: "", identityNumber: "", address: "", education: "", employmentAgreementNumber: "", employmentAgreementAt: "", screeningResult: "", screeningNotes: "" };
   const emptyCert = { employeeId: "", competencyCode: "", issuedAt: "", certificateNumber: "", expiresAt: "" };
   const emptyPic = { employeeId: "", picRole: "APU_PPT", assignedAt: "", decreeNumber: "", decreeAt: "" };
+  const nextDecreeNumber = (picRole: string) => {
+    const year = new Date().getFullYear();
+    const used = (picAssignments.data ?? []).filter((row) => row.picRole === picRole).length;
+    return suggestDecreeNumber(picRole, companyProfile.data?.legalEntityName ?? "", used + 1, year);
+  };
   const [employeeForm, setEmployeeForm] = useState(emptyEmployee);
   const [certForm, setCertForm] = useState(emptyCert);
   const [picForm, setPicForm] = useState(emptyPic);
+
+  const signatory = useMemo(
+    () => (employees.data ?? []).find((row) => row.jobLevel === "DIREKSI" && row.employmentStatus === "AKTIF"),
+    [employees.data],
+  );
+
+  const printLetter = (assignment: { employeeId: number; picRole: string; decreeNumber: string | null; decreeAt: string | Date | null; assignedAt: string | Date }) => {
+    const employee = employees.data?.find((row) => row.id === assignment.employeeId);
+    if (!employee) return toast.error("Data pegawai tidak ditemukan.");
+    if (!signatory) return toast.error("Belum ada direksi aktif yang dapat menandatangani surat.");
+    if (!companyProfile.data?.legalEntityName) return toast.error("Nama badan hukum belum diisi pada Profil Perusahaan.");
+    if (!employee.identityNumber || !employee.address) {
+      // Surat yang tercetak dengan tanda hubung di kolom identitas tidak layak ditandatangani.
+      return toast.error("Lengkapi No. KTP dan alamat pegawai sebelum mencetak surat keputusan.");
+    }
+    const asDate = (value: string | Date | null) => (value ? new Date(value).toISOString().slice(0, 10) : "");
+    printSuratKeputusan({
+      decreeNumber: assignment.decreeNumber ?? nextDecreeNumber(assignment.picRole),
+      roleTitle: PIC_ROLE_TITLES[assignment.picRole] ?? "Penanggung Jawab",
+      effectiveAt: asDate(assignment.assignedAt),
+      signedAt: asDate(assignment.decreeAt) || asDate(assignment.assignedAt),
+      signedCity: (companyProfile.data.address ?? "").split(",").slice(-2)[0]?.trim() || "—",
+      employee: { fullName: employee.fullName, identityNumber: employee.identityNumber, address: employee.address },
+      signatory: { fullName: signatory.fullName, position: signatory.position },
+      company: {
+        legalEntityName: companyProfile.data.legalEntityName,
+        address: companyProfile.data.address,
+        phone: companyProfile.data.phone,
+      },
+    });
+  };
 
   const activeStaff = useMemo(() => (employees.data ?? []).filter((row) => row.employmentStatus === "AKTIF"), [employees.data]);
   const withoutAgreement = activeStaff.filter((row) => !row.employmentAgreementNumber && row.jobLevel !== "KOMISARIS" && row.jobLevel !== "DIREKSI");
@@ -149,6 +186,8 @@ export default function Kepegawaian() {
                       competencyTrack: employeeForm.competencyTrack as never,
                       competencyLevel: (employeeForm.competencyLevel || undefined) as never,
                       joinedAt: new Date(employeeForm.joinedAt),
+                      identityNumber: employeeForm.identityNumber || undefined,
+                      address: employeeForm.address || undefined,
                       education: employeeForm.education || undefined,
                       employmentAgreementNumber: employeeForm.employmentAgreementNumber || undefined,
                       employmentAgreementAt: employeeForm.employmentAgreementAt ? new Date(employeeForm.employmentAgreementAt) : undefined,
@@ -164,6 +203,8 @@ export default function Kepegawaian() {
                   <Picker label="Jenjang pelaporan kompetensi" value={employeeForm.competencyLevel} options={JOB_LEVEL_LABELS} onChange={(v) => setEmployeeForm({ ...employeeForm, competencyLevel: v })} placeholder="Sama dengan jenjang" hint="Isi bila sertifikat terbit pada jenjang berbeda — mis. direktur bersertifikat Pejabat Eksekutif." />
                   <Field label="Tanggal masuk" type="date" value={employeeForm.joinedAt} onChange={(v) => setEmployeeForm({ ...employeeForm, joinedAt: v })} required />
                   <Field label="Pendidikan terakhir" value={employeeForm.education} onChange={(v) => setEmployeeForm({ ...employeeForm, education: v })} />
+                  <Field label="No. KTP" value={employeeForm.identityNumber} onChange={(v) => setEmployeeForm({ ...employeeForm, identityNumber: v })} hint="Tercetak pada surat keputusan penunjukan." />
+                  <Field label="Alamat" value={employeeForm.address} onChange={(v) => setEmployeeForm({ ...employeeForm, address: v })} />
                   <Field label="Nomor Perjanjian Kerja" value={employeeForm.employmentAgreementNumber} onChange={(v) => setEmployeeForm({ ...employeeForm, employmentAgreementNumber: v })} />
                   <Field label="Tanggal Perjanjian Kerja" type="date" value={employeeForm.employmentAgreementAt} onChange={(v) => setEmployeeForm({ ...employeeForm, employmentAgreementAt: v })} />
                   <Picker label="Hasil penyaringan calon pegawai" value={employeeForm.screeningResult} options={{ "": "Belum dilakukan", ...SCREENING_LABELS }} onChange={(v) => setEmployeeForm({ ...employeeForm, screeningResult: v })} />
@@ -303,9 +344,9 @@ export default function Kepegawaian() {
                   }}
                 >
                   <Picker label="Pegawai" value={picForm.employeeId} options={Object.fromEntries(activeStaff.map((row) => [String(row.id), `${row.fullName} — ${row.position}`]))} onChange={(v) => setPicForm({ ...picForm, employeeId: v })} placeholder="Pilih pegawai" />
-                  <Picker label="Fungsi" value={picForm.picRole} options={PIC_LABELS} onChange={(v) => setPicForm({ ...picForm, picRole: v })} />
+                  <Picker label="Fungsi" value={picForm.picRole} options={PIC_LABELS} onChange={(v) => setPicForm({ ...picForm, picRole: v, decreeNumber: picForm.decreeNumber || nextDecreeNumber(v) })} />
                   <Field label="Tanggal penunjukan" type="date" value={picForm.assignedAt} onChange={(v) => setPicForm({ ...picForm, assignedAt: v })} required />
-                  <Field label="Nomor SK penunjukan" value={picForm.decreeNumber} onChange={(v) => setPicForm({ ...picForm, decreeNumber: v })} />
+                  <Field label="Nomor SK penunjukan" value={picForm.decreeNumber} onChange={(v) => setPicForm({ ...picForm, decreeNumber: v })} hint={`Usulan: ${nextDecreeNumber(picForm.picRole)}`} />
                   <Field label="Tanggal SK" type="date" value={picForm.decreeAt} onChange={(v) => setPicForm({ ...picForm, decreeAt: v })} />
                   <div className="lg:col-span-2">
                     <Button type="submit" disabled={assignPic.isPending} className="bg-[#183f70] text-white hover:bg-[#12345d]"><ShieldCheck className="mr-2 size-4" />Simpan penunjukan</Button>
@@ -333,9 +374,12 @@ export default function Kepegawaian() {
                       </p>
                     </div>
                     {current.length ? (
-                      <div className="text-right text-xs text-[#718398]">
-                        {current[0].decreeNumber ? <p>SK {current[0].decreeNumber}</p> : <p className="text-amber-700">SK penunjukan belum dicatat</p>}
-                        <p>{formatDate(current[0].assignedAt)}</p>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right text-xs text-[#718398]">
+                          {current[0].decreeNumber ? <p>SK {current[0].decreeNumber}</p> : <p className="text-amber-700">SK penunjukan belum dicatat</p>}
+                          <p>{formatDate(current[0].assignedAt)}</p>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => printLetter(current[0])}><Printer className="mr-1.5 size-3.5" />Cetak SK</Button>
                       </div>
                     ) : <Badge className="w-fit bg-amber-100 text-amber-800 hover:bg-amber-100">Perlu ditunjuk</Badge>}
                   </div>

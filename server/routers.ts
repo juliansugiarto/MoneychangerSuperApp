@@ -372,6 +372,7 @@ export const appRouter = router({
       competencyTrack: z.enum(competencyTracks),
       joinedAt: z.coerce.date(),
       identityNumber: z.string().trim().max(40).optional(),
+      address: z.string().trim().max(500).optional(),
       education: z.string().trim().max(120).optional(),
       employmentAgreementNumber: z.string().trim().max(80).optional(),
       employmentAgreementAt: z.coerce.date().optional(),

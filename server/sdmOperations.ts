@@ -62,7 +62,7 @@ export async function listPicAssignments() {
 export async function createEmployee(
   input: {
     fullName: string; position: string; jobLevel: JobLevel; competencyTrack: CompetencyTrack;
-    joinedAt: Date; identityNumber?: string; education?: string; competencyLevel?: JobLevel;
+    joinedAt: Date; identityNumber?: string; address?: string; education?: string; competencyLevel?: JobLevel;
     employmentAgreementNumber?: string; employmentAgreementAt?: Date;
     screeningResult?: ScreeningResult; screenedAt?: Date; screeningNotes?: string; notes?: string;
   },
@@ -86,6 +86,7 @@ export async function createEmployee(
     competencyLevel: input.competencyLevel ?? null,
     joinedAt: input.joinedAt,
     identityNumber: input.identityNumber?.trim() || null,
+    address: input.address?.trim() || null,
     education: input.education?.trim() || null,
     employmentAgreementNumber: input.employmentAgreementNumber?.trim() || null,
     employmentAgreementAt: input.employmentAgreementAt ?? null,
