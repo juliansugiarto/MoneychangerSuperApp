@@ -1,6 +1,6 @@
 # Handoff — baca ini dulu
 
-Diperbarui 3 September 2026. Menggantikan isi sebelumnya.
+Diperbarui 3 September 2026 (sesi kedua hari itu). Menggantikan isi sebelumnya.
 
 ## Baca dulu, jangan diturunkan ulang dari kode
 
@@ -44,54 +44,56 @@ lewat `python3 -m http.server` (peramban menolak `file://`), lalu ambil tangkapa
 
 ## Keadaan sekarang
 
-**20 commit belum di-push. Produksi tidak pernah disentuh sepanjang dua sesi ini** — seluruh
-migrasi hanya diterapkan ke dua basis data lokal.
+**23 commit belum di-push. Produksi tidak pernah disentuh** — seluruh migrasi hanya diterapkan ke
+dua basis data lokal.
 
 Selesai sesi ini:
 
-- **Pelatihan APU PPT** (`aae8c0e`) — tab Pelatihan pada Kepegawaian, `client/src/lib/suratPelatihan.ts`
-  yang mencetak Surat Keterangan Pelaksanaan Pelatihan Internal beserta lampiran rekapitulasi
-  daftar hadir dan halaman materi. Diuji ujung ke ujung di peramban; cetakan diperiksa dan sesuai
-  contoh perusahaan.
-- **Peninjauan berkala profil pegawai** (`4db9b50`, temuan 12b) — tabel `employee_profile_reviews`,
-  `shared/employeeProfileReview.ts` (tenggang 6 bulan, status TERKINI/SEGERA/TERLAMBAT), kartu pada
-  tab Pegawai, ringkasan "Profil terlambat ditinjau". Migrasi 0041. Diuji ujung ke ujung.
+- **Penyaringan calon pegawai** (`dc5529e` skema, `372f6cf` sisanya) — `employee_candidates`
+  (migrasi `0042`), `server/sdmOperations.ts`, rute `sdm.*`, tab "Calon Pegawai" pada Kepegawaian,
+  `server/employeeCandidate.test.ts`. Tiga aturan yang menjaga inti temuannya, ketiganya dibuktikan
+  di peramban: calon tidak dapat diterima selama penyaringannya belum LULUS, hasil akhir tanpa
+  keterangan ditolak, dan calon yang tidak diterima tetap tampil beserta alasannya. Pencocokan
+  DTTOT/DPPSPM berjalan otomatis dan diulang tiap penyaringan disimpan; tampilan membedakan "belum
+  dicocokkan" dari "nihil".
+- **Fondasi buku besar** (`80939f3`, temuan 7.1) — `chart_of_accounts`, `accounting_periods`,
+  `journal_entries`, `journal_entry_lines` (migrasi `0043`, murni penambahan);
+  `shared/chartOfAccounts.ts` (42 akun, tiap akun terpetakan ke baris B0002/B0003/B0004),
+  `shared/ledger.ts` (aritmetika sen memakai `bigint`), `server/ledgerOperations.ts`, rute
+  `ledger.*`. **Antarmukanya belum ada** — seluruh verifikasi lewat skrip uji asap.
 
-Data uji yang tertinggal di tenant lokal `moneychanger`: satu sesi pelatihan 15 Okt 2025 dan satu
-peninjauan profil 3 Sep 2026 atas pegawai "UJI PELAKSANA". Boleh dibiarkan atau dihapus.
+Data uji yang tertinggal di tenant lokal `moneychanger`: satu sesi pelatihan 15 Okt 2025, satu
+peninjauan profil, dan satu calon "UJI CALON PELAMAR" beserta penyaringan dan keputusannya. Jurnal
+uji sudah dihapus; 42 baris `chart_of_accounts` yang tersemai adalah data acuan, bukan data uji.
 
-## SEDANG DIKERJAKAN — selesaikan ini dulu
+## Dua hal yang tidak boleh diturunkan ulang dari kode
 
-**Penyaringan calon pegawai** (temuan: perekrutan dari lingkungan keluarga tanpa penyaringan
-terdokumentasi). Yang sudah ada, **belum di-commit**:
+1. **Uang pada buku besar adalah `bigint` sen, bukan `number`.** Karena itu `tsconfig.json` kini
+   memakai `"target": "ES2022"`. tsc di repo ini hanya memeriksa tipe (`noEmit`), jadi keluaran
+   build tidak berubah sama sekali.
+2. **Tanggal dikirim ke MySQL sebagai tengah malam waktu lokal hari yang dimaksud** (`dbDate` di
+   `server/ledgerOperations.ts`). Mengirim `Date` tengah malam UTC membuat pembandingnya menjadi
+   `entryDate >= '2026-09-01 07:00:00'` di GMT+7, dan jurnal tanggal 1 hilang dari laporan bulannya
+   sendiri. Aritmetika bulan selalu atas teks `YYYY-MM-DD` (`isoDay`/`monthStartIso`/`monthEndIso`
+   di `shared/ledger.ts`), tidak pernah atas getter UTC sebuah tanggal tengah malam lokal.
 
-- `drizzle/schema.ts` — tabel `employeeCandidates` + `candidateDecisions`, dan tipe `EmployeeCandidate`.
-- `drizzle/0042_typical_kang.sql` + snapshot, **sudah diterapkan ke dua tenant lokal** lewat `migrate-all`.
-
-Yang belum ada:
-
-1. **Sisi server** di `server/sdmOperations.ts` — `listCandidates`, `recordCandidate`,
-   `screenCandidate`, `decideCandidate`. Saat calon dicatat, jalankan pencocokan otomatis memakai
-   `searchSanctionsWatchlist` (`server/operations.ts`, sudah ada) atas namanya, lalu simpan
-   `watchlistCheckedAt`, `watchlistMatchCount`, dan ringkasan namanya ke `watchlistSummary`.
-   Hasil penyaringan (LULUS/TIDAK_LULUS) tetap penilaian manusia, bukan hasil pencocokan.
-   Tulis jejak audit seperti `EMPLOYEE_PROFILE_REVIEWED`.
-2. **Rute tRPC** pada `server/routers.ts` di dalam `sdm` — baca dengan `staffProcedure`, tulis
-   dengan `controllerProcedure`, mengikuti pola `recordProfileReview` tepat di atasnya.
-3. **Tab "Calon Pegawai"** pada `client/src/pages/Kepegawaian.tsx` — formulir catat calon, tabel
-   calon beserta status pencocokan dan keputusannya, dan formulir perbarui hasil. Ikuti pola kartu
-   "Peninjauan berkala profil pegawai" pada tab Pegawai (baris ~355).
-4. **Uji** seperti `server/employeeProfileReview.test.ts`.
-
-Yang penting dibuktikan: **calon yang tidak diterima pun tetap tersimpan**. Itulah inti temuannya;
-kolom penyaringan pada tabel `employees` hanya menyimpan hasil bagi yang diterima.
+   **`listExpenses` di `server/operations.ts` memakai pola lama yang sama** (`gte(expenseDate, from)`
+   dengan `Date` mentah) dan kemungkinan besar menyingkirkan pengeluaran bertanggal batas awal
+   periode. Belum diperiksa dan belum diperbaiki — layak dicek lebih dulu di sesi berikutnya.
 
 ## Sesudah itu
 
-1. **Buku besar** — temuan 7.1, diminta BI secara tertulis dan prioritas utama pengguna.
-2. Temuan 3 (arsip dokumen), 6 (stock opname termasuk Rupiah), 10 (pemantauan berbasis profil).
-3. IRA — perlu tabel penilaian SRA.
-4. Perbaiki penamaan `dttotPpsdmMatch` / "PPPSM" menjadi **DPPSPM/PPPSPM**.
+Fase buku besar mengikuti rencana produk (artefak pada tautan di atas). Fase 03 selesai; sisanya:
+
+1. **Antarmuka buku besar** — jurnal manual, daftar jurnal, neraca saldo, buku besar per akun,
+   dan penutupan periode. Rutenya (`ledger.*`) sudah ada dan sudah diuji, tinggal layarnya.
+2. **Fase 01 dimensi cabang**, lalu **fase 04 penjurnalan otomatis** dari transaksi valuta,
+   pengeluaran, dan mutasi kas/bank. Urutan ini penting: penjurnalan otomatis membaca tepat
+   tabel-tabel yang diubah oleh cabang, dan dibalik urutannya fase itu ditulis dua kali.
+   Kunci unik `(sourceType, sourceReference)` sudah disiapkan supaya proses itu idempoten.
+3. Temuan 3 (arsip dokumen), 6 (stock opname termasuk Rupiah), 10 (pemantauan berbasis profil).
+4. IRA — perlu tabel penilaian SRA.
+5. Perbaiki penamaan `dttotPpsdmMatch` / "PPPSM" menjadi **DPPSPM/PPPSPM**.
 
 ## Aturan kerja
 
