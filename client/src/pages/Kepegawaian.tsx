@@ -14,7 +14,7 @@ import { printLampiranRealisasi } from "@/lib/lampiranRealisasi";
 import { printLampiranSdm } from "@/lib/lampiranSdm";
 import { PIC_ROLE_TITLES, printSuratKeputusan, suggestDecreeNumber } from "@/lib/suratKeputusan";
 import { TRAINING_METHOD_LABELS, printSuratPelatihan, suggestTrainingLetterNumber } from "@/lib/suratPelatihan";
-import { Award, CalendarCheck, Download, FileCheck2, GraduationCap, Printer, ShieldCheck, UserPlus, Users } from "lucide-react";
+import { Award, CalendarCheck, Download, FileCheck2, GraduationCap, Printer, ShieldCheck, UserPlus, UserSearch, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -44,6 +44,12 @@ const SCREENING_LABELS: Record<string, string> = {
   DALAM_PROSES: "Dalam proses",
   LULUS: "Lulus",
   TIDAK_LULUS: "Tidak lulus",
+};
+
+const CANDIDATE_DECISION_LABELS: Record<string, string> = {
+  DALAM_PROSES: "Belum diputuskan",
+  DITERIMA: "Diterima",
+  TIDAK_DITERIMA: "Tidak diterima",
 };
 
 const formatDate = (value: string | Date | null | undefined) =>
@@ -85,6 +91,13 @@ export default function Kepegawaian() {
 
   const emptyReview = { employeeId: "", reviewedAt: new Date().toISOString().slice(0, 10), outcome: "TIDAK_ADA_PERUBAHAN", notes: "" };
   const [reviewForm, setReviewForm] = useState(emptyReview);
+  const today = new Date().toISOString().slice(0, 10);
+  const emptyCandidate = { fullName: "", identityNumber: "", appliedPosition: "", appliedAt: today, notes: "" };
+  const [candidateForm, setCandidateForm] = useState(emptyCandidate);
+  const emptyScreening = { candidateId: "", screeningResult: "LULUS", screenedAt: today, screeningNotes: "" };
+  const [screeningForm, setScreeningForm] = useState(emptyScreening);
+  const emptyDecision = { candidateId: "", decision: "DITERIMA", decidedAt: today, employeeId: "" };
+  const [decisionForm, setDecisionForm] = useState(emptyDecision);
   const emptyTraining = { heldAt: "", topic: "", method: "IN_HOUSE", facilitator: "", materials: "", notes: "", attendeeIds: [] as number[] };
   const [trainingForm, setTrainingForm] = useState(emptyTraining);
   const [trainingPeriod, setTrainingPeriod] = useState(defaultTrainingPeriod);
@@ -97,6 +110,7 @@ export default function Kepegawaian() {
   const [track, setTrack] = useState<"PBK" | "KOMPETENSI">("PBK");
   const realisasi = trpc.sdm.realisasiReport.useQuery({ year, quarter, track }, { enabled: canManage });
   const profileReviewSchedule = trpc.sdm.profileReviewSchedule.useQuery();
+  const candidates = trpc.sdm.candidates.useQuery();
   const trainingSessions = trpc.sdm.trainingSessions.useQuery();
   const trainingRecap = trpc.sdm.trainingRecap.useQuery(
     { from: trainingPeriod.from, to: trainingPeriod.to },
@@ -111,6 +125,7 @@ export default function Kepegawaian() {
     utils.sdm.annualPlan.invalidate();
     utils.sdm.realisasiReport.invalidate();
     utils.sdm.profileReviewSchedule.invalidate();
+    utils.sdm.candidates.invalidate();
     utils.sdm.trainingSessions.invalidate();
     utils.sdm.trainingRecap.invalidate();
   };
@@ -133,6 +148,18 @@ export default function Kepegawaian() {
   });
   const recordProfileReview = trpc.sdm.recordProfileReview.useMutation({
     onSuccess: () => { toast.success("Peninjauan tercatat."); refresh(); setReviewForm(emptyReview); },
+    onError: (error) => toast.error(error.message),
+  });
+  const recordCandidate = trpc.sdm.recordCandidate.useMutation({
+    onSuccess: () => { toast.success("Calon pegawai tercatat dan dicocokkan dengan daftar sanksi."); refresh(); setCandidateForm(emptyCandidate); },
+    onError: (error) => toast.error(error.message),
+  });
+  const screenCandidate = trpc.sdm.screenCandidate.useMutation({
+    onSuccess: () => { toast.success("Hasil penyaringan tersimpan."); refresh(); setScreeningForm(emptyScreening); },
+    onError: (error) => toast.error(error.message),
+  });
+  const decideCandidate = trpc.sdm.decideCandidate.useMutation({
+    onSuccess: () => { toast.success("Keputusan tersimpan."); refresh(); setDecisionForm(emptyDecision); },
     onError: (error) => toast.error(error.message),
   });
   const recordTraining = trpc.sdm.recordTraining.useMutation({
@@ -162,6 +189,11 @@ export default function Kepegawaian() {
   const [employeeForm, setEmployeeForm] = useState(emptyEmployee);
   const [certForm, setCertForm] = useState(emptyCert);
   const [picForm, setPicForm] = useState(emptyPic);
+
+  const candidateOptions = useMemo(
+    () => Object.fromEntries((candidates.data?.rows ?? []).map((row) => [String(row.id), `${row.fullName} — ${row.appliedPosition}`])),
+    [candidates.data],
+  );
 
   const signatory = useMemo(
     () => (employees.data ?? []).find((row) => row.jobLevel === "DIREKSI" && row.employmentStatus === "AKTIF"),
@@ -270,6 +302,7 @@ export default function Kepegawaian() {
       <Tabs defaultValue="pegawai">
         <TabsList className="h-auto w-full flex-wrap gap-1.5 rounded-2xl border-2 border-[#183f70]/15 bg-[#eef3f9] p-1.5">
           <TabsTrigger value="pegawai" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><Users className="mr-1.5 size-4" />Pegawai</TabsTrigger>
+          <TabsTrigger value="calon" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><UserSearch className="mr-1.5 size-4" />Calon Pegawai</TabsTrigger>
           <TabsTrigger value="sertifikat" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><Award className="mr-1.5 size-4" />Sertifikat</TabsTrigger>
           <TabsTrigger value="pic" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><ShieldCheck className="mr-1.5 size-4" />Penanggung Jawab</TabsTrigger>
           <TabsTrigger value="pelatihan" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white"><GraduationCap className="mr-1.5 size-4" />Pelatihan</TabsTrigger>
@@ -425,6 +458,162 @@ export default function Kepegawaian() {
               ) : null}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ---------------------------- Calon Pegawai ---------------------------- */}
+        <TabsContent value="calon" className="mt-5 space-y-4">
+          <Card className="border-[#dce6f0]">
+            <CardHeader>
+              <CardTitle className="font-display text-xl text-[#18395f]">Penyaringan calon pegawai</CardTitle>
+              <CardDescription>
+                Setiap calon dicatat di sini sebelum ada keputusan, dan tetap tersimpan meskipun akhirnya tidak diterima —
+                itulah bukti bahwa penyaringan benar-benar dilakukan, bukan disusun setelah orangnya bekerja.
+                Nama calon otomatis dicocokkan dengan daftar DTTOT/DPPSPM yang termuat; hasil lulus atau tidaknya tetap penilaian manusia.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {canManage ? (
+                <form
+                  className="grid gap-4 rounded-xl border border-[#e6edf5] bg-[#fafcff] p-4 lg:grid-cols-2"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (!candidateForm.appliedAt) return toast.error("Tanggal lamaran wajib diisi.");
+                    recordCandidate.mutate({
+                      fullName: candidateForm.fullName,
+                      identityNumber: candidateForm.identityNumber || undefined,
+                      appliedPosition: candidateForm.appliedPosition,
+                      appliedAt: new Date(candidateForm.appliedAt),
+                      notes: candidateForm.notes || undefined,
+                    });
+                  }}
+                >
+                  <Field label="Nama lengkap calon" value={candidateForm.fullName} onChange={(v) => setCandidateForm({ ...candidateForm, fullName: v })} required />
+                  <Field label="Jabatan yang dilamar" value={candidateForm.appliedPosition} onChange={(v) => setCandidateForm({ ...candidateForm, appliedPosition: v })} required />
+                  <Field label="Tanggal lamaran" type="date" value={candidateForm.appliedAt} onChange={(v) => setCandidateForm({ ...candidateForm, appliedAt: v })} required />
+                  <Field label="No. KTP" value={candidateForm.identityNumber} onChange={(v) => setCandidateForm({ ...candidateForm, identityNumber: v })} hint="Membantu membedakan calon bernama mirip saat pencocokan daftar sanksi." />
+                  <div className="lg:col-span-2">
+                    <Label className="text-xs">Catatan</Label>
+                    <Textarea autoComplete="off" className="mt-1" rows={2} placeholder="Sumber lamaran, hubungan dengan pegawai/pemilik bila ada, dan berkas yang diterima." value={candidateForm.notes} onChange={(event) => setCandidateForm({ ...candidateForm, notes: event.target.value })} />
+                  </div>
+                  <div className="lg:col-span-2">
+                    <Button type="submit" disabled={recordCandidate.isPending} className="bg-[#183f70] text-white hover:bg-[#12345d]"><UserPlus className="mr-2 size-4" />Catat calon</Button>
+                  </div>
+                </form>
+              ) : null}
+
+              {candidates.isLoading ? <p className="py-8 text-sm text-[#475569]">Memuat calon pegawai…</p> : null}
+              {!candidates.isLoading && !candidates.data?.rows.length ? <EmptyNote text="Belum ada calon pegawai tercatat. Catat setiap pelamar sejak berkasnya diterima, termasuk yang akhirnya tidak diterima." /> : null}
+
+              {candidates.data?.rows.length ? (
+                <>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <Badge className={candidates.data.awaitingScreening ? "bg-amber-100 text-amber-800 hover:bg-amber-100" : "bg-[#eef6ed] text-[#4d8548] hover:bg-[#eef6ed]"}>Belum disaring: {candidates.data.awaitingScreening}</Badge>
+                    <Badge className={candidates.data.watchlistHits ? "bg-red-100 text-red-800 hover:bg-red-100" : "bg-[#eef6ed] text-[#4d8548] hover:bg-[#eef6ed]"}>Cocok daftar sanksi: {candidates.data.watchlistHits}</Badge>
+                    <Badge variant="outline">Tidak diterima: {candidates.data.rejected}</Badge>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[900px] text-left text-sm">
+                      <thead className="border-b border-[#dce6f0] bg-[#f5f8fc] text-xs uppercase tracking-wide text-[#475569]">
+                        <tr><th className="px-3 py-3">Nama</th><th className="px-3 py-3">Jabatan dilamar</th><th className="px-3 py-3">Tanggal lamaran</th><th className="px-3 py-3">Pencocokan daftar</th><th className="px-3 py-3">Penyaringan</th><th className="px-3 py-3">Keputusan</th></tr>
+                      </thead>
+                      <tbody>
+                        {candidates.data.rows.map((row) => (
+                          <tr key={row.id} className="border-b border-[#eef2f7] last:border-0">
+                            <td className="px-3 py-3 font-semibold text-[#213f63]">{row.fullName}</td>
+                            <td className="px-3 py-3 text-[#475569]">{row.appliedPosition}</td>
+                            <td className="px-3 py-3 text-[#475569]">{formatDate(row.appliedAt)}</td>
+                            <td className="px-3 py-3">
+                              {!row.watchlistCheckedAt ? <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Belum dicocokkan</Badge>
+                                : row.watchlistMatchCount ? <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{row.watchlistMatchCount} kemiripan</Badge>
+                                : <Badge className="bg-[#eef6ed] text-[#4d8548] hover:bg-[#eef6ed]">Nihil</Badge>}
+                              {row.watchlistSummary ? <p className="mt-1 whitespace-pre-line text-xs text-[#8a4b4b]">{row.watchlistSummary}</p> : null}
+                            </td>
+                            <td className="px-3 py-3">
+                              <Badge variant="outline">{SCREENING_LABELS[row.screeningResult] ?? row.screeningResult}</Badge>
+                              {row.screenedAt ? <p className="mt-1 text-xs text-[#8194aa]">{formatDate(row.screenedAt)}</p> : null}
+                              {row.screeningNotes ? <p className="mt-1 max-w-xs whitespace-pre-line text-xs text-[#718398]">{row.screeningNotes}</p> : null}
+                            </td>
+                            <td className="px-3 py-3">
+                              <Badge className={row.decision === "DITERIMA" ? "bg-[#eef6ed] text-[#4d8548] hover:bg-[#eef6ed]" : row.decision === "TIDAK_DITERIMA" ? "bg-[#eef3fb] text-[#405dbc] hover:bg-[#eef3fb]" : "bg-amber-100 text-amber-800 hover:bg-amber-100"}>
+                                {CANDIDATE_DECISION_LABELS[row.decision] ?? row.decision}
+                              </Badge>
+                              {row.decidedAt ? <p className="mt-1 text-xs text-[#8194aa]">{formatDate(row.decidedAt)}</p> : null}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          {canManage && candidates.data?.rows.length ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card className="border-[#dce6f0]">
+                <CardHeader>
+                  <CardTitle className="font-display text-lg text-[#18395f]">Hasil penyaringan</CardTitle>
+                  <CardDescription>Pencocokan daftar sanksi diulang saat hasil disimpan, karena daftarnya dapat berubah sejak calon dicatat.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form
+                    className="grid gap-4"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      if (!screeningForm.candidateId || !screeningForm.screenedAt) return toast.error("Calon dan tanggal penyaringan wajib diisi.");
+                      screenCandidate.mutate({
+                        candidateId: Number(screeningForm.candidateId),
+                        screeningResult: screeningForm.screeningResult as "DALAM_PROSES" | "LULUS" | "TIDAK_LULUS",
+                        screenedAt: new Date(screeningForm.screenedAt),
+                        screeningNotes: screeningForm.screeningNotes || undefined,
+                      });
+                    }}
+                  >
+                    <Picker label="Calon" value={screeningForm.candidateId} options={candidateOptions} onChange={(v) => setScreeningForm({ ...screeningForm, candidateId: v })} placeholder="Pilih calon" />
+                    <Picker label="Hasil" value={screeningForm.screeningResult} options={SCREENING_LABELS} onChange={(v) => setScreeningForm({ ...screeningForm, screeningResult: v })} />
+                    <Field label="Tanggal penyaringan" type="date" value={screeningForm.screenedAt} onChange={(v) => setScreeningForm({ ...screeningForm, screenedAt: v })} required />
+                    <div>
+                      <Label className="text-xs">Keterangan{screeningForm.screeningResult === "DALAM_PROSES" ? "" : " *"}</Label>
+                      <Textarea autoComplete="off" className="mt-1" rows={3} placeholder="Sumber pemeriksaan (referensi kerja, catatan kepolisian, wawancara), hasilnya, dan siapa yang memeriksa." value={screeningForm.screeningNotes} onChange={(event) => setScreeningForm({ ...screeningForm, screeningNotes: event.target.value })} />
+                      <p className="mt-1 text-xs text-[#718398]">Wajib diisi bila hasilnya sudah lulus atau tidak lulus.</p>
+                    </div>
+                    <Button type="submit" disabled={screenCandidate.isPending} className="bg-[#183f70] text-white hover:bg-[#12345d]"><ShieldCheck className="mr-2 size-4" />Simpan hasil penyaringan</Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              <Card className="border-[#dce6f0]">
+                <CardHeader>
+                  <CardTitle className="font-display text-lg text-[#18395f]">Keputusan</CardTitle>
+                  <CardDescription>Calon hanya dapat diterima setelah penyaringannya lulus. Calon yang tidak diterima tetap tersimpan sebagai bukti penyaringan.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form
+                    className="grid gap-4"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      if (!decisionForm.candidateId || !decisionForm.decidedAt) return toast.error("Calon dan tanggal keputusan wajib diisi.");
+                      decideCandidate.mutate({
+                        candidateId: Number(decisionForm.candidateId),
+                        decision: decisionForm.decision as "DALAM_PROSES" | "DITERIMA" | "TIDAK_DITERIMA",
+                        decidedAt: new Date(decisionForm.decidedAt),
+                        employeeId: decisionForm.employeeId ? Number(decisionForm.employeeId) : undefined,
+                      });
+                    }}
+                  >
+                    <Picker label="Calon" value={decisionForm.candidateId} options={candidateOptions} onChange={(v) => setDecisionForm({ ...decisionForm, candidateId: v })} placeholder="Pilih calon" />
+                    <Picker label="Keputusan" value={decisionForm.decision} options={CANDIDATE_DECISION_LABELS} onChange={(v) => setDecisionForm({ ...decisionForm, decision: v })} />
+                    <Field label="Tanggal keputusan" type="date" value={decisionForm.decidedAt} onChange={(v) => setDecisionForm({ ...decisionForm, decidedAt: v })} required />
+                    {decisionForm.decision === "DITERIMA" ? (
+                      <Picker label="Tautkan ke pegawai" value={decisionForm.employeeId} options={Object.fromEntries(activeStaff.map((row) => [String(row.id), `${row.fullName} — ${row.position}`]))} onChange={(v) => setDecisionForm({ ...decisionForm, employeeId: v })} placeholder="Belum tercatat sebagai pegawai" hint="Isi setelah calon dicatat pada tab Pegawai, agar penyaringannya tersambung ke berkas kepegawaiannya." />
+                    ) : null}
+                    <Button type="submit" disabled={decideCandidate.isPending} className="bg-[#183f70] text-white hover:bg-[#12345d]"><CalendarCheck className="mr-2 size-4" />Simpan keputusan</Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
+          ) : null}
         </TabsContent>
 
         {/* ------------------------------ Sertifikat ------------------------------ */}

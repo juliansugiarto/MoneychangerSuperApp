@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
 import {
   apuTrainingAttendance,
   apuTrainingSessions,
+  employeeCandidates,
   employeeCertifications,
   employeePicAssignments,
   employeeProfileReviews,
@@ -9,6 +10,7 @@ import {
   sdmCompetencyPlans,
   type jobLevels,
   type picRoles,
+  type candidateDecisions,
   type competencyTracks,
   type employmentStatuses,
   type screeningResults,
@@ -30,13 +32,14 @@ import {
   type RealisasiTrack,
 } from "../shared/sdmCompetency";
 import { profileReviewStatus } from "../shared/employeeProfileReview";
-import { databaseOrThrow, retryTransientDatabaseRead, writeAudit } from "./operations";
+import { databaseOrThrow, retryTransientDatabaseRead, searchSanctionsWatchlist, writeAudit } from "./operations";
 
 type JobLevel = (typeof jobLevels)[number];
 type PicRole = (typeof picRoles)[number];
 type CompetencyTrack = (typeof competencyTracks)[number];
 type EmploymentStatus = (typeof employmentStatuses)[number];
 type ScreeningResult = (typeof screeningResults)[number];
+type CandidateDecision = (typeof candidateDecisions)[number];
 type TrainingMethod = "IN_HOUSE" | "EKSTERNAL" | "DARING";
 type ProfileReviewOutcome = "TIDAK_ADA_PERUBAHAN" | "ADA_PERUBAHAN" | "PERLU_TINDAK_LANJUT";
 
@@ -548,4 +551,173 @@ export async function listProfileReviews(employeeId: number) {
       .where(eq(employeeProfileReviews.employeeId, employeeId))
       .orderBy(desc(employeeProfileReviews.reviewedAt));
   });
+}
+
+// ---------------------------------------------------------------------------
+// Penyaringan calon pegawai
+// ---------------------------------------------------------------------------
+
+/**
+ * Pencocokan otomatis nama calon terhadap daftar DTTOT/DPPSPM yang sedang termuat.
+ *
+ * Hasilnya hanya jejak — keputusan lulus/tidak lulus tetap penilaian manusia. Kegagalan
+ * pencocokan tidak boleh membatalkan pencatatan calonnya: yang menjadi temuan pemeriksaan adalah
+ * calon yang tidak tercatat sama sekali, bukan calon yang belum sempat dicocokkan.
+ */
+async function matchCandidateAgainstWatchlist(fullName: string) {
+  const query = fullName.trim();
+  if (query.length < 3) {
+    return { watchlistCheckedAt: null, watchlistMatchCount: 0, watchlistSummary: null };
+  }
+  try {
+    const matches = await searchSanctionsWatchlist({ query });
+    const summary = matches.length
+      ? matches.slice(0, 5).map((match) => `${match.fullName} — ${match.listType} ${Math.round(match.score * 100)}%`).join("\n")
+      : null;
+    return { watchlistCheckedAt: new Date(), watchlistMatchCount: matches.length, watchlistSummary: summary };
+  } catch {
+    return { watchlistCheckedAt: null, watchlistMatchCount: 0, watchlistSummary: null };
+  }
+}
+
+export async function listCandidates() {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const rows = await db.select().from(employeeCandidates).orderBy(desc(employeeCandidates.appliedAt));
+    return {
+      rows: rows.map((row) => ({
+        ...row,
+        appliedAt: asIsoDate(row.appliedAt)!,
+        screenedAt: asIsoDate(row.screenedAt),
+        decidedAt: asIsoDate(row.decidedAt),
+        watchlistCheckedAt: asIsoDate(row.watchlistCheckedAt),
+      })),
+      // Calon yang belum disaring adalah pekerjaan yang belum selesai; calon dengan kecocokan
+      // daftar sanksi adalah yang wajib ditinjau seseorang sebelum diputuskan.
+      awaitingScreening: rows.filter((row) => row.screeningResult === "DALAM_PROSES").length,
+      watchlistHits: rows.filter((row) => row.watchlistMatchCount > 0).length,
+      rejected: rows.filter((row) => row.decision === "TIDAK_DITERIMA").length,
+    };
+  });
+}
+
+export async function recordCandidate(
+  input: {
+    fullName: string;
+    identityNumber?: string;
+    appliedPosition: string;
+    appliedAt: Date;
+    notes?: string;
+  },
+  actor: { id: number },
+) {
+  const db = await databaseOrThrow();
+  const watchlist = await matchCandidateAgainstWatchlist(input.fullName);
+
+  const [candidate] = await db.insert(employeeCandidates).values({
+    fullName: input.fullName.trim(),
+    identityNumber: input.identityNumber?.trim() || null,
+    appliedPosition: input.appliedPosition.trim(),
+    appliedAt: input.appliedAt,
+    notes: input.notes?.trim() || null,
+    ...watchlist,
+    createdByUserId: actor.id,
+  }).$returningId();
+
+  await writeAudit({
+    actorUserId: actor.id,
+    action: "EMPLOYEE_CANDIDATE_RECORDED",
+    entityType: "employee_candidates",
+    entityId: String(candidate.id),
+    // Nama calon tidak ditulis ke jejak audit; yang perlu terbukti adalah pencatatan dan
+    // pencocokannya, bukan identitasnya, dan barisnya sendiri sudah menyimpan nama itu.
+    afterState: { appliedPosition: input.appliedPosition, appliedAt: input.appliedAt, watchlistMatchCount: watchlist.watchlistMatchCount },
+  });
+  return candidate;
+}
+
+/**
+ * Hasil penyaringan seorang calon.
+ *
+ * Pencocokan daftar sanksi diulang di sini karena daftarnya dapat berubah antara pencatatan dan
+ * penyaringan; yang dinilai pemeriksa adalah keadaan daftar pada saat calon disaring.
+ */
+export async function screenCandidate(
+  input: { candidateId: number; screeningResult: ScreeningResult; screenedAt: Date; screeningNotes?: string },
+  actor: { id: number },
+) {
+  const notes = input.screeningNotes?.trim() || null;
+  // Penyaringan tanpa keterangan tidak dapat dibuktikan kepada pemeriksa; yang terbaca hanyalah
+  // sebuah label tanpa sumber pemeriksaan maupun siapa yang memeriksanya.
+  if (input.screeningResult !== "DALAM_PROSES" && !notes) {
+    throw new Error("Jelaskan sumber pemeriksaan dan dasar hasil penyaringan calon ini.");
+  }
+
+  const db = await databaseOrThrow();
+  const [candidate] = await db.select().from(employeeCandidates).where(eq(employeeCandidates.id, input.candidateId));
+  if (!candidate) throw new Error("Calon pegawai tidak ditemukan.");
+
+  const watchlist = await matchCandidateAgainstWatchlist(candidate.fullName);
+  await db.update(employeeCandidates).set({
+    screeningResult: input.screeningResult,
+    screenedAt: input.screeningResult === "DALAM_PROSES" ? null : input.screenedAt,
+    screeningNotes: notes,
+    ...watchlist,
+  }).where(eq(employeeCandidates.id, input.candidateId));
+
+  await writeAudit({
+    actorUserId: actor.id,
+    action: "EMPLOYEE_CANDIDATE_SCREENED",
+    entityType: "employee_candidates",
+    entityId: String(input.candidateId),
+    beforeState: { screeningResult: candidate.screeningResult },
+    afterState: { screeningResult: input.screeningResult, screenedAt: input.screenedAt, watchlistMatchCount: watchlist.watchlistMatchCount },
+  });
+  return { id: input.candidateId };
+}
+
+/**
+ * Keputusan atas seorang calon.
+ *
+ * Calon yang tidak diterima tetap tersimpan — itulah inti temuannya. Barisnya tidak pernah
+ * dihapus, sehingga jejak bahwa calon tersebut pernah disaring tetap dapat ditunjukkan.
+ */
+export async function decideCandidate(
+  input: { candidateId: number; decision: CandidateDecision; decidedAt: Date; employeeId?: number; notes?: string },
+  actor: { id: number },
+) {
+  const db = await databaseOrThrow();
+  const [candidate] = await db.select().from(employeeCandidates).where(eq(employeeCandidates.id, input.candidateId));
+  if (!candidate) throw new Error("Calon pegawai tidak ditemukan.");
+
+  // Menerima calon yang belum lulus penyaringan persis mengulang temuan pemeriksaan: perekrutan
+  // berjalan lebih dulu, penyaringannya menyusul di atas kertas.
+  if (input.decision === "DITERIMA" && candidate.screeningResult !== "LULUS") {
+    throw new Error("Calon hanya dapat diterima setelah hasil penyaringannya LULUS.");
+  }
+
+  let employeeId: number | null = candidate.employeeId;
+  if (input.decision === "DITERIMA" && input.employeeId) {
+    const [employee] = await db.select().from(employees).where(eq(employees.id, input.employeeId));
+    if (!employee) throw new Error("Pegawai tidak ditemukan.");
+    employeeId = input.employeeId;
+  }
+  if (input.decision !== "DITERIMA") employeeId = null;
+
+  await db.update(employeeCandidates).set({
+    decision: input.decision,
+    decidedAt: input.decision === "DALAM_PROSES" ? null : input.decidedAt,
+    employeeId,
+    notes: input.notes?.trim() || candidate.notes,
+  }).where(eq(employeeCandidates.id, input.candidateId));
+
+  await writeAudit({
+    actorUserId: actor.id,
+    action: "EMPLOYEE_CANDIDATE_DECIDED",
+    entityType: "employee_candidates",
+    entityId: String(input.candidateId),
+    beforeState: { decision: candidate.decision },
+    afterState: { decision: input.decision, decidedAt: input.decidedAt, employeeId },
+  });
+  return { id: input.candidateId };
 }

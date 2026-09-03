@@ -99,10 +99,10 @@ import {
 } from "./operations";
 import { deleteCompanyDocument, getOperationalDocumentDownloadUrl, listCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
 import { expenseCategories } from "../drizzle/schema";
-import { competencyTracks, employmentStatuses, jobLevels, picRoles, screeningResults } from "../drizzle/schema";
+import { candidateDecisions, competencyTracks, employmentStatuses, jobLevels, picRoles, screeningResults } from "../drizzle/schema";
 import { KUPVA_WORK_AREA, competencyCodesForArea } from "../shared/sdmCompetency";
 import {
-  assignPicRole, buildAnnualSdmPlan, buildProfileReviewSchedule, buildTrainingRecap, listProfileReviews, listTrainingSessions, recordProfileReview, recordTrainingSession, buildSdmQuarterlyReport, buildSdmRealisasiReport, createEmployee, endEmployment, exportSdmTextFile,
+  assignPicRole, buildAnnualSdmPlan, buildProfileReviewSchedule, buildTrainingRecap, decideCandidate, listCandidates, listProfileReviews, listTrainingSessions, recordCandidate, recordProfileReview, recordTrainingSession, screenCandidate, buildSdmQuarterlyReport, buildSdmRealisasiReport, createEmployee, endEmployment, exportSdmTextFile,
   listEmployeeCertifications, listEmployees, listPicAssignments, recordCertification, setCompetencyPlan,
 } from "./sdmOperations";
 import { OPERATIONAL_TIMEZONE_VALUES } from "../shared/regulatoryActionQueue";
@@ -438,6 +438,30 @@ export const appRouter = router({
       outcome: z.enum(["TIDAK_ADA_PERUBAHAN", "ADA_PERUBAHAN", "PERLU_TINDAK_LANJUT"]),
       notes: z.string().trim().max(2000).optional(),
     })).mutation(({ input, ctx }) => recordProfileReview(input, ctx.user)),
+
+    // Calon pegawai dicatat sebelum ada keputusan apa pun, dan barisnya tetap tersimpan meskipun
+    // calonnya tidak diterima — itulah bukti penyaringan yang diminta pemeriksa.
+    candidates: staffProcedure.query(() => listCandidates()),
+    recordCandidate: controllerProcedure.input(z.object({
+      fullName: z.string().trim().min(1).max(200),
+      identityNumber: z.string().trim().max(40).optional(),
+      appliedPosition: z.string().trim().min(1).max(120),
+      appliedAt: z.coerce.date(),
+      notes: z.string().trim().max(2000).optional(),
+    })).mutation(({ input, ctx }) => recordCandidate(input, ctx.user)),
+    screenCandidate: controllerProcedure.input(z.object({
+      candidateId: z.number().int().positive(),
+      screeningResult: z.enum(screeningResults),
+      screenedAt: z.coerce.date(),
+      screeningNotes: z.string().trim().max(2000).optional(),
+    })).mutation(({ input, ctx }) => screenCandidate(input, ctx.user)),
+    decideCandidate: controllerProcedure.input(z.object({
+      candidateId: z.number().int().positive(),
+      decision: z.enum(candidateDecisions),
+      decidedAt: z.coerce.date(),
+      employeeId: z.number().int().positive().optional(),
+      notes: z.string().trim().max(2000).optional(),
+    })).mutation(({ input, ctx }) => decideCandidate(input, ctx.user)),
 
     realisasiReport: controllerProcedure.input(z.object({
       year: z.number().int().min(2020).max(2100),
