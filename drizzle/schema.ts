@@ -829,7 +829,20 @@ export const regulatoryIncidentReports = mysqlTable("regulatory_incident_reports
   index("regulatory_incident_category_idx").on(table.category, table.createdAt),
 ]);
 
-export const jobLevels = ["DIREKSI", "PEJABAT_EKSEKUTIF", "PENYELIA", "PELAKSANA"] as const;
+/**
+ * Jenjang pada struktur organisasi. KOMISARIS ikut dicatat karena tercantum dalam struktur dan
+ * menjadi pihak yang menyetujui kebijakan APU PPT, namun bukan SDM pelaku SK SP: jenjangnya tidak
+ * memiliki sandi kompetensi, sehingga tidak pernah masuk hitungan laporan RAP01/RAS01.
+ */
+export const jobLevels = ["KOMISARIS", "DIREKSI", "PEJABAT_EKSEKUTIF", "PENYELIA", "PELAKSANA"] as const;
+
+/**
+ * Fungsi penanggung jawab yang ditunjuk perusahaan. IRA menanyakan secara khusus apakah
+ * penyelenggara telah menunjuk pihak yang bertanggung jawab atas penerapan APU PPT PPPSPM dan
+ * apakah fungsi audit terpisah dari unit bisnis, sehingga penunjukan ini perlu tercatat beserta
+ * surat keputusannya - bukan sekadar diketahui.
+ */
+export const picRoles = ["INTERNAL_AUDIT", "MANAJEMEN_RISIKO", "APU_PPT", "PERLINDUNGAN_KONSUMEN", "NASABAH_RISIKO_TINGGI"] as const;
 export const employmentStatuses = ["AKTIF", "NONAKTIF"] as const;
 export const screeningResults = ["DALAM_PROSES", "LULUS", "TIDAK_LULUS"] as const;
 /**
@@ -924,8 +937,32 @@ export const sdmCompetencyPlans = mysqlTable("sdm_competency_plans", {
   uniqueIndex("sdm_competency_plans_period_code_uq").on(table.periodYear, table.periodQuarter, table.competencyCode),
 ]);
 
+/**
+ * Penunjukan penanggung jawab fungsi, berikut surat keputusannya. Dibuat sebagai tabel tersendiri
+ * karena satu orang dapat memegang lebih dari satu fungsi dan penunjukan berganti dari waktu ke
+ * waktu; menyimpannya sebagai kolom pada pegawai akan menghapus riwayat penunjukan sebelumnya.
+ */
+export const employeePicAssignments = mysqlTable("employee_pic_assignments", {
+  id: int("id").autoincrement().primaryKey(),
+  employeeId: int("employeeId").notNull(),
+  picRole: mysqlEnum("picRole", picRoles).notNull(),
+  /** Nomor dan tanggal SK penunjukan; diminta sebagai bukti pada penilaian IRA. */
+  decreeNumber: varchar("decreeNumber", { length: 120 }),
+  decreeAt: datetime("decreeAt"),
+  documentId: int("documentId"),
+  assignedAt: datetime("assignedAt").notNull(),
+  endedAt: datetime("endedAt"),
+  notes: text("notes"),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("employee_pic_assignments_role_idx").on(table.picRole, table.assignedAt),
+  index("employee_pic_assignments_employee_idx").on(table.employeeId),
+]);
+
 export type Employee = typeof employees.$inferSelect;
 export type EmployeeCertification = typeof employeeCertifications.$inferSelect;
+export type EmployeePicAssignment = typeof employeePicAssignments.$inferSelect;
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;

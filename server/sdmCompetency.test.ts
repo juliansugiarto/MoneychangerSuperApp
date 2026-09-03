@@ -304,3 +304,20 @@ describe("menurunkan angka laporan dari catatan pegawai", () => {
     expect(text).toContain("777249293|Q|2026-09-30|SKNK66SPP053|1|0|1|0");
   });
 });
+
+describe("jenjang di luar SDM pelaku SK SP", () => {
+  it("tidak pernah membebani komisaris dengan kewajiban sertifikasi", () => {
+    // Komisaris tercantum dalam struktur organisasi dan menyetujui kebijakan APU PPT, tetapi
+    // jenjangnya tidak memiliki sandi kompetensi pada template. Membebankan kewajiban kepadanya
+    // akan memunculkan angka yang tidak punya tempat pelaporan.
+    const komisaris = { id: 9, jobLevel: "KOMISARIS" as unknown as "DIREKSI", competencyTrack: "SERTIFIKASI_KOMPETENSI" as const, employmentStatus: "AKTIF" as const, joinedAt: "2020-01-01" };
+    const rows = deriveSdmCounts({
+      area: KUPVA_WORK_AREA,
+      periodStart: quarterStartDate(2026, 3),
+      periodEnd: quarterEndDate(2026, 3),
+      employees: [komisaris],
+      certifications: [],
+    });
+    expect(rows.every((row) => row.posisiKeseluruhanSDM === 0)).toBe(true);
+  });
+});
