@@ -40,6 +40,13 @@ describe("aturan penyaringan", () => {
     expect(source).toContain('input.decision === "DITERIMA" && candidate.screeningResult !== "LULUS"');
   });
 
+  it("tidak membiarkan hasil penyaringan diturunkan setelah calon diterima", () => {
+    // Tanpa penjagaan ini, aturan "hanya calon LULUS yang dapat diterima" dapat dilangkahi:
+    // luluskan, terima, lalu turunkan hasilnya — dan pegawai itu tercatat tidak lulus penyaringan.
+    expect(source).toContain('candidate.decision === "DITERIMA" && input.screeningResult !== "LULUS"');
+    expect(source).toContain("batalkan dahulu keputusannya sebelum mengubah hasil penyaringan");
+  });
+
   it("mengulang pencocokan daftar sanksi saat penyaringan disimpan", () => {
     const screenSection = source.slice(source.indexOf("export async function screenCandidate"));
     expect(screenSection).toContain("matchCandidateAgainstWatchlist(candidate.fullName)");

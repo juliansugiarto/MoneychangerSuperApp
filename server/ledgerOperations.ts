@@ -50,7 +50,9 @@ export type JournalLineInput = {
 /** Tanggal siap kirim: tengah malam waktu lokal pada hari kalender yang dimaksud. */
 const dbDate = (value: Date | string) => new Date(`${isoDay(value)}T00:00:00`);
 
-const asIsoDate = isoDay;
+/** Hari sebelum sebuah tanggal, dihitung atas teks harinya agar tidak bergantung jam maupun zona. */
+const previousDayIso = (value: Date | string) =>
+  new Date(new Date(`${isoDay(value)}T00:00:00Z`).getTime() - 86_400_000).toISOString().slice(0, 10);
 
 // ---------------------------------------------------------------------------
 // Bagan akun
@@ -68,34 +70,35 @@ export async function ensureChartOfAccounts() {
   const existing = await db.select().from(chartOfAccounts);
   const byCode = new Map(existing.map((row) => [row.code, row]));
 
-  let inserted = 0;
+  const rowFor = (account: (typeof CHART_OF_ACCOUNTS)[number]) => ({
+    name: account.name,
+    type: account.type,
+    normalBalance: account.normalBalance,
+    isContra: account.contra === true,
+    forms: account.forms,
+  });
+
+  const missing = CHART_OF_ACCOUNTS.filter((account) => !byCode.has(account.code));
+  if (missing.length) {
+    await db.insert(chartOfAccounts).values(missing.map((account) => ({ code: account.code, ...rowFor(account) })));
+  }
+
   let updated = 0;
   for (const account of CHART_OF_ACCOUNTS) {
     const current = byCode.get(account.code);
-    const values = {
-      name: account.name,
-      type: account.type,
-      normalBalance: account.normalBalance,
-      isContra: account.contra === true,
-      forms: account.forms,
-    };
-    if (!current) {
-      await db.insert(chartOfAccounts).values({ code: account.code, ...values });
-      inserted += 1;
-      continue;
-    }
+    if (!current) continue;
+    const values = rowFor(account);
     const unchanged =
       current.name === values.name &&
       current.type === values.type &&
       current.normalBalance === values.normalBalance &&
       current.isContra === values.isContra &&
       JSON.stringify(current.forms) === JSON.stringify(values.forms);
-    if (!unchanged) {
-      await db.update(chartOfAccounts).set(values).where(eq(chartOfAccounts.id, current.id));
-      updated += 1;
-    }
+    if (unchanged) continue;
+    await db.update(chartOfAccounts).set(values).where(eq(chartOfAccounts.id, current.id));
+    updated += 1;
   }
-  return { inserted, updated, total: CHART_OF_ACCOUNTS.length };
+  return { inserted: missing.length, updated, total: CHART_OF_ACCOUNTS.length };
 }
 
 export async function listAccounts() {
@@ -115,8 +118,8 @@ export async function listAccountingPeriods() {
     const rows = await db.select().from(accountingPeriods).orderBy(desc(accountingPeriods.periodStart));
     return rows.map((row) => ({
       ...row,
-      periodStart: asIsoDate(row.periodStart),
-      periodEnd: asIsoDate(row.periodEnd),
+      periodStart: isoDay(row.periodStart),
+      periodEnd: isoDay(row.periodEnd),
     }));
   });
 }
@@ -137,16 +140,12 @@ async function periodForDate(db: Awaited<ReturnType<typeof databaseOrThrow>>, en
     .limit(1);
   if (existing) return existing;
 
-  await db.insert(accountingPeriods).values({
+  const [inserted] = await db.insert(accountingPeriods).values({
     periodStart: dbDate(monthStartIso(entryDate)),
     periodEnd: dbDate(monthEndIso(entryDate)),
     createdByUserId: actorUserId,
-  });
-  const [created] = await db
-    .select()
-    .from(accountingPeriods)
-    .where(and(lte(accountingPeriods.periodStart, day), gte(accountingPeriods.periodEnd, day)))
-    .limit(1);
+  }).$returningId();
+  const [created] = await db.select().from(accountingPeriods).where(eq(accountingPeriods.id, inserted.id)).limit(1);
   if (!created) throw new Error("Periode pembukuan untuk tanggal tersebut tidak dapat dibuat.");
   return created;
 }
@@ -220,13 +219,34 @@ export async function reopenAccountingPeriod(input: { periodId: number; reason: 
  * bersamaan tertahan indeks unik dan dicoba ulang, bukan diam-diam menimpa.
  */
 async function nextEntryNumber(db: Awaited<ReturnType<typeof databaseOrThrow>>, entryDate: Date) {
-  const prefix = `JU-${asIsoDate(entryDate).slice(0, 7).replace("-", "")}-`;
+  const prefix = `JU-${isoDay(entryDate).slice(0, 7).replace("-", "")}-`;
+  // Urutan dihitung numerik, bukan menurut teks: setelah jurnal ke-9999 dalam sebulan, "10000"
+  // lebih kecil daripada "9999" secara teks dan nomor akan berhenti bertambah.
   const [row] = await db
-    .select({ latest: sql<string | null>`MAX(${journalEntries.entryNumber})` })
+    .select({ latest: sql<number | null>`MAX(CAST(SUBSTRING(${journalEntries.entryNumber}, ${prefix.length + 1}) AS UNSIGNED))` })
     .from(journalEntries)
     .where(sql`${journalEntries.entryNumber} LIKE ${`${prefix}%`}`);
-  const sequence = row?.latest ? Number(row.latest.slice(prefix.length)) + 1 : 1;
+  const sequence = (Number(row?.latest ?? 0) || 0) + 1;
   return `${prefix}${String(sequence).padStart(4, "0")}`;
+}
+
+/**
+ * Apakah galat ini pelanggaran indeks unik tertentu?
+ *
+ * Nama indeksnya hanya muncul pada `sqlMessage` di rantai `cause`, bukan pada pesan luar
+ * DrizzleQueryError yang isinya kueri beserta seluruh nama kolom — mencocokkan pesan luar akan
+ * menganggap hampir setiap kegagalan insert sebagai tabrakan nomor.
+ */
+function isDuplicateKeyFor(error: unknown, indexName: string) {
+  let current: unknown = error;
+  for (let depth = 0; depth < 4 && current && typeof current === "object"; depth += 1) {
+    const record = current as { code?: unknown; sqlMessage?: unknown; cause?: unknown };
+    if (record.code === "ER_DUP_ENTRY" && typeof record.sqlMessage === "string" && record.sqlMessage.includes(indexName)) {
+      return true;
+    }
+    current = record.cause;
+  }
+  return false;
 }
 
 async function insertJournal(
@@ -257,7 +277,7 @@ async function insertJournal(
   const period = await periodForDate(db, input.entryDate, actor.id);
   if (period.status === "DITUTUP") {
     throw new Error(
-      `Periode ${asIsoDate(period.periodStart)} s.d. ${asIsoDate(period.periodEnd)} sudah ditutup; catat koreksinya sebagai jurnal balik pada periode terbuka.`,
+      `Periode ${isoDay(period.periodStart)} s.d. ${isoDay(period.periodEnd)} sudah ditutup; catat koreksinya sebagai jurnal balik pada periode terbuka.`,
     );
   }
 
@@ -267,7 +287,7 @@ async function insertJournal(
     const entryNumber = await nextEntryNumber(db, input.entryDate);
     try {
       await db.transaction(async (tx) => {
-        await tx.insert(journalEntries).values({
+        const [inserted] = await tx.insert(journalEntries).values({
           entryNumber,
           entryDate: dbDate(input.entryDate),
           description: input.description.trim(),
@@ -280,13 +300,11 @@ async function insertJournal(
           reversalReason: input.reversalReason ?? null,
           postedByUserId: actor.id,
           postedAt,
-        });
-        const [entry] = await tx.select().from(journalEntries).where(eq(journalEntries.entryNumber, entryNumber)).limit(1);
-        if (!entry) throw new Error("Jurnal tidak dapat disimpan.");
+        }).$returningId();
 
         await tx.insert(journalEntryLines).values(
           input.lines.map((line, position) => ({
-            entryId: entry.id,
+            entryId: inserted.id,
             lineNumber: position + 1,
             accountCode: line.accountCode,
             side: line.side,
@@ -303,11 +321,10 @@ async function insertJournal(
       if (!saved) throw new Error("Jurnal tidak dapat dibaca kembali setelah disimpan.");
       return saved;
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      // Nomor jurnal direbut pencatatan lain: ambil nomor berikutnya dan ulangi. Tabrakan pada
-      // kunci sumber adalah hal berbeda — itu berarti jurnalnya memang sudah ada.
-      if (!/entryNumber|journal_entries_number_uq|Duplicate entry/i.test(message)) throw error;
-      if (/journal_entries_source_uq/i.test(message)) throw error;
+      // Hanya tabrakan nomor jurnal yang layak dicoba ulang: pencatatan lain merebut nomor itu
+      // lebih dulu. Tabrakan pada kunci sumber adalah hal berbeda — jurnalnya memang sudah ada,
+      // dan mengulangnya justru akan menyembunyikan sifat idempoten yang sengaja dibangun.
+      if (!isDuplicateKeyFor(error, "journal_entries_number_uq")) throw error;
       lastError = error;
     }
   }
@@ -446,13 +463,18 @@ export async function listJournalEntries(input?: { from?: Date; to?: Date; sourc
 
     return rows.map((row) => ({
       ...row,
-      entryDate: asIsoDate(row.entryDate),
+      entryDate: isoDay(row.entryDate),
       lines: lines.filter((line) => line.entryId === row.id),
     }));
   });
 }
 
-async function loadLines(from?: Date, to?: Date, accountCode?: string) {
+/**
+ * Batas rentang dinormalkan di sini dan hanya di sini. Pemanggil menyerahkan tanggal apa adanya —
+ * menormalkannya dua kali justru memundurkan batasnya satu hari, karena `dbDate` atas tanggal
+ * tengah malam lokal membaca hari kalender UTC-nya yang sudah berbeda.
+ */
+async function loadLines(from?: Date | string, to?: Date | string, accountCode?: string) {
   const db = await databaseOrThrow();
   const conditions = [
     from ? gte(journalEntries.entryDate, dbDate(from)) : undefined,
@@ -494,8 +516,8 @@ export async function buildTrialBalanceReport(input: { from?: Date; to?: Date })
     const trial = buildTrialBalance(rows.map((row) => ({ accountCode: row.accountCode, side: row.side as JournalSide, amount: parseAmount(row.amount) })));
 
     return {
-      from: input.from ? asIsoDate(input.from) : null,
-      to: input.to ? asIsoDate(input.to) : null,
+      from: input.from ? isoDay(input.from) : null,
+      to: input.to ? isoDay(input.to) : null,
       rows: trial.rows.map((row) => {
         const account = accountsByCode.get(row.accountCode);
         const definition = findAccount(row.accountCode);
@@ -536,7 +558,8 @@ export async function buildAccountLedger(input: { accountCode: string; from?: Da
     const normalBalance = account?.normalBalance ?? definition!.normalBalance;
 
     const [priorRows, rows] = await Promise.all([
-      input.from ? loadLines(undefined, new Date(input.from.getTime() - 86_400_000), input.accountCode) : Promise.resolve([]),
+      // Saldo awal dihitung dari seluruh mutasi sampai hari sebelum tanggal mulai.
+      input.from ? loadLines(undefined, previousDayIso(input.from), input.accountCode) : Promise.resolve([]),
       loadLines(input.from, input.to, input.accountCode),
     ]);
 
@@ -552,7 +575,7 @@ export async function buildAccountLedger(input: { accountCode: string; from?: Da
       return {
         entryId: row.entryId,
         entryNumber: row.entryNumber,
-        entryDate: asIsoDate(row.entryDate),
+        entryDate: isoDay(row.entryDate),
         description: row.description,
         sourceType: row.sourceType,
         sourceReference: row.sourceReference,

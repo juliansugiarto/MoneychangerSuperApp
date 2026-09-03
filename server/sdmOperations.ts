@@ -656,6 +656,12 @@ export async function screenCandidate(
   const db = await databaseOrThrow();
   const [candidate] = await db.select().from(employeeCandidates).where(eq(employeeCandidates.id, input.candidateId));
   if (!candidate) throw new Error("Calon pegawai tidak ditemukan.");
+  // `decideCandidate` menolak menerima calon yang belum lulus; tanpa penjagaan di sisi ini,
+  // aturan itu dapat dilangkahi dengan meluluskan calon, menerimanya, lalu menurunkan hasil
+  // penyaringannya — dan yang tersisa adalah pegawai yang tercatat tidak lulus penyaringan.
+  if (candidate.decision === "DITERIMA" && input.screeningResult !== "LULUS") {
+    throw new Error("Calon ini sudah diterima; batalkan dahulu keputusannya sebelum mengubah hasil penyaringan.");
+  }
 
   const watchlist = await matchCandidateAgainstWatchlist(candidate.fullName);
   await db.update(employeeCandidates).set({
