@@ -6,7 +6,9 @@ import {
   buildSdmTextFile,
   competencyCodesForArea,
   formForPeriod,
+  deriveSdmCounts,
   quarterEndDate,
+  quarterStartDate,
   validateSdmReport,
 } from "../shared/sdmCompetency";
 
@@ -207,5 +209,98 @@ describe("pemeriksaan sebelum unggah", () => {
   it("meloloskan laporan yang wajar", () => {
     const rows = buildSdmReportRows(KUPVA_WORK_AREA, { SKNK66SPP054: { posisiKeseluruhanSDM: 5, posisiSDMYangMemilikiSertifikat: 5, rencanaSertifikasiSDM: 0, realisasiSertifikasiSDM: 0 } });
     expect(validateSdmReport(rows)).toEqual([]);
+  });
+});
+
+describe("menurunkan angka laporan dari catatan pegawai", () => {
+  const period = { periodStart: quarterStartDate(2026, 3), periodEnd: quarterEndDate(2026, 3) };
+  const teller = { id: 1, jobLevel: "PELAKSANA" as const, competencyTrack: "SERTIFIKASI_KOMPETENSI" as const, employmentStatus: "AKTIF" as const, joinedAt: "2024-01-05" };
+  const supervisor = { id: 2, jobLevel: "PENYELIA" as const, competencyTrack: "SERTIFIKASI_KOMPETENSI" as const, employmentStatus: "AKTIF" as const, joinedAt: "2023-03-01" };
+  const direktur = { id: 3, jobLevel: "DIREKSI" as const, competencyTrack: "PBK" as const, employmentStatus: "AKTIF" as const, joinedAt: "2020-01-01" };
+
+  const rowFor = (rows: ReturnType<typeof deriveSdmCounts>, code: string) => rows.find((row) => row.code === code)!;
+
+  it("menghitung kewajiban menurut jenjang dan jalur kompetensi", () => {
+    const rows = deriveSdmCounts({ area: KUPVA_WORK_AREA, ...period, employees: [teller, supervisor], certifications: [] });
+    expect(rowFor(rows, "SKNK66SPP054").posisiKeseluruhanSDM).toBe(1); // pelaksana
+    expect(rowFor(rows, "SKNK66SPP053").posisiKeseluruhanSDM).toBe(1); // penyelia
+    expect(rowFor(rows, "SKNK66SPP052").posisiKeseluruhanSDM).toBe(0); // tidak ada pejabat eksekutif
+    // Jalur sertifikasi kompetensi tidak menimbulkan kewajiban PBK.
+    expect(rowFor(rows, "PBKNK66SPP054").posisiKeseluruhanSDM).toBe(0);
+  });
+
+  it("tidak membebani jenjang direksi dengan sandi PBK yang memang tidak ada", () => {
+    const rows = deriveSdmCounts({ area: KUPVA_WORK_AREA, ...period, employees: [direktur], certifications: [] });
+    // Template tidak punya PBKNK berjenjang direksi, jadi kewajibannya tidak dapat dilaporkan
+    // di mana pun - dan tidak boleh diam-diam digeser ke jenjang lain.
+    expect(rows.filter((row) => row.posisiKeseluruhanSDM > 0)).toHaveLength(0);
+  });
+
+  it("menghitung pemegang sertifikat hanya bila masih berlaku pada akhir periode", () => {
+    const rows = deriveSdmCounts({
+      area: KUPVA_WORK_AREA, ...period,
+      employees: [teller, supervisor],
+      certifications: [
+        { employeeId: 1, competencyCode: "SKNK66SPP054", issuedAt: "2025-02-01" },
+        { employeeId: 2, competencyCode: "SKNK66SPP053", issuedAt: "2023-06-01", expiresAt: "2026-01-31" },
+      ],
+    });
+    expect(rowFor(rows, "SKNK66SPP054").posisiSDMYangMemilikiSertifikat).toBe(1);
+    // Sertifikat penyelia sudah kedaluwarsa sebelum akhir periode.
+    expect(rowFor(rows, "SKNK66SPP053").posisiSDMYangMemilikiSertifikat).toBe(0);
+  });
+
+  it("menghitung realisasi hanya untuk sertifikat yang terbit dalam periode", () => {
+    const rows = deriveSdmCounts({
+      area: KUPVA_WORK_AREA, ...period,
+      employees: [teller, supervisor],
+      certifications: [
+        { employeeId: 1, competencyCode: "SKNK66SPP054", issuedAt: "2026-08-15" }, // dalam triwulan III
+        { employeeId: 2, competencyCode: "SKNK66SPP053", issuedAt: "2026-02-10" }, // triwulan I
+      ],
+    });
+    expect(rowFor(rows, "SKNK66SPP054").realisasiSertifikasiSDM).toBe(1);
+    expect(rowFor(rows, "SKNK66SPP053").realisasiSertifikasiSDM).toBe(0);
+    // Namun keduanya tetap terhitung sebagai pemegang sertifikat.
+    expect(rowFor(rows, "SKNK66SPP053").posisiSDMYangMemilikiSertifikat).toBe(1);
+  });
+
+  it("membebankan kewajiban pemeliharaan hanya setelah sertifikat dasar dimiliki", () => {
+    const tanpaSertifikat = deriveSdmCounts({ area: KUPVA_WORK_AREA, ...period, employees: [teller], certifications: [] });
+    expect(rowFor(tanpaSertifikat, "SKPK66SPP054").posisiKeseluruhanSDM).toBe(0);
+
+    const sudahBersertifikat = deriveSdmCounts({
+      area: KUPVA_WORK_AREA, ...period,
+      employees: [teller],
+      certifications: [{ employeeId: 1, competencyCode: "SKNK66SPP054", issuedAt: "2025-02-01" }],
+    });
+    expect(rowFor(sudahBersertifikat, "SKPK66SPP054").posisiKeseluruhanSDM).toBe(1);
+  });
+
+  it("mengabaikan pegawai yang sudah tidak aktif pada akhir periode", () => {
+    const keluar = { ...teller, endedAt: "2026-05-31" };
+    const rows = deriveSdmCounts({ area: KUPVA_WORK_AREA, ...period, employees: [keluar], certifications: [] });
+    expect(rowFor(rows, "SKNK66SPP054").posisiKeseluruhanSDM).toBe(0);
+  });
+
+  it("mengambil rencana dari tabel rencana, bukan menurunkannya", () => {
+    // Rencana adalah keputusan manajemen; menurunkannya dari fakta akan membuat kolom itu selalu
+    // sama dengan realisasi dan laporan kehilangan maknanya.
+    const rows = deriveSdmCounts({ area: KUPVA_WORK_AREA, ...period, employees: [teller], certifications: [], plans: { SKNK66SPP054: 2 } });
+    expect(rowFor(rows, "SKNK66SPP054").rencanaSertifikasiSDM).toBe(2);
+    expect(rowFor(rows, "SKNK66SPP053").rencanaSertifikasiSDM).toBe(0);
+  });
+
+  it("menghasilkan laporan yang lolos pemeriksaan dan siap diunggah", () => {
+    const rows = deriveSdmCounts({
+      area: KUPVA_WORK_AREA, ...period,
+      employees: [teller, supervisor],
+      certifications: [{ employeeId: 1, competencyCode: "SKNK66SPP054", issuedAt: "2026-08-15" }],
+      plans: { SKNK66SPP053: 1 },
+    });
+    expect(validateSdmReport(rows)).toEqual([]);
+    const text = buildSdmTextFile({ idPelapor: "777249293", periodeData: period.periodEnd, rows });
+    expect(text).toContain("777249293|Q|2026-09-30|SKNK66SPP054|1|1|0|1");
+    expect(text).toContain("777249293|Q|2026-09-30|SKNK66SPP053|1|0|1|0");
   });
 });

@@ -829,6 +829,104 @@ export const regulatoryIncidentReports = mysqlTable("regulatory_incident_reports
   index("regulatory_incident_category_idx").on(table.category, table.createdAt),
 ]);
 
+export const jobLevels = ["DIREKSI", "PEJABAT_EKSEKUTIF", "PENYELIA", "PELAKSANA"] as const;
+export const employmentStatuses = ["AKTIF", "NONAKTIF"] as const;
+export const screeningResults = ["DALAM_PROSES", "LULUS", "TIDAK_LULUS"] as const;
+/**
+ * Jalur kompetensi yang diwajibkan bagi seorang pegawai. PADG No. 17 Tahun 2024 memisahkan PBK
+ * Sistem Pembayaran dari Sertifikasi Kompetensi Sistem Pembayaran, dan kewajiban pemeliharaan
+ * mengikuti sertifikat yang sudah dimiliki. Menyimpan jalur pada pegawai membuat keempat angka
+ * RAP01/RAS01 dapat diturunkan, bukan diketik ulang setiap triwulan.
+ */
+export const competencyTracks = ["PBK", "SERTIFIKASI_KOMPETENSI", "TIDAK_WAJIB"] as const;
+
+/**
+ * Pegawai yang tercantum dalam struktur organisasi.
+ *
+ * Temuan pemeriksaan Bank Indonesia 2026 butir 2 dan 12: tidak terdapat dokumen kepegawaian,
+ * mekanisme rekrutmen, dan pemantauan profil pegawai, serta belum ada prosedur dan dokumentasi
+ * penyaringan calon pegawai. Tabel ini menjadi tempat catatan itu berada, sekaligus sumber angka
+ * laporan kompetensi SDM triwulanan ke pelaporan.bi.go.id.
+ */
+export const employees = mysqlTable("employees", {
+  id: int("id").autoincrement().primaryKey(),
+  fullName: varchar("fullName", { length: 200 }).notNull(),
+  /** Nomor identitas untuk penyaringan terhadap daftar DTTOT/DPPSPM. */
+  identityNumber: varchar("identityNumber", { length: 40 }),
+  position: varchar("position", { length: 120 }).notNull(),
+  jobLevel: mysqlEnum("jobLevel", jobLevels).notNull(),
+  competencyTrack: mysqlEnum("competencyTrack", competencyTracks).default("TIDAK_WAJIB").notNull(),
+  employmentStatus: mysqlEnum("employmentStatus", employmentStatuses).default("AKTIF").notNull(),
+  joinedAt: datetime("joinedAt").notNull(),
+  endedAt: datetime("endedAt"),
+  /** Pendidikan terakhir; bagian dari profil pegawai yang diminta pemeriksa. */
+  education: varchar("education", { length: 120 }),
+  /** Nomor dan tanggal perjanjian kerja - empat pegawai ditemukan tanpa dokumen ini. */
+  employmentAgreementNumber: varchar("employmentAgreementNumber", { length: 80 }),
+  employmentAgreementAt: datetime("employmentAgreementAt"),
+  /** Penyaringan calon pegawai (pre-employee screening) beserta buktinya. */
+  screeningResult: mysqlEnum("screeningResult", screeningResults),
+  screenedAt: datetime("screenedAt"),
+  screeningNotes: text("screeningNotes"),
+  screenedByUserId: int("screenedByUserId"),
+  /** Akun aplikasi bila pegawai ini memakai sistem; boleh kosong. */
+  userId: int("userId"),
+  notes: text("notes"),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("employees_status_level_idx").on(table.employmentStatus, table.jobLevel),
+  index("employees_track_idx").on(table.competencyTrack),
+]);
+
+/**
+ * Sertifikat kompetensi yang dimiliki pegawai, satu baris per sertifikat.
+ *
+ * `competencyCode` memakai sandi resmi PADG 17/2024 (mis. SKNK66SPP054) sehingga angka laporan
+ * dapat dijumlahkan langsung per sandi tanpa pemetaan tambahan.
+ */
+export const employeeCertifications = mysqlTable("employee_certifications", {
+  id: int("id").autoincrement().primaryKey(),
+  employeeId: int("employeeId").notNull(),
+  competencyCode: varchar("competencyCode", { length: 20 }).notNull(),
+  certificateNumber: varchar("certificateNumber", { length: 120 }),
+  issuedAt: datetime("issuedAt").notNull(),
+  /** Sertifikat wajib dipelihara; kosong berarti tidak memiliki masa berlaku. */
+  expiresAt: datetime("expiresAt"),
+  documentId: int("documentId"),
+  notes: text("notes"),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("employee_certifications_employee_idx").on(table.employeeId, table.competencyCode),
+  index("employee_certifications_code_issued_idx").on(table.competencyCode, table.issuedAt),
+]);
+
+/**
+ * Rencana sertifikasi per triwulan, kolom `rencanaSertifikasiSDM` pada RAP01/RAS01. Ini satu-satunya
+ * dari keempat angka laporan yang tidak dapat diturunkan dari catatan pegawai, karena rencana
+ * memang keputusan manajemen dan bukan fakta yang sudah terjadi.
+ */
+export const sdmCompetencyPlans = mysqlTable("sdm_competency_plans", {
+  id: int("id").autoincrement().primaryKey(),
+  periodYear: int("periodYear").notNull(),
+  periodQuarter: int("periodQuarter").notNull(),
+  competencyCode: varchar("competencyCode", { length: 20 }).notNull(),
+  plannedCount: int("plannedCount").default(0).notNull(),
+  /** Rencana penyediaan dana, rupiah penuh - diminta Lampiran X/XI PADG 17/2024. */
+  plannedBudgetIdr: decimal("plannedBudgetIdr", { precision: 18, scale: 2 }),
+  notes: text("notes"),
+  updatedByUserId: int("updatedByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("sdm_competency_plans_period_code_uq").on(table.periodYear, table.periodQuarter, table.competencyCode),
+]);
+
+export type Employee = typeof employees.$inferSelect;
+export type EmployeeCertification = typeof employeeCertifications.$inferSelect;
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type StaffRole = User["role"];

@@ -201,3 +201,106 @@ export function validateSdmReport(rows: SdmReportRow[]): string[] {
   }
   return problems;
 }
+
+
+// ---------------------------------------------------------------------------
+// Menurunkan angka laporan dari catatan pegawai
+// ---------------------------------------------------------------------------
+
+/** Jenjang pada tabel pegawai, dipetakan ke angka terakhir sandi kompetensi. */
+export const JOB_LEVEL_BY_NAME: Record<string, JobLevel> = {
+  DIREKSI: 1,
+  PEJABAT_EKSEKUTIF: 2,
+  PENYELIA: 3,
+  PELAKSANA: 4,
+};
+
+export type EmployeeForReport = {
+  id: number;
+  jobLevel: keyof typeof JOB_LEVEL_BY_NAME;
+  competencyTrack: "PBK" | "SERTIFIKASI_KOMPETENSI" | "TIDAK_WAJIB";
+  employmentStatus: "AKTIF" | "NONAKTIF";
+  joinedAt: string;
+  endedAt?: string | null;
+};
+
+export type CertificationForReport = {
+  employeeId: number;
+  competencyCode: string;
+  issuedAt: string;
+  expiresAt?: string | null;
+};
+
+/** Jenis sertifikasi dasar untuk tiap jalur, dan jenis pemeliharaannya. */
+const TRACK_BASE: Record<string, CertificationType | null> = { PBK: "PBKNK", SERTIFIKASI_KOMPETENSI: "SKNK", TIDAK_WAJIB: null };
+const TRACK_MAINTENANCE: Record<string, CertificationType | null> = { PBK: "PBKPK", SERTIFIKASI_KOMPETENSI: "SKPK", TIDAK_WAJIB: null };
+
+const employedAt = (employee: EmployeeForReport, date: string) =>
+  employee.joinedAt <= date && (!employee.endedAt || employee.endedAt >= date) && employee.employmentStatus === "AKTIF";
+
+const certificateValidAt = (certificate: CertificationForReport, date: string) =>
+  certificate.issuedAt <= date && (!certificate.expiresAt || certificate.expiresAt >= date);
+
+/**
+ * Menghitung keempat angka RAP01/RAS01 dari catatan pegawai dan sertifikatnya.
+ *
+ * Kewajiban dibaca dari jalur kompetensi pegawai: jalur PBK menimbulkan kewajiban PBKNK, jalur
+ * Sertifikasi Kompetensi menimbulkan SKNK. Kewajiban pemeliharaan (PBKPK/SKPK) hanya berlaku bagi
+ * pegawai yang sudah memegang sertifikat dasarnya, karena tidak ada yang perlu dipelihara sebelum
+ * sertifikat itu ada.
+ *
+ * `rencanaSertifikasiSDM` tidak diturunkan di sini - rencana adalah keputusan manajemen, bukan
+ * fakta yang sudah terjadi, sehingga datang dari tabel rencana.
+ */
+export function deriveSdmCounts(input: {
+  area: WorkArea;
+  periodStart: string;
+  periodEnd: string;
+  employees: EmployeeForReport[];
+  certifications: CertificationForReport[];
+  plans?: Record<string, number>;
+}): SdmReportRow[] {
+  const { area, periodStart, periodEnd, employees, certifications, plans = {} } = input;
+  const active = employees.filter((employee) => employedAt(employee, periodEnd));
+  const byEmployee = new Map<number, CertificationForReport[]>();
+  for (const certificate of certifications) {
+    const list = byEmployee.get(certificate.employeeId) ?? [];
+    list.push(certificate);
+    byEmployee.set(certificate.employeeId, list);
+  }
+
+  return competencyCodesForArea(area).map((entry) => {
+    const obliged = active.filter((employee) => {
+      if (JOB_LEVEL_BY_NAME[employee.jobLevel] !== entry.level) return false;
+      const base = TRACK_BASE[employee.competencyTrack];
+      const maintenance = TRACK_MAINTENANCE[employee.competencyTrack];
+      if (entry.type === base) return true;
+      if (entry.type !== maintenance) return false;
+      // Pemeliharaan baru menjadi kewajiban setelah sertifikat dasarnya dimiliki.
+      const baseCode = base ? competencyCode(base, entry.area, entry.level) : null;
+      return Boolean(baseCode && (byEmployee.get(employee.id) ?? []).some((certificate) => certificate.competencyCode === baseCode && certificate.issuedAt <= periodEnd));
+    });
+
+    const holders = obliged.filter((employee) =>
+      (byEmployee.get(employee.id) ?? []).some((certificate) => certificate.competencyCode === entry.code && certificateValidAt(certificate, periodEnd)),
+    );
+
+    const realised = obliged.filter((employee) =>
+      (byEmployee.get(employee.id) ?? []).some((certificate) => certificate.competencyCode === entry.code && certificate.issuedAt >= periodStart && certificate.issuedAt <= periodEnd),
+    );
+
+    return {
+      ...entry,
+      posisiKeseluruhanSDM: obliged.length,
+      posisiSDMYangMemilikiSertifikat: holders.length,
+      rencanaSertifikasiSDM: plans[entry.code] ?? 0,
+      realisasiSertifikasiSDM: realised.length,
+    };
+  });
+}
+
+/** Awal triwulan sebagai yyyy-mm-dd, pasangan quarterEndDate. */
+export function quarterStartDate(year: number, quarter: 1 | 2 | 3 | 4): string {
+  const firstDay = { 1: "01-01", 2: "04-01", 3: "07-01", 4: "10-01" }[quarter];
+  return `${year}-${firstDay}`;
+}
