@@ -94,13 +94,21 @@ dari sesi 3 September.
    kembali sebagai tengah malam **UTC** (`2026-09-01T00:00:00.000Z` pada mesin GMT+7), jadi
    `toISOString()` saat membaca sudah benar. Yang perlu dinormalkan hanya arah kirim.
 
-   **Yang belum diperbaiki:** perbandingan `eq()` atas kolom `date` yang memakai
-   `jakartaBusinessDate` — `dailyOperationalChecklists.businessDate` dan `stockOpnames.opnameDate`
-   (`server/operations.ts` baris ~1733, ~1817, ~2716). `jakartaBusinessDate` mengembalikan tengah
-   malam UTC: benar di produksi yang berjalan pada UTC, meleset tujuh jam di mesin pengembangan
-   WIB, sehingga pencarian checklist/opname hari berjalan tidak menemukan baris yang sudah ada dan
-   berisiko menyisipkan duplikat. Sengaja tidak disentuh: mengubah `jakartaBusinessDate` mengubah
-   perilaku tutup buku, opname, dan checklist sekaligus, jadi perlu rencana tersendiri.
+   **Sudah diperbaiki (paket K1, `dbc027d`):** `eq()` atas `dailyOperationalChecklists.businessDate`
+   dan `stockOpnames.opnameDate` kini memakai `jakartaBusinessDateColumn()`, pembungkus tipis atas
+   `dateColumnBound(jakartaBusinessDate(...))`. Batas rentang `getStockOpnameReport` ikut
+   dinormalkan. Dijaga `server/businessDateColumn.test.ts`.
+
+   **`jakartaBusinessDate` sendiri sengaja tetap mengembalikan tengah malam UTC** dan **jangan**
+   diubah: `openingCashMovementReason` memakainya untuk membentuk teks, `getOperationalDashboard`
+   sebagai batas `datetime`, dan `reverseJournalEntry` (`server/ledgerOperations.ts:458`)
+   menyerahkannya ke `insertJournal` yang sudah menormalkannya lewat `dbDate` — membungkusnya lagi
+   di sana justru memundurkan tanggalnya satu hari.
+
+   **Menguji ini menuntut asersi atas jam lokalnya, bukan tanggalnya.** Di WIB, nilai lama dan nilai
+   baru punya bagian tanggal lokal yang sama persis dan hanya berbeda pada jamnya (07:00 lawan
+   00:00) — uji yang hanya memeriksa tanggal akan lolos terhadap bug ini. Pada proses yang berjalan
+   UTC keduanya identik, dan memang di sanalah bugnya tidak ada.
 
 3. **Penjurnalan otomatis dijalankan terpisah, bukan di dalam `completeTransaction`.** Penyelesaian
    bon memindahkan dua sisi kas, stok pecahan, dan saldo bank dalam satu transaksi basis data;

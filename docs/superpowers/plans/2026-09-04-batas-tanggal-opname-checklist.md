@@ -22,7 +22,7 @@ memakainya sebagai batas `datetime` dan sudah benar.
 Pengerjaan di ROADMAP.
 
 - [x] Tugas 1 — Normalkan tanggal yang dikirim ke kolom `date`
-- [ ] Tugas 2 — Uji penjaga dan dokumentasi
+- [x] Tugas 2 — Uji penjaga dan dokumentasi
 
 Urutannya mengikat: 1 sebelum 2.
 
@@ -209,46 +209,37 @@ git commit -m "Kirim hari usaha ke kolom date sebagai tengah malam lokal"
 - Consumes: `jakartaBusinessDateColumn`, `jakartaBusinessDate` dari tugas 1
 - Produces: —
 
-- [ ] **Langkah 1: Tulis uji penjaga**
+- [x] **Langkah 1: Tulis uji penjaga**
 
 Ujinya harus lulus di zona waktu mana pun — termasuk mesin CI yang berjalan UTC — jadi asersinya
 atas **komponen lokal** hasilnya, bukan atas `toISOString()`.
 
-Buat `server/businessDateColumn.test.ts`:
+Buat `server/businessDateColumn.test.ts`.
+
+> **Koreksi terhadap rancangan awal rencana ini.** Draf semula hanya mengasersi bagian **tanggal**
+> lokal hasilnya. Itu tidak menjaga apa pun: di WIB, nilai lama (tengah malam UTC) dan nilai baru
+> punya bagian tanggal lokal yang sama persis — `2026-09-02` keduanya — dan hanya berbeda pada
+> jamnya, 07:00 lawan 00:00. Justru jam itulah yang membuat MySQL menolak kecocokan. Asersinya
+> karena itu atas bentuk yang benar-benar dikirim mysql2, tanggal **beserta jamnya**. Diverifikasi
+> dengan mengembalikan sementara perilaku lama: tiga dari empat uji gagal, sebagaimana seharusnya.
 
 ```ts
 import { describe, expect, it } from "vitest";
 import { jakartaBusinessDate, jakartaBusinessDateColumn } from "./operations";
 
-/** Tanggal sebagaimana mysql2 akan memformatnya: komponen waktu LOKAL proses. */
-function asMysqlDate(value: Date) {
+/** Persis seperti mysql2 mengirimkan sebuah `Date`: komponen waktu lokal proses, lengkap jamnya. */
+function asMysqlValue(value: Date) {
   const pad = (part: number) => String(part).padStart(2, "0");
-  return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+  const day = `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+  return `${day} ${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
 }
-
-describe("hari usaha Jakarta sebagai nilai kolom date", () => {
-  it("mengirim hari kalender Jakarta, bukan hari UTC-nya", () => {
-    // 20:00 UTC adalah pukul 03:00 keesokan harinya di Jakarta.
-    const instant = new Date("2026-09-01T20:00:00Z");
-    expect(asMysqlDate(jakartaBusinessDateColumn(instant))).toBe("2026-09-02");
-  });
-
-  it("tetap benar pada tengah malam Jakarta, batas yang paling mudah meleset", () => {
-    // 17:00 UTC adalah tepat tengah malam awal 2 September di Jakarta.
-    expect(asMysqlDate(jakartaBusinessDateColumn(new Date("2026-09-01T17:00:00Z")))).toBe("2026-09-02");
-    // Satu detik sebelumnya masih 1 September.
-    expect(asMysqlDate(jakartaBusinessDateColumn(new Date("2026-09-01T16:59:59Z")))).toBe("2026-09-01");
-  });
-
-  it("membiarkan jakartaBusinessDate tetap tengah malam UTC bagi pemanggil datetime", () => {
-    // Pemanggil seperti getOperationalDashboard memakainya sebagai batas datetime dan sudah benar.
-    // Mengubahnya akan menggeser batas dasbor, tutup buku, dan checklist sekaligus.
-    expect(jakartaBusinessDate(new Date("2026-09-01T20:00:00Z")).toISOString()).toBe("2026-09-02T00:00:00.000Z");
-  });
-});
 ```
 
-- [ ] **Langkah 2: Jalankan dan pastikan lulus**
+Empat perilaku yang dijaga: hari kalender Jakarta pada tengah malam lokal; batas tengah malam
+Jakarta beserta satu detik sebelumnya; jam lokal yang benar-benar nol (asersi yang menjaga);
+dan `jakartaBusinessDate` yang tetap mengembalikan tengah malam UTC bagi pemanggil `datetime`.
+
+- [x] **Langkah 2: Jalankan dan pastikan lulus**
 
 ```bash
 ./node_modules/.bin/vitest run server/businessDateColumn.test.ts
@@ -257,7 +248,7 @@ describe("hari usaha Jakarta sebagai nilai kolom date", () => {
 Bila `jakartaBusinessDateColumn` belum diekspor, ekspor dari `server/operations.ts` — tugas 1
 langkah 1 sudah menuliskannya sebagai `export function`.
 
-- [ ] **Langkah 3: Perbarui skema database**
+- [x] **Langkah 3: Perbarui skema database**
 
 Di `docs/SKEMA-DATABASE-PROJECT.md`, pada bagian "Kontrol Data Penting", tambahkan satu baris
 tabel yang menjelaskan aturannya sekali untuk seluruh proyek:
@@ -266,7 +257,7 @@ tabel yang menjelaskan aturannya sekali untuk seluruh proyek:
 |---|---|---|
 | Nilai kolom `date` | `dateColumnBound`/`jakartaBusinessDateColumn` (`server/operations.ts`) dan `dbDate` (`server/ledgerOperations.ts`) menormalkan tanggal menjadi tengah malam **lokal** sebelum dikirim | mysql2 memformat `Date` memakai zona waktu proses, jadi tengah malam UTC menjadi `'... 07:00:00'` di mesin WIB — `eq()` tidak pernah cocok dengan baris yang sudah ada dan `gte()` menyingkirkan baris pada batas bawahnya. Benar di produksi (jam server UTC), salah hanya di mesin pengembangan, sehingga bug jenis ini lolos tanpa suara. Normalisasi dilakukan **sekali**; menerapkannya dua kali memundurkan tanggalnya satu hari. |
 
-- [ ] **Langkah 4: Perbarui handoff**
+- [x] **Langkah 4: Perbarui handoff**
 
 Di `docs/HANDOFF-OPUS.md` butir 2 bagian "Empat hal yang tidak boleh diturunkan ulang dari kode",
 sub-bagian **"Yang belum diperbaiki"** menyebut `dailyOperationalChecklists.businessDate` dan
@@ -274,7 +265,7 @@ sub-bagian **"Yang belum diperbaiki"** menyebut `dailyOperationalChecklists.busi
 diperbaiki lewat `jakartaBusinessDateColumn`, dan bahwa `jakartaBusinessDate` sendiri sengaja
 dibiarkan mengembalikan tengah malam UTC untuk pemanggil `datetime`.
 
-- [ ] **Langkah 5: Gerbang mutu**
+- [x] **Langkah 5: Gerbang mutu**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -286,7 +277,7 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 
 Harapan: bersih, dengan **tiga uji tambahan** dibanding baseline.
 
-- [ ] **Langkah 6: Commit, lalu centang Status Pengerjaan**
+- [x] **Langkah 6: Commit, lalu centang Status Pengerjaan**
 
 ```bash
 git add server/businessDateColumn.test.ts docs/

@@ -15,8 +15,8 @@ rancangan)* — kerjakan sesi rancangannya lebih dulu, yang menghasilkan spec da
 
 ### Paket K1 — Batas tanggal `jakartaBusinessDate`
 Rencana: `plans/2026-09-04-batas-tanggal-opname-checklist.md`
-- [ ] Tugas 1 — Normalkan tanggal pada checklist dan opname
-- [ ] Tugas 2 — Uji penjaga dan dokumentasi
+- [x] Tugas 1 — Normalkan tanggal pada checklist dan opname
+- [x] Tugas 2 — Uji penjaga dan dokumentasi
 
 ### Paket B — Setoran modal pada persiapan go-live
 Rencana: `plans/2026-09-04-setoran-modal-persiapan-go-live.md`
@@ -95,7 +95,7 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 ./node_modules/.bin/vite build
 ```
 
-Baseline setelah paket A: **522 uji lulus, 2 dilewati (75 berkas)**. Tugas yang mengganti uji lama
+Baseline saat ini (setelah paket K1): **526 uji lulus, 2 dilewati (76 berkas)**. Tugas yang mengganti uji lama
 akan mengubah angkanya — sebutkan angka yang benar-benar dilihat, jangan mengarang.
 
 ### Batas keras
