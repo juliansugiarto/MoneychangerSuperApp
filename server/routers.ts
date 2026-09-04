@@ -112,6 +112,16 @@ import {
 } from "./ledgerOperations";
 import { postOperationsToLedger } from "./ledgerPosting";
 import { buildPeriodValuation, postPeriodClosing, postYearEndProfitClosing } from "./periodClosing";
+import {
+  buildMonthlyDepreciation,
+  disposeFixedAsset,
+  getFixedAssetSettings,
+  listFixedAssets,
+  postMonthlyDepreciation,
+  registerFixedAsset,
+  updateFixedAssetSettings,
+} from "./fixedAssets";
+import { fixedAssetCategories, fixedAssetTaxGroups } from "../drizzle/schema";
 import { buildFinancialStatements } from "./financialStatements";
 import { KUPVA_WORK_AREA, competencyCodesForArea } from "../shared/sdmCompetency";
 import {
@@ -537,6 +547,18 @@ export const appRouter = router({
       .input(z.object({ periodId: z.number().int().positive() }))
       .mutation(({ input, ctx }) => postYearEndProfitClosing(input, ctx.user)),
 
+    /**
+     * Penyusutan bulanan. Diletakkan pada router `ledger`, bukan `fixedAssets`, karena yang
+     * dilakukan orang di tab Periode adalah menutup bulan — dan penyusutan adalah langkah
+     * pertamanya, sebelum penilaian persediaan dan sebelum penguncian.
+     */
+    monthlyDepreciation: controllerProcedure
+      .input(z.object({ periodId: z.number().int().positive() }))
+      .query(({ input }) => buildMonthlyDepreciation(input.periodId)),
+    postMonthlyDepreciation: controllerProcedure
+      .input(z.object({ periodId: z.number().int().positive() }))
+      .mutation(({ input, ctx }) => postMonthlyDepreciation(input, ctx.user)),
+
     entries: controllerProcedure.input(z.object({
       from: z.coerce.date().optional(),
       to: z.coerce.date().optional(),
@@ -588,6 +610,45 @@ export const appRouter = router({
       from: z.coerce.date().optional(),
       to: z.coerce.date().optional(),
     })).query(({ input }) => buildAccountLedger(input)),
+  }),
+
+  /**
+   * Register aset tetap. Controller ke atas, sama seperti router `ledger`: harga perolehan
+   * menentukan isi neraca, dan batas kapitalisasi menentukan apa yang masuk ke sana.
+   *
+   * Tanggal dikirim sebagai "YYYY-MM-DD", **bukan** `z.coerce.date()`: `coerce` menghasilkan
+   * tengah malam UTC, dan mengirimnya ke kolom `date` dari mesin WIB memundurkan tanggalnya satu
+   * hari. Server mengubahnya lewat `dbDate` sendiri.
+   */
+  fixedAssets: router({
+    list: controllerProcedure.query(() => listFixedAssets()),
+    settings: controllerProcedure.query(() => getFixedAssetSettings()),
+    updateSettings: controllerProcedure
+      .input(z.object({ capitalisationThresholdIdr: decimalString }))
+      .mutation(({ input, ctx }) => updateFixedAssetSettings(input, ctx.user)),
+    register: controllerProcedure
+      .input(z.object({
+        assetCode: z.string().trim().max(60).optional(),
+        name: z.string().trim().min(1).max(200),
+        category: z.enum(fixedAssetCategories),
+        taxGroup: z.enum(fixedAssetTaxGroups).optional(),
+        acquisitionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal harus berbentuk YYYY-MM-DD."),
+        acquisitionCost: decimalString,
+        residualValue: decimalString.optional(),
+        usefulLifeMonths: z.number().int().positive().max(600).nullable(),
+        firstJournalMonth: z.string().regex(/^\d{4}-\d{2}$/, "Bulan harus berbentuk YYYY-MM.").optional(),
+        openingAccumulatedDepreciation: decimalString.optional(),
+        notes: z.string().trim().max(2000).optional(),
+      }))
+      .mutation(({ input, ctx }) => registerFixedAsset(input, ctx.user)),
+    dispose: controllerProcedure
+      .input(z.object({
+        assetId: z.number().int().positive(),
+        disposalDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal harus berbentuk YYYY-MM-DD."),
+        proceeds: decimalString,
+        notes: z.string().trim().max(2000).optional(),
+      }))
+      .mutation(({ input, ctx }) => disposeFixedAsset(input, ctx.user)),
   }),
 
   companyProfile: router({
