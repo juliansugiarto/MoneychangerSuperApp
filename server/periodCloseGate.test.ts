@@ -63,6 +63,7 @@ const december = (overrides: Record<string, unknown> = {}) => ({
   periodStart: dbDay("2026-12-01"),
   periodEnd: dbDay("2026-12-31"),
   status: "TERBUKA" as const,
+  depreciationPostedAt: new Date("2027-01-02T03:00:00Z"),
   valuationPostedAt: new Date("2027-01-02T03:00:00Z"),
   profitClosingPostedAt: null,
   ...overrides,
@@ -73,6 +74,7 @@ const september = (overrides: Record<string, unknown> = {}) => ({
   periodStart: dbDay("2026-09-01"),
   periodEnd: dbDay("2026-09-30"),
   status: "TERBUKA" as const,
+  depreciationPostedAt: new Date("2026-10-01T03:00:00Z"),
   valuationPostedAt: new Date("2026-10-01T03:00:00Z"),
   profitClosingPostedAt: null,
   ...overrides,
@@ -89,6 +91,17 @@ const reads = (periods: unknown[][], extra: { balances?: unknown[]; journal?: un
   { table: periodClosingValuations, results: [[]] },
   { table: cashBalances, results: [[]] },
 ];
+
+/**
+ * Dua belas bulan tahun buku, seluruhnya sudah disusutkan.
+ *
+ * `postYearEndProfitClosing` membacanya sebelum penutupan tahunan sebelumnya (paket E): penutup
+ * laba menolkan 6-1700, jadi bebannya harus lengkap lebih dulu.
+ */
+const twelveMonthsPosted = Array.from({ length: 12 }, (_, index) => ({
+  periodStart: dbDay(`2026-${`${index + 1}`.padStart(2, "0")}-01`),
+  depreciationPostedAt: new Date("2027-01-02T03:00:00Z"),
+}));
 
 const actor = { id: 42 };
 
@@ -172,7 +185,7 @@ describe("postYearEndProfitClosing", () => {
     ] as never);
     // Periode ini, lalu periode dinilai sebelumnya (dibaca `buildPeriodValuation`), lalu penutupan
     // tahunan sebelumnya yang menentukan tanggal mulainya.
-    const { spy, writes } = mockDb(reads([[december()], [], [{ periodEnd: dbDay("2025-12-31") }]]));
+    const { spy, writes } = mockDb(reads([[december()], [], twelveMonthsPosted, [{ periodEnd: dbDay("2025-12-31") }]]));
 
     const result = await postYearEndProfitClosing({ periodId: 12 }, actor);
 
@@ -201,7 +214,7 @@ describe("postYearEndProfitClosing", () => {
   });
 
   it("menghitung sejak awal pembukuan bila belum pernah ada penutupan tahunan", async () => {
-    const { spy } = mockDb(reads([[december()], [], []]));
+    const { spy } = mockDb(reads([[december()], [], twelveMonthsPosted, []]));
 
     await postYearEndProfitClosing({ periodId: 12 }, actor);
 
@@ -210,7 +223,7 @@ describe("postYearEndProfitClosing", () => {
   });
 
   it("tetap menandai tahun sudah ditutup meski tidak ada saldo laba rugi untuk dijurnal", async () => {
-    const { spy, writes } = mockDb(reads([[december()], [], []]));
+    const { spy, writes } = mockDb(reads([[december()], [], twelveMonthsPosted, []]));
 
     const result = await postYearEndProfitClosing({ periodId: 12 }, actor);
 

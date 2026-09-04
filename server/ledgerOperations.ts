@@ -205,6 +205,14 @@ export async function closeAccountingPeriod(input: { periodId: number; notes?: s
   // 1-1210 Kas UKA nol selamanya. Penilaian karena itu menjadi syarat, bukan anjuran. Diperiksa
   // **setelah** keutuhan jurnal: jurnal yang tidak utuh masalah yang lebih besar, dan pesannyalah
   // yang harus sampai lebih dulu.
+  // Penyusutan lebih dulu daripada penilaian: ia mengubah laba periode ini, sementara penilaian
+  // persediaan tidak bergantung padanya. Bulan yang terlupa membuat laba berlebih persis sebesar
+  // penyusutan yang tidak pernah dibebankan, dan tidak ada satu pun laporan yang menolaknya.
+  if (!period.depreciationPostedAt) {
+    throw new Error(
+      "Periode tidak dapat ditutup: penyusutan aset tetap belum dijurnal. Jalankan penyusutan bulanan pada panel Periode lebih dulu.",
+    );
+  }
   if (!period.valuationPostedAt) {
     throw new Error(
       "Periode tidak dapat ditutup: penilaian persediaan akhir UKA belum dijalankan. Jalankan penilaian pada panel Penutupan Periode lebih dulu.",

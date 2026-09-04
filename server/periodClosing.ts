@@ -452,6 +452,32 @@ export async function postYearEndProfitClosing(input: { periodId: number }, acto
   const memo = `Penutup laba tahun buku ${year}`;
   const sourceReference = `TUTUP-LABA-${year}`;
 
+  // Penutup laba menolkan 6-1700 Beban Penyusutan bersama akun laba rugi lainnya. Menutupnya
+  // sebelum bebannya lengkap memindahkan angka yang salah ke 3-2100 Laba Ditahan — dan 3-2100
+  // tidak pernah ditinjau lagi setelahnya. Seluruh bulan yang tertinggal disebut sekaligus, bukan
+  // satu per satu setiap kali dicoba.
+  const monthsInYear = await db
+    .select({
+      periodStart: accountingPeriods.periodStart,
+      depreciationPostedAt: accountingPeriods.depreciationPostedAt,
+    })
+    .from(accountingPeriods)
+    .where(
+      and(
+        gte(accountingPeriods.periodStart, dbDate(`${year}-01-01`)),
+        lte(accountingPeriods.periodEnd, dbDate(`${year}-12-31`)),
+      ),
+    )
+    .orderBy(accountingPeriods.periodStart);
+  const missingDepreciation = monthsInYear
+    .filter((row) => !row.depreciationPostedAt)
+    .map((row) => calendarDay(row.periodStart).slice(0, 7));
+  if (missingDepreciation.length) {
+    throw new Error(
+      `Penutup laba tidak dapat dijalankan: penyusutan belum dijurnal untuk ${missingDepreciation.join(", ")}.`,
+    );
+  }
+
   // Laba yang dipindahkan adalah laba **sejak penutupan tahunan terakhir**, bukan sejak awal
   // pembukuan: saldo sebelum itu sudah berpindah ke 3-2100 pada penutupan sebelumnya, dan
   // memindahkannya lagi menghitung laba tahun lalu dua kali.

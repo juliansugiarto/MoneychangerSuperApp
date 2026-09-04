@@ -72,8 +72,17 @@ const opname = (id: number, day: string, quantity: string) => ({
 });
 const period = (id: number, start: string, end: string, overrides: Record<string, unknown> = {}) => ({
   id, periodStart: dbDay(start), periodEnd: dbDay(end), status: "TERBUKA" as const,
+  // Penyusutan bulanan (paket E) sudah dijalankan; skenario ini menguji penilaian dan penutup laba,
+  // bukan gerbang penyusutannya — gerbang itu punya berkasnya sendiri di `depreciationGate.test.ts`.
+  depreciationPostedAt: new Date("2027-01-02T03:00:00Z"),
   valuationPostedAt: null, profitClosingPostedAt: null, ...overrides,
 });
+
+/** Dua belas bulan tahun buku yang penyusutannya sudah dijurnal — dibaca `postYearEndProfitClosing`. */
+const twelveMonthsPosted = Array.from({ length: 12 }, (_, index) => ({
+  periodStart: dbDay(`2026-${`${index + 1}`.padStart(2, "0")}-01`),
+  depreciationPostedAt: new Date("2027-01-02T03:00:00Z"),
+}));
 
 const reads = (options: {
   periods: unknown[][];
@@ -214,7 +223,7 @@ describe("penutupan Desember", () => {
       { accountCode: "5-1300", balance: parseAmount("161000000.00") },
       { accountCode: "6-1100", balance: parseAmount("30000000.00") },
     ] as never);
-    const posting = mockDb(reads({ periods: [[december], [], []] }));
+    const posting = mockDb(reads({ periods: [[december], [], twelveMonthsPosted, []] }));
 
     await postYearEndProfitClosing({ periodId: 12 }, actor);
 
