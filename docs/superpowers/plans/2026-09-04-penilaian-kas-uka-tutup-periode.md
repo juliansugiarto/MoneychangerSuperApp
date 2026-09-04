@@ -18,7 +18,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 1 — Migrasi penilaian penutupan periode (0047)
 - [x] Tugas 2 — Penilaian kurs tengah murni di `shared/`
 - [x] Tugas 3 — Pemetaan jurnal penutupan dan penutup laba
-- [ ] Tugas 4 — `buildPeriodValuation`: bukti kuantitas dan kurs
+- [x] Tugas 4 — `buildPeriodValuation`: bukti kuantitas dan kurs
 - [ ] Tugas 5 — `postPeriodClosing`: tulis penilaian dan jurnalnya
 - [ ] Tugas 6 — Penutup laba tahunan dan gerbang `closeAccountingPeriod`
 - [ ] Tugas 7 — Neraca memakai laba sejak penutupan tahunan terakhir
@@ -670,7 +670,7 @@ sehingga yang dilihat pengguna dan yang dijurnal server mustahil berbeda.
   - `buildPeriodValuation(periodId: number): Promise<PeriodValuation>`
   - Dipakai tugas 5, 8, 9.
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 Buat `server/periodValuation.test.ts`. Palsukan `getDb` seperti `server/opnameSystemCounts.test.ts`,
 dan mock `getOpnameSystemCounts` supaya pemeriksaan "stok memang kosong" dapat dikemudikan:
@@ -706,14 +706,14 @@ Uji yang wajib ada, masing-masing satu `it`:
    tidak menghasilkan baris penilaian.
 10. `priorClosingValue` dibaca dari periode dinilai sebelumnya; nol bila belum pernah ada.
 
-- [ ] **Step 2: Jalankan uji, pastikan gagal**
+- [x] **Step 2: Jalankan uji, pastikan gagal**
 
 ```bash
 ./node_modules/.bin/vitest run server/periodValuation.test.ts
 ```
 Harapan: GAGAL — `server/periodClosing.ts` belum ada.
 
-- [ ] **Step 3: Tulis implementasi**
+- [x] **Step 3: Tulis implementasi**
 
 Buat `server/periodClosing.ts` dengan bentuk berikut. Doc-comment-nya wajib menyebutkan **alasan**,
 bukan hanya langkahnya:
@@ -774,7 +774,7 @@ Aturan yang harus ditegakkan implementasinya, seluruhnya sudah diputuskan pada s
 - `priorClosingValue`: `SUM(rupiahValue)` dari `period_closing_valuations` milik periode dengan
   `periodEnd` terbesar yang `< periodStart` **dan** `valuationPostedAt IS NOT NULL`.
 
-- [ ] **Step 4: Jalankan uji dan gerbang mutu**
+- [x] **Step 4: Jalankan uji dan gerbang mutu**
 
 ```bash
 ./node_modules/.bin/vitest run server/periodValuation.test.ts
@@ -782,7 +782,7 @@ Aturan yang harus ditegakkan implementasinya, seluruhnya sudah diputuskan pada s
 ```
 Harapan: seluruh uji lulus.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/periodClosing.ts server/periodValuation.test.ts
