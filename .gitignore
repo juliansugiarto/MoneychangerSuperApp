@@ -6,3 +6,8 @@ backups/
 !.env.example
 *.log
 .DS_Store
+
+# Skill pihak ketiga yang dipasang lewat `npx skills add` — alat bantu agen, bukan bagian produk.
+.agents/
+.claude/
+skills-lock.json
