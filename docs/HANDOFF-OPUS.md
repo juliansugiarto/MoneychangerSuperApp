@@ -11,6 +11,9 @@ Diperbarui 4 September 2026. Menggantikan isi sebelumnya.
    bagan akun, sembilan fase, dan pemeriksaan silang. **Dokumen pengarah utama.**
 3. Memori sesi (`~/.claude/projects/.../memory/`) — SAK EP, aturan penyusutan, struktur IRA,
    struktur RAP01/RAS01, temuan SINTA, jebakan kolom `date` MySQL. Semuanya sudah diverifikasi.
+4. **`docs/superpowers/ROADMAP-SISA-PEKERJAAN.md`** — sebelas paket sisa pekerjaan, urutan beserta
+   ketergantungannya, dan Status Pengerjaan lintas paket. **Mulai dari sini** untuk tahu apa yang
+   dikerjakan berikutnya. Prompt siap tempel per tugas ada di `docs/superpowers/PROMPT-SESI.md`.
 
 ## Cara menjalankan
 
@@ -119,30 +122,23 @@ dari sesi 3 September.
 
 ## Yang harus dikerjakan berikutnya
 
-Paket A (penjurnalan kas, modal, kas↔bank) sudah selesai — lihat "Selesai pada dua sesi terakhir".
-Dua paket lanjutannya adalah prioritas berikutnya; keduanya belum punya spec sendiri, dan rujukan
-awalnya ada di `docs/superpowers/specs/2026-09-04-penjurnalan-kas-design.md` (bagian "Yang sudah
-diputuskan pengguna" butir 3).
+Daftar lengkapnya kini hidup di **`docs/superpowers/ROADMAP-SISA-PEKERJAAN.md`** beserta Status
+Pengerjaan per tugas — jangan menyalinnya kembali ke sini, satu daftar saja supaya tidak ada dua
+sumber kebenaran yang berselisih.
 
-1. **Paket B — form data awal perusahaan saat login pertama shareholder.** Menuntun urutan yang
-   benar (setor modal dulu, baru hitungan kas awal) supaya operator tidak perlu mengingatnya
-   sendiri; memanggil mekanisme setoran modal dari paket A. Tanpa ini, kas awal pertama tetap
-   dilewati beserta alasannya dan Kas Rupiah tetap timpang sampai modalnya dicatat manual.
-2. **Paket C — revaluasi dan penutupan kas UKA.** Mengisi 1-1210 Kas UKA dan 5-1300 lewat
-   persediaan akhir hasil opname beserta kurs penutup yang dituntut SAK EP Bab 30; inilah yang
-   akhirnya memberi nilai pada mutasi kas valuta asing yang sengaja dilewati paket A. Beririsan
-   dengan fase 05 di butir 4.
-3. **Fase 01 dimensi cabang**, lalu melengkapi fase 04 dengan `branchId`. Kolomnya sudah disediakan
-   nullable pada `journal_entries` dan `journal_entry_lines` supaya jurnal tidak ditulis ulang;
-   yang tersisa hanya meneruskannya dari tabel sumber.
-4. **Fase 05** — register aset tetap dan penyusutan (memasok baris Penyusutan B0003 yang selama ini
-   tidak punya asal), amortisasi biaya dibayar dimuka, dan **revaluasi kas UKA memakai kurs
-   penutup** yang dituntut SAK EP Bab 30.
-5. **Fase 07 dan 08** — Arus Kas, CALK, paket audit, lalu ekspor ke tata letak B0002/B0003/B0004
-   memakai pola validasi `server/financialImport.ts`. Tidak ada pengiriman otomatis ke regulator.
-6. Temuan 3 (arsip dokumen), 6 (stock opname termasuk Rupiah), 10 (pemantauan berbasis profil).
-7. IRA — perlu tabel penilaian SRA.
-8. Perbaiki penamaan `dttotPpsdmMatch` / "PPPSM" menjadi **DPPSPM/PPPSPM**.
+Ringkasnya, sebelas paket dalam urutan yang direkomendasikan: **K1** batas tanggal → **B** setoran
+modal go-live → **D** opname pecahan dan brankas (temuan 6) → **C** penilaian kas UKA (temuan 7.1)
+→ **E** aset tetap → **F** Arus Kas dan CALK → **G** ekspor B0002/B0003/B0004 → **H** profil
+transaksi (temuan 9 sisa, 10) → **I** arsip dokumen (temuan 3) → **J** IRA (temuan 11) → **K2/K3**
+kebersihan. Yang mengikat hanya K1 sebelum D, D sebelum C, E sebelum F, dan C–F sebelum G.
+
+Paket K1 dan B sudah punya rencana bertugas yang rinci dan dapat langsung dikerjakan. Sembilan
+paket sisanya perlu sesi rancangan lebih dulu; prompt untuk sesi itu sudah disiapkan.
+
+**Empat temuan pemeriksaan BI masih terbuka dan tenggatnya 28 Agustus 2026 sudah lewat:** 3 (arsip
+dokumen), 6 (opname mencakup brankas dan Rupiah), 10 (pemantauan berbasis profil), 11 (IRA). Bila
+tekanan pemeriksaan lebih mendesak daripada kerapian laporan keuangan, D, H, I, dan J boleh
+didahulukan — hanya D yang punya ketergantungan.
 
 ## Aturan kerja
 
