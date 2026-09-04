@@ -333,3 +333,83 @@ export function mapYearEndProfitClosing(input: {
   }
   return { lines };
 }
+
+export const FIXED_ASSET_COST_ACCOUNT = "1-1510";
+export const ACCUMULATED_DEPRECIATION_ACCOUNT = "1-1520";
+export const DEPRECIATION_EXPENSE_ACCOUNT = "6-1700";
+export const ASSET_DISPOSAL_ACCOUNT = "7-1400";
+export const OTHER_RECEIVABLE_ACCOUNT = "1-1320";
+
+/**
+ * Perolehan aset tetap.
+ *
+ * Dikredit ke 2-1900, bukan ke kas, dengan alasan yang sama persis seperti `mapExpense`: modul di
+ * luar sistem kas yang mengkredit 1-1110 membuat kas pada buku besar berbeda dari `cash_balances`.
+ * Pelunasannya dijurnal terpisah saat uangnya benar-benar keluar.
+ */
+export function mapFixedAssetAcquisition(input: { cost: string; assetName: string }): MappingResult {
+  if (Number(input.cost) <= 0) return { skipped: "harga perolehan nol" };
+  const memo = `Perolehan ${input.assetName}`.slice(0, 500);
+  return {
+    lines: [
+      { accountCode: FIXED_ASSET_COST_ACCOUNT, side: "DEBIT", amount: input.cost, memo },
+      { accountCode: EXPENSE_PAYABLE_ACCOUNT, side: "KREDIT", amount: input.cost, memo },
+    ],
+  };
+}
+
+/**
+ * Penyusutan satu bulan untuk **seluruh** aset sekaligus.
+ *
+ * Satu jurnal, bukan satu per aset: empat puluh jurnal kecil setiap bulan akan mengubur jurnal
+ * transaksi di antara derau. Rincian per asetnya ada di `fixed_asset_depreciation_entries`, tempat
+ * ia dapat diurutkan dan dijumlahkan.
+ */
+export function mapMonthlyDepreciation(input: { totalCharge: string; month: string }): MappingResult {
+  if (Number(input.totalCharge) <= 0) return { skipped: `tidak ada beban penyusutan pada ${input.month}` };
+  const memo = `Penyusutan aset tetap ${input.month}`;
+  return {
+    lines: [
+      { accountCode: DEPRECIATION_EXPENSE_ACCOUNT, side: "DEBIT", amount: input.totalCharge, memo },
+      { accountCode: ACCUMULATED_DEPRECIATION_ACCOUNT, side: "KREDIT", amount: input.totalCharge, memo },
+    ],
+  };
+}
+
+/**
+ * Pelepasan aset tetap.
+ *
+ * `accumulated` wajib berupa akumulasi yang **benar-benar tercatat** — akumulasi awal ditambah baris
+ * `fixed_asset_depreciation_entries` — bukan angka teoretis dari jadwalnya. Bulan yang belum
+ * dijurnal belum pernah menyentuh 1-1520; mengeluarkan lebih banyak daripada yang pernah masuk
+ * membuat neracanya tetap seimbang sementara angkanya salah, dan kekeliruan seperti itu tidak
+ * terlihat dari laporan mana pun.
+ */
+export function mapFixedAssetDisposal(input: {
+  cost: string;
+  accumulated: string;
+  proceeds: string;
+  assetName: string;
+}): MappingResult {
+  const cost = Number(input.cost);
+  const accumulated = Number(input.accumulated);
+  const proceeds = Number(input.proceeds);
+  if (cost <= 0) return { skipped: "harga perolehan nol" };
+  if (accumulated < 0) return { skipped: "akumulasi penyusutan negatif" };
+  if (accumulated > cost) return { skipped: "akumulasi penyusutan melebihi harga perolehan" };
+  if (proceeds < 0) return { skipped: "hasil pelepasan negatif" };
+
+  const memo = `Pelepasan ${input.assetName}`.slice(0, 500);
+  const carrying = cost - accumulated;
+  const gain = proceeds - carrying;
+
+  const debits: MappedLine[] = [];
+  const credits: MappedLine[] = [];
+  if (proceeds > 0) debits.push({ accountCode: OTHER_RECEIVABLE_ACCOUNT, side: "DEBIT", amount: input.proceeds, memo });
+  if (accumulated > 0) debits.push({ accountCode: ACCUMULATED_DEPRECIATION_ACCOUNT, side: "DEBIT", amount: input.accumulated, memo });
+  if (gain < 0) debits.push({ accountCode: ASSET_DISPOSAL_ACCOUNT, side: "DEBIT", amount: Math.abs(gain).toFixed(2), memo });
+  credits.push({ accountCode: FIXED_ASSET_COST_ACCOUNT, side: "KREDIT", amount: input.cost, memo });
+  if (gain > 0) credits.push({ accountCode: ASSET_DISPOSAL_ACCOUNT, side: "KREDIT", amount: gain.toFixed(2), memo });
+
+  return { lines: [...debits, ...credits] };
+}
