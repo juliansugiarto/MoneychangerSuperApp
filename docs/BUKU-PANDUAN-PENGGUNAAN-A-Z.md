@@ -64,7 +64,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 | Kontrol Outlet | Buka & Tutup Outlet | Checklist pembukaan, penutupan, catatan serah-terima, dan arsip PDF penutupan. | Staff |
 | Kontrol Outlet | Kurs Operasional | Memantau, menyiapkan, dan mengaktifkan kurs secara manual dengan alasan. | Admin |
 | Kontrol Outlet | Bandingkan Kurs | Membandingkan kurs outlet dengan referensi yang tersedia. | Admin |
-| Kontrol Outlet | Kas & Persediaan | Satu halaman dengan tab Kas Awal / Stok Saat Ini / Stock Opname / Penyesuaian Brankas (Controller); pindah tab tanpa ganti halaman. | Staff |
+| Kontrol Outlet | Kas & Persediaan | Satu halaman dengan tab Kas Awal / Stok Saat Ini / Stock Opname / Penyesuaian Brankas (Controller) / Modal & Bank (Controller); pindah tab tanpa ganti halaman. | Staff |
 | Kontrol Outlet | Keluhan Nasabah | Register, investigasi, hasil, dan eskalasi pengaduan konsumen. | Staff |
 | Pengawasan | Kesiapan Operasional | Kontrol harian Controller, termasuk status Paket Pelaporan. | Controller |
 | Pengawasan | Direksi Mengetahui | Daftar informasi pengawasan yang perlu diakui Direksi. | Controller |
@@ -138,15 +138,32 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 
 ### 5.6 Kas, Persediaan, dan Stock Opname — Staff dan Supervisor
 
-Menu ini adalah **satu halaman** ("Kas & Persediaan") dengan tab di dalamnya — **Kas Awal**, **Stok Saat Ini**, **Stock Opname**, dan **Penyesuaian Brankas** (khusus Controller ke atas). Pindah tab tidak berpindah halaman; setiap tab tetap menampilkan konteksnya secara penuh.
+Menu ini adalah **satu halaman** ("Kas & Persediaan") dengan tab di dalamnya — **Kas Awal**, **Stok Saat Ini**, **Stock Opname**, **Penyesuaian Brankas**, dan **Modal & Bank** (dua terakhir khusus Controller ke atas). Pindah tab tidak berpindah halaman; setiap tab tetap menampilkan konteksnya secara penuh.
 
 1. Buka tab **Kas Awal** terlebih dahulu, **termasuk rincian pecahan** (wajib) — ini stok fisik awal per pecahan yang jadi acuan sistem sepanjang hari. Cari mata uang lewat kotak pencarian, **termasuk IDR** untuk modal kerja Rupiah (dibutuhkan agar bon beli bisa diselesaikan — sistem menolak bon beli bila modal Rupiah tidak cukup) — tidak dibatasi ke mata uang yang sudah disinkronkan otomatis. Nilai pecahan dipilih dari daftar pecahan asli mata uang tersebut (bukan diketik bebas), supaya angka seperti "IDR 131.250.000, 1 lembar" tidak mungkin masuk sebagai pecahan.
 1a. Di tab yang sama juga tersedia **Rekening Bank Perusahaan** — Controller ke atas dapat menambahkan rekening (nama bank, nama pemilik, nomor rekening, saldo awal), mengedit datanya, menonaktifkannya, atau mencatat penyesuaian saldo manual (mis. biaya bank). Staff hanya bisa melihat daftar dan memilihnya saat membuat bon Transfer Bank (§5.4 langkah 6b) — tidak bisa menambah/mengubah rekening.
 2. Selama hari berjalan, kas dan stok pecahan **kedua sisi** (valuta asing dan Rupiah untuk pembayaran tunai) bergerak otomatis begitu bon **disetujui** — posting kas/stok sekarang langsung terjadi saat persetujuan, tidak perlu tombol "Selesaikan" terpisah lagi (lihat §5.4). Jangan melakukan pembukuan paralel tanpa rekonsiliasi. Buka tab **Stok Saat Ini** untuk melihat angka sistem berjalan per pecahan (kategori IDR mencakup kas fisik maupun saldo rekening bank secara terpisah); **cek fisik hanya perlu dilakukan sekali saat mau tutup**, bukan sepanjang hari.
 3. Setor/ambil dari brankas atau penjualan luar jam kerja dicatat lewat tab **Penyesuaian Brankas** — rincian pecahan wajib diisi di sini juga.
+3a. Setoran/penarikan modal pemilik dan pemindahan kas ke/dari rekening bank **tidak** dicatat di sini, melainkan di tab **Modal & Bank** (lihat §5.6a) — hanya kategori itulah yang dapat dijurnal ke buku besar.
 4. Menjelang tutup, buka tab **Stock Opname**, masukkan hitungan fisik per mata uang (bandingkan dengan rincian pecahan di tab Stok Saat Ini), lalu kirim hasil hitung.
 5. Telaah varians yang tampil. Varians memerlukan peninjauan Supervisor; Direksi harus memperoleh informasi pengawasan sesuai workflow.
 6. Jangan menyembunyikan selisih dengan mengubah angka fisik agar sama dengan sistem.
+
+### 5.6a Modal dan Pemindahan Kas ke Bank — Controller ke atas
+
+Tab **Modal & Bank** di halaman "Kas & Persediaan" mencatat uang yang **melintasi batas usaha** — uang pemilik yang masuk atau keluar, dan kas fisik yang berpindah ke/dari rekening bank perusahaan. Tanpa tab ini, uang pemilik menyamar sebagai selisih hitungan kas pagi dan buku besar tidak bisa menjurnalnya, sehingga akun 1-1110 Kas Rupiah berjalan negatif meski uangnya nyata ada di laci.
+
+**Urutan yang benar pada hari pertama: catat setoran modal lebih dulu, baru isi hitungan kas pagi.**
+
+Alasannya: kas awal **pertama** untuk sebuah mata uang tidak dijurnal — kalau uangnya belum pernah dicatat asalnya, menjurnalnya berarti mencatat uang yang muncul entah dari mana (dan menjadikannya "pendapatan lain-lain" akan salah besar). Buku besar akan menyebutkan alasan itu apa adanya pada daftar "dilewati": *"kas awal pertama; asal uangnya belum tercatat — catat sebagai setoran modal lebih dulu"*. Bila urutannya benar — modal masuk dulu, lalu hitungan kas pagi mencocokkan uang yang sama — selisih pembukaannya nol dan tidak ada yang perlu dijurnal.
+
+1. **Setoran modal (uang pemilik masuk).** Pilih mata uang, arah **Masuk**, isi nominal, alasan (minimal 5 karakter, dipakai sebagai memo jurnal), dan **rincian pecahan yang wajib**. Jurnalnya: debit 1-1110 Kas Rupiah, kredit 3-1100 Modal Disetor.
+2. **Penarikan pemilik (uang pemilik keluar).** Arah **Keluar**, isian sama. Jurnalnya: debit 3-4100 **Prive/Dividen**, kredit 1-1110 Kas Rupiah — **bukan** pengurangan Modal Disetor. Modal Disetor mencerminkan setoran resmi pemegang saham dan hanya berubah lewat keputusan korporasi; pengambilan uang sehari-hari oleh pemilik adalah distribusi, bukan pembatalan setoran.
+3. **Kas → Bank (setor ke rekening).** Pilih rekening bank perusahaan, arah **Ke Bank**, nominal, alasan, dan rincian pecahan uang yang dibawa ke bank. Satu tindakan ini menulis **dua sisi sekaligus**: kas fisik berkurang dan saldo rekening bertambah. Jurnalnya: debit 1-1120 Bank, kredit 1-1110 Kas Rupiah.
+4. **Bank → Kas (tarik tunai untuk modal kerja).** Arah **Ke Kas**, rincian pecahan diisi sesuai uang yang diterima dari bank. Jurnalnya kebalikannya: debit 1-1110 Kas Rupiah, kredit 1-1120 Bank.
+5. Sisi bank dari pemindahan ini **tidak dijurnal ulang** dari mutasi rekeningnya, supaya uangnya tidak terhitung dua kali. Hanya rekening **IDR** yang dijurnal; rekening valuta asing tidak dinilai per mutasi.
+6. Semua tindakan di tab ini hanya untuk **Controller ke atas**, tercatat di jejak audit, dan tidak bisa dihapus. Bila salah catat, buat entri koreksi berlawanan arah dengan alasan yang jelas.
+7. Hasilnya dapat diperiksa lewat panel **rekonsiliasi kas** di halaman Buku Besar: panel itu membandingkan saldo 1-1110 pada buku besar dengan kas Rupiah operasional yang benar-benar ada, dan mendaftar mutasi yang dilewati beserta alasannya. Selisih yang tersisa hampir selalu berarti ada uang yang berpindah tanpa dicatat lewat tab ini.
 
 ### 5.7 Penutupan Outlet — Staff dan Supervisor
 

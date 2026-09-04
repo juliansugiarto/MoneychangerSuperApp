@@ -23,7 +23,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 6 — Posting ke buku besar
 - [x] Tugas 7 — Tab Modal & Bank
 - [x] Tugas 8 — Panel rekonsiliasi kas
-- [ ] Tugas 9 — Skenario dan dokumentasi
+- [x] Tugas 9 — Skenario dan dokumentasi
 
 Urutannya mengikat: 3 sebelum 4 dan 5; 2 sebelum 6. Tugas 7 dan 8 boleh ditukar.
 
@@ -1382,7 +1382,7 @@ git commit -m "Panel rekonsiliasi kas: tunjukkan selisih buku besar terhadap kas
 - Consumes: seluruh keluaran tugas 2–6.
 - Produces: —
 
-- [ ] **Step 1: Tulis uji skenario**
+- [x] **Step 1: Tulis uji skenario**
 
 Buat `server/cashLedgerScenario.test.ts`. Uji ini murni atas pemetaan — ia merangkai satu hari operasional dan memastikan buku besarnya masuk akal, tanpa menyentuh basis data:
 
@@ -1436,25 +1436,25 @@ describe("satu hari operasional: setor modal, kas awal, beli, jual", () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan dan pastikan lulus**
+- [x] **Step 2: Jalankan dan pastikan lulus**
 
 ```bash
 ./node_modules/.bin/vitest run server/cashLedgerScenario.test.ts
 ```
 
-- [ ] **Step 3: Perbarui panduan A–Z**
+- [x] **Step 3: Perbarui panduan A–Z**
 
 Di `docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md`, tambahkan bagian **"Modal dan pemindahan kas ke bank"** pada bab kas/stok. Wajib memuat urutan yang benar dan alasannya: **catat setoran modal lebih dulu, baru hitungan kas pagi** — kalau dibalik, kas awal pertama tidak akan dijurnal dan buku besar akan memberi tahu alasannya. Sebutkan pula bahwa penarikan pemilik masuk sebagai Prive/Dividen, bukan pengurangan Modal Disetor.
 
-- [ ] **Step 4: Perbarui skema database**
+- [x] **Step 4: Perbarui skema database**
 
 Di `docs/SKEMA-DATABASE-PROJECT.md`, perbarui daftar nilai `category` pada `cash_balance_movements` dan `bank_account_movements`, dengan satu kalimat per kategori baru tentang bagaimana ia dijurnal.
 
-- [ ] **Step 5: Perbarui handoff**
+- [x] **Step 5: Perbarui handoff**
 
 Di `docs/HANDOFF-OPUS.md`, pindahkan butir 1 "Yang harus dikerjakan berikutnya" ke bagian selesai, dan catat paket B dan C sebagai prioritas berikutnya beserta rujukan ke spec-nya.
 
-- [ ] **Step 6: Jalankan seluruh gerbang mutu**
+- [x] **Step 6: Jalankan seluruh gerbang mutu**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -1465,7 +1465,7 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 ```
 Harapan: seluruhnya bersih. Laporkan jumlah uji sebenarnya — jangan menyebut angka yang tidak dilihat.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add server/cashLedgerScenario.test.ts docs/

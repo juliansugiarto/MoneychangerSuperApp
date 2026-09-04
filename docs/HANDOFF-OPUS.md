@@ -26,7 +26,7 @@ Server pengembangan **sudah berjalan di http://localhost:3003** dan sesi peramba
 sebagai Development Shareholder — pakai itu untuk verifikasi visual, jangan menyalakan yang baru.
 Sandi tidak pernah diketik oleh asisten; bila sesi habis, minta pengguna yang login.
 
-Migrasi ke seluruh tenant lokal (terakhir: `0043`):
+Migrasi ke seluruh tenant lokal (terakhir: `0044`):
 
 ```bash
 export TENANT_REGISTRY="ibukota=mysql://root@127.0.0.1:3306/moneychanger;abcvalas=mysql://root@127.0.0.1:3306/mc_t_abcvalas"
@@ -60,6 +60,14 @@ dari sesi 3 September.
   laporan keuangan (`f1a749f`). Migrasi `0043`. Halaman **Laporan → Buku Besar**
   (`/operasional/buku-besar`) dengan lima tab: Jurnal, Neraca Saldo, Buku Besar Akun,
   Laporan Keuangan, Periode.
+- **Paket A — penjurnalan kas, setoran modal, dan mutasi kas↔bank** (migrasi `0044`). Kategori
+  `CAPITAL_INJECTION`/`CAPITAL_WITHDRAWAL`/`BANK_DEPOSIT`/`BANK_WITHDRAWAL` pada
+  `cash_balance_movements` dan `CAPITAL_INJECTION`/`CAPITAL_WITHDRAWAL`/`CASH_TRANSFER` pada
+  `bank_account_movements`; `recordCapitalMovement`/`recordCashBankTransfer` di
+  `server/operations.ts`; `postCashMovements`/`postBankMovements` di `server/ledgerPosting.ts`;
+  tab **Modal & Bank** pada Kas & Persediaan dan panel rekonsiliasi kas pada Buku Besar.
+  Rencananya: `docs/superpowers/plans/2026-09-04-penjurnalan-kas.md`; spec:
+  `docs/superpowers/specs/2026-09-04-penjurnalan-kas-design.md`.
 - **Peninjauan kode** (`385e5e0`, `83682db`, `93c73d1`) — delapan temuan diperbaiki, satu ditolak
   setelah diperiksa langsung.
 - **Perbaikan batas tanggal pada daftar pengeluaran** (`934419d`).
@@ -111,32 +119,30 @@ dari sesi 3 September.
 
 ## Yang harus dikerjakan berikutnya
 
-1. **Penjurnalan kas awal dan mutasi kas.** Penghalang terbesar sebelum laporan keuangan layak
-   dipakai. Sekarang akun Kas Rupiah hanya memuat pergerakan dari bon, sehingga tampil negatif pada
-   outlet yang lebih banyak membeli daripada menjual; sudah dijelaskan di layar dan dijaga
-   peringatan, tetapi tetap harus diselesaikan. Perlu keputusan kebijakan **per kategori**, dan
-   masing-masing berbeda:
-   - `OPENING` — `cash_balance_movements` mencatat **selisih**, bukan seluruh saldo; kemungkinan
-     besar ini selisih kas lebih/kurang ke 7-1900.
-   - `SAFE_DEPOSIT` / `SAFE_WITHDRAWAL` — perpindahan brankas dan laci; keduanya kas milik sendiri,
-     jadi seharusnya **tidak** mengubah total kas sama sekali.
-   - `OFF_HOURS_SALE` — sebenarnya penjualan, seharusnya dicatat sebagai bon.
-   - `DENOMINATION_EXCHANGE` — netnya nol, lewati.
-   - Kategori `TRANSACTION` **jangan** dijurnal: sisi kas bon sudah terjurnal lewat bonnya sendiri,
-     dan menjurnalnya lagi menghitung uang yang sama dua kali.
-   - Mutasi kas valuta asing tidak punya nilai Rupiah pada tabelnya; di bawah model periodik memang
-     tidak perlu dijurnal per mutasi.
-2. **Fase 01 dimensi cabang**, lalu melengkapi fase 04 dengan `branchId`. Kolomnya sudah disediakan
+Paket A (penjurnalan kas, modal, kas↔bank) sudah selesai — lihat "Selesai pada dua sesi terakhir".
+Dua paket lanjutannya adalah prioritas berikutnya; keduanya belum punya spec sendiri, dan rujukan
+awalnya ada di `docs/superpowers/specs/2026-09-04-penjurnalan-kas-design.md` (bagian "Yang sudah
+diputuskan pengguna" butir 3).
+
+1. **Paket B — form data awal perusahaan saat login pertama shareholder.** Menuntun urutan yang
+   benar (setor modal dulu, baru hitungan kas awal) supaya operator tidak perlu mengingatnya
+   sendiri; memanggil mekanisme setoran modal dari paket A. Tanpa ini, kas awal pertama tetap
+   dilewati beserta alasannya dan Kas Rupiah tetap timpang sampai modalnya dicatat manual.
+2. **Paket C — revaluasi dan penutupan kas UKA.** Mengisi 1-1210 Kas UKA dan 5-1300 lewat
+   persediaan akhir hasil opname beserta kurs penutup yang dituntut SAK EP Bab 30; inilah yang
+   akhirnya memberi nilai pada mutasi kas valuta asing yang sengaja dilewati paket A. Beririsan
+   dengan fase 05 di butir 4.
+3. **Fase 01 dimensi cabang**, lalu melengkapi fase 04 dengan `branchId`. Kolomnya sudah disediakan
    nullable pada `journal_entries` dan `journal_entry_lines` supaya jurnal tidak ditulis ulang;
    yang tersisa hanya meneruskannya dari tabel sumber.
-3. **Fase 05** — register aset tetap dan penyusutan (memasok baris Penyusutan B0003 yang selama ini
+4. **Fase 05** — register aset tetap dan penyusutan (memasok baris Penyusutan B0003 yang selama ini
    tidak punya asal), amortisasi biaya dibayar dimuka, dan **revaluasi kas UKA memakai kurs
    penutup** yang dituntut SAK EP Bab 30.
-4. **Fase 07 dan 08** — Arus Kas, CALK, paket audit, lalu ekspor ke tata letak B0002/B0003/B0004
+5. **Fase 07 dan 08** — Arus Kas, CALK, paket audit, lalu ekspor ke tata letak B0002/B0003/B0004
    memakai pola validasi `server/financialImport.ts`. Tidak ada pengiriman otomatis ke regulator.
-5. Temuan 3 (arsip dokumen), 6 (stock opname termasuk Rupiah), 10 (pemantauan berbasis profil).
-6. IRA — perlu tabel penilaian SRA.
-7. Perbaiki penamaan `dttotPpsdmMatch` / "PPPSM" menjadi **DPPSPM/PPPSPM**.
+6. Temuan 3 (arsip dokumen), 6 (stock opname termasuk Rupiah), 10 (pemantauan berbasis profil).
+7. IRA — perlu tabel penilaian SRA.
+8. Perbaiki penamaan `dttotPpsdmMatch` / "PPPSM" menjadi **DPPSPM/PPPSPM**.
 
 ## Aturan kerja
 
@@ -155,8 +161,12 @@ dari sesi 3 September.
 
 ## Yang masih menggantung
 
-- **Kas awal dan mutasi kas belum dijurnal** — lihat butir 1 di atas. Akibatnya Kas Rupiah pada
-  buku besar tampil negatif bila saldo awal belum dicatat sebagai jurnal manual.
+- **Kas awal pertama tetap tidak dijurnal, dan itu disengaja.** Bila operator mencatat hitungan kas
+  pagi sebelum setoran modalnya, mutasi itu dilewati beserta alasannya dan Kas Rupiah tetap
+  timpang sampai modalnya dicatat lewat tab Modal & Bank. Paket B-lah yang membuat urutan itu tidak
+  perlu diingat sendiri.
+- **Mutasi kas valuta asing belum bernilai** — di bawah persediaan periodik nilainya baru muncul di
+  akhir periode; itu pekerjaan paket C.
 - **Ambang underlying bulanan** (commit `3fb0e98`) mengubah perilaku harian: kasir diminta dokumen
   pendukung bagi nasabah yang akumulasi sebulannya melewati USD 10.000. Logikanya diuji, kuerinya
   belum pernah diuji terhadap transaksi nyata.
