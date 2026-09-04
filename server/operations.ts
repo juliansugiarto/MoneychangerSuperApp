@@ -2445,6 +2445,54 @@ export async function listCashDenominationBalances() {
   });
 }
 
+/**
+ * Isi laci dan isi brankas menurut sistem, per nilai pecahan — lawan hitung fisik sebuah opname.
+ *
+ * Laci dibaca dari stok berjalan `cash_denomination_balances`, TANPA penyaring `quantity > 0` yang
+ * dipakai `listCashDenominationBalances`: pecahan yang nol di sistem tetapi ada di tangan petugas
+ * adalah selisih yang paling penting ditemukan, dan menyaringnya akan menyembunyikannya.
+ *
+ * Brankas diturunkan, tidak disimpan: SAFE_DEPOSIT dikurangi SAFE_WITHDRAWAL atas rincian pecahan
+ * tiap mutasi. Ini logika yang sama dengan total pada getCashReconciliation, hanya dipecah per
+ * pecahan. OFF_HOURS_SALE sengaja tidak ikut — uang itu keluar dari laci karena terjual, bukan
+ * masuk brankas.
+ */
+export async function getOpnameSystemCounts(currencyId: number) {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const counterRows = await db.select({ value: cashDenominationBalances.denominationValue, quantity: cashDenominationBalances.quantity })
+      .from(cashDenominationBalances).where(eq(cashDenominationBalances.currencyId, currencyId));
+
+    const balance = (await db.select({ id: cashBalances.id }).from(cashBalances).where(eq(cashBalances.currencyId, currencyId)).limit(1))[0];
+    const safeTotals = new Map<string, number>();
+    if (balance) {
+      const safeRows = await db.select({
+        category: cashBalanceMovements.category,
+        value: cashDenominationEntries.denominationValue,
+        quantity: cashDenominationEntries.quantity,
+      }).from(cashDenominationEntries)
+        .innerJoin(cashBalanceMovements, eq(cashBalanceMovements.id, cashDenominationEntries.cashBalanceMovementId))
+        .where(and(
+          eq(cashBalanceMovements.cashBalanceId, balance.id),
+          inArray(cashBalanceMovements.category, ["SAFE_DEPOSIT", "SAFE_WITHDRAWAL"]),
+        ));
+      for (const row of safeRows) {
+        // Kategorinya sudah disaring di kueri; dinilai eksplisit lagi di sini supaya kategori
+        // lain yang kelak ikut terbawa tidak diam-diam diperlakukan sebagai penarikan brankas.
+        if (row.category !== "SAFE_DEPOSIT" && row.category !== "SAFE_WITHDRAWAL") continue;
+        const value = new Decimal(String(row.value)).toFixed(6);
+        const signed = row.category === "SAFE_DEPOSIT" ? row.quantity : -row.quantity;
+        safeTotals.set(value, (safeTotals.get(value) ?? 0) + signed);
+      }
+    }
+
+    return {
+      counter: counterRows.map((row) => ({ value: new Decimal(String(row.value)).toFixed(6), quantity: row.quantity })),
+      safe: [...safeTotals.entries()].map(([value, quantity]) => ({ value, quantity })),
+    };
+  });
+}
+
 function gcdBig(a: bigint, b: bigint): bigint {
   a = a < BigInt(0) ? -a : a;
   b = b < BigInt(0) ? -b : b;

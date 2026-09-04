@@ -64,6 +64,7 @@ import {
   listTransactionDenominations,
   listStockOpnames,
   openStockOpname,
+  getOpnameSystemCounts,
   recordOpeningCash,
   recordCashAdjustment,
   recordCapitalMovement,
@@ -716,6 +717,8 @@ export const appRouter = router({
   stockOpname: router({
     list: staffProcedure.query(({ ctx }) => listStockOpnames(ctx.user)),
     open: staffProcedure.input(z.object({ currencyId: z.number().int().positive() })).mutation(({ input, ctx }) => openStockOpname({ currencyId: input.currencyId, actorUserId: ctx.user.id })),
+    /** staffProcedure karena yang menghitung fisik adalah Staff, dan mereka harus melihat angka pembandingnya sebelum mengirim. */
+    systemCounts: staffProcedure.input(z.object({ currencyId: z.number().int().positive() })).query(({ input }) => getOpnameSystemCounts(input.currencyId)),
     submit: staffProcedure.input(z.object({ stockOpnameId: z.number().int().positive(), physicalBalance: decimalString, varianceNotes: z.string().trim().max(1000).optional() })).mutation(({ input, ctx }) => submitStockOpname(input, ctx.user)),
     reconcile: adminProcedure.input(z.object({ stockOpnameId: z.number().int().positive(), notes: z.string().trim().min(3).max(1000) })).mutation(({ input, ctx }) => reconcileStockOpname(input, ctx.user.id)),
   }),

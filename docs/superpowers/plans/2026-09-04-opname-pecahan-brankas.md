@@ -21,7 +21,7 @@ Pengerjaan di ROADMAP.
 
 - [x] Tugas 1 — Skema dan migrasi aditif
 - [x] Tugas 2 — Pembanding pecahan murni di `shared/`
-- [ ] Tugas 3 — Angka sistem per pecahan untuk laci dan brankas
+- [x] Tugas 3 — Angka sistem per pecahan untuk laci dan brankas
 - [ ] Tugas 4 — `submitStockOpname` menerima pecahan dua lokasi
 - [ ] Tugas 5 — UI tab Stock Opname
 - [ ] Tugas 6 — Dokumentasi dan gerbang akhir
@@ -242,7 +242,7 @@ git commit -m "Pembanding pecahan fisik terhadap catatan sistem"
 - Produces: `getOpnameSystemCounts(currencyId)` → `{ counter, safe }`, keduanya
   `DenominationCount[]` — dipakai tugas 4 dan (lewat tRPC) tugas 5
 
-- [ ] **Langkah 1: Tulis fungsinya**
+- [x] **Langkah 1: Tulis fungsinya**
 
 Tambahkan di `server/operations.ts`, dekat `listCashDenominationBalances`
 (`server/operations.ts:2438`):
@@ -297,7 +297,7 @@ export async function getOpnameSystemCounts(currencyId: number) {
 Periksa dulu apakah `inArray` sudah diimpor di berkas itu; `server/ledgerOperations.ts` memakainya,
 `server/operations.ts` mungkin belum.
 
-- [ ] **Langkah 2: Ekspos lewat tRPC**
+- [x] **Langkah 2: Ekspos lewat tRPC**
 
 Di `server/routers.ts`, pada router `stockOpname` (sekitar `server/routers.ts:716`):
 
@@ -308,7 +308,7 @@ Di `server/routers.ts`, pada router `stockOpname` (sekitar `server/routers.ts:71
 `staffProcedure` karena yang menghitung fisik adalah Staff, dan mereka harus melihat angka
 pembandingnya sebelum mengirim.
 
-- [ ] **Langkah 3: Ujinya**
+- [x] **Langkah 3: Ujinya**
 
 Pola `getDb` dipalsukan, **jangan menyentuh basis data**. Tiru `server/openingCashOrder.test.ts`
 yang membedakan kueri berurutan lewat urutan pemanggilan `select`. Empat perilaku:
@@ -319,7 +319,7 @@ yang membedakan kueri berurutan lewat urutan pemanggilan `select`. Empat perilak
 3. Mutasi `OFF_HOURS_SALE` **tidak** mengubah isi brankas.
 4. Mata uang yang belum punya baris `cash_balances` → `safe` kosong, bukan galat.
 
-- [ ] **Langkah 4: Gerbang mutu dan commit**
+- [x] **Langkah 4: Gerbang mutu dan commit**
 
 ```bash
 ./node_modules/.bin/vitest run
