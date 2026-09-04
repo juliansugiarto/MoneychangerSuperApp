@@ -47,7 +47,7 @@ Rencana: `plans/2026-09-04-penilaian-kas-uka-tutup-periode.md`
 - [x] Tugas 6 — Penutup laba tahunan dan gerbang `closeAccountingPeriod`
 - [x] Tugas 7 — Neraca memakai laba sejak penutupan tahunan terakhir
 - [x] Tugas 8 — Tiga prosedur tRPC
-- [ ] Tugas 9 — Panel Penutupan Periode
+- [x] Tugas 9 — Panel Penutupan Periode
 - [ ] Tugas 10 — Skenario menyeluruh dan dokumentasi
 
 ### Paket E — Aset tetap dan penyusutan

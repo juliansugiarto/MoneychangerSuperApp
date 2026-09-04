@@ -23,7 +23,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 6 — Penutup laba tahunan dan gerbang `closeAccountingPeriod`
 - [x] Tugas 7 — Neraca memakai laba sejak penutupan tahunan terakhir
 - [x] Tugas 8 — Tiga prosedur tRPC
-- [ ] Tugas 9 — Panel Penutupan Periode
+- [x] Tugas 9 — Panel Penutupan Periode
 - [ ] Tugas 10 — Skenario menyeluruh dan dokumentasi
 
 Urutannya mengikat: 1 sebelum 4–6; 2 dan 3 sebelum 5; 5 sebelum 6; 8 sebelum 9. Tugas 7 berdiri
@@ -1118,36 +1118,36 @@ git commit -m "Prosedur tRPC penilaian dan penutupan periode"
   - Tombol "Tutup periode" yang sudah ada tetap memakai `trpc.ledger.closePeriod`
 - Produces: tampilan saja; tidak ada tipe baru.
 
-- [ ] **Step 1: Muat penilaian per baris periode**
+- [x] **Step 1: Muat penilaian per baris periode**
 
 `closingValuation` dipanggil **per periode**, dan hanya untuk periode yang sedang dibuka detailnya —
 memanggilnya untuk seluruh baris sekaligus berarti satu kueri per periode setiap kali tab dibuka.
 Tambahkan state "periode yang sedang diperiksa" pada komponen induk, dan `enabled` pada query-nya.
 
-- [ ] **Step 2: Tabel per mata uang**
+- [x] **Step 2: Tabel per mata uang**
 
 Kolom: Mata uang, Kuantitas, Tanggal opname, Kurs tengah, Tanggal kurs, Nilai Rupiah. Tanggal opname
 dan tanggal kurs yang **berbeda** dari akhir periode diberi tanda beserta keterangan singkat — itulah
 bentuk konkret keputusan 5 pada spec, dan menyembunyikannya mengembalikan pemunduran tanggal diam-diam
 yang keputusan itu justru tolak.
 
-- [ ] **Step 3: Daftar penghalang**
+- [x] **Step 3: Daftar penghalang**
 
 `blockers` ditampilkan sebagai daftar per mata uang beserta alasannya, dan tombol "Jalankan penilaian"
 dinonaktifkan selama daftar itu tidak kosong. Wajib ada keadaan memuat, kosong, dan galat.
 
-- [ ] **Step 4: Ringkasan yang akan dijurnal**
+- [x] **Step 4: Ringkasan yang akan dijurnal**
 
 Di atas tombol: "Persediaan awal (5-1100)" = `priorClosingValue` dan "Persediaan akhir (5-1300)" =
 `closingValue`, sehingga angkanya terlihat **sebelum** dijurnal.
 
-- [ ] **Step 5: Tombol dan urutannya**
+- [x] **Step 5: Tombol dan urutannya**
 
 Tombol "Tutup periode" yang sudah ada dinonaktifkan selama `valuationPostedAt` kosong, dengan
 keterangan singkat mengapa — pengguna tidak boleh menemukan syaratnya lewat pesan galat. Untuk
 periode Desember, tombol penutup laba muncul di antara keduanya.
 
-- [ ] **Step 6: Verifikasi visual**
+- [ ] **Step 6: Verifikasi visual** — *belum tuntas: basis data lokal `moneychanger` tidak memiliki periode, opname, maupun snapshot kurs, sehingga panelnya tidak dapat ditampilkan. Yang sudah diperiksa dengan mata: halaman Buku Besar termuat, tab Periode berpindah, keadaan kosong tampil benar. Tabel, penanda tanggal mundur, daftar penghalang, dan fokus keyboard tombol barunya masih perlu diperiksa setelah ada data uji lokal.*
 
 ```bash
 ./node_modules/.bin/vite build
@@ -1156,7 +1156,7 @@ Lalu jalankan aplikasi, buka **Buku Besar → Periode**, dan periksa dengan mata
 yang berbeda tertandai, tombol tertutup saat ada penghalang, fokus keyboard berjalan pada tombol
 barunya. Sertakan tangkapan layar pada laporan tugas ini.
 
-- [ ] **Step 7: Gerbang mutu dan commit**
+- [x] **Step 7: Gerbang mutu dan commit**
 
 ```bash
 ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vitest run && ./node_modules/.bin/vite build
