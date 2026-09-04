@@ -13,6 +13,9 @@
  *
  * Reads TENANT_REGISTRY ("kode=mysql://…;kode2=mysql://…") and ADMIN_DATABASE_URL, a connection
  * with rights to CREATE DATABASE. Never drops or overwrites anything.
+ *
+ * TENANT_REGISTRY is the ONLY source of databases here — DATABASE_URL is not consulted, so the
+ * primary database must be listed in the registry too or `migrate-all` will skip it.
  */
 
 import { createConnection } from "mysql2/promise";
@@ -65,7 +68,7 @@ async function migrate(databaseUrl, label) {
 
 async function list() {
   const registry = parseRegistry(process.env.TENANT_REGISTRY);
-  if (!registry.size) return console.log("Belum ada tenant terdaftar di TENANT_REGISTRY.");
+  if (!registry.size) return console.log("Belum ada tenant terdaftar di TENANT_REGISTRY (basis data utama pun harus terdaftar di sana).");
   console.log(`${registry.size} tenant terdaftar:`);
   for (const [code, url] of registry) {
     const name = new URL(url).pathname.slice(1);
@@ -104,7 +107,16 @@ async function provision(code) {
 
 async function migrateAll() {
   const registry = parseRegistry(process.env.TENANT_REGISTRY);
-  if (!registry.size) return console.log("Tidak ada tenant untuk dimigrasikan.");
+  if (!registry.size) {
+    // Gagal dengan berisik, bukan diam. Registry yang kosong hampir selalu berarti TENANT_REGISTRY
+    // lupa diekspor, bukan "memang tidak ada tenant" — dan pesan sukses pada keadaan itu membuat
+    // operator mengira migrasi sudah tersebar padahal tidak satu pun basis data tersentuh.
+    console.error("TENANT_REGISTRY kosong atau belum diatur, jadi TIDAK ADA basis data yang dimigrasikan.");
+    console.error('Contoh: TENANT_REGISTRY="ibukota=mysql://root@127.0.0.1:3306/moneychanger;abcvalas=mysql://root@127.0.0.1:3306/mc_t_abcvalas"');
+    console.error("Basis data utama pun harus terdaftar di sana; skrip ini tidak membaca DATABASE_URL.");
+    process.exitCode = 1;
+    return;
+  }
   console.log(`Menerapkan migrasi ke ${registry.size} tenant:`);
   const failed = [];
   for (const [code, url] of registry) {
