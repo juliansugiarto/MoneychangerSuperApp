@@ -26,7 +26,7 @@ import {
   type fixedAssetCategories,
   type fixedAssetTaxGroups,
 } from "../drizzle/schema";
-import { depreciationSchedule, monthKey } from "../shared/depreciation";
+import { depreciationForMonth, depreciationSchedule, monthKey } from "../shared/depreciation";
 import { isSkipped, mapFixedAssetAcquisition } from "../shared/journalMapping";
 import { calendarDay } from "../shared/ledger";
 import { postJournalEntry } from "./ledgerOperations";
@@ -320,5 +320,158 @@ export async function listFixedAssets(): Promise<FixedAssetRow[]> {
         isLegacy: row.acquisitionJournalEntryId === null,
       };
     });
+  });
+}
+
+export type AssetDepreciationRow = {
+  assetId: number;
+  assetCode: string | null;
+  assetName: string;
+  category: FixedAssetCategory;
+  charge: string;
+  accumulatedAfter: string;
+  carryingAfter: string;
+};
+
+export type MonthlyDepreciation = {
+  periodId: number;
+  /** "YYYY-MM" bulan periode itu. */
+  periodMonth: string;
+  periodStart: string;
+  periodEnd: string;
+  status: "TERBUKA" | "DITUTUP";
+  rows: AssetDepreciationRow[];
+  totalCharge: string;
+  blockers: { assetName: string; reason: string }[];
+  depreciationPostedAt: Date | null;
+};
+
+/**
+ * Beban penyusutan sebuah periode beserta apa yang menghalanginya. **Tidak menulis apa pun.**
+ *
+ * Panel memakainya untuk menunjukkan angka sebelum tombol ditekan, dan `postMonthlyDepreciation`
+ * memakainya sebagai satu-satunya sumber angka — sehingga yang dilihat pengguna dan yang dijurnal
+ * server mustahil berbeda. Pola yang sama dengan `buildPeriodValuation` pada paket C.
+ *
+ * Aset yang bulan itu **sudah** punya baris keluar sebagai penghalang, bukan sebagai baris:
+ * menjalankan penyusutan dua kali tidak boleh menjurnal beban yang sama untuk kedua kalinya, dan
+ * kunci unik `(assetId, periodMonth)` adalah jaring terakhirnya, bukan yang pertama.
+ */
+export async function buildMonthlyDepreciation(periodId: number): Promise<MonthlyDepreciation> {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+
+    const period = (
+      await db
+        .select({
+          id: accountingPeriods.id,
+          periodStart: accountingPeriods.periodStart,
+          periodEnd: accountingPeriods.periodEnd,
+          status: accountingPeriods.status,
+          depreciationPostedAt: accountingPeriods.depreciationPostedAt,
+        })
+        .from(accountingPeriods)
+        .where(eq(accountingPeriods.id, periodId))
+        .limit(1)
+    )[0];
+    if (!period) {
+      const error = new Error(`Periode ${periodId} tidak ditemukan.`) as Error & { code?: string };
+      error.code = "PERIOD_NOT_FOUND";
+      throw error;
+    }
+
+    const periodMonth = monthKey(period.periodStart);
+
+    const assets = await db
+      .select({
+        id: fixedAssets.id,
+        assetCode: fixedAssets.assetCode,
+        name: fixedAssets.name,
+        category: fixedAssets.category,
+        // Wajib ikut dibaca: untuk aset warisan, bulan perolehan dan bulan jurnal pertama berbeda,
+        // dan selisih itulah yang menentukan berapa bulan umur manfaatnya masih tersisa. Memakai
+        // `firstJournalMonth` sebagai bulan perolehan akan membagi sisa dasar penyusutan atas umur
+        // manfaat **penuh**, sehingga bebannya terlalu kecil dan asetnya tidak pernah habis
+        // disusutkan pada waktunya.
+        acquisitionDate: fixedAssets.acquisitionDate,
+        acquisitionCost: fixedAssets.acquisitionCost,
+        residualValue: fixedAssets.residualValue,
+        usefulLifeMonths: fixedAssets.usefulLifeMonths,
+        firstJournalMonth: fixedAssets.firstJournalMonth,
+        openingAccumulatedDepreciation: fixedAssets.openingAccumulatedDepreciation,
+        status: fixedAssets.status,
+        disposalDate: fixedAssets.disposalDate,
+      })
+      .from(fixedAssets)
+      .orderBy(fixedAssets.id);
+
+    const entries = await db
+      .select({
+        assetId: fixedAssetDepreciationEntries.assetId,
+        periodMonth: fixedAssetDepreciationEntries.periodMonth,
+        charge: fixedAssetDepreciationEntries.charge,
+      })
+      .from(fixedAssetDepreciationEntries);
+
+    const rows: AssetDepreciationRow[] = [];
+    const blockers: { assetName: string; reason: string }[] = [];
+    let totalCharge = new Decimal(0);
+
+    for (const asset of assets) {
+      // Tanah tidak menyusut, dan itu bukan kekurangan data — ia tidak boleh muncul sebagai
+      // penghalang yang menahan penutupan periode.
+      if (asset.usefulLifeMonths === null) continue;
+
+      // Aset yang dilepas **di dalam** bulan ini tetap disusutkan: pelepasan menuntut penyusutan
+      // sampai dengan bulan pelepasan sudah dijurnal lebih dulu.
+      if (asset.status === "DILEPAS" && asset.disposalDate && monthKey(asset.disposalDate) < periodMonth) continue;
+
+      const assetEntries = entries.filter((entry) => entry.assetId === asset.id);
+      if (assetEntries.some((entry) => entry.periodMonth === periodMonth)) {
+        blockers.push({ assetName: asset.name, reason: `penyusutan bulan ${periodMonth} sudah dijurnal` });
+        continue;
+      }
+
+      const charge = depreciationForMonth(
+        {
+          acquisitionMonth: monthKey(asset.acquisitionDate),
+          firstJournalMonth: asset.firstJournalMonth,
+          acquisitionCost: asset.acquisitionCost,
+          residualValue: asset.residualValue,
+          usefulLifeMonths: asset.usefulLifeMonths,
+          openingAccumulatedDepreciation: asset.openingAccumulatedDepreciation,
+        },
+        periodMonth,
+      );
+      if (new Decimal(charge).lessThanOrEqualTo(0)) continue;
+
+      // Akumulasi dihitung dari baris yang **sudah dijurnal**, bukan dari jadwalnya: bulan yang
+      // belum dijurnal belum pernah menyentuh 1-1520.
+      const postedBefore = assetEntries.reduce((sum, entry) => sum.plus(entry.charge), new Decimal(0));
+      const accumulatedAfter = new Decimal(asset.openingAccumulatedDepreciation).plus(postedBefore).plus(charge);
+
+      rows.push({
+        assetId: asset.id,
+        assetCode: asset.assetCode,
+        assetName: asset.name,
+        category: asset.category,
+        charge,
+        accumulatedAfter: accumulatedAfter.toFixed(2),
+        carryingAfter: new Decimal(asset.acquisitionCost).minus(accumulatedAfter).toFixed(2),
+      });
+      totalCharge = totalCharge.plus(charge);
+    }
+
+    return {
+      periodId,
+      periodMonth,
+      periodStart: calendarDay(period.periodStart),
+      periodEnd: calendarDay(period.periodEnd),
+      status: period.status,
+      rows,
+      totalCharge: totalCharge.toFixed(2),
+      blockers,
+      depreciationPostedAt: period.depreciationPostedAt,
+    };
   });
 }
