@@ -56,6 +56,18 @@ export type JournalLineInput = {
 /** Tanggal siap kirim: tengah malam waktu lokal pada hari kalender yang dimaksud. */
 const dbDate = (value: Date | string) => new Date(`${isoDay(value)}T00:00:00`);
 
+/**
+ * Hari kalender sebuah kolom `date`, dibaca dari komponen **lokalnya**.
+ *
+ * Driver mysql2 mengembalikan kolom `date` sebagai tengah malam waktu lokal, sehingga `isoDay`
+ * memundurkannya satu hari di mesin yang tidak berjalan pada UTC — dan 31 Desember yang terbaca
+ * 30 Desember membuat gerbang penutup laba tahunan diam-diam tidak pernah menyala.
+ */
+const calendarDay = (value: Date | string): string =>
+  typeof value === "string"
+    ? value.slice(0, 10)
+    : `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+
 /** Hari sebelum sebuah tanggal, dihitung atas teks harinya agar tidak bergantung jam maupun zona. */
 const previousDayIso = (value: Date | string) =>
   new Date(new Date(`${isoDay(value)}T00:00:00Z`).getTime() - 86_400_000).toISOString().slice(0, 10);
@@ -198,6 +210,19 @@ export async function closeAccountingPeriod(input: { periodId: number; notes?: s
   if (integrity.problems.length) {
     const detail = integrity.problems.slice(0, 3).map((problem) => `${problem.entryNumber} (${problem.problem})`).join(", ");
     throw new Error(`Periode tidak dapat ditutup: ${integrity.problems.length} jurnal tidak utuh — ${detail}.`);
+  }
+
+  // Mengunci tanpa menilai adalah keadaan yang berlaku sampai paket C, dan justru itu yang membuat
+  // 1-1210 Kas UKA nol selamanya. Penilaian karena itu menjadi syarat, bukan anjuran. Diperiksa
+  // **setelah** keutuhan jurnal: jurnal yang tidak utuh masalah yang lebih besar, dan pesannyalah
+  // yang harus sampai lebih dulu.
+  if (!period.valuationPostedAt) {
+    throw new Error(
+      "Periode tidak dapat ditutup: penilaian persediaan akhir UKA belum dijalankan. Jalankan penilaian pada panel Penutupan Periode lebih dulu.",
+    );
+  }
+  if (calendarDay(period.periodEnd).slice(5) === "12-31" && !period.profitClosingPostedAt) {
+    throw new Error("Periode Desember tidak dapat ditutup: jurnal penutup laba ke Laba Ditahan belum dijalankan.");
   }
 
   const closedAt = new Date();

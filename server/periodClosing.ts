@@ -24,8 +24,9 @@ import {
   stockOpnames,
 } from "../drizzle/schema";
 import { valueForeignInventory } from "../shared/inventoryValuation";
-import { isSkipped, mapPeriodInventoryClosing } from "../shared/journalMapping";
-import { postJournalEntry } from "./ledgerOperations";
+import { formatAmount } from "../shared/ledger";
+import { isSkipped, mapPeriodInventoryClosing, mapYearEndProfitClosing } from "../shared/journalMapping";
+import { accountBalancesFor, postJournalEntry } from "./ledgerOperations";
 import { databaseOrThrow, getOpnameSystemCounts, retryTransientDatabaseRead, writeAudit } from "./operations";
 
 /**
@@ -431,6 +432,112 @@ export async function postPeriodClosing(input: { periodId: number }, actor: { id
     periodId: input.periodId,
     entryNumber: entry?.entryNumber ?? null,
     rows: valuation.rows,
+    skipped: isSkipped(mapped) ? mapped.skipped : null,
+  };
+}
+
+/** Hari sesudah sebuah tanggal, dihitung atas teksnya supaya bebas dari zona waktu penjalannya. */
+const nextDayIso = (value: string): string => {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+};
+
+/**
+ * Jurnal penutup laba tahun buku ke 3-2100 Laba Ditahan.
+ *
+ * Hanya periode yang berakhir 31 Desember (keputusan pengguna 4 September 2026). Menutup tiap bulan
+ * akan membuat laporan laba rugi tahunan tidak lagi dapat disusun dari buku besar tanpa membaca
+ * balik jurnal penutup tiap bulan.
+ *
+ * Urutannya mengikat: penilaian persediaan akhir Desember harus sudah berjalan lebih dulu, karena
+ * persediaan akhir menentukan harga pokok dan karenanya menentukan laba yang dipindahkan.
+ */
+export async function postYearEndProfitClosing(input: { periodId: number }, actor: { id: number }) {
+  const valuation = await buildPeriodValuation(input.periodId);
+  if (!valuation.isFiscalYearEnd) {
+    throw new Error("Jurnal penutup laba hanya dijalankan pada periode yang berakhir 31 Desember.");
+  }
+  if (valuation.status === "DITUTUP") throw new Error("Periode ini sudah ditutup; penutup labanya tidak dapat diulang.");
+  if (!valuation.valuationPostedAt) {
+    throw new Error("Jalankan penilaian persediaan akhir UKA lebih dulu: persediaan akhir ikut menentukan laba tahun ini.");
+  }
+  if (valuation.profitClosingPostedAt) throw new Error("Penutup laba tahun ini sudah dijalankan.");
+
+  const db = await databaseOrThrow();
+  const year = valuation.periodEnd.slice(0, 4);
+  const memo = `Penutup laba tahun buku ${year}`;
+  const sourceReference = `TUTUP-LABA-${year}`;
+
+  // Laba yang dipindahkan adalah laba **sejak penutupan tahunan terakhir**, bukan sejak awal
+  // pembukuan: saldo sebelum itu sudah berpindah ke 3-2100 pada penutupan sebelumnya, dan
+  // memindahkannya lagi menghitung laba tahun lalu dua kali.
+  const priorYearEnd = (
+    await db
+      .select({ periodEnd: accountingPeriods.periodEnd })
+      .from(accountingPeriods)
+      .where(and(lt(accountingPeriods.periodEnd, dbDate(valuation.periodStart)), isNotNull(accountingPeriods.profitClosingPostedAt)))
+      .orderBy(desc(accountingPeriods.periodEnd))
+      .limit(1)
+  )[0];
+
+  const balances = await accountBalancesFor({
+    from: priorYearEnd ? nextDayIso(calendarDay(priorYearEnd.periodEnd)) : undefined,
+    to: valuation.periodEnd,
+  });
+  const mapped = mapYearEndProfitClosing({
+    memo,
+    balances: balances.map((row) => ({ accountCode: row.accountCode, balance: formatAmount(row.balance) })),
+  });
+
+  let entry: { id: number; entryNumber: string } | null = null;
+  if (!isSkipped(mapped)) {
+    const existing = (
+      await db
+        .select({ id: journalEntries.id, entryNumber: journalEntries.entryNumber })
+        .from(journalEntries)
+        .where(and(eq(journalEntries.sourceType, "TUTUP_PERIODE"), eq(journalEntries.sourceReference, sourceReference)))
+        .limit(1)
+    )[0];
+    entry =
+      existing ??
+      (await postJournalEntry(
+        {
+          entryDate: dbDate(valuation.periodEnd),
+          description: memo,
+          sourceType: "TUTUP_PERIODE",
+          sourceReference,
+          lines: mapped.lines,
+        },
+        actor,
+      ));
+  }
+
+  const postedAt = new Date();
+  // Tahun tanpa saldo laba rugi tetap ditandai: penutupannya sudah dijalankan dan hasilnya memang
+  // kosong. Tanpa penanda itu, Desember tahun tersebut tidak akan pernah dapat ditutup.
+  await db
+    .update(accountingPeriods)
+    .set({ profitClosingPostedAt: postedAt, profitClosingJournalEntryId: entry?.id ?? null })
+    .where(eq(accountingPeriods.id, input.periodId));
+
+  await writeAudit({
+    actorUserId: actor.id,
+    action: "PERIOD_PROFIT_CLOSING_POSTED",
+    entityType: "accounting_periods",
+    entityId: String(input.periodId),
+    afterState: {
+      year,
+      entryNumber: entry?.entryNumber ?? null,
+      from: priorYearEnd ? nextDayIso(calendarDay(priorYearEnd.periodEnd)) : null,
+      to: valuation.periodEnd,
+      lines: isSkipped(mapped) ? [] : mapped.lines,
+    },
+    reason: isSkipped(mapped) ? mapped.skipped : null,
+  });
+
+  return {
+    periodId: input.periodId,
+    entryNumber: entry?.entryNumber ?? null,
     skipped: isSkipped(mapped) ? mapped.skipped : null,
   };
 }

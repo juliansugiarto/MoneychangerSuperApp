@@ -20,7 +20,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 3 — Pemetaan jurnal penutupan dan penutup laba
 - [x] Tugas 4 — `buildPeriodValuation`: bukti kuantitas dan kurs
 - [x] Tugas 5 — `postPeriodClosing`: tulis penilaian dan jurnalnya
-- [ ] Tugas 6 — Penutup laba tahunan dan gerbang `closeAccountingPeriod`
+- [x] Tugas 6 — Penutup laba tahunan dan gerbang `closeAccountingPeriod`
 - [ ] Tugas 7 — Neraca memakai laba sejak penutupan tahunan terakhir
 - [ ] Tugas 8 — Tiga prosedur tRPC
 - [ ] Tugas 9 — Panel Penutupan Periode
@@ -885,7 +885,7 @@ git commit -m "Penilaian persediaan akhir UKA dijurnal saat penutupan periode"
 - Produces: `postYearEndProfitClosing(input: { periodId: number }, actor: { id: number })`; dua
   penolakan baru pada `closeAccountingPeriod`. Dipakai tugas 8.
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 Buat `server/periodCloseGate.test.ts`. Uji yang wajib ada:
 
@@ -900,13 +900,13 @@ Buat `server/periodCloseGate.test.ts`. Uji yang wajib ada:
 6. Jurnalnya bersumber `TUTUP_PERIODE` dengan `sourceReference = "TUTUP-LABA-{tahun}"` dan saldo yang
    ditutup diambil dari `accountBalancesFor` sejak penutupan tahunan sebelumnya.
 
-- [ ] **Step 2: Jalankan uji, pastikan gagal**
+- [x] **Step 2: Jalankan uji, pastikan gagal**
 
 ```bash
 ./node_modules/.bin/vitest run server/periodCloseGate.test.ts
 ```
 
-- [ ] **Step 3: Tulis implementasi**
+- [x] **Step 3: Tulis implementasi**
 
 Di `server/ledgerOperations.ts`, **setelah** blok `verifyLedgerIntegrity` yang sudah ada di
 `closeAccountingPeriod`:
@@ -926,7 +926,7 @@ Di `server/ledgerOperations.ts`, **setelah** blok `verifyLedgerIntegrity` yang s
 saldo diambil `accountBalancesFor({ from: <hari setelah penutupan tahunan sebelumnya>, to: periodEnd })`
 dan diubah menjadi string dua desimal lewat `formatAmount`.
 
-- [ ] **Step 4: Jalankan uji dan gerbang mutu**
+- [x] **Step 4: Jalankan uji dan gerbang mutu**
 
 ```bash
 ./node_modules/.bin/vitest run server/periodCloseGate.test.ts server/ledger.test.ts
@@ -936,7 +936,7 @@ Harapan: `server/ledger.test.ts` yang sudah ada mungkin memakai `closeAccounting
 penilaian. **Bila gagal, itu bukan kejutan** — perbarui ujinya agar menyiapkan `valuationPostedAt`,
 dan sebutkan perubahan jumlah ujinya pada pesan commit.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/periodClosing.ts server/ledgerOperations.ts server/periodCloseGate.test.ts server/ledger.test.ts
