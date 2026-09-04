@@ -82,6 +82,7 @@ export default function BukuBesar() {
   const trialBalance = trpc.ledger.trialBalance.useQuery({ from: range.from, to: range.to });
   const integrity = trpc.ledger.integrity.useQuery({ from: range.from, to: range.to });
   const statements = trpc.ledger.statements.useQuery({ from: range.from, to: range.to });
+  const cashReconciliation = trpc.ledger.cashReconciliation.useQuery({ asOf: range.to });
   const accountLedger = trpc.ledger.accountLedger.useQuery(
     { accountCode: ledgerAccount, from: range.from, to: range.to },
     { enabled: Boolean(ledgerAccount) },
@@ -94,6 +95,7 @@ export default function BukuBesar() {
     utils.ledger.accountLedger.invalidate();
     utils.ledger.periods.invalidate();
     utils.ledger.statements.invalidate();
+    utils.ledger.cashReconciliation.invalidate();
   };
 
   const seedAccounts = trpc.ledger.seedAccounts.useMutation({
@@ -569,6 +571,61 @@ export default function BukuBesar() {
 
         {/* --------------------------- Laporan keuangan --------------------------- */}
         <TabsContent value="laporan" className="mt-5 space-y-4">
+          {/*
+            Kas buku besar memuat seluruh kas Rupiah milik sendiri, sedangkan kas operasional hanya
+            memuat laci — perpindahan ke brankas sengaja tidak dijurnal. Selisih keduanya karena itu
+            harus persis sebesar isi brankas, dan ditunjukkan di sini supaya selisih yang tidak
+            terjelaskan tidak lagi luput seperti pada temuan pemeriksaan 7.2/7.3.
+          */}
+          <Card className="border-[#dce6f0]">
+            <CardHeader>
+              <CardTitle className="font-display text-xl text-[#18395f]">Rekonsiliasi Kas Rupiah</CardTitle>
+              <CardDescription>Posisi per {formatDate(range.to)}.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {cashReconciliation.isLoading ? (
+                <p className="py-4 text-sm text-[#475569]">Menghitung rekonsiliasi kas…</p>
+              ) : cashReconciliation.error ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                  <p className="text-sm font-semibold text-red-900">Rekonsiliasi kas gagal dibaca</p>
+                  <p className="mt-1 text-sm text-red-800">{cashReconciliation.error.message}</p>
+                  <Button variant="outline" size="sm" className="mt-3" onClick={() => cashReconciliation.refetch()}>
+                    <RefreshCw className="mr-1.5 size-4" />Coba lagi
+                  </Button>
+                </div>
+              ) : cashReconciliation.data ? (
+                <>
+                  <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {[
+                      { label: "Kas Rupiah (buku besar)", value: cashReconciliation.data.ledgerCashIdr, hint: "Akun 1-1110" },
+                      { label: "Kas operasional", value: cashReconciliation.data.operationalCashIdr, hint: "Laci kasir" },
+                      { label: "Saldo brankas", value: cashReconciliation.data.safeBalanceIdr, hint: "Setor dikurangi ambil" },
+                      { label: "Selisih", value: cashReconciliation.data.difference, hint: "Yang belum terjelaskan" },
+                    ].map((item) => (
+                      <div key={item.label} className="rounded-xl border border-[#dce6f0] bg-[#f8fafc] p-4">
+                        <dt className="text-xs font-semibold uppercase tracking-wide text-[#475569]">{item.label}</dt>
+                        <dd className="mt-1 font-display text-lg tabular-nums text-[#18395f]">{formatRupiah(item.value)}</dd>
+                        <p className="mt-1 text-xs text-[#64748b]">{item.hint}</p>
+                      </div>
+                    ))}
+                  </dl>
+                  {cashReconciliation.data.reconciled ? (
+                    <p className="mt-4 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+                      <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+                      Selisih kas buku besar terhadap kas operasional seluruhnya dijelaskan oleh saldo brankas.
+                    </p>
+                  ) : (
+                    <p className="mt-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                      <ShieldAlert className="mt-0.5 size-4 shrink-0" />
+                      Ada selisih {formatRupiah(cashReconciliation.data.difference)} yang belum dapat dijelaskan oleh saldo
+                      brankas. Telusuri mutasi kas dan jurnalnya sebelum laporan ini dipakai.
+                    </p>
+                  )}
+                </>
+              ) : null}
+            </CardContent>
+          </Card>
+
           {statements.isLoading ? <p className="py-8 text-sm text-[#475569]">Menyusun laporan…</p> : null}
 
           {statements.data?.warnings.length ? (

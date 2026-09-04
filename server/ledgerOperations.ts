@@ -1,7 +1,11 @@
+import Decimal from "decimal.js";
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import {
   accountingPeriods,
+  cashBalanceMovements,
+  cashBalances,
   chartOfAccounts,
+  currencies,
   journalEntries,
   journalEntryLines,
   type journalSourceTypes,
@@ -17,8 +21,10 @@ import {
   monthStartIso,
   oppositeSide,
   parseAmount,
+  reconcileCash,
   type JournalSide,
 } from "../shared/ledger";
+import { CASH_ACCOUNT } from "../shared/journalMapping";
 import { databaseOrThrow, jakartaBusinessDate, retryTransientDatabaseRead, writeAudit } from "./operations";
 
 type JournalSourceType = (typeof journalSourceTypes)[number];
@@ -722,6 +728,64 @@ export async function buildAccountLedger(input: { accountCode: string; from?: Da
       openingBalance: formatAmount(openingBalance),
       closingBalance: formatAmount(normalBalance === "DEBIT" ? running : -running),
       movements,
+    };
+  });
+}
+
+/**
+ * Selisih buku besar terhadap kas operasional, dan penjelasannya.
+ *
+ * 1-1110 memuat seluruh kas Rupiah milik sendiri, sementara `cash_balances.availableAmount` hanya
+ * memuat laci — perpindahan ke brankas sengaja tidak dijurnal karena B0002 hanya punya satu baris
+ * kas. Selisih keduanya karena itu harus persis sebesar isi brankas. Ditampilkan supaya selisihnya
+ * dapat **ditunjukkan**, bukan sekadar ada.
+ */
+export async function getCashReconciliation(input: { asOf: Date }) {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const upperBound = new Date(`${isoDay(input.asOf)}T23:59:59`);
+
+    const ledgerRows = await db
+      .select({ side: journalEntryLines.side, amount: journalEntryLines.amount })
+      .from(journalEntryLines)
+      .innerJoin(journalEntries, eq(journalEntries.id, journalEntryLines.entryId))
+      .where(and(eq(journalEntryLines.accountCode, CASH_ACCOUNT), lte(journalEntries.entryDate, dbDate(input.asOf))));
+    let ledgerCents = 0n;
+    for (const row of ledgerRows) ledgerCents += row.side === "DEBIT" ? parseAmount(String(row.amount)) : -parseAmount(String(row.amount));
+
+    const balanceRow = (await db
+      .select({ id: cashBalances.id, availableAmount: cashBalances.availableAmount })
+      .from(cashBalances)
+      .innerJoin(currencies, eq(currencies.id, cashBalances.currencyId))
+      .where(eq(currencies.code, "IDR"))
+      .limit(1))[0];
+    const operationalCents = balanceRow ? parseAmount(new Decimal(String(balanceRow.availableAmount)).toFixed(2)) : 0n;
+
+    let safeCents = 0n;
+    if (balanceRow) {
+      const safeRows = await db
+        .select({ category: cashBalanceMovements.category, amount: cashBalanceMovements.amount })
+        .from(cashBalanceMovements)
+        .where(and(
+          eq(cashBalanceMovements.cashBalanceId, balanceRow.id),
+          inArray(cashBalanceMovements.category, ["SAFE_DEPOSIT", "SAFE_WITHDRAWAL"]),
+          lte(cashBalanceMovements.createdAt, upperBound),
+        ));
+      for (const row of safeRows) {
+        const cents = parseAmount(new Decimal(String(row.amount)).toFixed(2));
+        safeCents += row.category === "SAFE_DEPOSIT" ? cents : -cents;
+      }
+    }
+
+    const ledgerCashIdr = formatAmount(ledgerCents);
+    const operationalCashIdr = formatAmount(operationalCents);
+    const safeBalanceIdr = formatAmount(safeCents);
+    return {
+      asOf: isoDay(input.asOf),
+      ledgerCashIdr,
+      operationalCashIdr,
+      safeBalanceIdr,
+      ...reconcileCash({ ledgerCashIdr, operationalCashIdr, safeBalanceIdr }),
     };
   });
 }

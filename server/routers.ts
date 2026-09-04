@@ -105,7 +105,7 @@ import { candidateDecisions, competencyTracks, employmentStatuses, jobLevels, pi
 import { journalSourceTypes } from "../drizzle/schema";
 import {
   buildAccountLedger, buildTrialBalanceReport, closeAccountingPeriod, ensureChartOfAccounts,
-  listAccountingPeriods, listAccounts, listJournalEntries, postJournalEntry, reopenAccountingPeriod,
+  getCashReconciliation, listAccountingPeriods, listAccounts, listJournalEntries, postJournalEntry, reopenAccountingPeriod,
   reverseJournalEntry, verifyLedgerIntegrity,
 } from "./ledgerOperations";
 import { postOperationsToLedger } from "./ledgerPosting";
@@ -552,6 +552,8 @@ export const appRouter = router({
       from: z.coerce.date().optional(),
       to: z.coerce.date().optional(),
     }).optional()).query(({ input }) => verifyLedgerIntegrity(input ?? {})),
+    /** Controller, seperti seluruh pembacaan buku besar lain: angkanya angka laporan keuangan, bukan informasi operasional harian. */
+    cashReconciliation: controllerProcedure.input(z.object({ asOf: z.coerce.date() })).query(({ input }) => getCashReconciliation(input)),
 
     // Penjurnalan otomatis dijalankan atas rentang tanggal yang dipilih, bukan berjalan sendiri di
     // latar belakang: yang menentukan kapan pembukuan sebuah periode dikerjakan adalah manusia.

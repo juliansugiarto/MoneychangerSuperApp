@@ -199,3 +199,9 @@ export const monthEndIso = (value: Date | string): string => {
   const [year, month] = isoDay(value).split("-").map(Number);
   return new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
 };
+
+/** Selisih yang tersisa setelah isi brankas diperhitungkan; nol berarti buku besar dan kas operasional cocok. */
+export function reconcileCash(input: { ledgerCashIdr: string; operationalCashIdr: string; safeBalanceIdr: string }) {
+  const difference = parseAmount(input.ledgerCashIdr) - parseAmount(input.operationalCashIdr) - parseAmount(input.safeBalanceIdr);
+  return { difference: formatAmount(difference), reconciled: difference === 0n };
+}

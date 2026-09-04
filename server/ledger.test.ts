@@ -11,6 +11,7 @@ import {
   monthStartIso,
   oppositeSide,
   parseAmount,
+  reconcileCash,
   summariseJournal,
 } from "../shared/ledger";
 
@@ -265,5 +266,19 @@ describe("hari kalender dan batas periode", () => {
     expect(monthEndIso("2028-02-10")).toBe("2028-02-29");
     expect(monthEndIso("2026-01-31")).toBe("2026-01-31");
     expect(monthEndIso("2026-12-01")).toBe("2026-12-31");
+  });
+});
+
+describe("rekonsiliasi kas buku besar terhadap kas operasional", () => {
+  it("menyatakan cocok ketika selisihnya persis sebesar isi brankas", () => {
+    // 1-1110 pada buku besar memuat seluruh kas milik sendiri; cash_balances hanya memuat laci.
+    // Selisih keduanya karena itu harus sama dengan akumulasi SAFE_DEPOSIT dikurangi SAFE_WITHDRAWAL.
+    expect(reconcileCash({ ledgerCashIdr: "150000000.00", operationalCashIdr: "100000000.00", safeBalanceIdr: "50000000.00" }))
+      .toEqual({ difference: "0.00", reconciled: true });
+  });
+
+  it("menunjukkan selisih yang tidak dapat dijelaskan brankas", () => {
+    expect(reconcileCash({ ledgerCashIdr: "150000000.00", operationalCashIdr: "100000000.00", safeBalanceIdr: "40000000.00" }))
+      .toEqual({ difference: "10000000.00", reconciled: false });
   });
 });

@@ -22,7 +22,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 5 — `recordCashBankTransfer`
 - [x] Tugas 6 — Posting ke buku besar
 - [x] Tugas 7 — Tab Modal & Bank
-- [ ] Tugas 8 — Panel rekonsiliasi kas
+- [x] Tugas 8 — Panel rekonsiliasi kas
 - [ ] Tugas 9 — Skenario dan dokumentasi
 
 Urutannya mengikat: 3 sebelum 4 dan 5; 2 sebelum 6. Tugas 7 dan 8 boleh ditukar.
@@ -1248,7 +1248,7 @@ Karena `SAFE_DEPOSIT` mengurangi `cash_balances.availableAmount` tetapi sengaja 
 - Consumes: `trialBalance`/pembacaan saldo akun yang sudah ada di `server/ledgerOperations.ts`; `cashBalances`.
 - Produces: `getCashReconciliation(input: { asOf: Date }): Promise<{ ledgerCashIdr: string; operationalCashIdr: string; safeBalanceIdr: string; difference: string; reconciled: boolean }>`; prosedur tRPC `ledger.cashReconciliation`.
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 Tambahkan ke `server/ledger.test.ts`:
 
@@ -1278,14 +1278,14 @@ export function reconcileCash(input: { ledgerCashIdr: string; operationalCashIdr
 }
 ```
 
-- [ ] **Step 2: Jalankan uji, pastikan gagal, lalu lulus**
+- [x] **Step 2: Jalankan uji, pastikan gagal, lalu lulus**
 
 ```bash
 ./node_modules/.bin/vitest run server/ledger.test.ts
 ```
 Harapan: GAGAL sebelum fungsi ditambahkan, LULUS sesudahnya.
 
-- [ ] **Step 3: Tambahkan `getCashReconciliation` di `server/ledgerOperations.ts`**
+- [x] **Step 3: Tambahkan `getCashReconciliation` di `server/ledgerOperations.ts`**
 
 ```ts
 /**
@@ -1341,7 +1341,7 @@ export async function getCashReconciliation(input: { asOf: Date }) {
 
 Sesuaikan nama kolom `journalEntryLines` (`entryId`, `accountCode`, `side`, `amount`) dengan yang benar-benar ada di `drizzle/schema.ts` sebelum menulis — periksa, jangan menebak. Tambahkan `CASH_ACCOUNT`, `reconcileCash`, `parseAmount`, `formatAmount`, dan `inArray` ke impor berkas ini.
 
-- [ ] **Step 4: Ekspos lewat tRPC**
+- [x] **Step 4: Ekspos lewat tRPC**
 
 Tambahkan di router `ledger` (`server/routers.ts:508`):
 
@@ -1349,21 +1349,21 @@ Tambahkan di router `ledger` (`server/routers.ts:508`):
     cashReconciliation: staffProcedure.input(z.object({ asOf: z.date() })).query(({ input }) => getCashReconciliation(input)),
 ```
 
-- [ ] **Step 5: Tampilkan pada tab Laporan Keuangan di `BukuBesar.tsx`**
+- [x] **Step 5: Tampilkan pada tab Laporan Keuangan di `BukuBesar.tsx`**
 
 Panel menampilkan empat angka berlabel jelas — Kas Rupiah (buku besar), Kas operasional, Saldo brankas, Selisih — dan satu kalimat penjelas ketika `reconciled` bernilai benar: "Selisih kas buku besar terhadap kas operasional seluruhnya dijelaskan oleh saldo brankas." Ketika bernilai salah, tampilkan peringatan bahwa ada selisih yang belum dapat dijelaskan. Sertakan loading dan error state.
 
-- [ ] **Step 6: Pastikan tipe, uji, dan build bersih**
+- [x] **Step 6: Pastikan tipe, uji, dan build bersih**
 
 ```bash
 ./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build
 ```
 
-- [ ] **Step 7: Verifikasi visual**
+- [x] **Step 7: Verifikasi visual**
 
 Buka `/operasional/buku-besar`, tab Laporan Keuangan, ambil tangkapan layar panel rekonsiliasi.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add shared/ledger.ts server/ledger.test.ts server/ledgerOperations.ts server/routers.ts client/src/pages/BukuBesar.tsx
