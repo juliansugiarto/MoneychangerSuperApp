@@ -17,7 +17,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 
 - [x] Tugas 1 — Migrasi kategori mutasi (0044)
 - [x] Tugas 2 — Pemetaan jurnal mutasi kas dan bank
-- [ ] Tugas 3 — Helper `applyCashMovement`
+- [x] Tugas 3 — Helper `applyCashMovement`
 - [ ] Tugas 4 — `recordCapitalMovement`
 - [ ] Tugas 5 — `recordCashBankTransfer`
 - [ ] Tugas 6 — Posting ke buku besar
@@ -482,14 +482,14 @@ Refactor murni. Penguncian baris, rekonsiliasi pecahan, dan delta stok saat ini 
 - Consumes: `reconcileDenominations` (`server/operations.ts:1639`), `applyDenominationBalanceDelta` (`:1663`), `nonNegativeOrZeroDecimal` (`:162`).
 - Produces: `applyCashMovement(tx, input): Promise<{ balanceId: number; currencyCode: string; before: string; after: string; movementId: number }>` dengan `input: { currencyId: number; direction: "IN" | "OUT"; amount: Decimal; reason: string; category: string; denominationRows: { denominationValue: string; quantity: number; subtotal: string }[]; actorUserId: number }`. Dipakai tugas 4 dan 5.
 
-- [ ] **Step 1: Pastikan uji yang ada lulus sebagai jaring pengaman**
+- [x] **Step 1: Pastikan uji yang ada lulus sebagai jaring pengaman**
 
 ```bash
 ./node_modules/.bin/vitest run
 ```
 Harapan: 478 lulus, 2 dilewati. Catat angkanya — refactor ini tidak boleh mengubahnya.
 
-- [ ] **Step 2: Tambahkan helper tepat di atas `recordCashAdjustment`**
+- [x] **Step 2: Tambahkan helper tepat di atas `recordCashAdjustment`**
 
 ```ts
 /**
@@ -534,7 +534,7 @@ async function applyCashMovement(
 }
 ```
 
-- [ ] **Step 3: Ganti isi `db.transaction` pada `recordCashAdjustment` agar memakai helper**
+- [x] **Step 3: Ganti isi `db.transaction` pada `recordCashAdjustment` agar memakai helper**
 
 ```ts
   return db.transaction(async (tx) => {
@@ -547,7 +547,7 @@ async function applyCashMovement(
   });
 ```
 
-- [ ] **Step 4: Jalankan seluruh uji — perilaku tidak boleh berubah**
+- [x] **Step 4: Jalankan seluruh uji — perilaku tidak boleh berubah**
 
 ```bash
 ./node_modules/.bin/vitest run
@@ -555,7 +555,7 @@ async function applyCashMovement(
 ```
 Harapan: **angka lulus persis sama dengan Step 1**. Bila ada yang gagal, refactor mengubah perilaku — perbaiki, jangan ubah ujinya.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/operations.ts

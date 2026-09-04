@@ -2574,6 +2574,47 @@ export async function recordOpeningCash(input: { currencyId: number; openingAmou
   });
 }
 
+/**
+ * Satu pergerakan kas fisik: kunci baris saldo, geser saldo, tulis mutasi, dan gerakkan stok pecahan.
+ *
+ * Ditarik keluar karena tiga pemanggil (penyesuaian, setoran modal, pemindahan kas↔bank) menuntut
+ * urutan yang sama persis. Menyalinnya berarti tiga salinan logika kas fisik yang harus dijaga
+ * serempak, dan stok pecahan berjalan adalah sumber kebenaran operasional — bukan catatan tambahan.
+ */
+async function applyCashMovement(
+  tx: any,
+  input: {
+    currencyId: number;
+    direction: "IN" | "OUT";
+    amount: Decimal;
+    reason: string;
+    category: string;
+    denominationRows: { denominationValue: string; quantity: number; subtotal: string }[];
+    actorUserId: number;
+  },
+) {
+  const currency = (await tx.select().from(currencies).where(and(eq(currencies.id, input.currencyId), eq(currencies.active, true))).limit(1))[0];
+  if (!currency) throw new Error("Mata uang aktif tidak ditemukan.");
+  await tx.execute(sql`SELECT ${cashBalances.id} FROM ${cashBalances} WHERE ${cashBalances.currencyId} = ${input.currencyId} FOR UPDATE`);
+  const balance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, input.currencyId)).limit(1))[0];
+  if (!balance) throw new Error("Saldo kas belum ada. Catat kas awal terlebih dahulu.");
+
+  const before = new Decimal(String(balance.availableAmount));
+  if (input.direction === "OUT" && before.lt(input.amount)) throw new Error("Jumlah melebihi saldo kas yang tersedia.");
+  const after = input.direction === "OUT" ? before.minus(input.amount) : before.plus(input.amount);
+  await tx.update(cashBalances).set({ availableAmount: after.toFixed(6) }).where(eq(cashBalances.id, balance.id));
+
+  const [movement] = await tx.insert(cashBalanceMovements).values({
+    cashBalanceId: balance.id, direction: input.direction, amount: input.amount.toFixed(6),
+    reason: input.reason.slice(0, 255), category: input.category as never, createdByUserId: input.actorUserId,
+  }).$returningId();
+  if (input.denominationRows.length && movement) {
+    await tx.insert(cashDenominationEntries).values(input.denominationRows.map((row) => ({ ...row, cashBalanceMovementId: movement.id })));
+    await applyDenominationBalanceDelta(tx, input.currencyId, input.denominationRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })), input.direction === "IN" ? 1 : -1);
+  }
+  return { balanceId: balance.id, currencyCode: currency.code, before: before.toFixed(6), after: after.toFixed(6), movementId: movement?.id ?? 0 };
+}
+
 /** Off-hours cash movements that aren't part of the normal transaction flow — owner safe deposits/withdrawals, or a sale made outside business hours. Always requires a note and always writes an audit trail so it shows up correctly in the daily stock report. */
 export async function recordCashAdjustment(
   input: { currencyId: number; category: "SAFE_DEPOSIT" | "SAFE_WITHDRAWAL" | "OFF_HOURS_SALE" | "OTHER"; amount: string; notes: string; denominations: DenominationEntryInput[] },
@@ -2590,23 +2631,12 @@ export async function recordCashAdjustment(
   const currencyForValidation = (await db.select({ code: currencies.code }).from(currencies).where(eq(currencies.id, input.currencyId)).limit(1))[0];
   const denominationRows = reconcileDenominations(input.denominations, amount, currencyForValidation?.code);
   return db.transaction(async (tx) => {
-    const currency = (await tx.select().from(currencies).where(and(eq(currencies.id, input.currencyId), eq(currencies.active, true))).limit(1))[0];
-    if (!currency) throw new Error("Mata uang aktif tidak ditemukan.");
-    await tx.execute(sql`SELECT ${cashBalances.id} FROM ${cashBalances} WHERE ${cashBalances.currencyId} = ${input.currencyId} FOR UPDATE`);
-    const balance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, input.currencyId)).limit(1))[0];
-    if (!balance) throw new Error("Saldo kas belum ada. Catat kas awal terlebih dahulu.");
-    const before = new Decimal(String(balance.availableAmount));
-    if (direction === "OUT" && before.lt(amount)) throw new Error("Jumlah penyesuaian melebihi saldo kas yang tersedia.");
-    const after = direction === "OUT" ? before.minus(amount) : before.plus(amount);
-    await tx.update(cashBalances).set({ availableAmount: after.toFixed(6) }).where(eq(cashBalances.id, balance.id));
-    const reason = `${input.category}_${Date.now()}_${currency.code}`;
-    const [movement] = await tx.insert(cashBalanceMovements).values({ cashBalanceId: balance.id, direction, amount: amount.toFixed(6), reason: `${input.category}: ${notes}`.slice(0, 255), category: input.category, createdByUserId: actor.id }).$returningId();
-    if (denominationRows.length && movement) {
-      await tx.insert(cashDenominationEntries).values(denominationRows.map((row) => ({ ...row, cashBalanceMovementId: movement.id })));
-      await applyDenominationBalanceDelta(tx, input.currencyId, denominationRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })), direction === "IN" ? 1 : -1);
-    }
-    await writeAudit({ actorUserId: actor.id, action: "CASH_ADJUSTMENT_RECORDED", entityType: "cash_balance", entityId: String(balance.id), beforeState: { availableAmount: before.toFixed(6) }, afterState: { availableAmount: after.toFixed(6), currency: currency.code }, reason: notes, metadata: { category: input.category, direction, amount: amount.toFixed(6), denominationCount: denominationRows.length } });
-    return { balanceId: balance.id, currencyCode: currency.code, beforeAmount: before.toFixed(6), afterAmount: after.toFixed(6), direction, category: input.category };
+    const applied = await applyCashMovement(tx, {
+      currencyId: input.currencyId, direction, amount, category: input.category,
+      reason: `${input.category}: ${notes}`, denominationRows, actorUserId: actor.id,
+    });
+    await writeAudit({ actorUserId: actor.id, action: "CASH_ADJUSTMENT_RECORDED", entityType: "cash_balance", entityId: String(applied.balanceId), beforeState: { availableAmount: applied.before }, afterState: { availableAmount: applied.after, currency: applied.currencyCode }, reason: notes, metadata: { category: input.category, direction, amount: amount.toFixed(6), denominationCount: denominationRows.length } });
+    return { balanceId: applied.balanceId, currencyCode: applied.currencyCode, beforeAmount: applied.before, afterAmount: applied.after, direction, category: input.category };
   });
 }
 
