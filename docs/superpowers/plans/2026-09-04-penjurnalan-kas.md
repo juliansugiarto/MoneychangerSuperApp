@@ -10,6 +10,23 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-04-penjurnalan-kas-design.md`
 
+## Status Pengerjaan
+
+Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu**, supaya sesi
+berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
+
+- [ ] Tugas 1 — Migrasi kategori mutasi (0044)
+- [ ] Tugas 2 — Pemetaan jurnal mutasi kas dan bank
+- [ ] Tugas 3 — Helper `applyCashMovement`
+- [ ] Tugas 4 — `recordCapitalMovement`
+- [ ] Tugas 5 — `recordCashBankTransfer`
+- [ ] Tugas 6 — Posting ke buku besar
+- [ ] Tugas 7 — Tab Modal & Bank
+- [ ] Tugas 8 — Panel rekonsiliasi kas
+- [ ] Tugas 9 — Skenario dan dokumentasi
+
+Urutannya mengikat: 3 sebelum 4 dan 5; 2 sebelum 6. Tugas 7 dan 8 boleh ditukar.
+
 ## Global Constraints
 
 - `pnpm` tidak ada di PATH. Pakai `./node_modules/.bin/*`. Klien MySQL di `/opt/homebrew/opt/mysql/bin`.
