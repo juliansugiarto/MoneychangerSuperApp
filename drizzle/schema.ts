@@ -1141,6 +1141,19 @@ export const accountingPeriods = mysqlTable("accounting_periods", {
   closedByUserId: int("closedByUserId"),
   closedAt: datetime("closedAt"),
   closingNotes: text("closingNotes"),
+  /**
+   * Penanda bahwa penilaian persediaan akhir UKA sudah dijalankan untuk periode ini.
+   *
+   * Ditaruh sebagai kolom, bukan disimpulkan dari ada-tidaknya baris `period_closing_valuations`:
+   * outlet yang belum memegang UKA menghasilkan nol baris penilaian, dan itu keadaan sah yang tetap
+   * harus bisa ditutup. Menghitung baris akan mencampur "belum dinilai" dengan "sudah dinilai,
+   * hasilnya memang kosong".
+   */
+  valuationPostedAt: datetime("valuationPostedAt"),
+  valuationJournalEntryId: int("valuationJournalEntryId"),
+  /** Penanda jurnal penutup laba ke 3-2100; hanya periode yang berakhir 31 Desember mengisinya. */
+  profitClosingPostedAt: datetime("profitClosingPostedAt"),
+  profitClosingJournalEntryId: int("profitClosingJournalEntryId"),
   createdByUserId: int("createdByUserId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -1148,6 +1161,44 @@ export const accountingPeriods = mysqlTable("accounting_periods", {
   uniqueIndex("accounting_periods_range_uq").on(table.periodStart, table.periodEnd),
   index("accounting_periods_status_idx").on(table.status, table.periodStart),
 ]);
+
+/**
+ * Penilaian persediaan valuta akhir periode, satu baris per mata uang per periode.
+ *
+ * Setiap angka penilaian dapat diturunkan ulang dari barisnya sendiri — kuantitas beserta opname
+ * yang membuktikannya, kurs beserta snapshot dan tanggal yang benar-benar dipakai. Itulah jawaban
+ * atas temuan 7.1 pada tingkat baris: pos "Kas UKA" pada neraca bukan angka yang muncul entah dari
+ * mana, melainkan hitungan fisik dikali kurs BI yang dapat ditunjuk.
+ *
+ * `opnameDate` dan `rateReferenceDate` disimpan meski sudah dapat dijangkau lewat id-nya, karena
+ * keduanya boleh berbeda dari akhir periode — opname hanya terjadi saat outlet buka, dan BI tidak
+ * mengumumkan kurs pada hari libur. Perbedaan itu harus terbaca tanpa menelusuri tabel lain.
+ */
+export const periodClosingValuations = mysqlTable("period_closing_valuations", {
+  id: int("id").autoincrement().primaryKey(),
+  periodId: int("periodId").notNull(),
+  currencyId: int("currencyId").notNull(),
+  /** Kuantitas valuta hasil hitung fisik: laci + brankas, dari `stock_opnames.physicalBalance`. */
+  quantity: decimal("quantity", { precision: 24, scale: 6 }).notNull(),
+  stockOpnameId: int("stockOpnameId").notNull(),
+  opnameDate: date("opnameDate").notNull(),
+  rateSnapshotId: int("rateSnapshotId").notNull(),
+  rateReferenceDate: date("rateReferenceDate").notNull(),
+  buyRate: decimal("buyRate", { precision: 24, scale: 6 }).notNull(),
+  sellRate: decimal("sellRate", { precision: 24, scale: 6 }).notNull(),
+  /** BI mengutip JPY per 100 unit; mengabaikan kolom ini membuat nilainya meleset seratus kali. */
+  quoteUnit: decimal("quoteUnit", { precision: 18, scale: 6 }).notNull(),
+  /** Kurs tengah per satu unit valuta: (buyRate + sellRate) / 2 / quoteUnit. */
+  midRatePerUnit: decimal("midRatePerUnit", { precision: 24, scale: 12 }).notNull(),
+  /** quantity × midRatePerUnit, dibulatkan setengah-ke-atas ke sen — lihat spec bagian 7. */
+  rupiahValue: decimal("rupiahValue", { precision: 24, scale: 2 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("period_closing_valuations_period_currency_uq").on(table.periodId, table.currencyId),
+  index("period_closing_valuations_period_idx").on(table.periodId),
+]);
+
+export type PeriodClosingValuation = typeof periodClosingValuations.$inferSelect;
 
 /**
  * Asal sebuah jurnal. `MANUAL` diketik manusia; sisanya dihasilkan sistem dari catatan operasional

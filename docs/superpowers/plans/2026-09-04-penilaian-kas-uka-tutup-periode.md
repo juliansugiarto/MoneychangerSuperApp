@@ -15,7 +15,7 @@
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu**, supaya sesi
 berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 
-- [ ] Tugas 1 — Migrasi penilaian penutupan periode (0047)
+- [x] Tugas 1 — Migrasi penilaian penutupan periode (0047)
 - [ ] Tugas 2 — Penilaian kurs tengah murni di `shared/`
 - [ ] Tugas 3 — Pemetaan jurnal penutupan dan penutup laba
 - [ ] Tugas 4 — `buildPeriodValuation`: bukti kuantitas dan kurs
@@ -95,7 +95,7 @@ sendiri dan boleh dikerjakan kapan saja setelah 6. Tugas 10 terakhir.
 - Produces: tabel `period_closing_valuations`, kolom `accountingPeriods.valuationPostedAt`,
   `valuationJournalEntryId`, `profitClosingPostedAt`, `profitClosingJournalEntryId`. Dipakai tugas 4–9.
 
-- [ ] **Step 1: Tambah empat kolom pada `accountingPeriods`**
+- [x] **Step 1: Tambah empat kolom pada `accountingPeriods`**
 
 Di `drizzle/schema.ts`, sisipkan sebelum `createdByUserId` pada `accountingPeriods`:
 
@@ -115,7 +115,7 @@ Di `drizzle/schema.ts`, sisipkan sebelum `createdByUserId` pada `accountingPerio
   profitClosingJournalEntryId: int("profitClosingJournalEntryId"),
 ```
 
-- [ ] **Step 2: Tambah tabel `periodClosingValuations`**
+- [x] **Step 2: Tambah tabel `periodClosingValuations`**
 
 Tepat di bawah `accountingPeriods`:
 
@@ -159,14 +159,14 @@ export const periodClosingValuations = mysqlTable("period_closing_valuations", {
 export type PeriodClosingValuation = typeof periodClosingValuations.$inferSelect;
 ```
 
-- [ ] **Step 3: Hasilkan migrasi**
+- [x] **Step 3: Hasilkan migrasi**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
 ./node_modules/.bin/drizzle-kit generate
 ```
 
-- [ ] **Step 4: Baca SQL yang dihasilkan sebelum menerapkannya**
+- [x] **Step 4: Baca SQL yang dihasilkan sebelum menerapkannya**
 
 ```bash
 cat drizzle/0047_*.sql
@@ -174,21 +174,21 @@ cat drizzle/0047_*.sql
 
 Harapan: satu `CREATE TABLE period_closing_valuations`, satu atau empat `ALTER TABLE accounting_periods ADD ...`, dan dua `CREATE INDEX`/`UNIQUE`. **Bila ada `DROP`, `TRUNCATE`, `MODIFY COLUMN`, atau perubahan pada tabel selain kedua itu, berhenti dan laporkan** — migrasi ini harus murni aditif.
 
-- [ ] **Step 5: Terapkan ke dua basis data lokal**
+- [x] **Step 5: Terapkan ke dua basis data lokal**
 
 ```bash
 node scripts/tenant.mjs migrate-all
 ```
 Harapan: kedua tenant (`moneychanger`, `mc_t_abcvalas`) melaporkan migrasi diterapkan.
 
-- [ ] **Step 6: Pastikan tipe dan uji masih bersih**
+- [x] **Step 6: Pastikan tipe dan uji masih bersih**
 
 ```bash
 ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vitest run
 ```
 Harapan: tanpa galat; jumlah uji masih 551 lulus, 2 dilewati.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add drizzle/schema.ts drizzle/0047_*.sql drizzle/meta
