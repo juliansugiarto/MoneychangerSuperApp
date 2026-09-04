@@ -1147,7 +1147,7 @@ Tombol "Tutup periode" yang sudah ada dinonaktifkan selama `valuationPostedAt` k
 keterangan singkat mengapa — pengguna tidak boleh menemukan syaratnya lewat pesan galat. Untuk
 periode Desember, tombol penutup laba muncul di antara keduanya.
 
-- [ ] **Step 6: Verifikasi visual** — *belum tuntas: basis data lokal `moneychanger` tidak memiliki periode, opname, maupun snapshot kurs, sehingga panelnya tidak dapat ditampilkan. Yang sudah diperiksa dengan mata: halaman Buku Besar termuat, tab Periode berpindah, keadaan kosong tampil benar. Tabel, penanda tanggal mundur, daftar penghalang, dan fokus keyboard tombol barunya masih perlu diperiksa setelah ada data uji lokal.*
+- [x] **Step 6: Verifikasi visual** — *diperiksa 5 September 2026 pada basis data lokal `moneychanger` dengan data uji seizin pengguna (USD dan SGD, satu periode September 2026, dua snapshot BI, dua opname RECONCILED). Terbukti: keadaan memuat, penghalang SGD beserta alasannya, tabel dua mata uang terurut kode, penanda mundur hanya pada tanggal yang memang berbeda dari akhir periode, ringkasan 5-1100/5-1300, tombol "Jalankan penilaian" tertutup saat ada penghalang dan terbuka setelahnya, "Tutup periode" tertutup sampai penilaian dijalankan lalu terbuka, dan fokus keyboard tampak pada tombol barunya. Penilaian dijalankan sungguhan: jurnal JU-202609-0001 senilai 210.050.000,00 dengan dua baris penilaian yang membuktikannya.*
 
 ```bash
 ./node_modules/.bin/vite build

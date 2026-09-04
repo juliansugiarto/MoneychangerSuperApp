@@ -964,35 +964,35 @@ function PeriodClosingPanel({
 
       {data.rows.length ? (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[52rem] text-left text-sm">
             <thead className="text-xs uppercase tracking-wide text-[#8194aa]">
               <tr className="border-b border-[#e6edf5]">
-                <th className="py-2">Mata uang</th>
-                <th className="py-2 text-right">Kuantitas</th>
-                <th className="py-2">Tanggal opname</th>
-                <th className="py-2 text-right">Kurs tengah</th>
-                <th className="py-2">Tanggal kurs</th>
+                <th className="py-2 pr-4">Mata uang</th>
+                <th className="py-2 pr-4 text-right">Kuantitas</th>
+                <th className="py-2 pr-4">Tanggal opname</th>
+                <th className="py-2 pr-4 text-right">Kurs tengah</th>
+                <th className="py-2 pr-4">Tanggal kurs</th>
                 <th className="py-2 text-right">Nilai Rupiah</th>
               </tr>
             </thead>
             <tbody>
               {data.rows.map((row) => (
                 <tr key={row.currencyId} className="border-b border-[#eef2f7]">
-                  <td className="py-2 font-semibold text-[#213f63]">{row.currencyCode}</td>
-                  <td className="py-2 text-right tabular-nums text-[#475569]">{formatRupiah(row.quantity)}</td>
+                  <td className="py-2 pr-4 font-semibold text-[#213f63]">{row.currencyCode}</td>
+                  <td className="py-2 pr-4 text-right align-top tabular-nums text-[#475569]">{formatRupiah(row.quantity)}</td>
                   {/*
                     Tanggal yang berbeda dari akhir periode ditandai, bukan disamarkan: opname hanya
                     terjadi saat outlet buka dan BI tidak mengumumkan kurs pada hari libur, jadi
                     kemundurannya sah — tetapi harus terbaca.
                   */}
-                  <td className="py-2 text-[#475569]">
+                  <td className="py-2 pr-4 align-top text-[#475569]">
                     <DateWithShift day={row.opnameDate} endDay={endDay} note="hitungan fisik terakhir sebelum akhir periode" />
                   </td>
-                  <td className="py-2 text-right tabular-nums text-[#475569]">{formatRupiah(row.midRatePerUnit)}</td>
-                  <td className="py-2 text-[#475569]">
+                  <td className="py-2 pr-4 text-right align-top tabular-nums text-[#475569]">{formatRupiah(row.midRatePerUnit)}</td>
+                  <td className="py-2 pr-4 align-top text-[#475569]">
                     <DateWithShift day={row.rateReferenceDate} endDay={endDay} note="kurs BI terakhir sampai akhir periode" />
                   </td>
-                  <td className="py-2 text-right font-semibold tabular-nums text-[#213f63]">{formatRupiah(row.rupiahValue)}</td>
+                  <td className="py-2 text-right align-top font-semibold tabular-nums text-[#213f63]">{formatRupiah(row.rupiahValue)}</td>
                 </tr>
               ))}
             </tbody>
@@ -1042,9 +1042,9 @@ function PeriodClosingPanel({
 function DateWithShift({ day, endDay, note }: { day: string; endDay: string; note: string }) {
   if (day === endDay) return <>{formatDate(day)}</>;
   return (
-    <span className="flex flex-col">
-      <span>{formatDate(day)}</span>
-      <span className="text-xs text-[#8a6320]" title={note}>Mundur dari akhir periode — {note}</span>
+    <span className="flex flex-col gap-0.5">
+      <span className="whitespace-nowrap">{formatDate(day)}</span>
+      <span className="text-xs leading-snug text-[#8a6320]" title={note}>Mundur dari akhir periode — {note}</span>
     </span>
   );
 }
