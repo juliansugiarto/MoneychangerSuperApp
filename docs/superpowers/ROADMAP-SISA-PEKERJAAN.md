@@ -45,7 +45,7 @@ Rencana: `plans/2026-09-04-penilaian-kas-uka-tutup-periode.md`
 - [x] Tugas 4 — `buildPeriodValuation`: bukti kuantitas dan kurs
 - [x] Tugas 5 — `postPeriodClosing`: tulis penilaian dan jurnalnya
 - [x] Tugas 6 — Penutup laba tahunan dan gerbang `closeAccountingPeriod`
-- [ ] Tugas 7 — Neraca memakai laba sejak penutupan tahunan terakhir
+- [x] Tugas 7 — Neraca memakai laba sejak penutupan tahunan terakhir
 - [ ] Tugas 8 — Tiga prosedur tRPC
 - [ ] Tugas 9 — Panel Penutupan Periode
 - [ ] Tugas 10 — Skenario menyeluruh dan dokumentasi

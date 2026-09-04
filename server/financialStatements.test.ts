@@ -1,4 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("./ledgerOperations", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./ledgerOperations")>();
+  return { ...actual, accountBalancesFor: vi.fn() };
+});
+
 import {
   buildBalanceSheet,
   buildEquityStatement,
@@ -7,6 +13,9 @@ import {
   type StatementAccount,
 } from "../shared/financialStatements";
 import { formatAmount, parseAmount } from "../shared/ledger";
+import * as db from "./db";
+import { buildFinancialStatements } from "./financialStatements";
+import { accountBalancesFor } from "./ledgerOperations";
 
 /** Saldo searah saldo normal akunnya, seperti yang dihasilkan `accountBalancesFor`. */
 const at = (entries: Record<string, string>): StatementAccount[] =>
@@ -148,5 +157,104 @@ describe("peringatan kelayakan angka", () => {
 
   it("tidak memperingatkan apa pun pada buku besar yang lengkap dan seimbang", () => {
     expect(warn({ "1-1110": "422500000.00", "1-1210": "77500000.00", "3-1100": "500000000.00" })).toEqual([]);
+  });
+});
+
+/**
+ * Neraca setelah penutup laba tahunan ada.
+ *
+ * `accountBalancesFor` dan `getDb` dipalsukan; tidak ada basis data yang disentuh. Yang diuji bukan
+ * aritmetika laporannya — itu sudah diuji di atas — melainkan **rentang mana** yang dipakai untuk
+ * akun laba rugi pada neraca.
+ */
+describe("neraca dan penutup laba tahunan", () => {
+  const kumulatif = at({ "1-1110": "140000000.00", "3-1100": "100000000.00", "4-1100": "40000000.00" });
+
+  /** Satu pemanggilan `accountBalancesFor`, dikenali dari batas rentangnya. */
+  const rangeKey = (input: { from?: Date | string; to?: Date | string }) =>
+    `${input.from ? isoDayOf(input.from) : "-"}..${input.to ? isoDayOf(input.to) : "-"}`;
+  const isoDayOf = (value: Date | string) => (typeof value === "string" ? value.slice(0, 10) : value.toISOString().slice(0, 10));
+
+  function setup(options: { balances: Record<string, StatementAccount[]>; closings: unknown[][] }) {
+    const queue = [...options.closings];
+    const chain = (rows: unknown[]): never => {
+      const thenable = Promise.resolve(rows) as unknown as Record<string, unknown>;
+      for (const method of ["where", "orderBy", "limit"]) thenable[method] = () => chain(rows);
+      return thenable as never;
+    };
+    const getDb = vi.spyOn(db, "getDb").mockResolvedValue({
+      select: () => ({ from: () => chain((queue.length > 1 ? queue.shift() : queue[0]) ?? []) }),
+    } as never);
+    const balances = vi.mocked(accountBalancesFor);
+    balances.mockReset();
+    balances.mockImplementation(async (input) => options.balances[rangeKey(input)] ?? kosong);
+    return { getDb, balances };
+  }
+
+  const range = { from: new Date("2026-06-01T00:00:00Z"), to: new Date("2026-06-30T00:00:00Z") };
+
+  it("tidak menggerakkan satu angka pun selama belum pernah ada penutup laba", async () => {
+    const { getDb } = setup({
+      closings: [[]],
+      balances: { "-..2026-06-30": kumulatif, "-..2026-05-31": kumulatif },
+    });
+
+    const result = await buildFinancialStatements(range);
+
+    // Laba sejak awal pembukuan, persis seperti sebelum paket C.
+    expect(result.balanceSheet.currentPeriodProfit).toBe("40000000.00");
+    expect(result.balanceSheet.balanced).toBe(true);
+    getDb.mockRestore();
+  });
+
+  it("memakai laba sejak penutup laba terakhir, bukan sejak awal pembukuan", async () => {
+    // Kumulatif masih memuat laba 2025 pada 4-1100; yang boleh tampil pada neraca 2026 hanyalah
+    // laba sejak 1 Januari 2026, karena laba 2025 sudah berpindah ke 3-2100.
+    const { getDb, balances } = setup({
+      closings: [[{ entryDate: new Date("2025-12-31T00:00:00") }]],
+      balances: {
+        "-..2026-06-30": at({ "1-1110": "140000000.00", "3-1100": "100000000.00", "3-2100": "25000000.00", "4-1100": "40000000.00" }),
+        "2026-01-01..2026-06-30": at({ "4-1100": "15000000.00" }),
+        "-..2026-05-31": kosong,
+      },
+    });
+
+    const result = await buildFinancialStatements(range);
+
+    expect(balances).toHaveBeenCalledWith({ from: "2026-01-01", to: range.to });
+    expect(result.balanceSheet.currentPeriodProfit).toBe("15000000.00");
+    // 140jt aset = 100jt modal + 25jt laba ditahan + 15jt laba berjalan.
+    expect(result.balanceSheet.balanced).toBe(true);
+    getDb.mockRestore();
+  });
+
+  it("kolom pembanding memakai batasnya sendiri, bukan batas periode berjalan", async () => {
+    // Pembanding berakhir 31 Mei 2026 — sesudah penutup laba 2025, jadi ia pun dibatasi sejak
+    // 1 Januari 2026. Menyamakannya dengan batas periode berjalan akan menyajikan angka
+    // pembanding yang tidak pernah ada.
+    const { getDb, balances } = setup({
+      closings: [[{ entryDate: new Date("2025-12-31T00:00:00") }]],
+      balances: {},
+    });
+
+    await buildFinancialStatements(range);
+
+    expect(balances).toHaveBeenCalledWith({ from: "2026-01-01", to: "2026-05-31" });
+    getDb.mockRestore();
+  });
+
+  it("membiarkan pembanding memakai laba sejak awal pembukuan bila penutupnya belum ada saat itu", async () => {
+    // Neraca 31 Desember 2025 disusun sebelum jurnal penutupnya tertulis; laba 2025 masih berada
+    // di akun laba rugi, dan memangkasnya akan membuat neraca itu berselisih.
+    const { getDb, balances } = setup({
+      closings: [[{ entryDate: new Date("2025-12-31T00:00:00") }], []],
+      balances: {},
+    });
+
+    await buildFinancialStatements(range);
+
+    expect(balances).toHaveBeenCalledWith({ to: "2026-05-31" });
+    expect(balances).not.toHaveBeenCalledWith({ from: "2026-01-01", to: "2026-05-31" });
+    getDb.mockRestore();
   });
 });

@@ -21,7 +21,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 4 — `buildPeriodValuation`: bukti kuantitas dan kurs
 - [x] Tugas 5 — `postPeriodClosing`: tulis penilaian dan jurnalnya
 - [x] Tugas 6 — Penutup laba tahunan dan gerbang `closeAccountingPeriod`
-- [ ] Tugas 7 — Neraca memakai laba sejak penutupan tahunan terakhir
+- [x] Tugas 7 — Neraca memakai laba sejak penutupan tahunan terakhir
 - [ ] Tugas 8 — Tiga prosedur tRPC
 - [ ] Tugas 9 — Panel Penutupan Periode
 - [ ] Tugas 10 — Skenario menyeluruh dan dokumentasi
@@ -959,7 +959,7 @@ dijalankan — itulah yang membuatnya dapat dirilis dan diuji tanpa menunggu 31 
   `shared/chartOfAccounts`.
 - Produces: perilaku baru `buildFinancialStatements`; bentuk keluarannya **tidak berubah**.
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 Tambahkan pada `server/financialStatements.test.ts`:
 
@@ -968,13 +968,13 @@ Tambahkan pada `server/financialStatements.test.ts`:
    2026, dan 3-2100 sudah memuat laba tahun-tahun sebelumnya sehingga neracanya tetap seimbang.
 3. Kolom pembanding memakai batasnya sendiri, bukan batas periode berjalan.
 
-- [ ] **Step 2: Jalankan uji, pastikan gagal**
+- [x] **Step 2: Jalankan uji, pastikan gagal**
 
 ```bash
 ./node_modules/.bin/vitest run server/financialStatements.test.ts
 ```
 
-- [ ] **Step 3: Tulis implementasi**
+- [x] **Step 3: Tulis implementasi**
 
 Perbarui komentar pada `buildFinancialStatements` — komentar lama menyatakan neraca memakai laba
 sejak awal pembukuan **karena jurnal penutup belum ada**, dan alasan itu kini gugur untuk tahun yang
@@ -1021,14 +1021,14 @@ Pemakaiannya: hitung `lastProfitClosingDate` untuk `input.to` dan untuk `dayBefo
 Laporan laba rugi periode (`periodNow`, `periodPrior`) **tidak berubah** — ia sudah memakai mutasi
 periode.
 
-- [ ] **Step 4: Jalankan uji dan gerbang mutu**
+- [x] **Step 4: Jalankan uji dan gerbang mutu**
 
 ```bash
 ./node_modules/.bin/vitest run server/financialStatements.test.ts server/financialReporting.test.ts
 ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vitest run
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/financialStatements.ts server/financialStatements.test.ts

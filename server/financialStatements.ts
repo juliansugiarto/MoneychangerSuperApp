@@ -1,4 +1,6 @@
-import { CHART_OF_ACCOUNTS } from "../shared/chartOfAccounts";
+import { and, desc, eq, lte, sql } from "drizzle-orm";
+import { journalEntries } from "../drizzle/schema";
+import { CHART_OF_ACCOUNTS, findAccount, isBalanceSheetAccount } from "../shared/chartOfAccounts";
 import {
   buildBalanceSheet,
   buildEquityStatement,
@@ -12,7 +14,7 @@ import {
 } from "../shared/financialStatements";
 import { formatAmount, isoDay } from "../shared/ledger";
 import { accountBalancesFor } from "./ledgerOperations";
-import { retryTransientDatabaseRead } from "./operations";
+import { databaseOrThrow, retryTransientDatabaseRead } from "./operations";
 
 const DAY_MS = 86_400_000;
 
@@ -87,9 +89,16 @@ const renderEquity = (equity: EquityStatement) => ({
  * Dua ukuran laba dipakai dan keduanya benar pada tempatnya masing-masing:
  *
  * - Laporan laba rugi memakai **mutasi periode** — itulah arti laba sebulan.
- * - Neraca memakai laba **sejak awal pembukuan**, karena selama jurnal penutup belum dijalankan
- *   laba periode-periode sebelumnya masih berada di akun laba rugi dan belum pindah ke laba
- *   ditahan. Memakai laba periode saja akan membuat neraca berselisih persis sebesar laba lampau.
+ * - Neraca memakai laba **sejak penutup laba tahunan terakhir**. Selama penutup itu belum pernah
+ *   dijalankan, "sejak penutupan terakhir" berarti sejak awal pembukuan dan angkanya persis seperti
+ *   sebelum paket C: laba periode-periode sebelumnya masih berada di akun laba rugi dan belum
+ *   pindah ke laba ditahan, sehingga memakai laba periode saja akan membuat neraca berselisih
+ *   persis sebesar laba lampau. Setelah penutup tahunan ada, laba lampau sudah berada di 3-2100 dan
+ *   membawanya lagi dari akun laba rugi akan menghitungnya dua kali.
+ *
+ * Batasnya dihitung terpisah untuk kolom berjalan dan kolom pembanding: neraca 31 Desember 2025
+ * disusun sebelum jurnal penutupnya tertulis, dan memangkasnya dengan batas tahun 2026 akan
+ * menyajikan angka pembanding yang tidak pernah ada.
  */
 export async function buildFinancialStatements(input: { from: Date; to: Date }) {
   if (input.from > input.to) throw new Error("Tanggal mulai tidak boleh melewati tanggal akhir.");
@@ -98,17 +107,28 @@ export async function buildFinancialStatements(input: { from: Date; to: Date }) 
     const prior = priorRange(input.from, input.to);
     const dayBefore = shiftDays(input.from, -1);
 
-    const [periodNow, periodPrior, cumulativeNow, cumulativePrior] = await Promise.all([
+    const db = await databaseOrThrow();
+    const [closingNow, closingPrior] = await Promise.all([
+      lastProfitClosingDate(db, input.to),
+      lastProfitClosingDate(db, dayBefore),
+    ]);
+
+    const [periodNow, periodPrior, cumulativeNow, cumulativePrior, sinceClosingNow, sinceClosingPrior] = await Promise.all([
       accountBalancesFor({ from: input.from, to: input.to }),
       accountBalancesFor(prior),
       accountBalancesFor({ to: input.to }),
       accountBalancesFor({ to: dayBefore }),
+      closingNow ? accountBalancesFor({ from: shiftDays(closingNow, 1), to: input.to }) : null,
+      closingPrior ? accountBalancesFor({ from: shiftDays(closingPrior, 1), to: dayBefore }) : null,
     ]);
 
+    const sheetNow = sinceClosingNow ? mergeForBalanceSheet(cumulativeNow, sinceClosingNow) : cumulativeNow;
+    const sheetPrior = sinceClosingPrior ? mergeForBalanceSheet(cumulativePrior, sinceClosingPrior) : cumulativePrior;
+
     const income = buildIncomeStatement(periodNow, periodPrior);
-    const cumulativeIncome = buildIncomeStatement(cumulativeNow, cumulativePrior);
-    const balanceSheet = buildBalanceSheet(cumulativeNow, cumulativePrior, cumulativeIncome);
-    const equity = buildEquityStatement(cumulativeNow, cumulativePrior, cumulativeIncome);
+    const cumulativeIncome = buildIncomeStatement(sheetNow, sheetPrior);
+    const balanceSheet = buildBalanceSheet(sheetNow, sheetPrior, cumulativeIncome);
+    const equity = buildEquityStatement(sheetNow, sheetPrior, cumulativeIncome);
 
     return {
       period: { from: isoDay(input.from), to: isoDay(input.to) },
@@ -116,7 +136,7 @@ export async function buildFinancialStatements(input: { from: Date; to: Date }) 
       incomeStatement: renderIncome(income),
       balanceSheet: renderBalanceSheet(balanceSheet),
       equityStatement: renderEquity(equity),
-      warnings: statementWarnings(balanceSheet, cumulativeNow),
+      warnings: statementWarnings(balanceSheet, sheetNow),
       /** Akun yang punya saldo tetapi belum terpetakan ke form mana pun — seharusnya tidak pernah ada. */
       unmappedAccounts: unmapped(cumulativeNow),
     };
@@ -126,4 +146,55 @@ export async function buildFinancialStatements(input: { from: Date; to: Date }) 
 function unmapped(accounts: StatementAccount[]) {
   const mapped = new Set(CHART_OF_ACCOUNTS.filter((account) => account.forms.length).map((account) => account.code));
   return accounts.filter((row) => row.balance !== 0n && !mapped.has(row.accountCode)).map((row) => row.accountCode);
+}
+
+/**
+ * Hari kalender sebuah kolom `date`, dibaca dari komponen lokalnya.
+ *
+ * Driver mysql2 mengembalikan kolom `date` sebagai tengah malam waktu lokal, sehingga `isoDay`
+ * memundurkannya satu hari di mesin yang tidak berjalan pada UTC — dan penutup laba 31 Desember
+ * yang terbaca 30 Desember akan memangkas laba satu hari terlalu awal.
+ */
+const calendarDay = (value: Date | string): string =>
+  typeof value === "string"
+    ? value.slice(0, 10)
+    : `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+
+/** Tanggal jurnal penutup laba terakhir yang tidak melewati batas ini, bila sudah pernah ada. */
+async function lastProfitClosingDate(db: Awaited<ReturnType<typeof databaseOrThrow>>, to: Date | string) {
+  const [row] = await db
+    .select({ entryDate: journalEntries.entryDate })
+    .from(journalEntries)
+    .where(
+      and(
+        eq(journalEntries.sourceType, "TUTUP_PERIODE"),
+        sql`${journalEntries.sourceReference} LIKE 'TUTUP-LABA-%'`,
+        lte(journalEntries.entryDate, new Date(`${isoDay(to)}T00:00:00`)),
+      ),
+    )
+    .orderBy(desc(journalEntries.entryDate))
+    .limit(1);
+  return row ? calendarDay(row.entryDate) : null;
+}
+
+/**
+ * Saldo untuk neraca: akun neraca kumulatif sejak awal pembukuan, akun laba rugi hanya sejak
+ * penutupan tahunan terakhir.
+ *
+ * Pada buku besar yang utuh keduanya sudah sama — jurnal penutup itulah yang menolkan akun laba
+ * rugi. Penggabungan ini menjaga neraca tetap benar ketika keduanya **tidak** sama, misalnya
+ * sesudah sebuah jurnal penutup dibalik: memakai kumulatif di situ akan menghitung laba lampau dua
+ * kali, sekali pada 3-2100 dan sekali lagi pada akun laba ruginya.
+ */
+function mergeForBalanceSheet(cumulative: StatementAccount[], sinceClosing: StatementAccount[]): StatementAccount[] {
+  const sinceMap = new Map(sinceClosing.map((row) => [row.accountCode, row.balance]));
+  const seen = new Set<string>();
+  const merged = cumulative.map((row) => {
+    seen.add(row.accountCode);
+    const account = findAccount(row.accountCode);
+    if (account && isBalanceSheetAccount(account.type)) return row;
+    return { accountCode: row.accountCode, balance: sinceMap.get(row.accountCode) ?? 0n };
+  });
+  for (const row of sinceClosing) if (!seen.has(row.accountCode)) merged.push(row);
+  return merged;
 }
