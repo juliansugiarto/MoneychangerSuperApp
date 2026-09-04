@@ -113,32 +113,19 @@ lalu centang barisnya di bagian Status Pengerjaan.
 Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 ```
 
-### Paket D — Opname menyeluruh: pecahan dan brankas (sesi rancangan dulu)
+### Paket D — Opname menyeluruh: pecahan dan brankas (6 tugas)
+
+Sesi rancangannya sudah selesai; spec dan rencananya ada. Pakai **Prompt B**, ganti `<N>` dengan
+nomor tugas pertama yang belum tercentang di ROADMAP.
 
 ```
-Baca docs/superpowers/ROADMAP-SISA-PEKERJAAN.md bagian "Paket D", lalu baca juga bagian
-"Aturan kerja yang berlaku untuk seluruh paket" pada dokumen yang sama.
-
-Rancang paket ini. Telusuri kodenya sungguhan lebih dulu — sketsa di ROADMAP sengaja tidak cukup
-untuk langsung menulis kode, dan rujukan berkas:baris di sana ditulis 4 September 2026 dan mungkin
-sudah bergeser.
-
-Jawab dulu setiap pertanyaan pada bagian "Pertanyaan yang harus dijawab spec-nya". Pertanyaan yang
-merupakan keputusan operasional TANYAKAN kepada saya — jangan ditebak.
-
-Hasilkan dua berkas:
-
-1. docs/superpowers/specs/2026-XX-XX-opname-pecahan-brankas-design.md
-2. docs/superpowers/plans/2026-XX-XX-opname-pecahan-brankas.md
-
-Ikuti bentuk spec dan rencana paket A (2026-09-04-penjurnalan-kas-design.md dan
-2026-09-04-penjurnalan-kas.md): rencana harus punya bagian "Status Pengerjaan", tabel berkas, dan
-tiap tugas berisi langkah bernomor dengan checkbox, potongan kode konkret, perintah verifikasi, dan
-perintah commit. Satu tugas = satu commit yang berdiri sendiri beserta ujinya sendiri.
-
-Setelah kedua berkas jadi, perbarui Status Pengerjaan pada ROADMAP.
-
-JANGAN menulis kode aplikasi pada sesi ini. Commit dokumentasinya saja, lalu berhenti dan laporkan.
+Baca docs/superpowers/plans/2026-09-04-opname-pecahan-brankas.md.
+Baca juga docs/superpowers/specs/2026-09-04-opname-pecahan-brankas-design.md
+bagian "Yang sudah diputuskan pengguna" — empat keputusan di sana mengikat.
+Kerjakan HANYA Tugas <N>, ikuti langkahnya berurutan.
+Centang setiap langkah di berkas rencana setelah selesai,
+lalu centang barisnya di bagian Status Pengerjaan.
+Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 ```
 
 ### Paket C — Penilaian kas UKA dan penutupan periode (sesi rancangan dulu)
