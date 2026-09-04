@@ -484,6 +484,14 @@ export const stockOpnames = mysqlTable("stock_opnames", {
   adjustments: decimal("adjustments", { precision: 24, scale: 6 }).default("0.000000").notNull(),
   closingSystemBalance: decimal("closingSystemBalance", { precision: 24, scale: 6 }).notNull(),
   physicalBalance: decimal("physicalBalance", { precision: 24, scale: 6 }),
+  /** Hasil hitung fisik laci, dijumlahkan dari rincian pecahan — tidak pernah diketik langsung. */
+  physicalCounterBalance: decimal("physicalCounterBalance", { precision: 24, scale: 6 }),
+  /** Hasil hitung fisik brankas, dijumlahkan dari rincian pecahan. Nol berarti "dihitung dan memang kosong". */
+  physicalSafeBalance: decimal("physicalSafeBalance", { precision: 24, scale: 6 }),
+  /** Isi brankas menurut sistem saat opname dikirim. NULL pada baris sebelum paket D — aritmetika variansnya lalu identik dengan perilaku lama. */
+  closingSystemSafeBalance: decimal("closingSystemSafeBalance", { precision: 24, scale: 6 }),
+  /** Ada pecahan yang jumlahnya meleset meski totalnya bisa saja nol. Dihitung saat pengiriman, bukan saat pemeriksaan. */
+  hasDenominationVariance: boolean("hasDenominationVariance").default(false).notNull(),
   variance: decimal("variance", { precision: 24, scale: 6 }),
   reconciliationStatus: mysqlEnum("reconciliationStatus", ["OPEN", "SUBMITTED", "RECONCILED", "VARIANCE"]).default("OPEN").notNull(),
   tellerUserId: int("tellerUserId").notNull(),
@@ -501,6 +509,26 @@ export const stockOpnames = mysqlTable("stock_opnames", {
   uniqueIndex("stock_opnames_date_currency_uq").on(table.opnameDate, table.currencyId),
   index("stock_opnames_live_status_idx").on(table.isDemo, table.isHistorical, table.reconciliationStatus),
   index("stock_opnames_status_idx").on(table.reconciliationStatus),
+]);
+
+/**
+ * Rincian pecahan hasil hitung fisik sebuah opname, terpisah per lokasi.
+ *
+ * Bentuknya sengaja meniru `cash_denomination_entries` supaya pembacaannya seragam; yang berbeda
+ * hanya `location`, karena satu opname menghitung dua tempat sekaligus — laci dan brankas.
+ */
+export const stockOpnameDenominations = mysqlTable("stock_opname_denominations", {
+  id: int("id").autoincrement().primaryKey(),
+  stockOpnameId: int("stockOpnameId").notNull(),
+  location: mysqlEnum("location", ["COUNTER", "SAFE"]).notNull(),
+  denominationValue: decimal("denominationValue", { precision: 24, scale: 6 }).notNull(),
+  quantity: int("quantity").notNull(),
+  /** denominationValue * quantity, disimpan berlebih supaya kueri rekonsiliasi murah. */
+  subtotal: decimal("subtotal", { precision: 24, scale: 6 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("stock_opname_denominations_opname_location_value_uq").on(table.stockOpnameId, table.location, table.denominationValue),
+  index("stock_opname_denominations_opname_idx").on(table.stockOpnameId),
 ]);
 
 /** One checklist per operational date records the outlet opening and closing controls in the SOP. */

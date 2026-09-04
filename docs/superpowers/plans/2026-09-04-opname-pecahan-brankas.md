@@ -19,7 +19,7 @@ terutama bagian "Yang sudah diputuskan pengguna". Empat keputusan di sana mengik
 **Centang barisnya di sini setelah commit tugas itu**, dan centang juga barisnya pada Status
 Pengerjaan di ROADMAP.
 
-- [ ] Tugas 1 — Skema dan migrasi aditif
+- [x] Tugas 1 — Skema dan migrasi aditif
 - [ ] Tugas 2 — Pembanding pecahan murni di `shared/`
 - [ ] Tugas 3 — Angka sistem per pecahan untuk laci dan brankas
 - [ ] Tugas 4 — `submitStockOpname` menerima pecahan dua lokasi
@@ -56,7 +56,7 @@ memakai kontrak tRPC dari tugas 4.
 **Interfaces:**
 - Produces: `stockOpnameDenominations`, dan empat kolom baru pada `stockOpnames` — dipakai tugas 3–5
 
-- [ ] **Langkah 1: Tambahkan kolomnya pada `stockOpnames`**
+- [x] **Langkah 1: Tambahkan kolomnya pada `stockOpnames`**
 
 Di `drizzle/schema.ts`, pada `stockOpnames`, tepat setelah `physicalBalance`:
 
@@ -75,7 +75,7 @@ Keempatnya nullable kecuali yang terakhir (punya default), sehingga baris lama t
 pengisian mundur. **Jangan menyentuh `stock_opnames_date_currency_uq`** — keputusan 1 pada spec
 memilih bentuk yang tidak menuntutnya.
 
-- [ ] **Langkah 2: Tambahkan tabel rincian hitungnya**
+- [x] **Langkah 2: Tambahkan tabel rincian hitungnya**
 
 Tepat setelah blok `stockOpnames`:
 
@@ -101,7 +101,7 @@ export const stockOpnameDenominations = mysqlTable("stock_opname_denominations",
 ]);
 ```
 
-- [ ] **Langkah 3: Hasilkan migrasinya dan BACA SQL-nya**
+- [x] **Langkah 3: Hasilkan migrasinya dan BACA SQL-nya**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -115,7 +115,7 @@ stock_opname_denominations` dan `ALTER TABLE stock_opnames ADD COLUMN` (empat ka
 berkas `.sql` itu langsung lewat klien mysql; penanda `--> statement-breakpoint` membuat pernyataan
 kedua gagal.
 
-- [ ] **Langkah 4: Terapkan ke dua basis data lokal**
+- [x] **Langkah 4: Terapkan ke dua basis data lokal**
 
 ```bash
 node scripts/tenant.mjs migrate-all
@@ -129,7 +129,7 @@ Verifikasi bentuk akhirnya:
 mysql -h 127.0.0.1 -u root moneychanger -e "SHOW COLUMNS FROM stock_opnames; SHOW CREATE TABLE stock_opname_denominations\G"
 ```
 
-- [ ] **Langkah 5: Gerbang mutu dan commit**
+- [x] **Langkah 5: Gerbang mutu dan commit**
 
 ```bash
 export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
