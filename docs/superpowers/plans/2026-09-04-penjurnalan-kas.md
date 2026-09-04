@@ -16,7 +16,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 
 - [x] Tugas 1 — Migrasi kategori mutasi (0044)
-- [ ] Tugas 2 — Pemetaan jurnal mutasi kas dan bank
+- [x] Tugas 2 — Pemetaan jurnal mutasi kas dan bank
 - [ ] Tugas 3 — Helper `applyCashMovement`
 - [ ] Tugas 4 — `recordCapitalMovement`
 - [ ] Tugas 5 — `recordCashBankTransfer`
@@ -146,7 +146,7 @@ Pemetaan murni tanpa basis data, sehingga dapat diuji sungguhan. Inilah yang men
   - `mapBankMovement(input: { category: BankMovementCategory; direction: "IN" | "OUT" | "ADJUSTMENT"; amount: string; currencyCode: string; reason: string }): MappingResult`
   - Konstanta: `CASH_ACCOUNT = "1-1110"`, `BANK_ACCOUNT = "1-1120"`, `PAID_IN_CAPITAL_ACCOUNT = "3-1100"`, `DIVIDEND_ACCOUNT = "3-4100"`, `CASH_VARIANCE_ACCOUNT = "7-1900"`
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 Buat `server/cashJournalMapping.test.ts`:
 
@@ -308,14 +308,14 @@ describe("pemetaan mutasi bank", () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan uji, pastikan gagal**
+- [x] **Step 2: Jalankan uji, pastikan gagal**
 
 ```bash
 ./node_modules/.bin/vitest run server/cashJournalMapping.test.ts
 ```
 Harapan: GAGAL — `mapCashMovement` dan `mapBankMovement` belum diekspor dari `shared/journalMapping.ts`.
 
-- [ ] **Step 3: Tulis implementasi**
+- [x] **Step 3: Tulis implementasi**
 
 Tambahkan di akhir `shared/journalMapping.ts`:
 
@@ -454,7 +454,7 @@ export function mapBankMovement(input: {
 }
 ```
 
-- [ ] **Step 4: Jalankan uji, pastikan lulus**
+- [x] **Step 4: Jalankan uji, pastikan lulus**
 
 ```bash
 ./node_modules/.bin/vitest run server/cashJournalMapping.test.ts
@@ -462,7 +462,7 @@ export function mapBankMovement(input: {
 ```
 Harapan: seluruh uji LULUS, tipe bersih.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add shared/journalMapping.ts server/cashJournalMapping.test.ts
