@@ -65,6 +65,7 @@ import {
   listStockOpnames,
   openStockOpname,
   getOpnameSystemCounts,
+  listStockOpnameDenominations,
   recordOpeningCash,
   recordCashAdjustment,
   recordCapitalMovement,
@@ -719,7 +720,15 @@ export const appRouter = router({
     open: staffProcedure.input(z.object({ currencyId: z.number().int().positive() })).mutation(({ input, ctx }) => openStockOpname({ currencyId: input.currencyId, actorUserId: ctx.user.id })),
     /** staffProcedure karena yang menghitung fisik adalah Staff, dan mereka harus melihat angka pembandingnya sebelum mengirim. */
     systemCounts: staffProcedure.input(z.object({ currencyId: z.number().int().positive() })).query(({ input }) => getOpnameSystemCounts(input.currencyId)),
-    submit: staffProcedure.input(z.object({ stockOpnameId: z.number().int().positive(), physicalBalance: decimalString, varianceNotes: z.string().trim().max(1000).optional() })).mutation(({ input, ctx }) => submitStockOpname(input, ctx.user)),
+    /** Rincian pecahan yang dibekukan saat pengiriman — dipakai layar untuk menampilkan varians per pecahan tanpa menghitung ulang terhadap stok yang sudah bergerak. */
+    denominations: staffProcedure.input(z.object({ stockOpnameId: z.number().int().positive() })).query(({ input }) => listStockOpnameDenominations(input.stockOpnameId)),
+    /** Tidak ada `physicalBalance`: nominalnya dihitung dari rincian pecahan, tidak diketik. Daftar brankas boleh kosong — "dihitung dan memang kosong" tetap dibandingkan dengan sistem. */
+    submit: staffProcedure.input(z.object({
+      stockOpnameId: z.number().int().positive(),
+      counterDenominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).min(1, "Rincian pecahan laci wajib diisi untuk stock opname.").max(50),
+      safeDenominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).max(50).default([]),
+      varianceNotes: z.string().trim().max(1000).optional(),
+    })).mutation(({ input, ctx }) => submitStockOpname(input, ctx.user)),
     reconcile: adminProcedure.input(z.object({ stockOpnameId: z.number().int().positive(), notes: z.string().trim().min(3).max(1000) })).mutation(({ input, ctx }) => reconcileStockOpname(input, ctx.user.id)),
   }),
 

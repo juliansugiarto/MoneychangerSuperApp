@@ -34,6 +34,7 @@ import {
   regulatoryIncidentReports,
   sanctionsWatchlistEntries,
   serviceRequests,
+  stockOpnameDenominations,
   stockOpnames,
   transactionReviewActions,
   type StaffRole,
@@ -46,6 +47,7 @@ import { buildGoAmlLtktReportXml, buildGoAmlLtkmReportXml, type GoAmlCustomer, t
 import { isKnownGoAmlReportIndicator } from "../shared/goAmlReportIndicators";
 import { decodeSanctionsWatchlistUpload, parseSanctionsWatchlistWorkbook, cleanSanctionsWatchlistFileName } from "./sanctionsWatchlistImport";
 import { findBestNameMatch, parseWatchlistNameList, scoreNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
+import { compareDenominationCounts, type DenominationVarianceRow } from "../shared/denominationVariance";
 
 /** Rejects a denomination value that doesn't match a real banknote/coin for this currency (when we have a curated list — see shared/currencyDenominations.ts). Never trust the client alone here: this is exactly the check that stops a typo like "IDR 131250000 × 1 lembar" from being recorded as if it were a real note. */
 function assertKnownDenomination(value: Decimal, currencyCode: string | undefined, label: string) {
@@ -1661,18 +1663,29 @@ export function jakartaBusinessDateColumn(date = new Date()) {
 export type DenominationEntryInput = { value: string; quantity: number };
 
 /** Validates a denomination breakdown against the declared total and returns rows ready to insert. Throws if it doesn't reconcile, so a movement can never be saved with a breakdown that doesn't add up. currencyCode is optional only for call sites that predate per-currency validation being wired through everywhere — new callers should always pass it. */
-function reconcileDenominations(entries: DenominationEntryInput[], expectedTotal: Decimal, currencyCode?: string) {
-  if (!entries.length) return [];
-  let sum = new Decimal(0);
-  const rows = entries.map((entry) => {
+/**
+ * Memvalidasi tiap nilai pecahan dan mengembalikan baris siap sisip — tanpa menuntut totalnya sama
+ * dengan angka mana pun.
+ *
+ * Dipisahkan dari `reconcileDenominations` karena stock opname justru menjadikan pecahannya
+ * **sumber** total, sehingga tidak ada angka ketikan untuk dicocokkan; validasi nilainya tetap satu
+ * salinan supaya "IDR 131.250.000 x 1 lembar" mustahil lewat jalur mana pun.
+ */
+function denominationRowsFrom(entries: DenominationEntryInput[], currencyCode?: string) {
+  return entries.map((entry) => {
     const value = nonNegativeOrZeroDecimal(entry.value, "Nilai pecahan");
     if (value.lte(0)) throw new Error("Nilai pecahan harus lebih besar dari nol.");
     assertKnownDenomination(value, currencyCode, "rincian pecahan");
     if (!Number.isInteger(entry.quantity) || entry.quantity <= 0) throw new Error("Jumlah lembar/keping tiap pecahan harus bilangan bulat positif.");
     const subtotal = value.times(entry.quantity);
-    sum = sum.plus(subtotal);
     return { denominationValue: value.toFixed(6), quantity: entry.quantity, subtotal: subtotal.toFixed(6) };
   });
+}
+
+function reconcileDenominations(entries: DenominationEntryInput[], expectedTotal: Decimal, currencyCode?: string) {
+  if (!entries.length) return [];
+  const rows = denominationRowsFrom(entries, currencyCode);
+  const sum = rows.reduce((total, row) => total.plus(row.subtotal), new Decimal(0));
   if (!sum.eq(expectedTotal)) throw new Error(`Rincian pecahan (${sum.toFixed(2)}) tidak sama dengan jumlah kas yang dimasukkan (${expectedTotal.toFixed(2)}). Perbaiki rincian sebelum menyimpan.`);
   return rows;
 }
@@ -2935,38 +2948,156 @@ export async function openStockOpname(input: { currencyId: number; actorUserId: 
   return created;
 }
 
-export async function submitStockOpname(input: { stockOpnameId: number; physicalBalance: string; varianceNotes?: string }, actor: { id: number; role: StaffRole }) {
+/** Ringkasan pecahan yang meleset, untuk butir "Direksi Mengetahui" — selisih komposisi yang totalnya nol akan tampil sebagai "selisih 0.000000" bila hanya totalnya yang disebutkan, dan itu justru menyesatkan Direksi. */
+function describeDenominationVariance(location: string, rows: StockOpnameDenominationRow[]) {
+  const off = rows.filter((row) => row.systemQuantity !== null && row.systemQuantity !== row.quantity);
+  if (!off.length) return null;
+  return `${location}: ${off.map((row) => `${new Decimal(String(row.denominationValue)).toFixed(0)} (sistem ${row.systemQuantity}, fisik ${row.quantity})`).join("; ")}`;
+}
+
+export type StockOpnameDenominationRow = {
+  location: "COUNTER" | "SAFE";
+  denominationValue: string;
+  quantity: number;
+  systemQuantity: number | null;
+};
+
+/** Rincian pecahan sebuah opname sebagaimana dibekukan saat pengiriman — kedua sisi, kedua lokasi. */
+export async function listStockOpnameDenominations(stockOpnameId: number): Promise<StockOpnameDenominationRow[]> {
+  return retryTransientDatabaseRead(async () => {
+    const db = await databaseOrThrow();
+    const rows = await db.select({
+      location: stockOpnameDenominations.location,
+      denominationValue: stockOpnameDenominations.denominationValue,
+      quantity: stockOpnameDenominations.quantity,
+      systemQuantity: stockOpnameDenominations.systemQuantity,
+    }).from(stockOpnameDenominations)
+      .where(eq(stockOpnameDenominations.stockOpnameId, stockOpnameId))
+      .orderBy(stockOpnameDenominations.location, desc(stockOpnameDenominations.denominationValue));
+    return rows.map((row) => ({ ...row, denominationValue: new Decimal(String(row.denominationValue)).toFixed(6) }));
+  });
+}
+
+/**
+ * Nominal hitung fisik dihitung dari rincian pecahan, tidak diketik — sama seperti setiap jalur kas
+ * fisik lain sejak paket A, dan opname adalah satu-satunya tempat uang benar-benar dihitung ulang.
+ *
+ * Dua lokasi dihitung sekaligus: laci (wajib ada isinya) dan brankas (boleh kosong, dan kosong
+ * berarti "dihitung dan memang kosong" — tetap dibandingkan dengan sistem, sehingga brankas yang
+ * menurut sistem berisi langsung menyalakan varians).
+ *
+ * Rincian pecahan wajib **tanpa cabang pengecualian `isHistorical`**: keputusan 3 pada spec
+ * menjadikannya invarian ke depan, jadi importir opname historis kelak wajib membawa rinciannya.
+ * Cabang pengecualian tidak boleh ditambahkan belakangan.
+ */
+export async function submitStockOpname(
+  input: { stockOpnameId: number; counterDenominations: DenominationEntryInput[]; safeDenominations: DenominationEntryInput[]; varianceNotes?: string },
+  actor: { id: number; role: StaffRole },
+) {
   const db = await databaseOrThrow();
   const opname = (await db.select().from(stockOpnames).where(and(eq(stockOpnames.id, input.stockOpnameId), eq(stockOpnames.isDemo, false), eq(stockOpnames.isHistorical, false))).limit(1))[0];
   if (!opname || opname.isDemo || opname.isHistorical) throw new Error("Stock opname tidak ditemukan.");
   if (actor.role === "STAFF" && opname.tellerUserId !== actor.id) throw new Error("Staff hanya dapat mengirim stock opname miliknya sendiri.");
   if (opname.reconciliationStatus !== "OPEN") throw new Error("Hanya stock opname OPEN yang dapat dikirim.");
-  const physical = nonNegativeOrZeroDecimal(input.physicalBalance, "Saldo fisik");
+  if (!input.counterDenominations?.length) throw new Error("Rincian pecahan laci wajib diisi untuk stock opname.");
+
+  const currency = (await db.select({ code: currencies.code }).from(currencies).where(eq(currencies.id, opname.currencyId)).limit(1))[0];
+  const counterRows = denominationRowsFrom(input.counterDenominations, currency?.code);
+  const safeRows = denominationRowsFrom(input.safeDenominations ?? [], currency?.code);
+
+  const counterPhysical = counterRows.reduce((sum, row) => sum.plus(row.subtotal), new Decimal(0));
+  const safePhysical = safeRows.reduce((sum, row) => sum.plus(row.subtotal), new Decimal(0));
+  const physical = counterPhysical.plus(safePhysical);
+
+  const systemCounts = await getOpnameSystemCounts(opname.currencyId);
+  const counterVariance = compareDenominationCounts(systemCounts.counter, counterRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })));
+  const safeVariance = compareDenominationCounts(systemCounts.safe, safeRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })));
+  const hasDenominationVariance = counterVariance.hasVariance || safeVariance.hasVariance;
+
   const currentBalance = (await db.select().from(cashBalances).where(eq(cashBalances.currencyId, opname.currencyId)).limit(1))[0];
+  // Tetap berarti laci saja, persis seperti sebelumnya; brankas ditambahkan terpisah di bawah.
   const systemBalance = new Decimal(String(currentBalance?.availableAmount ?? opname.closingSystemBalance));
-  const variance = new Decimal(calculateStockVariance(physical.toFixed(6), systemBalance.toFixed(6)));
-  await db.update(stockOpnames).set({ closingSystemBalance: systemBalance.toFixed(6), physicalBalance: physical.toFixed(6), variance: variance.toFixed(6), reconciliationStatus: "SUBMITTED", varianceNotes: input.varianceNotes?.trim() || null }).where(eq(stockOpnames.id, opname.id));
-  await writeAudit({ actorUserId: actor.id, action: "STOCK_OPNAME_SUBMITTED", entityType: "stock_opname", entityId: String(opname.id), beforeState: { reconciliationStatus: opname.reconciliationStatus }, afterState: { reconciliationStatus: "SUBMITTED", closingSystemBalance: systemBalance.toFixed(6), physicalBalance: physical.toFixed(6), variance: variance.toFixed(6) }, reason: input.varianceNotes?.trim() || null });
-  return { ...opname, closingSystemBalance: systemBalance.toFixed(6), physicalBalance: physical.toFixed(6), variance: variance.toFixed(6), reconciliationStatus: "SUBMITTED" as const, varianceNotes: input.varianceNotes?.trim() || null };
+  const systemSafe = systemCounts.safe.reduce((sum, row) => sum.plus(new Decimal(row.value).times(row.quantity)), new Decimal(0));
+  const variance = new Decimal(calculateStockVariance(physical.toFixed(6), systemBalance.plus(systemSafe).toFixed(6)));
+
+  const update = {
+    closingSystemBalance: systemBalance.toFixed(6),
+    closingSystemSafeBalance: systemSafe.toFixed(6),
+    physicalBalance: physical.toFixed(6),
+    physicalCounterBalance: counterPhysical.toFixed(6),
+    physicalSafeBalance: safePhysical.toFixed(6),
+    hasDenominationVariance,
+    variance: variance.toFixed(6),
+    reconciliationStatus: "SUBMITTED" as const,
+    varianceNotes: input.varianceNotes?.trim() || null,
+  };
+
+  // Disimpan sebagai gabungan kedua sisi, bukan hanya yang dihitung petugas: pecahan yang ada
+  // menurut sistem tetapi tidak ditemukan saat dihitung justru temuan, dan barisnya harus ada
+  // supaya kelak terbaca sebagai "sistem 4, fisik 0" — bukan menghilang tanpa jejak.
+  const persistedRowsFor = (location: "COUNTER" | "SAFE", variance: DenominationVarianceRow[]) => variance.map((row) => ({
+    stockOpnameId: opname.id,
+    location,
+    denominationValue: row.value,
+    quantity: row.physicalQuantity,
+    systemQuantity: row.systemQuantity,
+    subtotal: new Decimal(row.value).times(row.physicalQuantity).toFixed(6),
+  }));
+
+  // Satu transaksi: opname yang tersimpan setengah — angka tanpa rinciannya, atau sebaliknya —
+  // lebih buruk daripada opname yang gagal, karena ia terlihat seperti hasil hitung yang sah.
+  await db.transaction(async (tx) => {
+    await tx.update(stockOpnames).set(update).where(eq(stockOpnames.id, opname.id));
+    await tx.delete(stockOpnameDenominations).where(eq(stockOpnameDenominations.stockOpnameId, opname.id));
+    const rows = [...persistedRowsFor("COUNTER", counterVariance.rows), ...persistedRowsFor("SAFE", safeVariance.rows)];
+    if (rows.length) await tx.insert(stockOpnameDenominations).values(rows);
+  });
+
+  await writeAudit({
+    actorUserId: actor.id,
+    action: "STOCK_OPNAME_SUBMITTED",
+    entityType: "stock_opname",
+    entityId: String(opname.id),
+    beforeState: { reconciliationStatus: opname.reconciliationStatus },
+    afterState: { reconciliationStatus: "SUBMITTED", closingSystemBalance: update.closingSystemBalance, closingSystemSafeBalance: update.closingSystemSafeBalance, physicalBalance: update.physicalBalance, physicalCounterBalance: update.physicalCounterBalance, physicalSafeBalance: update.physicalSafeBalance, variance: update.variance },
+    reason: input.varianceNotes?.trim() || null,
+    metadata: { counterDenominationCount: counterRows.length, safeDenominationCount: safeRows.length, hasDenominationVariance },
+  });
+
+  return { ...opname, ...update, counterVariance: counterVariance.rows, safeVariance: safeVariance.rows };
 }
 
 export async function reconcileStockOpname(input: { stockOpnameId: number; notes: string }, reviewerUserId: number) {
   const db = await databaseOrThrow();
   const opname = (await db.select().from(stockOpnames).where(and(eq(stockOpnames.id, input.stockOpnameId), eq(stockOpnames.isDemo, false), eq(stockOpnames.isHistorical, false))).limit(1))[0];
   if (!opname || opname.isDemo || opname.isHistorical || opname.reconciliationStatus !== "SUBMITTED") throw new Error("Hanya stock opname SUBMITTED yang dapat direkonsiliasi.");
-  const hasVariance = !new Decimal(String(opname.variance ?? "0")).isZero();
+  // Komposisi pecahan yang meleset menyalakan VARIANCE meski totalnya nol — keputusan 2 pada spec.
+  const hasVariance = !new Decimal(String(opname.variance ?? "0")).isZero() || opname.hasDenominationVariance;
   const status = hasVariance ? "VARIANCE" as const : "RECONCILED" as const;
   const reviewedAt = new Date();
   await db.update(stockOpnames).set({ reconciliationStatus: status, reviewerUserId, reviewedAt, varianceNotes: input.notes }).where(eq(stockOpnames.id, opname.id));
   await writeAudit({ actorUserId: reviewerUserId, action: "STOCK_OPNAME_RECONCILED", entityType: "stock_opname", entityId: String(opname.id), beforeState: { reconciliationStatus: opname.reconciliationStatus }, afterState: { reconciliationStatus: status, reviewedAt }, reason: input.notes });
   const result = { ...opname, reconciliationStatus: status, reviewerUserId, reviewedAt, varianceNotes: input.notes };
   if (hasVariance) {
+    // Dibaca dari rincian yang dibekukan saat pengiriman, bukan dihitung ulang terhadap stok
+    // berjalan: stok sudah bergerak sejak opname dikirim, dan Supervisor harus menilai hitungan
+    // yang sama dengan yang dilihat petugas.
+    const rows = opname.hasDenominationVariance ? await listStockOpnameDenominations(opname.id) : [];
+    const composition = [
+      describeDenominationVariance("Laci", rows.filter((row) => row.location === "COUNTER")),
+      describeDenominationVariance("Brankas", rows.filter((row) => row.location === "SAFE")),
+    ].filter(Boolean).join(" | ");
+    // Selisih total nol dengan komposisi yang meleset harus terbaca sebagai temuan, bukan sebagai
+    // "selisih 0.000000" yang membuat Direksi menyimpulkan tidak ada apa-apa.
+    const detailForDirectors = composition
+      ? `Selisih total ${String(opname.variance)}, dan komposisi pecahan tidak cocok — ${composition}.`
+      : `Terdapat selisih ${String(opname.variance)} pada stock opname.`;
     await createDirectorKnowledgeItem({
       eventType: "STOCK_VARIANCE",
       entityType: "stock_opname",
       entityId: String(opname.id),
       title: `Varians stock opname ${opname.opnameDate.toISOString().slice(0, 10)}`,
-      detail: `Terdapat selisih ${String(opname.variance)} pada stock opname. Catatan Supervisor: ${input.notes}`,
+      detail: `${detailForDirectors} Catatan Supervisor: ${input.notes}`,
       createdByUserId: reviewerUserId,
     });
   }

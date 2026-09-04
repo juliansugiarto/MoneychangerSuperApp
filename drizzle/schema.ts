@@ -522,7 +522,16 @@ export const stockOpnameDenominations = mysqlTable("stock_opname_denominations",
   stockOpnameId: int("stockOpnameId").notNull(),
   location: mysqlEnum("location", ["COUNTER", "SAFE"]).notNull(),
   denominationValue: decimal("denominationValue", { precision: 24, scale: 6 }).notNull(),
+  /** Hasil hitung fisik. Nol berarti pecahan ini ada menurut sistem tetapi tidak ditemukan saat dihitung. */
   quantity: int("quantity").notNull(),
+  /**
+   * Jumlah menurut sistem **pada saat opname dikirim**, dibekukan di sini dengan sengaja.
+   *
+   * Tanpanya, rincian varians hanya dapat disusun ulang terhadap stok berjalan yang sudah bergerak
+   * sejak pengiriman — persis ketergantungan yang `hasDenominationVariance` dibuat untuk dihindari.
+   * NULL hanya pada baris yang ditulis sebelum kolom ini ada.
+   */
+  systemQuantity: int("systemQuantity"),
   /** denominationValue * quantity, disimpan berlebih supaya kueri rekonsiliasi murah. */
   subtotal: decimal("subtotal", { precision: 24, scale: 6 }).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

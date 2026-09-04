@@ -22,8 +22,8 @@ Pengerjaan di ROADMAP.
 - [x] Tugas 1 — Skema dan migrasi aditif
 - [x] Tugas 2 — Pembanding pecahan murni di `shared/`
 - [x] Tugas 3 — Angka sistem per pecahan untuk laci dan brankas
-- [ ] Tugas 4 — `submitStockOpname` menerima pecahan dua lokasi
-- [ ] Tugas 5 — UI tab Stock Opname
+- [x] Tugas 4 — `submitStockOpname` menerima pecahan dua lokasi
+- [x] Tugas 5 — UI tab Stock Opname
 - [ ] Tugas 6 — Dokumentasi dan gerbang akhir
 
 Urutannya **mengikat seluruhnya**: 1 → 2 → 3 → 4 → 5 → 6. Tugas 4 memakai hasil 2 dan 3; tugas 5
@@ -341,7 +341,7 @@ git commit -m "Angka sistem per pecahan untuk laci dan brankas"
 - Consumes: `compareDenominationCounts` (tugas 2), `getOpnameSystemCounts` (tugas 3)
 - Produces: kontrak `stockOpname.submit` yang baru — dipakai tugas 5
 
-- [ ] **Langkah 1: Ubah tanda tangan dan perhitungannya**
+- [x] **Langkah 1: Ubah tanda tangan dan perhitungannya**
 
 `submitStockOpname` (`server/operations.ts:2890`) **tidak lagi menerima `physicalBalance`**. Ia
 menerima dua daftar pecahan dan menghitung sendiri:
@@ -392,7 +392,7 @@ daripada opname yang gagal.
 `writeAudit` mendapat tambahan `metadata`: `counterDenominationCount`, `safeDenominationCount`,
 `hasDenominationVariance`.
 
-- [ ] **Langkah 2: `reconcileStockOpname` ikut menilai komposisi**
+- [x] **Langkah 2: `reconcileStockOpname` ikut menilai komposisi**
 
 `server/operations.ts:2905`:
 
@@ -404,7 +404,7 @@ Dan detail `createDirectorKnowledgeItem` menyebutkan komposisinya bila itu penye
 komposisi yang totalnya nol akan tampil sebagai "selisih 0.000000" bila detailnya tidak diperbaiki,
 dan itu justru menyesatkan Direksi.
 
-- [ ] **Langkah 3: Kontrak tRPC**
+- [x] **Langkah 3: Kontrak tRPC**
 
 `server/routers.ts:719` menjadi:
 
@@ -420,7 +420,7 @@ dan itu justru menyesatkan Direksi.
 Periksa bentuk `DenominationEntryInput` yang sudah dipakai `cash.recordOpening` di berkas yang sama
 dan **ikuti persis** — jangan membuat bentuk kedua untuk hal yang sama.
 
-- [ ] **Langkah 4: Ujinya**
+- [x] **Langkah 4: Ujinya**
 
 `getDb` dipalsukan. Lima perilaku:
 
@@ -432,7 +432,7 @@ dan **ikuti persis** — jangan membuat bentuk kedua untuk hal yang sama.
 4. Daftar laci kosong → ditolak dengan pesan yang menyebut "pecahan laci".
 5. Nilai pecahan yang bukan pecahan IDR yang dikenal → ditolak lewat `assertKnownDenomination`.
 
-- [ ] **Langkah 5: Gerbang mutu dan commit**
+- [x] **Langkah 5: Gerbang mutu dan commit**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -455,7 +455,7 @@ git commit -m "Stock opname menghitung laci dan brankas dari rincian pecahan"
 - Consumes: `stockOpname.submit` (tugas 4), `stockOpname.systemCounts` (tugas 3),
   `compareDenominationCounts` (tugas 2)
 
-- [ ] **Langkah 1: Ganti isian tunggal dengan dua blok pecahan**
+- [x] **Langkah 1: Ganti isian tunggal dengan dua blok pecahan**
 
 `StockOpnamePanel` (`client/src/pages/StockControl.tsx:285-297`) hari ini hanya punya satu `Input`
 "Kas fisik saat tutup". Ganti dengan dua blok — **Laci** dan **Brankas** — mengikuti pola form
@@ -468,7 +468,7 @@ Jangan menyalin logika barisnya dua kali. Tarik keluar satu komponen dalam berka
 dapat memakai komponen yang sama tanpa memaksakan bentuknya — pakai ulang; bila memaksa, biarkan
 dan catat alasannya.
 
-- [ ] **Langkah 2: Tunjukkan selisihnya sebelum dikirim**
+- [x] **Langkah 2: Tunjukkan selisihnya sebelum dikirim**
 
 Panggil `trpc.stockOpname.systemCounts.useQuery({ currencyId })` untuk baris opname yang sedang
 dihitung, lalu tampilkan hasil `compareDenominationCounts` **per pecahan** di atas tombol kirim:
@@ -481,21 +481,21 @@ mengirim.
 Tombol kirim tetap aktif meski ada selisih. **Selisih bukan galat** — menemukan selisih justru
 tujuan opname; yang tidak boleh adalah selisih yang tidak terlihat.
 
-- [ ] **Langkah 3: Tampilkan varians per pecahan setelah dikirim**
+- [x] **Langkah 3: Tampilkan varians per pecahan setelah dikirim**
 
 Pada baris opname berstatus `SUBMITTED`/`VARIANCE`, tampilkan rincian pecahan yang meleset, bukan
 hanya angka total. Untuk opname lama yang tidak punya rincian (`physicalCounterBalance` NULL),
 tampilkan apa adanya: "rincian pecahan tidak tersedia — dicatat sebelum opname per pecahan
 diberlakukan". Jangan menampilkan nol seolah-olah itu hasil hitung.
 
-- [ ] **Langkah 4: Verifikasi visual**
+- [x] **Langkah 4: Verifikasi visual**
 
 Server pengembangan di `http://localhost:3003`, sesi peramban sudah login sebagai Development
 Shareholder — pakai itu, jangan menyalakan yang baru. Buka **Kas & Persediaan → Stock Opname** dan
 periksa: keadaan memuat, keadaan galat kueri `systemCounts`, opname lama tanpa rincian, dan lebar
 sempit. Jangan membuat data uji di basis data lokal tanpa izin pengguna pada giliran itu juga.
 
-- [ ] **Langkah 5: Gerbang mutu dan commit**
+- [x] **Langkah 5: Gerbang mutu dan commit**
 
 ```bash
 ./node_modules/.bin/vitest run

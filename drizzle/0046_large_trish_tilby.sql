@@ -1,0 +1,1 @@
+ALTER TABLE `stock_opname_denominations` ADD `systemQuantity` int;

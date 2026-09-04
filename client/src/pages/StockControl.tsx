@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatPlainAmount } from "@/lib/money";
+import { compareDenominationCounts, type DenominationVarianceRow } from "@shared/denominationVariance";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeftRight, Banknote, CheckCircle2, CircleAlert, ClipboardCheck, Landmark, Plus, RefreshCw, ScanLine, ShieldCheck, Vault, Wallet } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -255,22 +256,17 @@ function StockOpnamePanel() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
   const [selectedCurrency, setSelectedCurrency] = useState<PickedCurrency | null>(null);
-  const [physical, setPhysical] = useState<Record<number, string>>({});
-  const [notes, setNotes] = useState<Record<number, string>>({});
   const opnamesQuery = trpc.stockOpname.list.useQuery(undefined, { enabled: Boolean(user) });
   const opnames = opnamesQuery.data;
   const refreshAll = () => Promise.all([opnamesQuery.refetch(), utils.dashboard.overview.invalidate()]);
   const open = trpc.stockOpname.open.useMutation({ onSuccess: () => { toast.success("Hitung stok dibuka. Saldo sistem sudah dikunci sebagai saldo awal."); setSelectedCurrency(null); refreshAll(); }, onError: (error) => toast.error(error.message) });
-  const submit = trpc.stockOpname.submit.useMutation({ onSuccess: () => { toast.success("Hasil hitung akhir dikirim untuk diperiksa."); refreshAll(); }, onError: (error) => toast.error(error.message) });
-  const reconcile = trpc.stockOpname.reconcile.useMutation({ onSuccess: () => { toast.success("Hasil hitung stok telah direkonsiliasi."); refreshAll(); }, onError: (error) => toast.error(error.message) });
-  const canReconcile = user?.role !== "STAFF";
   const hasLoadError = opnamesQuery.isError;
 
   return <div className="space-y-4">
     <div className="flex justify-end"><Button variant="outline" className="border-[#d8e5ef]" onClick={refreshAll}><RefreshCw className="mr-2 size-4" /> Muat ulang</Button></div>
     {hasLoadError ? <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">Data stock opname belum dapat dimuat.</p><p className="mt-1 text-xs">Tidak ada data yang berubah. Periksa koneksi lalu muat ulang beberapa saat lagi.</p></div><Button size="sm" variant="outline" onClick={refreshAll}>Coba lagi</Button></div> : null}
     <Card className="border-[#dce6f0]">
-      <CardHeader><CardTitle className="flex items-center gap-2 font-display text-xl text-[#18395f]"><ScanLine className="size-5 text-[#5c8f53]" /> Buka, hitung, dan periksa</CardTitle><CardDescription>Buka hitungan setelah kas awal tercatat. Saat tutup toko, masukkan jumlah fisik; selisih akan terlihat jelas untuk diperiksa. Cek fisik hanya dilakukan sekali di sini, bukan sepanjang hari.</CardDescription></CardHeader>
+      <CardHeader><CardTitle className="flex items-center gap-2 font-display text-xl text-[#18395f]"><ScanLine className="size-5 text-[#5c8f53]" /> Buka, hitung, dan periksa</CardTitle><CardDescription>Buka hitungan setelah kas awal tercatat. Saat tutup toko, hitung uangnya per pecahan — laci dan brankas — dan nominalnya dijumlahkan dari rincian itu, tidak diketik. Cek fisik hanya dilakukan sekali di sini, bukan sepanjang hari.</CardDescription></CardHeader>
       <CardContent>
         <div className="rounded-xl border border-[#dce6f0] bg-[#fbfdff] p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -282,24 +278,165 @@ function StockOpnamePanel() {
           </div>
         </div>
         <div className="mt-5 space-y-3">
-          {opnames?.length ? opnames.map(({ opname, currency }) => <div key={opname.id} className="rounded-2xl border border-[#e2eaf2] bg-[#fbfdff] p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div><p className="font-semibold text-[#18395f]">{currency.code} · {new Date(opname.opnameDate).toLocaleDateString("id-ID")}</p><p className="mt-1 text-xs text-[#334155]">Saldo sistem: {formatPlainAmount(opname.closingSystemBalance)} · Fisik: {opname.physicalBalance ? formatPlainAmount(opname.physicalBalance) : "belum dihitung"} · Selisih: {opname.variance ? formatPlainAmount(opname.variance) : "belum ada"}</p></div>
-              <Badge className={opname.reconciliationStatus === "VARIANCE" ? "status-rejected" : opname.reconciliationStatus === "RECONCILED" ? "status-approved" : "status-pending"}>{opname.reconciliationStatus === "OPEN" ? "MENUNGGU HITUNG" : opname.reconciliationStatus === "SUBMITTED" ? "MENUNGGU PERIKSA" : opname.reconciliationStatus}</Badge>
-            </div>
-            {opname.reconciliationStatus === "OPEN" ? <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-              <div><Label className="text-xs">Kas fisik saat tutup</Label><Input inputMode="decimal" value={physical[opname.id] ?? ""} onChange={(event) => setPhysical({ ...physical, [opname.id]: event.target.value })} placeholder="0" /></div>
-              <div><Label className="text-xs">Catatan bila ada selisih</Label><Input value={notes[opname.id] ?? ""} onChange={(event) => setNotes({ ...notes, [opname.id]: event.target.value })} placeholder="Contoh: Perbedaan hitung pecahan" /></div>
-              <Button className="self-end bg-[#183f70] text-white hover:bg-[#12345d]" disabled={!physical[opname.id] || submit.isPending} onClick={() => submit.mutate({ stockOpnameId: opname.id, physicalBalance: physical[opname.id], varianceNotes: notes[opname.id] || undefined })}>Kirim hasil hitung</Button>
-            </div> : null}
-            {opname.reconciliationStatus === "SUBMITTED" && canReconcile ? <div className="mt-4 flex flex-wrap gap-3"><Input className="flex-1" value={notes[opname.id] ?? ""} onChange={(event) => setNotes({ ...notes, [opname.id]: event.target.value })} placeholder="Catatan pemeriksaan Admin" /><Button disabled={(notes[opname.id] ?? "").trim().length < 3 || reconcile.isPending} onClick={() => reconcile.mutate({ stockOpnameId: opname.id, notes: notes[opname.id] })}><ShieldCheck className="mr-2 size-4" /> Selesaikan pemeriksaan</Button></div> : null}
-            {opname.reconciliationStatus === "RECONCILED" ? <p className="mt-3 flex items-center gap-2 text-xs text-emerald-700"><CheckCircle2 className="size-4" /> Hitungan telah sesuai dan selesai diperiksa.</p> : null}
-            {opname.reconciliationStatus === "VARIANCE" ? <p className="mt-3 flex items-center gap-2 text-xs text-rose-700"><CircleAlert className="size-4" /> Ada selisih; tindak lanjuti sesuai prosedur sebelum penutupan final.</p> : null}
-          </div>) : <div className="rounded-2xl border border-dashed border-[#cbd9e7] bg-[#f8fbfe] px-5 py-10 text-center text-sm leading-6 text-[#475569]">Mulai dari <strong>Kas Awal</strong>, lalu buka hitungan stok untuk mata uang yang akan dikontrol hari ini.</div>}
+          {opnamesQuery.isLoading ? <p className="rounded-2xl border border-dashed border-[#cbd9e7] bg-[#f8fbfe] px-5 py-10 text-center text-sm text-[#475569]">Memuat hitungan stok…</p> : null}
+          {opnames?.length ? opnames.map(({ opname, currency }) => <OpnameCard key={opname.id} opname={opname} currencyCode={currency.code} onDone={refreshAll} />) : opnamesQuery.isLoading ? null : <div className="rounded-2xl border border-dashed border-[#cbd9e7] bg-[#f8fbfe] px-5 py-10 text-center text-sm leading-6 text-[#475569]">Mulai dari <strong>Kas Awal</strong>, lalu buka hitungan stok untuk mata uang yang akan dikontrol hari ini.</div>}
         </div>
       </CardContent>
     </Card>
   </div>;
+}
+
+const parsedRows = (rows: DenominationRow[]) => rows.filter((row) => row.value && row.quantity).map((row) => ({ value: row.value, quantity: Number(row.quantity) }));
+const sumRows = (rows: DenominationRow[]) => rows.reduce((sum, row) => sum + (Number(row.value) || 0) * (Number(row.quantity) || 0), 0);
+
+/** Satu baris opname punya kueri angka sistemnya sendiri, jadi ia harus jadi komponen tersendiri — hook tidak boleh dipanggil di dalam perulangan. */
+function OpnameCard({ opname, currencyCode, onDone }: {
+  opname: { id: number; opnameDate: string | Date; reconciliationStatus: string; currencyId: number; closingSystemBalance: string; closingSystemSafeBalance: string | null; physicalBalance: string | null; physicalCounterBalance: string | null; physicalSafeBalance: string | null; hasDenominationVariance: boolean; variance: string | null };
+  currencyCode: string;
+  onDone: () => void;
+}) {
+  const { user } = useAuth();
+  const canReconcile = user?.role !== "STAFF";
+  const [counterRows, setCounterRows] = useState<DenominationRow[]>([emptyRow()]);
+  const [safeRows, setSafeRows] = useState<DenominationRow[]>([]);
+  const [notes, setNotes] = useState("");
+
+  const isOpen = opname.reconciliationStatus === "OPEN";
+  const isSubmitted = opname.reconciliationStatus === "SUBMITTED";
+  const isCounted = opname.reconciliationStatus !== "OPEN";
+
+  const systemCountsQuery = trpc.stockOpname.systemCounts.useQuery({ currencyId: opname.currencyId }, { enabled: isOpen });
+  const storedQuery = trpc.stockOpname.denominations.useQuery({ stockOpnameId: opname.id }, { enabled: isCounted });
+
+  const submit = trpc.stockOpname.submit.useMutation({ onSuccess: () => { toast.success("Hasil hitung akhir dikirim untuk diperiksa."); onDone(); }, onError: (error) => toast.error(error.message) });
+  const reconcile = trpc.stockOpname.reconcile.useMutation({ onSuccess: () => { toast.success("Hasil hitung stok telah direkonsiliasi."); onDone(); }, onError: (error) => toast.error(error.message) });
+
+  const editorFor = (rows: DenominationRow[], setRows: (updater: (rows: DenominationRow[]) => DenominationRow[]) => void) => ({
+    onAdd: () => setRows((current) => [...current, emptyRow()]),
+    onUpdate: (index: number, field: keyof DenominationRow, value: string) => setRows((current) => current.map((row, i) => (i === index ? { ...row, [field]: value } : row))),
+    onRemove: (index: number) => setRows((current) => current.filter((_, i) => i !== index)),
+  });
+
+  const counterTotal = sumRows(counterRows);
+  const safeTotal = sumRows(safeRows);
+  const counterComplete = counterRows.length > 0 && counterRows.every((row) => row.value && row.quantity);
+  const safeComplete = safeRows.every((row) => row.value && row.quantity);
+
+  // Aturan yang sama persis dengan yang dipakai server saat menilai, sehingga petugas melihat
+  // selisihnya sebelum mengirim dan tidak pernah terkejut oleh status yang muncul sesudahnya.
+  const preview = useMemo(() => {
+    if (!systemCountsQuery.data) return null;
+    return {
+      counter: compareDenominationCounts(systemCountsQuery.data.counter, parsedRows(counterRows)),
+      safe: compareDenominationCounts(systemCountsQuery.data.safe, parsedRows(safeRows)),
+    };
+  }, [systemCountsQuery.data, counterRows, safeRows]);
+
+  const storedByLocation = (location: "COUNTER" | "SAFE") => (storedQuery.data ?? []).filter((row) => row.location === location);
+
+  // Sebelum dikirim, isi brankas menurut sistem hanya ada di `systemCounts` — kolomnya baru terisi
+  // saat pengiriman. Memakai kolom yang masih NULL akan menampilkan pembanding yang lebih kecil
+  // daripada yang dipakai server, dan petugas akan mengira selisihnya lebih besar dari sebenarnya.
+  const liveSafeTotal = useMemo(
+    () => (systemCountsQuery.data ?? { safe: [] }).safe.reduce((sum, row) => sum + Number(row.value) * row.quantity, 0),
+    [systemCountsQuery.data],
+  );
+  const systemSafeTotal = opname.closingSystemSafeBalance !== null ? Number(opname.closingSystemSafeBalance) : liveSafeTotal;
+  const systemTotal = Number(opname.closingSystemBalance) + systemSafeTotal;
+
+  return <div className="rounded-2xl border border-[#e2eaf2] bg-[#fbfdff] p-4">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <p className="font-semibold text-[#18395f]">{currencyCode} · {new Date(opname.opnameDate).toLocaleDateString("id-ID")}</p>
+        <p className="mt-1 text-xs text-[#334155]">Sistem: {formatPlainAmount(String(systemTotal))} (laci {formatPlainAmount(opname.closingSystemBalance)} · brankas {formatPlainAmount(String(systemSafeTotal))}) · Fisik: {opname.physicalBalance ? formatPlainAmount(opname.physicalBalance) : "belum dihitung"} · Selisih: {opname.variance ? formatPlainAmount(opname.variance) : "belum ada"}</p>
+      </div>
+      <Badge className={opname.reconciliationStatus === "VARIANCE" ? "status-rejected" : opname.reconciliationStatus === "RECONCILED" ? "status-approved" : "status-pending"}>{opname.reconciliationStatus === "OPEN" ? "MENUNGGU HITUNG" : opname.reconciliationStatus === "SUBMITTED" ? "MENUNGGU PERIKSA" : opname.reconciliationStatus}</Badge>
+    </div>
+
+    {isOpen ? <div className="mt-4 space-y-3">
+      <DenominationEditor
+        currencyCode={currencyCode}
+        rows={counterRows}
+        total={counterTotal}
+        label="Rincian pecahan laci (wajib)"
+        summary={`Total laci: ${formatPlainAmount(String(counterTotal))}`}
+        {...editorFor(counterRows, setCounterRows)}
+      />
+      <DenominationEditor
+        currencyCode={currencyCode}
+        rows={safeRows}
+        total={safeTotal}
+        minRows={0}
+        label="Rincian pecahan brankas (kosongkan bila memang kosong)"
+        summary={`Total brankas: ${formatPlainAmount(String(safeTotal))}`}
+        {...editorFor(safeRows, setSafeRows)}
+      />
+      <p className="text-xs font-semibold text-[#18395f]">Total hitung fisik: {formatPlainAmount(String(counterTotal + safeTotal))} · menurut sistem {formatPlainAmount(String(systemTotal))}</p>
+
+      {systemCountsQuery.isLoading ? <p className="text-xs text-[#475569]">Memuat angka sistem per pecahan…</p> : null}
+      {systemCountsQuery.isError ? <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"><p className="font-semibold">Angka sistem per pecahan belum dapat dimuat.</p><p className="mt-1">Hasil hitung masih dapat dikirim — server tetap menilai selisihnya. <button type="button" className="font-semibold underline" onClick={() => systemCountsQuery.refetch()}>Coba lagi</button></p></div> : null}
+      {preview ? <div className="space-y-2">
+        <VariancePreview title="Selisih pecahan laci" rows={preview.counter.rows} />
+        <VariancePreview title="Selisih pecahan brankas" rows={preview.safe.rows} />
+        {preview.counter.hasVariance || preview.safe.hasVariance ? <p className="flex items-center gap-2 text-xs text-amber-800"><CircleAlert className="size-4 shrink-0" />Ada pecahan yang tidak cocok. Selisih bukan galat — kirim tetap bisa, dan justru inilah yang harus terlihat.</p> : null}
+      </div> : null}
+
+      <div><Label className="text-xs">Catatan bila ada selisih</Label><Input value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Contoh: Perbedaan hitung pecahan" /></div>
+      <Button
+        className="w-full bg-[#183f70] text-white hover:bg-[#12345d] sm:w-auto"
+        disabled={!counterComplete || !safeComplete || submit.isPending}
+        onClick={() => submit.mutate({ stockOpnameId: opname.id, counterDenominations: parsedRows(counterRows), safeDenominations: parsedRows(safeRows), varianceNotes: notes || undefined })}
+      >{submit.isPending ? "Mengirim…" : "Kirim hasil hitung"}</Button>
+    </div> : null}
+
+    {isCounted ? <div className="mt-4 space-y-2">
+      {opname.physicalCounterBalance === null
+        ? <p className="text-xs text-[#475569]">Rincian pecahan tidak tersedia — dicatat sebelum opname per pecahan diberlakukan.</p>
+        : <>
+          <p className="text-xs text-[#334155]">Laci {formatPlainAmount(opname.physicalCounterBalance)} · brankas {formatPlainAmount(opname.physicalSafeBalance ?? "0")}</p>
+          {storedQuery.isLoading ? <p className="text-xs text-[#475569]">Memuat rincian pecahan…</p> : null}
+          {storedQuery.isError ? <p role="alert" className="text-xs text-amber-800">Rincian pecahan belum dapat dimuat. <button type="button" className="font-semibold underline" onClick={() => storedQuery.refetch()}>Coba lagi</button></p> : null}
+          {storedQuery.data ? <>
+            <StoredVariance title="Selisih pecahan laci" rows={storedByLocation("COUNTER")} />
+            <StoredVariance title="Selisih pecahan brankas" rows={storedByLocation("SAFE")} />
+          </> : null}
+          {opname.hasDenominationVariance ? <p className="flex items-center gap-2 text-xs text-rose-700"><CircleAlert className="size-4 shrink-0" />Komposisi pecahan tidak cocok dengan catatan sistem saat pengiriman, meski selisih nominalnya bisa saja nol.</p> : null}
+        </>}
+    </div> : null}
+
+    {isSubmitted && canReconcile ? <div className="mt-4 flex flex-wrap gap-3"><Input className="flex-1" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Catatan pemeriksaan Admin" /><Button disabled={notes.trim().length < 3 || reconcile.isPending} onClick={() => reconcile.mutate({ stockOpnameId: opname.id, notes })}><ShieldCheck className="mr-2 size-4" /> Selesaikan pemeriksaan</Button></div> : null}
+    {opname.reconciliationStatus === "RECONCILED" ? <p className="mt-3 flex items-center gap-2 text-xs text-emerald-700"><CheckCircle2 className="size-4" /> Hitungan telah sesuai dan selesai diperiksa.</p> : null}
+    {opname.reconciliationStatus === "VARIANCE" ? <p className="mt-3 flex items-center gap-2 text-xs text-rose-700"><CircleAlert className="size-4" /> Ada selisih; tindak lanjuti sesuai prosedur sebelum penutupan final.</p> : null}
+  </div>;
+}
+
+/** Tabel selisih per pecahan. Sengaja hanya menampilkan pecahan yang meleset — menampilkan seluruhnya membuat yang penting tenggelam. */
+function VarianceTable({ title, rows }: { title: string; rows: { value: string; systemQuantity: number; physicalQuantity: number }[] }) {
+  if (!rows.length) return null;
+  return <div className="overflow-x-auto rounded-xl border border-[#e2c9c9] bg-white">
+    <p className="bg-[#fdf2f2] px-3 py-1.5 text-[11px] font-extrabold tracking-wide text-rose-800 uppercase">{title}</p>
+    <table className="w-full min-w-[320px] text-xs">
+      <thead><tr className="text-[#475569]"><th className="px-3 py-1.5 text-left font-semibold">Pecahan</th><th className="px-3 py-1.5 text-right font-semibold">Sistem</th><th className="px-3 py-1.5 text-right font-semibold">Fisik</th><th className="px-3 py-1.5 text-right font-semibold">Selisih</th></tr></thead>
+      <tbody>{rows.map((row) => <tr key={row.value} className="border-t border-[#f1e3e3]">
+        <td className="px-3 py-1.5 font-mono font-bold text-[#18395f]">{formatPlainAmount(row.value)}</td>
+        <td className="px-3 py-1.5 text-right font-mono">{row.systemQuantity}</td>
+        <td className="px-3 py-1.5 text-right font-mono">{row.physicalQuantity}</td>
+        <td className="px-3 py-1.5 text-right font-mono font-bold text-rose-700">{row.physicalQuantity - row.systemQuantity > 0 ? "+" : ""}{row.physicalQuantity - row.systemQuantity}</td>
+      </tr>)}</tbody>
+    </table>
+  </div>;
+}
+
+function VariancePreview({ title, rows }: { title: string; rows: DenominationVarianceRow[] }) {
+  return <VarianceTable title={title} rows={rows.filter((row) => row.difference !== 0)} />;
+}
+
+/** Dibaca dari rincian yang dibekukan saat pengiriman; baris lama tanpa `systemQuantity` dilewati daripada ditampilkan seolah sistemnya nol. */
+function StoredVariance({ title, rows }: { title: string; rows: { denominationValue: string; quantity: number; systemQuantity: number | null }[] }) {
+  const off = rows
+    .filter((row) => row.systemQuantity !== null && row.systemQuantity !== row.quantity)
+    .map((row) => ({ value: row.denominationValue, systemQuantity: row.systemQuantity as number, physicalQuantity: row.quantity }));
+  return <VarianceTable title={title} rows={off} />;
 }
 
 function PenyesuaianPanel() {
@@ -359,24 +496,34 @@ function PenyesuaianPanel() {
   </Card>;
 }
 
-/** Rincian pecahan dipakai dua kali di panel ini dengan bentuk yang sama persis; satu komponen kecil menjaga keduanya tidak berbeda diam-diam. */
-function DenominationEditor({ currencyCode, rows, total, mismatch, onAdd, onUpdate, onRemove }: {
+/**
+ * Rincian pecahan dipakai di beberapa tempat pada panel ini dengan bentuk yang sama persis; satu
+ * komponen kecil menjaga semuanya tidak berbeda diam-diam.
+ *
+ * `mismatch` hanya berlaku bagi pemanggil yang punya angka ketikan untuk dicocokkan. Stock opname
+ * tidak punya — di sana pecahannya justru sumber totalnya — sehingga ia mengoper `summary` sendiri
+ * dan `minRows: 0` untuk brankas yang boleh dinyatakan kosong.
+ */
+function DenominationEditor({ currencyCode, rows, total, mismatch, onAdd, onUpdate, onRemove, label = "Rincian pecahan (wajib)", summary, minRows = 1 }: {
   currencyCode?: string;
   rows: DenominationRow[];
   total: number;
-  mismatch: boolean;
+  mismatch?: boolean;
   onAdd: () => void;
   onUpdate: (index: number, field: keyof DenominationRow, value: string) => void;
   onRemove: (index: number) => void;
+  label?: string;
+  summary?: string;
+  minRows?: number;
 }) {
   return <div className="rounded-xl border border-[#cbd9e7] bg-[#f8fbfe] p-3">
-    <div className="flex items-center justify-between"><Label className="text-xs font-semibold text-[#18395f]">Rincian pecahan (wajib)</Label><Button type="button" size="sm" variant="outline" className="h-7 border-[#bcd2e5] text-xs text-[#183f70]" onClick={onAdd}><Plus className="mr-1 size-3" />Tambah pecahan</Button></div>
-    {rows.map((row, index) => <div key={index} className="mt-2 grid grid-cols-[1fr_100px_auto] items-start gap-2">
+    <div className="flex items-center justify-between"><Label className="text-xs font-semibold text-[#18395f]">{label}</Label><Button type="button" size="sm" variant="outline" className="h-7 border-[#bcd2e5] text-xs text-[#183f70]" onClick={onAdd}><Plus className="mr-1 size-3" />Tambah pecahan</Button></div>
+    {rows.length ? rows.map((row, index) => <div key={index} className="mt-2 grid grid-cols-[1fr_100px_auto] items-start gap-2">
       <DenominationValueInput currencyCode={currencyCode} value={row.value} onChange={(value) => onUpdate(index, "value", value)} />
       <Input required inputMode="numeric" value={row.quantity} onChange={(event) => onUpdate(index, "quantity", event.target.value)} placeholder="Lembar" />
-      <Button type="button" size="sm" variant="ghost" className="text-rose-600" disabled={rows.length === 1} onClick={() => onRemove(index)}>Hapus</Button>
-    </div>)}
-    <p className={`mt-2 text-xs ${mismatch ? "font-semibold text-rose-600" : "text-[#475569]"}`}>Total rincian: {formatPlainAmount(total)} {mismatch ? "— belum sama dengan jumlah di atas" : "— sudah sama dengan jumlah di atas"}</p>
+      <Button type="button" size="sm" variant="ghost" className="text-rose-600" disabled={rows.length <= minRows} onClick={() => onRemove(index)}>Hapus</Button>
+    </div>) : <p className="mt-2 text-xs text-[#475569]">Tidak ada baris — dihitung dan memang kosong.</p>}
+    <p className={`mt-2 text-xs ${mismatch ? "font-semibold text-rose-600" : "text-[#475569]"}`}>{summary ?? `Total rincian: ${formatPlainAmount(total)} ${mismatch ? "— belum sama dengan jumlah di atas" : "— sudah sama dengan jumlah di atas"}`}</p>
   </div>;
 }
 
