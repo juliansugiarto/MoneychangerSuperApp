@@ -23,7 +23,7 @@ satu pun jalur penulisan uang baru.
 **Centang barisnya di sini setelah commit tugas itu**, dan centang juga baris paket B pada Status
 Pengerjaan di ROADMAP.
 
-- [ ] Tugas 1 — Kartu "Modal disetor" dan urutan langkah go-live
+- [x] Tugas 1 — Kartu "Modal disetor" dan urutan langkah go-live
 - [ ] Tugas 2 — Peringatan urutan pada pencatatan kas awal
 - [ ] Tugas 3 — Uji dan dokumentasi
 
@@ -83,7 +83,7 @@ Masalahnya, tidak ada apa pun yang memberi tahu urutan itu di tempat orang beker
   mengembalikan `closingBalance` sebagai teks dua desimal
 - Produces: —
 
-- [ ] **Langkah 1: Baca saldo Modal Disetor**
+- [x] **Langkah 1: Baca saldo Modal Disetor**
 
 `buildAccountLedger` (`server/ledgerOperations.ts:687`) sudah mengembalikan `closingBalance` dengan
 tanda mengikuti saldo normal akunnya — 3-1100 bersaldo normal KREDIT, jadi modal yang sudah tercatat
@@ -98,7 +98,7 @@ Tambahkan di dalam komponen, di samping kueri yang sudah ada:
   const capitalRecorded = Number(capital?.closingBalance ?? "0") > 0;
 ```
 
-- [ ] **Langkah 2: Sisipkan kartunya sebagai langkah 2, dan nomori ulang sisanya**
+- [x] **Langkah 2: Sisipkan kartunya sebagai langkah 2, dan nomori ulang sisanya**
 
 Urutan kartunya menjadi: **1. Akun tim → 2. Modal disetor → 3. Kas pembukaan → 4. Kurs outlet →
 5. Checklist outlet**. Ubah `xl:grid-cols-4` menjadi `xl:grid-cols-5` pada `div` pembungkusnya.
@@ -127,7 +127,7 @@ Pada kartu "Kas pembukaan", ubah `CardDescription` menjadi:
 <CardDescription>Catat saldo awal per valuta — <strong>setelah</strong> modal di atas tercatat.</CardDescription>
 ```
 
-- [ ] **Langkah 3: Verifikasi visual**
+- [x] **Langkah 3: Verifikasi visual**
 
 Server pengembangan sudah berjalan di `http://localhost:3003` dan sesi peramban sudah login sebagai
 Development Shareholder — pakai itu, jangan menyalakan yang baru. Buka **Langkah Persiapan Awal**,
@@ -135,7 +135,7 @@ pastikan lima kartunya tersusun rapi pada lebar desktop dan tidak berdesakan pad
 pastikan keadaan memuat serta keadaan galat kueri buku besar tidak membuat kartunya kosong tanpa
 penjelasan.
 
-- [ ] **Langkah 4: Gerbang mutu**
+- [x] **Langkah 4: Gerbang mutu**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -145,7 +145,7 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 ./node_modules/.bin/vite build
 ```
 
-- [ ] **Langkah 5: Commit**
+- [x] **Langkah 5: Commit**
 
 ```bash
 git add client/src/pages/GoLiveSetup.tsx
