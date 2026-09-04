@@ -2676,6 +2676,58 @@ export async function recordCapitalMovement(
   });
 }
 
+/**
+ * Pemindahan uang antara laci dan rekening perusahaan.
+ *
+ * Kedua sisi bergerak dalam satu transaksi basis data: kas fisik beserta stok pecahannya, dan
+ * saldo rekening. Hanya sisi kas yang dijurnal; sisi banknya berkategori `CASH_TRANSFER` yang
+ * sengaja dilewati pemetaan, supaya uang yang sama tidak terhitung dua kali.
+ */
+export async function recordCashBankTransfer(
+  input: { currencyId: number; bankAccountId: number; direction: "TO_BANK" | "TO_CASH"; amount: string; notes: string; denominations: DenominationEntryInput[] },
+  actor: { id: number; role: StaffRole },
+) {
+  const amount = nonNegativeOrZeroDecimal(input.amount, "Jumlah pemindahan");
+  if (amount.lte(0)) throw new Error("Jumlah pemindahan harus lebih besar dari nol.");
+  const notes = input.notes.trim();
+  if (notes.length < 5) throw new Error("Catatan wajib diisi (minimal 5 karakter) untuk jejak audit.");
+  if (!input.denominations?.length) throw new Error("Rincian pecahan wajib diisi untuk pemindahan kas ke/dari bank.");
+
+  const db = await databaseOrThrow();
+  const currencyForValidation = (await db.select({ code: currencies.code }).from(currencies).where(eq(currencies.id, input.currencyId)).limit(1))[0];
+  if (!currencyForValidation) throw new Error("Mata uang tidak ditemukan.");
+  const denominationRows = reconcileDenominations(input.denominations, amount, currencyForValidation.code);
+
+  const toBank = input.direction === "TO_BANK";
+  const cashCategory = toBank ? "BANK_DEPOSIT" : "BANK_WITHDRAWAL";
+
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT ${bankAccounts.id} FROM ${bankAccounts} WHERE ${bankAccounts.id} = ${input.bankAccountId} FOR UPDATE`);
+    const account = (await tx.select().from(bankAccounts).where(eq(bankAccounts.id, input.bankAccountId)).limit(1))[0];
+    if (!account) throw new Error("Rekening bank tidak ditemukan.");
+    if (account.currencyId !== input.currencyId) throw new Error("Mata uang rekening berbeda dari mata uang kas yang dipindahkan.");
+
+    const bankBefore = new Decimal(String(account.availableAmount));
+    if (!toBank && bankBefore.lt(amount)) throw new Error("Jumlah penarikan melebihi saldo rekening yang tersedia.");
+    const bankAfter = toBank ? bankBefore.plus(amount) : bankBefore.minus(amount);
+
+    const applied = await applyCashMovement(tx, {
+      currencyId: input.currencyId, direction: toBank ? "OUT" : "IN", amount, category: cashCategory,
+      reason: `${cashCategory}: ${notes}`, denominationRows, actorUserId: actor.id,
+    });
+
+    await tx.update(bankAccounts).set({ availableAmount: bankAfter.toFixed(6) }).where(eq(bankAccounts.id, account.id));
+    await tx.insert(bankAccountMovements).values({
+      bankAccountId: account.id, direction: toBank ? "IN" : "OUT", amount: amount.toFixed(6),
+      reason: `CASH_TRANSFER: ${notes}`.slice(0, 255), category: "CASH_TRANSFER", createdByUserId: actor.id,
+    });
+
+    await writeAudit({ actorUserId: actor.id, action: "CASH_BANK_TRANSFER_RECORDED", entityType: "cash_balance", entityId: String(applied.balanceId), beforeState: { cash: applied.before, bank: bankBefore.toFixed(6) }, afterState: { cash: applied.after, bank: bankAfter.toFixed(6), currency: applied.currencyCode }, reason: notes, metadata: { direction: input.direction, bankAccountId: account.id, amount: amount.toFixed(6), denominationCount: denominationRows.length } });
+
+    return { balanceId: applied.balanceId, bankAccountId: account.id, currencyCode: applied.currencyCode, cashAfter: applied.after, bankAfter: bankAfter.toFixed(6), direction: input.direction };
+  });
+}
+
 /** Greedy, largest-first decomposition into curated real denominations — used only for the *receiving* side of a note exchange, where supply is effectively unlimited (a bank hands over whatever combination is requested), unlike suggestDenominationBreakdown which is bounded by what's actually in our own till. */
 function decomposeIntoCuratedDenominations(amount: Decimal, currencyCode: string, excludeValue?: string) {
   const known = knownDenominationsFor(currencyCode);
