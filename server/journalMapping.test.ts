@@ -146,10 +146,13 @@ describe("penjurnalan otomatis", () => {
     expect(operations).not.toContain("postExchangeTransactions");
   });
 
-  it("belum menjurnal mutasi kas dan bank, dan menyebutkan alasannya", () => {
-    // Sisi kas bon sudah terjurnal lewat bonnya sendiri; menjurnal mutasinya sekaligus akan
-    // menghitung uang yang sama dua kali.
-    expect(source).not.toContain("cashBalanceMovements");
-    expect(source).toContain("menghitung uang yang sama dua kali");
+  it("menjurnal mutasi kas dan bank tanpa menghitung ulang sisi kas bon", () => {
+    // Sisi kas bon sudah terjurnal lewat bonnya sendiri; kategori TRANSACTION karena itu wajib
+    // tetap dilewati oleh pemetaan, bukan ikut dijurnal dari tabel mutasi.
+    expect(source).toContain("cashBalanceMovements");
+    expect(source).toContain("bankAccountMovements");
+    const mapping = readFileSync(new URL("../shared/journalMapping.ts", import.meta.url), "utf8");
+    expect(mapping).toContain("sisi kas bon sudah terjurnal lewat bonnya sendiri");
+    expect(mapping).toContain("pemindahan kas↔bank sudah terjurnal dari sisi kas");
   });
 });

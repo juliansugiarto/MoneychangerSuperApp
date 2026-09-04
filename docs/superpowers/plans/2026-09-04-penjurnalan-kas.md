@@ -20,7 +20,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 3 — Helper `applyCashMovement`
 - [x] Tugas 4 — `recordCapitalMovement`
 - [x] Tugas 5 — `recordCashBankTransfer`
-- [ ] Tugas 6 — Posting ke buku besar
+- [x] Tugas 6 — Posting ke buku besar
 - [ ] Tugas 7 — Tab Modal & Bank
 - [ ] Tugas 8 — Panel rekonsiliasi kas
 - [ ] Tugas 9 — Skenario dan dokumentasi
@@ -933,7 +933,7 @@ git commit -m "Pemindahan kas ke dan dari rekening bank dalam satu transaksi dua
 - Consumes: `mapCashMovement`, `mapBankMovement` (tugas 2); `postJournalEntry` (`server/ledgerOperations.ts:375`); `alreadyJournaled` (`server/ledgerPosting.ts:34`, perlu diperluas tipenya).
 - Produces: `postCashMovements(input: { from: Date; to: Date }, actor: { id: number }): Promise<PostingOutcome>`, `postBankMovements(...)` dengan bentuk sama; keduanya masuk ke ringkasan `postOperationsToLedger`.
 
-- [ ] **Step 1: Ganti dua uji penjaga yang menjadi usang**
+- [x] **Step 1: Ganti dua uji penjaga yang menjadi usang**
 
 `server/journalMapping.test.ts:149` saat ini menjaga agar mutasi kas **tidak** dijurnal. Penjaga itu sudah selesai tugasnya. Ganti blok uji tersebut dengan penjaga baru yang menjaga hal yang masih benar:
 
@@ -949,14 +949,14 @@ git commit -m "Pemindahan kas ke dan dari rekening bank dalam satu transaksi dua
   });
 ```
 
-- [ ] **Step 2: Jalankan uji, pastikan gagal**
+- [x] **Step 2: Jalankan uji, pastikan gagal**
 
 ```bash
 ./node_modules/.bin/vitest run server/journalMapping.test.ts
 ```
 Harapan: GAGAL — `ledgerPosting.ts` belum menyebut `cashBalanceMovements`.
 
-- [ ] **Step 3: Perluas `alreadyJournaled` agar menerima seluruh tipe sumber**
+- [x] **Step 3: Perluas `alreadyJournaled` agar menerima seluruh tipe sumber**
 
 Di `server/ledgerPosting.ts`, ganti tanda tangannya:
 
@@ -966,7 +966,7 @@ type PostedSourceType = "TRANSAKSI_VALUTA" | "PENGELUARAN" | "MUTASI_KAS" | "MUT
 async function alreadyJournaled(sourceType: PostedSourceType, references: string[]) {
 ```
 
-- [ ] **Step 4: Tambahkan kedua fungsi posting**
+- [x] **Step 4: Tambahkan kedua fungsi posting**
 
 ```ts
 /**
@@ -1084,7 +1084,7 @@ import { bankAccountMovements, bankAccounts, cashBalanceMovements, cashBalances,
 import { isSkipped, mapBankMovement, mapCashMovement, mapExchangeTransaction, mapExpense } from "../shared/journalMapping";
 ```
 
-- [ ] **Step 5: Sambungkan ke `postOperationsToLedger`**
+- [x] **Step 5: Sambungkan ke `postOperationsToLedger`**
 
 Ganti isi fungsinya, dan **hapus paragraf komentar lama** yang menyatakan mutasi kas belum termasuk:
 
@@ -1128,7 +1128,7 @@ export async function postOperationsToLedger(input: { from: Date; to: Date }, ac
 }
 ```
 
-- [ ] **Step 6: Uji idempotensi posting**
+- [x] **Step 6: Uji idempotensi posting**
 
 Tambahkan ke `server/cashJournalMapping.test.ts`. Jurnal yang sudah pernah ditulis harus dilaporkan sebagai `alreadyPosted`, bukan ditulis ulang — kalau tidak, menekan tombol jurnalkan dua kali akan menggandakan seluruh kas.
 
@@ -1168,14 +1168,14 @@ describe("idempotensi posting mutasi kas", () => {
 
 Tambahkan `vi` ke impor `vitest` di berkas itu. Bila `postJournalEntry` tidak dapat dimata-matai karena dipanggil sebagai binding langsung, ubah asersi terakhir menjadi memeriksa bahwa tidak ada `insert` yang terjadi — **jangan** menghapus asersinya.
 
-- [ ] **Step 7: Jalankan seluruh uji dan tipe**
+- [x] **Step 7: Jalankan seluruh uji dan tipe**
 
 ```bash
 ./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit
 ```
 Harapan: LULUS. Bila ada uji lain yang mengandalkan bentuk `summary` lama, perbarui uji itu — bidang lama (`transactions`, `expenses`) sengaja dipertahankan agar tidak pecah.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add server/ledgerPosting.ts server/journalMapping.test.ts server/cashJournalMapping.test.ts

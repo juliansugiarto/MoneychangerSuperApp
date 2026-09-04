@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CHART_OF_ACCOUNTS } from "../shared/chartOfAccounts";
 import { isSkipped, mapBankMovement, mapCashMovement, type MappingResult } from "../shared/journalMapping";
 import { assertJournalIsPostable } from "../shared/ledger";
+import * as db from "./db";
+import * as ledgerOperations from "./ledgerOperations";
+import { postCashMovements } from "./ledgerPosting";
 
 const linesOf = (result: MappingResult) => {
   if (isSkipped(result)) throw new Error(`tidak terpetakan: ${result.skipped}`);
@@ -151,5 +154,44 @@ describe("pemetaan mutasi bank", () => {
 
   it("melewati rekening valuta asing", () => {
     expect(reasonOf(mapBankMovement(bank({ currencyCode: "USD" })))).toMatch(/valuta|IDR/i);
+  });
+});
+
+describe("idempotensi posting mutasi kas", () => {
+  it("melaporkan mutasi yang sudah pernah dijurnal sebagai alreadyPosted, tanpa menulis ulang", async () => {
+    const movement = {
+      id: 11,
+      cashBalanceId: 1,
+      category: "CAPITAL_INJECTION",
+      amount: "500000000.000000",
+      reason: "Setoran modal",
+      createdAt: new Date("2026-09-04T03:00:00Z"),
+      currencyCode: "IDR",
+    };
+    const chain = (rows: unknown[]): any => ({
+      from: () => chain(rows),
+      innerJoin: () => chain(rows),
+      where: () => chain(rows),
+      orderBy: () => chain(rows),
+      limit: () => Promise.resolve(rows),
+      then: (ok: any, err: any) => Promise.resolve(rows).then(ok, err),
+    });
+    const fakeDb = {
+      select: vi.fn((fields: Record<string, unknown>) => {
+        if ("sourceReference" in fields) return chain([{ sourceReference: "KAS-11" }]); // sudah pernah dijurnal
+        if (Object.keys(fields).length === 1) return chain([{ id: 11 }]);              // mutasi paling awal
+        return chain([movement]);
+      }),
+    };
+    const getDb = vi.spyOn(db, "getDb").mockResolvedValue(fakeDb as never);
+    const post = vi.spyOn(ledgerOperations, "postJournalEntry");
+
+    const outcome = await postCashMovements({ from: new Date("2026-09-01"), to: new Date("2026-09-30") }, { id: 1 });
+
+    expect(outcome.alreadyPosted).toEqual(["KAS-11"]);
+    expect(outcome.posted).toEqual([]);
+    expect(post).not.toHaveBeenCalled();
+    getDb.mockRestore();
+    post.mockRestore();
   });
 });
