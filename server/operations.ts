@@ -2640,6 +2640,42 @@ export async function recordCashAdjustment(
   });
 }
 
+/**
+ * Uang yang melintasi batas usaha: setoran modal pemilik dan penarikannya.
+ *
+ * Sebelum ini tidak ada jalur untuk mencatatnya sama sekali, sehingga modal yang masuk terpaksa
+ * menyamar sebagai kenaikan hitungan kas pagi — dan buku besar tidak punya apa pun untuk dijurnal.
+ * CONTROLLER ke atas: uang yang melintasi batas usaha bukan keputusan kasir.
+ */
+export async function recordCapitalMovement(
+  input: { currencyId: number; direction: "IN" | "OUT"; amount: string; notes: string; denominations: DenominationEntryInput[] },
+  actor: { id: number; role: StaffRole },
+) {
+  const amount = nonNegativeOrZeroDecimal(input.amount, "Jumlah modal");
+  if (amount.lte(0)) throw new Error("Jumlah modal harus lebih besar dari nol.");
+  const notes = input.notes.trim();
+  if (notes.length < 5) throw new Error("Catatan wajib diisi (minimal 5 karakter) untuk jejak audit.");
+  if (!input.denominations?.length) throw new Error("Rincian pecahan wajib diisi untuk setoran/penarikan modal.");
+
+  const db = await databaseOrThrow();
+  const currency = (await db.select({ code: currencies.code }).from(currencies).where(eq(currencies.id, input.currencyId)).limit(1))[0];
+  if (!currency) throw new Error("Mata uang tidak ditemukan.");
+  // Setoran modal dalam valuta asing menuntut kurs yang tidak tersimpan pada tabel mutasi;
+  // menebaknya akan membuat nilai Modal Disetor salah sejak awal.
+  if (currency.code.trim().toUpperCase() !== "IDR") throw new Error("Setoran dan penarikan modal hanya dapat dicatat dalam Rupiah.");
+  const denominationRows = reconcileDenominations(input.denominations, amount, currency.code);
+
+  const category = input.direction === "IN" ? "CAPITAL_INJECTION" : "CAPITAL_WITHDRAWAL";
+  return db.transaction(async (tx) => {
+    const applied = await applyCashMovement(tx, {
+      currencyId: input.currencyId, direction: input.direction, amount, category,
+      reason: `${category}: ${notes}`, denominationRows, actorUserId: actor.id,
+    });
+    await writeAudit({ actorUserId: actor.id, action: "CAPITAL_MOVEMENT_RECORDED", entityType: "cash_balance", entityId: String(applied.balanceId), beforeState: { availableAmount: applied.before }, afterState: { availableAmount: applied.after, currency: applied.currencyCode }, reason: notes, metadata: { category, direction: input.direction, amount: amount.toFixed(6), denominationCount: denominationRows.length } });
+    return { balanceId: applied.balanceId, currencyCode: applied.currencyCode, beforeAmount: applied.before, afterAmount: applied.after, direction: input.direction };
+  });
+}
+
 /** Greedy, largest-first decomposition into curated real denominations — used only for the *receiving* side of a note exchange, where supply is effectively unlimited (a bank hands over whatever combination is requested), unlike suggestDenominationBreakdown which is bounded by what's actually in our own till. */
 function decomposeIntoCuratedDenominations(amount: Decimal, currencyCode: string, excludeValue?: string) {
   const known = knownDenominationsFor(currencyCode);

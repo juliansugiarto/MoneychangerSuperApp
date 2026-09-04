@@ -18,7 +18,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 1 — Migrasi kategori mutasi (0044)
 - [x] Tugas 2 — Pemetaan jurnal mutasi kas dan bank
 - [x] Tugas 3 — Helper `applyCashMovement`
-- [ ] Tugas 4 — `recordCapitalMovement`
+- [x] Tugas 4 — `recordCapitalMovement`
 - [ ] Tugas 5 — `recordCashBankTransfer`
 - [ ] Tugas 6 — Posting ke buku besar
 - [ ] Tugas 7 — Tab Modal & Bank
@@ -574,7 +574,7 @@ git commit -m "Tarik applyCashMovement dari recordCashAdjustment tanpa mengubah 
 - Consumes: `applyCashMovement` (tugas 3), `reconcileDenominations`, `nonNegativeOrZeroDecimal`.
 - Produces: `recordCapitalMovement(input: { currencyId: number; direction: "IN" | "OUT"; amount: string; notes: string; denominations: DenominationEntryInput[] }, actor: { id: number; role: StaffRole }): Promise<{ balanceId: number; currencyCode: string; beforeAmount: string; afterAmount: string; direction: "IN" | "OUT" }>`; prosedur tRPC `cash.recordCapitalMovement`.
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 Buat `server/capitalMovement.test.ts`:
 
@@ -646,14 +646,14 @@ describe("recordCapitalMovement", () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan uji, pastikan gagal**
+- [x] **Step 2: Jalankan uji, pastikan gagal**
 
 ```bash
 ./node_modules/.bin/vitest run server/capitalMovement.test.ts
 ```
 Harapan: GAGAL — `recordCapitalMovement` belum ada.
 
-- [ ] **Step 3: Tulis implementasi di `server/operations.ts`**
+- [x] **Step 3: Tulis implementasi di `server/operations.ts`**
 
 ```ts
 /**
@@ -693,14 +693,14 @@ export async function recordCapitalMovement(
 }
 ```
 
-- [ ] **Step 4: Jalankan uji, pastikan lulus**
+- [x] **Step 4: Jalankan uji, pastikan lulus**
 
 ```bash
 ./node_modules/.bin/vitest run server/capitalMovement.test.ts
 ```
 Harapan: LULUS.
 
-- [ ] **Step 5: Ekspos lewat tRPC**
+- [x] **Step 5: Ekspos lewat tRPC**
 
 Tambahkan `recordCapitalMovement` ke daftar impor di `server/routers.ts:68`, lalu tambahkan prosedur di dalam router `cash` (setelah `recordAdjustment`):
 
@@ -714,13 +714,13 @@ Tambahkan `recordCapitalMovement` ke daftar impor di `server/routers.ts:68`, lal
     })).mutation(({ input, ctx }) => recordCapitalMovement(input, ctx.user)),
 ```
 
-- [ ] **Step 6: Pastikan tipe dan seluruh uji bersih**
+- [x] **Step 6: Pastikan tipe dan seluruh uji bersih**
 
 ```bash
 ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vitest run
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add server/operations.ts server/routers.ts server/capitalMovement.test.ts
