@@ -599,6 +599,30 @@ export async function buildTrialBalanceReport(input: { from?: Date; to?: Date })
 }
 
 /**
+ * Saldo tiap akun atas sebuah rentang, searah saldo normal akunnya.
+ *
+ * Tanpa `from` hasilnya kumulatif sejak awal pembukuan — bentuk yang dibutuhkan neraca. Dengan
+ * `from`, hasilnya mutasi periode itu saja — bentuk yang dibutuhkan laporan laba rugi.
+ */
+export async function accountBalancesFor(input: { from?: Date | string; to?: Date | string }) {
+  const [rows, accounts] = await Promise.all([loadLines(input.from, input.to), listAccounts()]);
+  const normalByCode = new Map(accounts.map((account) => [account.code, account.normalBalance]));
+
+  const totals = new Map<string, { debit: bigint; credit: bigint }>();
+  for (const row of rows) {
+    const entry = totals.get(row.accountCode) ?? { debit: 0n, credit: 0n };
+    if (row.side === "DEBIT") entry.debit += parseAmount(row.amount);
+    else entry.credit += parseAmount(row.amount);
+    totals.set(row.accountCode, entry);
+  }
+
+  return [...totals.entries()].map(([accountCode, entry]) => ({
+    accountCode,
+    balance: accountBalance(normalByCode.get(accountCode) ?? findAccount(accountCode)?.normalBalance ?? "DEBIT", entry.debit, entry.credit),
+  }));
+}
+
+/**
  * Pemeriksaan keutuhan buku besar: setiap jurnal harus punya jumlah debit sama dengan kredit, dan
  * jumlah itu harus sama dengan total yang tersimpan pada kepala jurnalnya.
  *

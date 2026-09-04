@@ -107,6 +107,7 @@ import {
   reverseJournalEntry, verifyLedgerIntegrity,
 } from "./ledgerOperations";
 import { postOperationsToLedger } from "./ledgerPosting";
+import { buildFinancialStatements } from "./financialStatements";
 import { KUPVA_WORK_AREA, competencyCodesForArea } from "../shared/sdmCompetency";
 import {
   assignPicRole, buildAnnualSdmPlan, buildProfileReviewSchedule, buildTrainingRecap, decideCandidate, listCandidates, listProfileReviews, listTrainingSessions, recordCandidate, recordProfileReview, recordTrainingSession, screenCandidate, buildSdmQuarterlyReport, buildSdmRealisasiReport, createEmployee, endEmployment, exportSdmTextFile,
@@ -552,6 +553,11 @@ export const appRouter = router({
 
     // Penjurnalan otomatis dijalankan atas rentang tanggal yang dipilih, bukan berjalan sendiri di
     // latar belakang: yang menentukan kapan pembukuan sebuah periode dikerjakan adalah manusia.
+    statements: controllerProcedure.input(z.object({
+      from: z.coerce.date(),
+      to: z.coerce.date(),
+    })).query(({ input }) => buildFinancialStatements(input)),
+
     postOperations: controllerProcedure.input(z.object({
       from: z.coerce.date(),
       to: z.coerce.date(),
