@@ -12,7 +12,7 @@ import {
   type StatementAccount,
   type StatementSection,
 } from "../shared/financialStatements";
-import { formatAmount, isoDay } from "../shared/ledger";
+import { calendarDay, formatAmount, isoDay } from "../shared/ledger";
 import { accountBalancesFor } from "./ledgerOperations";
 import { databaseOrThrow, retryTransientDatabaseRead } from "./operations";
 
@@ -147,18 +147,6 @@ function unmapped(accounts: StatementAccount[]) {
   const mapped = new Set(CHART_OF_ACCOUNTS.filter((account) => account.forms.length).map((account) => account.code));
   return accounts.filter((row) => row.balance !== 0n && !mapped.has(row.accountCode)).map((row) => row.accountCode);
 }
-
-/**
- * Hari kalender sebuah kolom `date`, dibaca dari komponen lokalnya.
- *
- * Driver mysql2 mengembalikan kolom `date` sebagai tengah malam waktu lokal, sehingga `isoDay`
- * memundurkannya satu hari di mesin yang tidak berjalan pada UTC — dan penutup laba 31 Desember
- * yang terbaca 30 Desember akan memangkas laba satu hari terlalu awal.
- */
-const calendarDay = (value: Date | string): string =>
-  typeof value === "string"
-    ? value.slice(0, 10)
-    : `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
 
 /** Tanggal jurnal penutup laba terakhir yang tidak melewati batas ini, bila sudah pernah ada. */
 async function lastProfitClosingDate(db: Awaited<ReturnType<typeof databaseOrThrow>>, to: Date | string) {

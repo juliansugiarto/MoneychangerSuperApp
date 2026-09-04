@@ -192,6 +192,30 @@ export function carryForwardBalance(type: AccountType, closingBalance: bigint): 
 export const isoDay = (value: Date | string): string =>
   typeof value === "string" ? value.slice(0, 10) : value.toISOString().slice(0, 10);
 
+/**
+ * Hari kalender sebuah tanggal, dibaca dari komponen **lokal**-nya.
+ *
+ * Ada dua jenis `Date` yang beredar di aplikasi ini, dan keduanya menyatakan hari yang sama dengan
+ * cara berbeda:
+ *
+ * - Yang datang dari kolom `date` MySQL. Driver mysql2 mengembalikannya sebagai **tengah malam
+ *   waktu lokal** proses, dan menuliskannya kembali dari komponen lokal juga.
+ * - Yang datang dari masukan layar lewat `z.coerce.date()` atas teks "YYYY-MM-DD", yaitu tengah
+ *   malam **UTC**.
+ *
+ * `isoDay` membaca keduanya lewat `toISOString()`, sehingga benar untuk yang kedua dan memundurkan
+ * yang pertama satu hari di zona waktu positif: 30 September terbaca 29 September di WIB. Membaca
+ * komponen lokal benar untuk keduanya selama proses berjalan pada UTC atau zona waktu positif —
+ * mencakup server produksi (UTC) dan seluruh mesin pengembangan di Indonesia.
+ *
+ * Fungsi ini adalah kebalikan tepat dari cara kolom `date` ditulis, jadi tanggalnya pulang-pergi
+ * utuh. Pakai ini, bukan `isoDay`, untuk setiap nilai yang bisa berasal dari kolom `date`.
+ */
+export const calendarDay = (value: Date | string): string =>
+  typeof value === "string"
+    ? value.slice(0, 10)
+    : `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+
 export const monthStartIso = (value: Date | string): string => `${isoDay(value).slice(0, 7)}-01`;
 
 /** Hari terakhir bulan tersebut, termasuk 29 Februari pada tahun kabisat. */

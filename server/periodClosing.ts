@@ -24,7 +24,7 @@ import {
   stockOpnames,
 } from "../drizzle/schema";
 import { valueForeignInventory } from "../shared/inventoryValuation";
-import { formatAmount } from "../shared/ledger";
+import { calendarDay, formatAmount } from "../shared/ledger";
 import { isSkipped, mapPeriodInventoryClosing, mapYearEndProfitClosing } from "../shared/journalMapping";
 import { accountBalancesFor, postJournalEntry } from "./ledgerOperations";
 import { databaseOrThrow, getOpnameSystemCounts, retryTransientDatabaseRead, writeAudit } from "./operations";
@@ -37,22 +37,6 @@ import { databaseOrThrow, getOpnameSystemCounts, retryTransientDatabaseRead, wri
  * K1 yang sudah diperbaiki dan tidak boleh kembali.
  */
 const dbDate = (value: string) => new Date(`${value}T00:00:00`);
-
-const pad = (value: number) => String(value).padStart(2, "0");
-
-/**
- * Hari kalender sebuah kolom `date` sebagai teks "YYYY-MM-DD".
- *
- * Sengaja **tidak** memakai `isoDay`. Driver mysql2 mengembalikan kolom `date` sebagai tengah malam
- * waktu lokal, sehingga `toISOString()` di mesin WIB memundurkannya satu hari — 30 September
- * terbaca 29 September, dan tanggal opname maupun tanggal kurs pada baris penilaian ikut meleset.
- * Membaca komponen lokalnya adalah kebalikan tepat dari `dbDate`, jadi tanggalnya pulang-pergi utuh
- * di zona waktu mana pun.
- */
-const calendarDay = (value: Date | string): string =>
-  typeof value === "string"
-    ? value.slice(0, 10)
-    : `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
 
 /** Hitungan fisik yang belum ditinjau bukan bukti; hanya kedua status ini yang boleh dinilai. */
 const REVIEWED_OPNAME_STATUSES = new Set(["RECONCILED", "VARIANCE"]);

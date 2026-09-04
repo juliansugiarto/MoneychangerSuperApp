@@ -15,6 +15,7 @@ import {
   accountBalance,
   assertJournalIsPostable,
   buildTrialBalance,
+  calendarDay,
   formatAmount,
   isoDay,
   monthEndIso,
@@ -54,19 +55,7 @@ export type JournalLineInput = {
  * tanggal tengah malam lokal — itulah campuran yang membuat 1 September jatuh ke periode Agustus.
  */
 /** Tanggal siap kirim: tengah malam waktu lokal pada hari kalender yang dimaksud. */
-const dbDate = (value: Date | string) => new Date(`${isoDay(value)}T00:00:00`);
-
-/**
- * Hari kalender sebuah kolom `date`, dibaca dari komponen **lokalnya**.
- *
- * Driver mysql2 mengembalikan kolom `date` sebagai tengah malam waktu lokal, sehingga `isoDay`
- * memundurkannya satu hari di mesin yang tidak berjalan pada UTC — dan 31 Desember yang terbaca
- * 30 Desember membuat gerbang penutup laba tahunan diam-diam tidak pernah menyala.
- */
-const calendarDay = (value: Date | string): string =>
-  typeof value === "string"
-    ? value.slice(0, 10)
-    : `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+const dbDate = (value: Date | string) => new Date(`${calendarDay(value)}T00:00:00`);
 
 /** Hari sebelum sebuah tanggal, dihitung atas teks harinya agar tidak bergantung jam maupun zona. */
 const previousDayIso = (value: Date | string) =>
@@ -153,8 +142,8 @@ export async function listAccountingPeriods() {
     const rows = await db.select().from(accountingPeriods).orderBy(desc(accountingPeriods.periodStart));
     return rows.map((row) => ({
       ...row,
-      periodStart: isoDay(row.periodStart),
-      periodEnd: isoDay(row.periodEnd),
+      periodStart: calendarDay(row.periodStart),
+      periodEnd: calendarDay(row.periodEnd),
     }));
   });
 }
@@ -287,7 +276,7 @@ export async function reopenAccountingPeriod(input: { periodId: number; reason: 
  * bersamaan tertahan indeks unik dan dicoba ulang, bukan diam-diam menimpa.
  */
 async function nextEntryNumber(db: Awaited<ReturnType<typeof databaseOrThrow>>, entryDate: Date) {
-  const prefix = `JU-${isoDay(entryDate).slice(0, 7).replace("-", "")}-`;
+  const prefix = `JU-${calendarDay(entryDate).slice(0, 7).replace("-", "")}-`;
   // Urutan dihitung numerik, bukan menurut teks: setelah jurnal ke-9999 dalam sebulan, "10000"
   // lebih kecil daripada "9999" secara teks dan nomor akan berhenti bertambah.
   const [row] = await db
@@ -345,7 +334,7 @@ async function insertJournal(
   const period = await periodForDate(db, input.entryDate, actor.id);
   if (period.status === "DITUTUP") {
     throw new Error(
-      `Periode ${isoDay(period.periodStart)} s.d. ${isoDay(period.periodEnd)} sudah ditutup; catat koreksinya sebagai jurnal balik pada periode terbuka.`,
+      `Periode ${calendarDay(period.periodStart)} s.d. ${calendarDay(period.periodEnd)} sudah ditutup; catat koreksinya sebagai jurnal balik pada periode terbuka.`,
     );
   }
 
@@ -538,7 +527,7 @@ export async function listJournalEntries(input?: { from?: Date; to?: Date; sourc
 
     return rows.map((row) => ({
       ...row,
-      entryDate: isoDay(row.entryDate),
+      entryDate: calendarDay(row.entryDate),
       lines: lines.filter((line) => line.entryId === row.id),
     }));
   });
@@ -734,7 +723,7 @@ export async function buildAccountLedger(input: { accountCode: string; from?: Da
       return {
         entryId: row.entryId,
         entryNumber: row.entryNumber,
-        entryDate: isoDay(row.entryDate),
+        entryDate: calendarDay(row.entryDate),
         description: row.description,
         sourceType: row.sourceType,
         sourceReference: row.sourceReference,

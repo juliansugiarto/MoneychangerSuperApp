@@ -10,7 +10,7 @@ import {
   operationalExpenses,
 } from "../drizzle/schema";
 import { isSkipped, mapBankMovement, mapCashMovement, mapExchangeTransaction, mapExpense } from "../shared/journalMapping";
-import { isoDay } from "../shared/ledger";
+import { calendarDay, isoDay } from "../shared/ledger";
 import { databaseOrThrow, writeAudit } from "./operations";
 import { postJournalEntry } from "./ledgerOperations";
 
@@ -35,7 +35,7 @@ export type PostingOutcome = {
 
 const emptyOutcome = (): PostingOutcome => ({ posted: [], alreadyPosted: [], skipped: [] });
 
-const dbDate = (value: Date) => new Date(`${isoDay(value)}T00:00:00`);
+const dbDate = (value: Date) => new Date(`${calendarDay(value)}T00:00:00`);
 
 type PostedSourceType = "TRANSAKSI_VALUTA" | "PENGELUARAN" | "MUTASI_KAS" | "MUTASI_BANK";
 
