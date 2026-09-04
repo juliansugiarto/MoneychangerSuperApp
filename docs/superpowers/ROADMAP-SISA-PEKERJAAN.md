@@ -36,7 +36,19 @@ Rencana: `plans/2026-09-04-opname-pecahan-brankas.md`
 - [x] Tugas 6 — Dokumentasi dan gerbang akhir
 
 ### Paket C — Penilaian kas UKA dan penutupan periode (temuan BI 7.1)
-- [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
+Spec: `specs/2026-09-04-penilaian-kas-uka-tutup-periode-design.md`
+Rencana: `plans/2026-09-04-penilaian-kas-uka-tutup-periode.md`
+- [x] Sesi rancangan — spec dan rencana bertugas
+- [ ] Tugas 1 — Migrasi penilaian penutupan periode (0047)
+- [ ] Tugas 2 — Penilaian kurs tengah murni di `shared/`
+- [ ] Tugas 3 — Pemetaan jurnal penutupan dan penutup laba
+- [ ] Tugas 4 — `buildPeriodValuation`: bukti kuantitas dan kurs
+- [ ] Tugas 5 — `postPeriodClosing`: tulis penilaian dan jurnalnya
+- [ ] Tugas 6 — Penutup laba tahunan dan gerbang `closeAccountingPeriod`
+- [ ] Tugas 7 — Neraca memakai laba sejak penutupan tahunan terakhir
+- [ ] Tugas 8 — Tiga prosedur tRPC
+- [ ] Tugas 9 — Panel Penutupan Periode
+- [ ] Tugas 10 — Skenario menyeluruh dan dokumentasi
 
 ### Paket E — Aset tetap dan penyusutan
 - [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
@@ -103,7 +115,7 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 ./node_modules/.bin/vite build
 ```
 
-Baseline saat ini (setelah paket K1): **526 uji lulus, 2 dilewati (76 berkas)**. Tugas yang mengganti uji lama
+Baseline saat ini (diukur 4 September 2026, setelah paket D): **551 uji lulus, 2 dilewati (81 berkas)**. Tugas yang mengganti uji lama
 akan mengubah angkanya — sebutkan angka yang benar-benar dilihat, jangan mengarang.
 
 ### Batas keras
@@ -304,10 +316,17 @@ Jangan menambahkan akun "Kas di Brankas" ke bagan akun — B0002 hanya menyediak
 - `closeAccountingPeriod` menolak menutup periode yang penilaiannya belum dijalankan.
 - Panel penutupan periode pada halaman Buku Besar.
 
-## Pertanyaan yang harus dijawab spec-nya — **jangan ditebak**
+## Pertanyaan yang harus dijawab spec-nya — **sudah dijawab**
 
-Ini paket paling berbahaya dari sisi akuntansi. Yang berikut adalah keputusan kebijakan, bukan
-detail implementasi, dan harus diputuskan pengguna sebelum kode ditulis:
+Ketiganya ditanyakan dan dijawab pengguna pada sesi rancangan 4 September 2026, ditambah dua
+pertanyaan yang muncul saat penelusuran kode (kurs mana yang dipakai, dan apa yang benar bila akhir
+periode jatuh pada hari libur). **Jawabannya ada di
+`specs/2026-09-04-penilaian-kas-uka-tutup-periode-design.md` bagian "Yang sudah diputuskan
+pengguna" — baca di sana, bukan di sini.** Ringkasnya: satu jurnal (7-1500 tetap tanpa pemanggil),
+persediaan awal ditulis sebagai bagian penutupan dalam jurnal yang sama, dan penutup laba ke 3-2100
+hanya pada akhir tahun buku.
+
+Pertanyaan aslinya disimpan di bawah karena alasannya masih menjelaskan mengapa keputusannya begitu:
 
 - Di bawah persediaan **periodik**, apakah revaluasi kurs (7-1500) dan penilaian persediaan akhir
   (5-1300) adalah dua jurnal terpisah atau satu? Menilai stok fisik pada kurs penutup sudah
