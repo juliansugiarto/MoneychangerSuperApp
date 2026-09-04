@@ -28,7 +28,12 @@ import {
   type fixedAssetTaxGroups,
 } from "../drizzle/schema";
 import { depreciationForMonth, depreciationSchedule, monthKey } from "../shared/depreciation";
-import { isSkipped, mapFixedAssetAcquisition, mapMonthlyDepreciation } from "../shared/journalMapping";
+import {
+  isSkipped,
+  mapFixedAssetAcquisition,
+  mapFixedAssetDisposal,
+  mapMonthlyDepreciation,
+} from "../shared/journalMapping";
 import { calendarDay } from "../shared/ledger";
 import { postJournalEntry } from "./ledgerOperations";
 import { databaseOrThrow, retryTransientDatabaseRead, writeAudit } from "./operations";
@@ -583,4 +588,154 @@ export async function postMonthlyDepreciation(input: { periodId: number }, actor
     rows: plan.rows,
     skipped: isSkipped(mapped) ? mapped.skipped : null,
   };
+}
+
+/**
+ * Melepaskan sebuah aset: mengeluarkan harga perolehan dan akumulasinya dari neraca, dan
+ * menjatuhkan selisihnya terhadap hasil pelepasan ke 7-1400.
+ *
+ * Hasil pelepasan masuk ke 1-1320 Piutang Lain-Lain, bukan ke kas — alasan yang sama seperti
+ * perolehan. Pelunasannya dijurnal terpisah saat uangnya benar-benar diterima.
+ *
+ * Akumulasi yang dikeluarkan adalah yang **benar-benar tercatat**: akumulasi awal ditambah baris
+ * `fixed_asset_depreciation_entries`. Karena itu pelepasan menolak aset yang penyusutannya belum
+ * dijurnal sampai dengan bulan pelepasan — mengeluarkan dari 1-1520 lebih banyak daripada yang
+ * pernah masuk membuat neracanya tetap seimbang sementara angkanya salah.
+ */
+export async function disposeFixedAsset(
+  input: { assetId: number; disposalDate: string; proceeds: string; notes?: string },
+  actor: { id: number },
+) {
+  const db = await databaseOrThrow();
+
+  const asset = (
+    await db
+      .select({
+        id: fixedAssets.id,
+        name: fixedAssets.name,
+        acquisitionDate: fixedAssets.acquisitionDate,
+        acquisitionCost: fixedAssets.acquisitionCost,
+        residualValue: fixedAssets.residualValue,
+        usefulLifeMonths: fixedAssets.usefulLifeMonths,
+        firstJournalMonth: fixedAssets.firstJournalMonth,
+        openingAccumulatedDepreciation: fixedAssets.openingAccumulatedDepreciation,
+        status: fixedAssets.status,
+      })
+      .from(fixedAssets)
+      .where(eq(fixedAssets.id, input.assetId))
+      .limit(1)
+  )[0];
+  if (!asset) throw new Error(`Aset ${input.assetId} tidak ditemukan.`);
+  if (asset.status === "DILEPAS") throw new Error("Aset ini sudah dilepas.");
+
+  const acquisitionDay = calendarDay(asset.acquisitionDate);
+  if (input.disposalDate < acquisitionDay) {
+    throw new Error(`Tanggal pelepasan ${input.disposalDate} mendahului tanggal perolehan ${acquisitionDay}.`);
+  }
+
+  const disposalMonth = monthKey(input.disposalDate);
+  const entries = await db
+    .select({
+      assetId: fixedAssetDepreciationEntries.assetId,
+      periodMonth: fixedAssetDepreciationEntries.periodMonth,
+      charge: fixedAssetDepreciationEntries.charge,
+    })
+    .from(fixedAssetDepreciationEntries)
+    .where(eq(fixedAssetDepreciationEntries.assetId, input.assetId));
+
+  // Bulan yang seharusnya sudah dijurnal tetapi belum. Tanah tidak pernah punya satu pun, dan itu
+  // benar — ia tidak menyusut, jadi tidak ada yang tertinggal.
+  if (asset.usefulLifeMonths !== null) {
+    const posted = new Set(entries.map((entry) => entry.periodMonth));
+    const schedule = depreciationSchedule({
+      acquisitionMonth: monthKey(asset.acquisitionDate),
+      firstJournalMonth: asset.firstJournalMonth,
+      acquisitionCost: asset.acquisitionCost,
+      residualValue: asset.residualValue,
+      usefulLifeMonths: asset.usefulLifeMonths,
+      openingAccumulatedDepreciation: asset.openingAccumulatedDepreciation,
+    });
+    const missing = schedule
+      .filter((row) => row.month <= disposalMonth && !posted.has(row.month))
+      .map((row) => row.month);
+    if (missing.length) {
+      throw new Error(
+        `Penyusutan aset ini belum dijurnal untuk ${missing.join(", ")}; jalankan penyusutan bulan-bulan itu lebih dulu.`,
+      );
+    }
+  }
+
+  const period = (
+    await db
+      .select({ status: accountingPeriods.status })
+      .from(accountingPeriods)
+      .where(
+        and(
+          lte(accountingPeriods.periodStart, dbDate(input.disposalDate)),
+          sql`${accountingPeriods.periodEnd} >= ${dbDate(input.disposalDate)}`,
+        ),
+      )
+      .limit(1)
+  )[0];
+  if (period?.status === "DITUTUP") {
+    throw new Error(
+      `Periode pembukuan ${disposalMonth} sudah ditutup, sehingga jurnal pelepasannya tidak dapat ditulis.`,
+    );
+  }
+
+  const accumulated = entries
+    .reduce((sum, entry) => sum.plus(entry.charge), new Decimal(asset.openingAccumulatedDepreciation))
+    .toFixed(2);
+  const carryingAmount = new Decimal(asset.acquisitionCost).minus(accumulated).toFixed(2);
+  const gainLoss = new Decimal(input.proceeds).minus(carryingAmount).toFixed(2);
+
+  const mapped = mapFixedAssetDisposal({
+    cost: asset.acquisitionCost,
+    accumulated,
+    proceeds: input.proceeds,
+    assetName: asset.name,
+  });
+  // Pelepasan yang tidak dapat dipetakan tidak boleh diam-diam berhasil: asetnya akan tampak lepas
+  // sementara 1-1510 dan 1-1520 masih memuatnya.
+  if (isSkipped(mapped)) throw new Error(`Pelepasan tidak dapat dijurnal: ${mapped.skipped}.`);
+
+  const entry = await postJournalEntry(
+    {
+      entryDate: dbDate(input.disposalDate),
+      description: `Pelepasan ${asset.name}`.slice(0, 500),
+      sourceType: "PELEPASAN_ASET",
+      sourceReference: `LEPAS-${input.assetId}`,
+      lines: mapped.lines,
+    },
+    actor,
+  );
+
+  await db
+    .update(fixedAssets)
+    .set({
+      status: "DILEPAS",
+      disposalDate: dbDate(input.disposalDate),
+      disposalProceeds: input.proceeds,
+      disposalJournalEntryId: entry.id,
+      disposalNotes: input.notes?.trim() || null,
+    })
+    .where(eq(fixedAssets.id, input.assetId));
+
+  await writeAudit({
+    actorUserId: actor.id,
+    action: "FIXED_ASSET_DISPOSED",
+    entityType: "fixed_assets",
+    entityId: String(input.assetId),
+    beforeState: { status: "AKTIF" },
+    afterState: {
+      disposalDate: input.disposalDate,
+      proceeds: input.proceeds,
+      accumulated,
+      carryingAmount,
+      gainLoss,
+      entryNumber: entry.entryNumber,
+    },
+  });
+
+  return { assetId: input.assetId, entryNumber: entry.entryNumber, gainLoss };
 }
