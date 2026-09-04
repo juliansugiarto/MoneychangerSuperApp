@@ -21,7 +21,7 @@ memakainya sebagai batas `datetime` dan sudah benar.
 **Centang barisnya di sini setelah commit tugas itu**, dan centang juga baris paket K1 pada Status
 Pengerjaan di ROADMAP.
 
-- [ ] Tugas 1 — Normalkan tanggal yang dikirim ke kolom `date`
+- [x] Tugas 1 — Normalkan tanggal yang dikirim ke kolom `date`
 - [ ] Tugas 2 — Uji penjaga dan dokumentasi
 
 Urutannya mengikat: 1 sebelum 2.
@@ -70,7 +70,7 @@ dimaksud — benar di kedua zona waktu.
 - Consumes: `jakartaBusinessDate` (`server/operations.ts:1628`), `dateColumnBound` (baris 2317)
 - Produces: `jakartaBusinessDateColumn(date?)` — dipakai tugas 2
 
-- [ ] **Langkah 1: Pindahkan `dateColumnBound` ke dekat `jakartaBusinessDate`**
+- [x] **Langkah 1: Pindahkan `dateColumnBound` ke dekat `jakartaBusinessDate`**
 
 `dateColumnBound` sekarang berada di baris 2317, jauh di bawah pemanggil pertamanya yang baru.
 Ia sebuah `const` arrow, jadi terkena *temporal dead zone* bila dipanggil saat modul dimuat —
@@ -111,7 +111,7 @@ export function jakartaBusinessDateColumn(date = new Date()) {
 }
 ```
 
-- [ ] **Langkah 2: Checklist operasional harian**
+- [x] **Langkah 2: Checklist operasional harian**
 
 Di `getDailyOperationalChecklist` (sekitar baris 1732), ganti:
 
@@ -129,7 +129,7 @@ menjadi:
 Nilai yang sama dipakai untuk `eq(...)` **dan** untuk `insert(...).values({ businessDate })`, jadi
 satu penggantian ini memperbaiki pencarian sekaligus penyisipannya.
 
-- [ ] **Langkah 3: Opname yang dibuka dari penyelesaian bon**
+- [x] **Langkah 3: Opname yang dibuka dari penyelesaian bon**
 
 Di `completeTransaction` (sekitar baris 1798), ganti:
 
@@ -143,7 +143,7 @@ menjadi:
     const opnameDate = jakartaBusinessDateColumn();
 ```
 
-- [ ] **Langkah 4: `openStockOpname`**
+- [x] **Langkah 4: `openStockOpname`**
 
 Sekitar baris 2844, penggantian yang sama:
 
@@ -155,7 +155,7 @@ Perhatikan bahwa `opnameDate` di sini dipakai tiga kali — dua `eq()` dan satu 
 penjaga "opname hari ini sudah ada" akhirnya benar-benar menemukan baris yang sudah ada, alih-alih
 menabrak kunci unik `stock_opnames_date_currency_uq`.
 
-- [ ] **Langkah 5: Batas rentang pada laporan opname**
+- [x] **Langkah 5: Batas rentang pada laporan opname**
 
 `getStockOpnameReport` (sekitar baris 2999) menerima `from`/`to` dari `z.coerce.date()`
 (`server/routers.ts:733`), yang menghasilkan tengah malam UTC — bug yang sama pada batas bawahnya.
@@ -165,7 +165,7 @@ Bungkus kedua batasnya:
     const rows = await db.select({ opname: stockOpnames, currency: currencies }).from(stockOpnames).innerJoin(currencies, eq(stockOpnames.currencyId, currencies.id)).where(and(gte(stockOpnames.opnameDate, dateColumnBound(input.from)), lt(stockOpnames.opnameDate, dateColumnBound(input.to)), eq(stockOpnames.isDemo, false), eq(stockOpnames.isHistorical, false))).orderBy(desc(stockOpnames.opnameDate), currencies.code);
 ```
 
-- [ ] **Langkah 6: Pastikan tidak ada pemanggil `date` lain yang terlewat**
+- [x] **Langkah 6: Pastikan tidak ada pemanggil `date` lain yang terlewat**
 
 ```bash
 grep -n "jakartaBusinessDate()" server/*.ts | grep -v "\.test\."
@@ -177,7 +177,7 @@ ditulis yang tersisa adalah `openingCashMovementReason` (baris 1720, membentuk t
 `getOperationalDashboard` (baris 2895, batas `datetime`). Keduanya benar apa adanya — **jangan
 diubah**. Bila ada pemanggil baru, periksa kolom tujuannya lebih dulu.
 
-- [ ] **Langkah 7: Gerbang mutu**
+- [x] **Langkah 7: Gerbang mutu**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -190,7 +190,7 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 Harapan: bersih, dan jumlah ujinya masih **522 lulus, 2 dilewati**. Laporkan angka yang benar-benar
 dilihat.
 
-- [ ] **Langkah 8: Commit**
+- [x] **Langkah 8: Commit**
 
 ```bash
 git add server/operations.ts

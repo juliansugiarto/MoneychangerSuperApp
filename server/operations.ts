@@ -1633,6 +1633,31 @@ export function jakartaBusinessDate(date = new Date()) {
   return new Date(Date.UTC(Number(value("year")), Number(value("month")) - 1, Number(value("day"))));
 }
 
+/**
+ * Nilai untuk kolom `date`: tengah malam **waktu lokal proses** pada hari yang dimaksud.
+ *
+ * mysql2 memformat `Date` memakai zona waktu proses. Sebuah `Date` tengah malam UTC terkirim
+ * sebagai "2026-09-01 07:00:00" di GMT+7, sehingga `expenseDate >= ...` menyingkirkan pengeluaran
+ * bertanggal 1 September dari laporan September itu sendiri, dan `eq()` tidak pernah cocok dengan
+ * baris yang sudah ada. Kesalahannya tidak terlihat di produksi (prosesnya berjalan pada UTC)
+ * tetapi nyata di setiap mesin pengembangan WIB — dan bentuk ini benar pada keduanya.
+ *
+ * Membaca komponen **UTC** masukannya, jadi hanya boleh diterapkan **sekali**: memberinya `Date`
+ * yang sudah tengah malam lokal justru memundurkan tanggalnya satu hari.
+ */
+const dateColumnBound = (value: Date) => new Date(`${value.toISOString().slice(0, 10)}T00:00:00`);
+
+/**
+ * Hari usaha Jakarta dalam bentuk yang aman dikirim ke kolom `date`.
+ *
+ * Dipakai setiap kali hari usaha menjadi **nilai kolom `date`** — bukan batas `datetime`. Pemanggil
+ * `jakartaBusinessDate()` yang lain sengaja dibiarkan apa adanya: mengubah fungsi itu sendiri akan
+ * menggeser batas dasbor operasional, tutup buku, opname, dan checklist sekaligus.
+ */
+export function jakartaBusinessDateColumn(date = new Date()) {
+  return dateColumnBound(jakartaBusinessDate(date));
+}
+
 export type DenominationEntryInput = { value: string; quantity: number };
 
 /** Validates a denomination breakdown against the declared total and returns rows ready to insert. Throws if it doesn't reconcile, so a movement can never be saved with a breakdown that doesn't add up. currencyCode is optional only for call sites that predate per-currency validation being wired through everywhere — new callers should always pass it. */
@@ -1729,7 +1754,8 @@ export function calculateOpeningCashAdjustment(currentBalance: string, declaredO
 
 export async function getDailyOperationalChecklist() {
   const db = await databaseOrThrow();
-  const businessDate = jakartaBusinessDate();
+  // Nilai ini menjadi isi kolom `date`, jadi harus tengah malam lokal — lihat jakartaBusinessDateColumn.
+  const businessDate = jakartaBusinessDateColumn();
   const readChecklist = async () => (await db.select().from(dailyOperationalChecklists).where(eq(dailyOperationalChecklists.businessDate, businessDate)).limit(1))[0];
   const existing = await readChecklist();
   if (existing) return existing;
@@ -1795,7 +1821,7 @@ export async function completeTransaction(transactionId: number, actor: { id: nu
     }
 
     const direction = transaction.operation === "BUY" ? "IN" as const : "OUT" as const;
-    const opnameDate = jakartaBusinessDate();
+    const opnameDate = jakartaBusinessDateColumn();
     const cashResults: { currencyId: number; before: string; after: string }[] = [];
     for (const [index, postingLine] of Array.from(postingLines.entries())) {
       await tx.insert(cashBalances).values({ currencyId: postingLine.currencyId, availableAmount: "0.000000" }).onDuplicateKeyUpdate({ set: { currencyId: sql`${cashBalances.currencyId}` } });
@@ -2305,16 +2331,6 @@ export async function createExpense(
   return (await db.select().from(operationalExpenses).where(eq(operationalExpenses.id, created.id)).limit(1))[0];
 }
 
-/**
- * Batas rentang untuk kolom `date`: tengah malam **waktu lokal proses** pada hari yang dimaksud.
- *
- * mysql2 memformat `Date` memakai zona waktu proses. Sebuah `Date` tengah malam UTC terkirim
- * sebagai "2026-09-01 07:00:00" di GMT+7, sehingga `expenseDate >= ...` menyingkirkan pengeluaran
- * bertanggal 1 September dari laporan September itu sendiri. Kesalahannya tidak terlihat di
- * produksi (prosesnya berjalan pada UTC) tetapi nyata di setiap mesin pengembangan WIB — dan
- * bentuk ini benar pada keduanya.
- */
-const dateColumnBound = (value: Date) => new Date(`${value.toISOString().slice(0, 10)}T00:00:00`);
 
 export async function listExpenses(input?: { from?: Date; to?: Date }) {
   return retryTransientDatabaseRead(async () => {
@@ -2841,7 +2857,7 @@ export async function openStockOpname(input: { currencyId: number; actorUserId: 
   const db = await databaseOrThrow();
   const currency = (await db.select().from(currencies).where(and(eq(currencies.id, input.currencyId), eq(currencies.active, true))).limit(1))[0];
   if (!currency) throw new Error("Mata uang aktif tidak ditemukan.");
-  const opnameDate = jakartaBusinessDate();
+  const opnameDate = jakartaBusinessDateColumn();
   const existing = (await db.select().from(stockOpnames).where(and(eq(stockOpnames.opnameDate, opnameDate), eq(stockOpnames.currencyId, input.currencyId), eq(stockOpnames.isDemo, false), eq(stockOpnames.isHistorical, false))).limit(1))[0];
   if (existing && !existing.isDemo && !existing.isHistorical) throw new Error("Stock opname untuk mata uang dan tanggal hari ini sudah ada.");
   const balance = (await db.select().from(cashBalances).where(eq(cashBalances.currencyId, input.currencyId)).limit(1))[0];
@@ -2999,7 +3015,7 @@ export async function getTransactionRecap(input: { from: Date; to: Date }) {
 export async function getStockOpnameReport(input: { from: Date; to: Date }) {
   return retryTransientDatabaseRead(async () => {
     const db = await databaseOrThrow();
-    const rows = await db.select({ opname: stockOpnames, currency: currencies }).from(stockOpnames).innerJoin(currencies, eq(stockOpnames.currencyId, currencies.id)).where(and(gte(stockOpnames.opnameDate, input.from), lt(stockOpnames.opnameDate, input.to), eq(stockOpnames.isDemo, false), eq(stockOpnames.isHistorical, false))).orderBy(desc(stockOpnames.opnameDate), currencies.code);
+    const rows = await db.select({ opname: stockOpnames, currency: currencies }).from(stockOpnames).innerJoin(currencies, eq(stockOpnames.currencyId, currencies.id)).where(and(gte(stockOpnames.opnameDate, dateColumnBound(input.from)), lt(stockOpnames.opnameDate, dateColumnBound(input.to)), eq(stockOpnames.isDemo, false), eq(stockOpnames.isHistorical, false))).orderBy(desc(stockOpnames.opnameDate), currencies.code);
     return rows.filter(({ opname }) => !opname.isDemo && !opname.isHistorical);
   });
 }
