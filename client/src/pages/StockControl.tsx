@@ -71,8 +71,11 @@ function KasAwalPanel() {
   const isComplete = denominations.length > 0 && denominations.every((row) => row.value && row.quantity);
 
   const opening = trpc.cash.recordOpening.useMutation({
-    onSuccess: ({ currencyCode, openingAmount: amount }) => {
+    onSuccess: ({ currencyCode, openingAmount: amount, capitalWarning }) => {
       toast.success(`Kas awal ${currencyCode} sebesar ${formatPlainAmount(amount)} berhasil dicatat, termasuk rincian pecahannya.`);
+      // Durasinya lebih panjang daripada toast biasa: isinya menuntut tindakan dan tidak boleh
+      // hilang sebelum sempat dibaca. Bukan toast.error — pencatatannya sendiri berhasil.
+      if (capitalWarning) toast.warning(capitalWarning, { duration: 12000 });
       setOpeningAmount(""); setOpeningNotes(""); setDenominations([emptyRow()]); setSelectedCurrency(null);
       utils.cash.balances.invalidate(); utils.cash.denominationBalances.invalidate(); utils.dashboard.overview.invalidate();
     },

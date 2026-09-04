@@ -2585,8 +2585,26 @@ export async function recordOpeningCash(input: { currencyId: number; openingAmou
       await tx.insert(cashDenominationEntries).values(denominationRows.map((row) => ({ ...row, cashBalanceMovementId: movement.id })));
       await resetDenominationBalances(tx, input.currencyId, denominationRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })));
     }
-    await writeAudit({ actorUserId: actor.id, action: "OPENING_CASH_RECORDED", entityType: "cash_balance", entityId: String(balance.id), beforeState: { availableAmount: before.toFixed(6) }, afterState: { availableAmount: declaredAmount.toFixed(6), currency: currency.code }, reason: input.notes?.trim() || null, metadata: { movementReason: reason, adjustment: adjustment.toFixed(6), denominationCount: denominationRows.length } });
-    return { balanceId: balance.id, currencyCode: currency.code, beforeAmount: before.toFixed(6), openingAmount: declaredAmount.toFixed(6) };
+    // Kas awal pertama untuk sebuah mata uang sengaja tidak dijurnal — asal uangnya belum tercatat.
+    // Diberi tahu di sini, di tempat orang mencatatnya, bukan hanya di peringatan laporan keuangan.
+    // Peringatan, bukan penolakan: modal bisa saja masuk lewat rekening bank, atau outlet ini
+    // melanjutkan pembukuan lama. Menghalangi operasional demi kerapian pembukuan bukan urutan
+    // prioritas yang benar.
+    //
+    // Syarat before.isZero() disengaja: peringatan hanya relevan pada hitungan kas pertama. Setelah
+    // saldo berjalan ada, mutasi OPENING berikutnya dijurnal sebagai selisih hitung kas dan tidak
+    // memerlukan modal apa pun.
+    let capitalWarning: string | null = null;
+    if (currency.code.trim().toUpperCase() === "IDR" && before.isZero()) {
+      const capital = (await tx.select({ id: cashBalanceMovements.id }).from(cashBalanceMovements)
+        .where(and(eq(cashBalanceMovements.cashBalanceId, balance.id), eq(cashBalanceMovements.category, "CAPITAL_INJECTION")))
+        .limit(1))[0];
+      if (!capital) {
+        capitalWarning = "Setoran modal belum pernah dicatat, sehingga kas awal Rupiah ini tidak akan dijurnal ke buku besar. Catat setoran modal lewat tab Modal & Bank, lalu jalankan penjurnalan.";
+      }
+    }
+    await writeAudit({ actorUserId: actor.id, action: "OPENING_CASH_RECORDED", entityType: "cash_balance", entityId: String(balance.id), beforeState: { availableAmount: before.toFixed(6) }, afterState: { availableAmount: declaredAmount.toFixed(6), currency: currency.code }, reason: input.notes?.trim() || null, metadata: { movementReason: reason, adjustment: adjustment.toFixed(6), denominationCount: denominationRows.length, capitalWarning: Boolean(capitalWarning) } });
+    return { balanceId: balance.id, currencyCode: currency.code, beforeAmount: before.toFixed(6), openingAmount: declaredAmount.toFixed(6), capitalWarning };
   });
 }
 

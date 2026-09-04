@@ -24,7 +24,7 @@ satu pun jalur penulisan uang baru.
 Pengerjaan di ROADMAP.
 
 - [x] Tugas 1 — Kartu "Modal disetor" dan urutan langkah go-live
-- [ ] Tugas 2 — Peringatan urutan pada pencatatan kas awal
+- [x] Tugas 2 — Peringatan urutan pada pencatatan kas awal
 - [ ] Tugas 3 — Uji dan dokumentasi
 
 Urutannya mengikat: 2 sebelum 3. Tugas 1 boleh dikerjakan kapan saja.
@@ -163,7 +163,7 @@ git commit -m "Modal disetor menjadi langkah persiapan tersendiri sebelum kas aw
 - Consumes: `cashBalanceMovements.category`, nilai `CAPITAL_INJECTION` dari paket A
 - Produces: `recordOpeningCash` mengembalikan `capitalWarning: string | null` — dipakai tugas 3
 
-- [ ] **Langkah 1: Kembalikan peringatan dari `recordOpeningCash`**
+- [x] **Langkah 1: Kembalikan peringatan dari `recordOpeningCash`**
 
 Di dalam transaksi `recordOpeningCash` (`server/operations.ts:2548`), setelah baris saldo dikunci
 dan **sebelum** `writeAudit`, tambahkan pemeriksaannya. Peringatan hanya berlaku untuk Rupiah:
@@ -199,7 +199,7 @@ jejak auditnya mencatat bahwa peringatan itu memang dimunculkan.
 > saldo berjalan ada, mutasi `OPENING` berikutnya dijurnal sebagai selisih hitung kas dan tidak
 > memerlukan modal apa pun.
 
-- [ ] **Langkah 2: Tampilkan peringatannya**
+- [x] **Langkah 2: Tampilkan peringatannya**
 
 Di `client/src/pages/StockControl.tsx`, pada `onSuccess` mutasi `opening` (sekitar baris 73):
 
@@ -217,7 +217,7 @@ tidak boleh hilang sebelum sempat dibaca. Bila `toast.warning` tidak tersedia pa
 dipakai, gunakan `toast` biasa dengan ikon peringatan — **jangan** memakai `toast.error`, karena
 pencatatannya sendiri berhasil.
 
-- [ ] **Langkah 3: Gerbang mutu dan commit**
+- [x] **Langkah 3: Gerbang mutu dan commit**
 
 ```bash
 ./node_modules/.bin/vitest run
