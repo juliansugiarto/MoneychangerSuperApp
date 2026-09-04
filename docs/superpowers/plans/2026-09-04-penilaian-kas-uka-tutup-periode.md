@@ -19,7 +19,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 2 — Penilaian kurs tengah murni di `shared/`
 - [x] Tugas 3 — Pemetaan jurnal penutupan dan penutup laba
 - [x] Tugas 4 — `buildPeriodValuation`: bukti kuantitas dan kurs
-- [ ] Tugas 5 — `postPeriodClosing`: tulis penilaian dan jurnalnya
+- [x] Tugas 5 — `postPeriodClosing`: tulis penilaian dan jurnalnya
 - [ ] Tugas 6 — Penutup laba tahunan dan gerbang `closeAccountingPeriod`
 - [ ] Tugas 7 — Neraca memakai laba sejak penutupan tahunan terakhir
 - [ ] Tugas 8 — Tiga prosedur tRPC
@@ -803,7 +803,7 @@ git commit -m "Bukti kuantitas dan kurs penutup untuk penilaian persediaan UKA"
 - Produces: `postPeriodClosing(input: { periodId: number }, actor: { id: number }): Promise<{ periodId: number; entryNumber: string | null; rows: CurrencyValuationRow[]; skipped: string | null }>`.
   Dipakai tugas 8.
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 Buat `server/periodClosingPosting.test.ts` dengan `buildPeriodValuation` dan `postJournalEntry`
 di-mock. Uji yang wajib ada:
@@ -822,13 +822,13 @@ di-mock. Uji yang wajib ada:
    tanpa jurnalnya terlihat seperti penutupan yang sah padahal bukan.
 7. Menulis `writeAudit` dengan aksi `PERIOD_CLOSING_VALUATION_POSTED` beserta nilai per mata uang.
 
-- [ ] **Step 2: Jalankan uji, pastikan gagal**
+- [x] **Step 2: Jalankan uji, pastikan gagal**
 
 ```bash
 ./node_modules/.bin/vitest run server/periodClosingPosting.test.ts
 ```
 
-- [ ] **Step 3: Tulis implementasi**
+- [x] **Step 3: Tulis implementasi**
 
 Kerangkanya:
 
@@ -858,14 +858,14 @@ export async function postPeriodClosing(input: { periodId: number }, actor: { id
 }
 ```
 
-- [ ] **Step 4: Jalankan uji dan gerbang mutu**
+- [x] **Step 4: Jalankan uji dan gerbang mutu**
 
 ```bash
 ./node_modules/.bin/vitest run server/periodClosingPosting.test.ts
 ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vitest run
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/periodClosing.ts server/periodClosingPosting.test.ts

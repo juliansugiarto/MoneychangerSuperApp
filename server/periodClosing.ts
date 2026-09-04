@@ -18,12 +18,15 @@ import {
   accountingPeriods,
   cashBalances,
   currencies,
+  journalEntries,
   periodClosingValuations,
   rateReferenceSnapshots,
   stockOpnames,
 } from "../drizzle/schema";
 import { valueForeignInventory } from "../shared/inventoryValuation";
-import { databaseOrThrow, getOpnameSystemCounts, retryTransientDatabaseRead } from "./operations";
+import { isSkipped, mapPeriodInventoryClosing } from "../shared/journalMapping";
+import { postJournalEntry } from "./ledgerOperations";
+import { databaseOrThrow, getOpnameSystemCounts, retryTransientDatabaseRead, writeAudit } from "./operations";
 
 /**
  * Tanggal yang dikirim ke kolom `date`.
@@ -192,9 +195,12 @@ export async function buildPeriodValuation(periodId: number): Promise<PeriodValu
       if (!opname) {
         // Mata uang yang stoknya memang kosong tidak menghalangi penutupan: tidak ada yang perlu
         // dihitung, dan menuntut opname atas nol lembar uang hanya melatih orang menekan "kirim".
-        const counts = await getOpnameSystemCounts(currency.currencyId);
-        const safeIsEmpty = counts.safe.every((entry) => Number(entry.quantity) === 0);
-        if (new Decimal(currency.availableAmount).isZero() && safeIsEmpty) continue;
+        // Stok laci diperiksa lebih dulu karena sudah ada di tangan: mata uang yang lacinya berisi
+        // sudah pasti menghalangi, dan menanyakan isi brankasnya hanya menambah kueri.
+        if (new Decimal(currency.availableAmount).isZero()) {
+          const counts = await getOpnameSystemCounts(currency.currencyId);
+          if (counts.safe.every((entry) => Number(entry.quantity) === 0)) continue;
+        }
         blockers.push({
           currencyCode: currency.currencyCode,
           reason: `belum ada stock opname yang sudah ditinjau antara ${periodStart} dan ${periodEnd}`,
@@ -298,4 +304,133 @@ export async function buildPeriodValuation(periodId: number): Promise<PeriodValu
       profitClosingPostedAt: period.profitClosingPostedAt,
     };
   });
+}
+
+/**
+ * Kunci sumber jurnal penutupan sebuah periode.
+ *
+ * Bersama `sourceType` ia membentuk kunci unik `journal_entries_source_uq` yang sudah ada, sehingga
+ * penutupan yang dijalankan dua kali tidak pernah menghasilkan jurnal ganda — bukan karena kodenya
+ * berhati-hati, melainkan karena basis datanya menolak.
+ */
+export const periodClosingSourceReference = (periodId: number) => `TUTUP-${periodId}`;
+
+/**
+ * Menjalankan penilaian persediaan akhir periode: menulis barisnya, menjurnalnya, dan menandai
+ * periodenya sudah dinilai.
+ *
+ * Angkanya tidak dihitung ulang di sini — seluruhnya datang dari `buildPeriodValuation`, yang juga
+ * dipakai panel untuk menampilkannya sebelum tombol ditekan. Itu membuat angka yang dilihat
+ * pengguna dan angka yang dijurnal server mustahil berbeda.
+ *
+ * Penutupan tidak pernah berjalan sebagian: satu penghalang saja membatalkan seluruhnya. Buku besar
+ * yang setengah tertutup jauh lebih sulit ditelusuri daripada buku besar yang belum ditutup.
+ */
+export async function postPeriodClosing(input: { periodId: number }, actor: { id: number }) {
+  const valuation = await buildPeriodValuation(input.periodId);
+  if (valuation.status === "DITUTUP") {
+    throw new Error("Periode ini sudah ditutup; penilaiannya tidak dapat diulang.");
+  }
+  if (valuation.valuationPostedAt) {
+    throw new Error("Penilaian periode ini sudah dijalankan; balik jurnalnya lebih dulu bila angkanya perlu diperbaiki.");
+  }
+  if (valuation.blockers.length) {
+    const detail = valuation.blockers.map((blocker) => `${blocker.currencyCode} (${blocker.reason})`).join(", ");
+    throw new Error(`Penilaian tidak dapat dijalankan: ${detail}.`);
+  }
+
+  const db = await databaseOrThrow();
+  const memo = `Penutupan periode ${valuation.periodStart} s.d. ${valuation.periodEnd}`;
+  const sourceReference = periodClosingSourceReference(input.periodId);
+  const mapped = mapPeriodInventoryClosing({
+    priorClosingValue: valuation.priorClosingValue,
+    closingValue: valuation.closingValue,
+    memo,
+  });
+
+  let entry: { id: number; entryNumber: string } | null = null;
+  if (!isSkipped(mapped)) {
+    // Percobaan sebelumnya boleh saja gagal setelah jurnalnya tertulis tetapi sebelum penanda
+    // periodenya tersimpan. Memakai ulang jurnal itu memulihkan keadaan tersebut; menulis yang
+    // kedua hanya akan menabrak kunci unik dan mengunci periodenya selamanya.
+    const existing = (
+      await db
+        .select({ id: journalEntries.id, entryNumber: journalEntries.entryNumber })
+        .from(journalEntries)
+        .where(and(eq(journalEntries.sourceType, "TUTUP_PERIODE"), eq(journalEntries.sourceReference, sourceReference)))
+        .limit(1)
+    )[0];
+    entry =
+      existing ??
+      (await postJournalEntry(
+        {
+          entryDate: dbDate(valuation.periodEnd),
+          description: memo,
+          sourceType: "TUTUP_PERIODE",
+          sourceReference,
+          lines: mapped.lines,
+        },
+        actor,
+      ));
+  }
+
+  const postedAt = new Date();
+  // Baris penilaian dan penanda periodenya harus jatuh bersama. Baris tanpa penanda membuat
+  // penutupan tampak belum berjalan padahal jurnalnya sudah ada; penanda tanpa baris membuat pos
+  // "Kas UKA" pada neraca kehilangan bukti barisnya — persis yang temuan 7.1 permasalahkan.
+  await db.transaction(async (tx) => {
+    await tx.delete(periodClosingValuations).where(eq(periodClosingValuations.periodId, input.periodId));
+    if (valuation.rows.length) {
+      await tx.insert(periodClosingValuations).values(
+        valuation.rows.map((row) => ({
+          periodId: input.periodId,
+          currencyId: row.currencyId,
+          quantity: row.quantity,
+          stockOpnameId: row.stockOpnameId,
+          opnameDate: dbDate(row.opnameDate),
+          rateSnapshotId: row.rateSnapshotId,
+          rateReferenceDate: dbDate(row.rateReferenceDate),
+          buyRate: row.buyRate,
+          sellRate: row.sellRate,
+          quoteUnit: row.quoteUnit,
+          midRatePerUnit: row.midRatePerUnit,
+          rupiahValue: row.rupiahValue,
+        })),
+      );
+    }
+    await tx
+      .update(accountingPeriods)
+      .set({ valuationPostedAt: postedAt, valuationJournalEntryId: entry?.id ?? null })
+      .where(eq(accountingPeriods.id, input.periodId));
+  });
+
+  await writeAudit({
+    actorUserId: actor.id,
+    action: "PERIOD_CLOSING_VALUATION_POSTED",
+    entityType: "accounting_periods",
+    entityId: String(input.periodId),
+    afterState: {
+      periodStart: valuation.periodStart,
+      periodEnd: valuation.periodEnd,
+      entryNumber: entry?.entryNumber ?? null,
+      priorClosingValue: valuation.priorClosingValue,
+      closingValue: valuation.closingValue,
+      currencies: valuation.rows.map((row) => ({
+        currencyCode: row.currencyCode,
+        quantity: row.quantity,
+        opnameDate: row.opnameDate,
+        rateReferenceDate: row.rateReferenceDate,
+        midRatePerUnit: row.midRatePerUnit,
+        rupiahValue: row.rupiahValue,
+      })),
+    },
+    reason: isSkipped(mapped) ? mapped.skipped : null,
+  });
+
+  return {
+    periodId: input.periodId,
+    entryNumber: entry?.entryNumber ?? null,
+    rows: valuation.rows,
+    skipped: isSkipped(mapped) ? mapped.skipped : null,
+  };
 }
