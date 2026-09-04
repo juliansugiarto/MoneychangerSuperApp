@@ -220,6 +220,30 @@ Gunakan **Laporan** untuk melihat ringkasan yang disediakan dan **Jejak Audit** 
 - Jumlah transaksi **Selesai**, turnover total, total beli dan total jual (Rupiah) untuk periode tsb — hanya bon yang sudah terposting ke kas/stok yang dihitung (DRAFT/PENDING_REVIEW/APPROVED/RETURNED/CANCELLED tidak masuk hitungan).
 - **Estimasi margin kotor** per mata uang dan totalnya, dihitung dengan metode **rata-rata tertimbang**: kurs jual rata-rata dikurangi kurs beli rata-rata, dikalikan volume yang lebih kecil di antara total beli/jual mata uang tsb pada periode itu. Ini **bukan** perhitungan laba akuntansi penuh berbasis FIFO (sistem belum melacak lot valuta mana yang terjual dari pembelian mana) — perlakukan sebagai indikasi kasar, bukan angka final untuk laporan keuangan resmi.
 
+### 6.4 Penutupan Periode Pembukuan — Controller ke atas
+
+Buka **Buku Besar → Periode**. Setiap periode terbuka punya tombol **Penutupan periode** yang membuka panel penilaian persediaan akhir UKA. Urutannya mengikat dan tidak dapat dilompati:
+
+1. **Stock opname akhir bulan sudah ditinjau** (§5.6 langkah 4–5). Penilaian hanya menerima opname berstatus **RECONCILED** atau **VARIANCE** — hitungan fisik yang belum ditinjau bukan bukti. Opname yang masih OPEN atau SUBMITTED akan muncul sebagai penghalang.
+2. **Jalankan penilaian.** Panel menampilkan, per mata uang: kuantitas hasil hitung fisik, tanggal opname yang dipakai, kurs tengah BI, tanggal kurs yang dipakai, dan nilai Rupiahnya. Di bawahnya tertera **Persediaan awal (5-1100)** dan **Persediaan akhir (5-1300)** — itulah angka yang akan dijurnal, terlihat **sebelum** tombolnya ditekan. Kurs tengah adalah (kurs beli + kurs jual) ÷ 2, dibagi satuan kuotasi BI (JPY dikutip per 100 unit).
+3. **Khusus periode yang berakhir 31 Desember:** tombol **Jurnal penutup laba tahunan** muncul setelah penilaian dijalankan. Ia memindahkan seluruh saldo laba rugi tahun itu ke 3-2100 Laba Ditahan. Wajib dijalankan sebelum periodenya dapat ditutup.
+4. **Tutup periode.** Tombolnya tetap tidak aktif selama penilaian belum dijalankan, dan pada Desember selama penutup labanya belum dijalankan.
+
+**Tanggal opname atau tanggal kurs yang berbeda dari akhir periode diberi tanda "Mundur dari akhir periode".** Itu keadaan sah, bukan kekeliruan: outlet tidak menghitung uang pada hari tutup, dan BI tidak mengumumkan kurs pada Sabtu, Minggu, dan hari libur. Yang dipakai adalah opname terakhir di dalam periode dan snapshot kurs terakhir yang tidak melewati akhir periode. Tanggal yang benar-benar dipakai disimpan pada baris penilaian dan jejak audit, sehingga pemeriksa dapat menunjuknya — pemunduran tanggal tidak pernah terjadi diam-diam.
+
+**Bila muncul penghalang,** tombol penilaian tidak aktif dan daftar penghalang menyebut mata uang beserta alasannya. Penutupan **tidak pernah berjalan sebagian** — satu penghalang membatalkan seluruhnya, karena buku besar yang setengah tertutup jauh lebih sulit ditelusuri daripada yang belum ditutup. Yang harus dilakukan:
+
+| Penghalang | Tindakan |
+|---|---|
+| Belum ada stock opname yang sudah ditinjau di dalam periode | Lakukan opname untuk mata uang itu (§5.6), lalu minta Supervisor meninjaunya |
+| Opname masih berstatus OPEN atau SUBMITTED | Minta peninjauan opname tersebut |
+| Opname tidak memuat hitungan fisik | Ulangi opname beserta rincian pecahannya |
+| Tidak ada kurs BI sampai akhir periode, atau kurs terakhir jatuh sebelum periode dimulai | Jalankan sinkronisasi kurs BI lebih dulu; jangan menyisipkan snapshot bertanggal manual |
+
+Mata uang yang stoknya memang nol — laci kosong dan brankas kosong — dilewati tanpa penghalang dan tanpa baris penilaian. IDR tidak pernah ikut dinilai: kas Rupiah sudah tercatat pada 1-1110, dan menilainya lagi pada 1-1210 akan menghitungnya dua kali sementara neracanya tetap seimbang.
+
+Penilaian yang sudah dijalankan **tidak dapat diulang**. Bila angkanya perlu diperbaiki, catat jurnal baliknya lebih dulu seperti koreksi jurnal lainnya.
+
 ## 7. Pelaporan Regulator Internal
 
 Halaman **Pelaporan Regulator** adalah pusat persiapan internal. Halaman ini tidak terhubung untuk submit otomatis ke Bank Indonesia atau regulator lain.

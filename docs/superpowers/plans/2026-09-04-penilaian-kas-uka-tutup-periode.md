@@ -24,7 +24,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 7 — Neraca memakai laba sejak penutupan tahunan terakhir
 - [x] Tugas 8 — Tiga prosedur tRPC
 - [x] Tugas 9 — Panel Penutupan Periode
-- [ ] Tugas 10 — Skenario menyeluruh dan dokumentasi
+- [x] Tugas 10 — Skenario menyeluruh dan dokumentasi
 
 Urutannya mengikat: 1 sebelum 4–6; 2 dan 3 sebelum 5; 5 sebelum 6; 8 sebelum 9. Tugas 7 berdiri
 sendiri dan boleh dikerjakan kapan saja setelah 6. Tugas 10 terakhir.
@@ -1177,7 +1177,7 @@ git commit -m "Panel Penutupan Periode pada tab Periode Buku Besar"
 - Consumes: seluruh tugas sebelumnya.
 - Produces: bukti bahwa dua periode berurutan tersambung dengan benar.
 
-- [ ] **Step 1: Skenario dua periode berurutan**
+- [x] **Step 1: Skenario dua periode berurutan**
 
 Uji Vitest atas fungsi, dengan `getDb` dipalsukan — **jangan** membuat data di basis data lokal.
 Yang harus dibuktikan:
@@ -1190,18 +1190,18 @@ Yang harus dibuktikan:
 4. Menutup Desember tanpa penutup laba ditolak; setelah penutup laba dijalankan, 3-2100 memuat laba
    tahun itu dan neraca tetap seimbang.
 
-- [ ] **Step 2: Perbarui panduan A–Z**
+- [x] **Step 2: Perbarui panduan A–Z**
 
 Tambahkan langkah penutupan periode: urutannya (opname akhir bulan → penilaian → penutup laba bila
 Desember → tutup periode), arti kolom tanggal opname/kurs yang berbeda, dan apa yang harus dilakukan
 bila muncul penghalang.
 
-- [ ] **Step 3: Perbarui skema database**
+- [x] **Step 3: Perbarui skema database**
 
 Tabel `period_closing_valuations` dan empat kolom baru `accounting_periods`, beserta alasan kolom
 penanda dipisahkan dari baris penilaian.
 
-- [ ] **Step 4: Gerbang akhir**
+- [x] **Step 4: Gerbang akhir**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -1211,12 +1211,12 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 Sebutkan jumlah uji yang **benar-benar dilihat** pada laporan; baseline sebelum paket ini 551 lulus,
 2 dilewati, 81 berkas.
 
-- [ ] **Step 5: Tinjau `todo-jp0taelo.md` dan centang ROADMAP**
+- [x] **Step 5: Tinjau `todo-jp0taelo.md` dan centang ROADMAP**
 
 Centang seluruh Tugas 1–10 Paket C pada `docs/superpowers/ROADMAP-SISA-PEKERJAAN.md`, dan tandai
 butir yang selesai pada `todo-jp0taelo.md`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add server/periodClosingScenario.test.ts docs todo-jp0taelo.md
