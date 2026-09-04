@@ -23,11 +23,12 @@ import {
   fixedAssetDepreciationEntries,
   fixedAssetSettings,
   fixedAssets,
+  journalEntries,
   type fixedAssetCategories,
   type fixedAssetTaxGroups,
 } from "../drizzle/schema";
 import { depreciationForMonth, depreciationSchedule, monthKey } from "../shared/depreciation";
-import { isSkipped, mapFixedAssetAcquisition } from "../shared/journalMapping";
+import { isSkipped, mapFixedAssetAcquisition, mapMonthlyDepreciation } from "../shared/journalMapping";
 import { calendarDay } from "../shared/ledger";
 import { postJournalEntry } from "./ledgerOperations";
 import { databaseOrThrow, retryTransientDatabaseRead, writeAudit } from "./operations";
@@ -474,4 +475,112 @@ export async function buildMonthlyDepreciation(periodId: number): Promise<Monthl
       depreciationPostedAt: period.depreciationPostedAt,
     };
   });
+}
+
+export const monthlyDepreciationSourceReference = (periodMonth: string) => `SUSUT-${periodMonth}`;
+
+/**
+ * Menjurnal penyusutan sebuah bulan: menulis rinciannya, jurnalnya, dan menandai periodenya.
+ *
+ * Angkanya tidak dihitung ulang di sini — seluruhnya datang dari `buildMonthlyDepreciation`, yang
+ * juga dipakai panel untuk menampilkannya sebelum tombol ditekan. Itu membuat angka yang dilihat
+ * pengguna dan angka yang dijurnal server mustahil berbeda.
+ *
+ * Penyusutan tidak pernah berjalan sebagian: satu penghalang saja membatalkan seluruhnya. Buku
+ * besar yang setengah disusutkan jauh lebih sulit ditelusuri daripada yang belum disusutkan.
+ */
+export async function postMonthlyDepreciation(input: { periodId: number }, actor: { id: number }) {
+  const plan = await buildMonthlyDepreciation(input.periodId);
+  if (plan.status === "DITUTUP") {
+    throw new Error("Periode ini sudah ditutup; penyusutannya tidak dapat dijalankan lagi.");
+  }
+  if (plan.depreciationPostedAt) {
+    throw new Error(
+      "Penyusutan periode ini sudah dijalankan; balik jurnalnya lebih dulu bila angkanya perlu diperbaiki.",
+    );
+  }
+  if (plan.blockers.length) {
+    const detail = plan.blockers.map((blocker) => `${blocker.assetName} (${blocker.reason})`).join(", ");
+    throw new Error(`Penyusutan tidak dapat dijalankan: ${detail}.`);
+  }
+
+  const db = await databaseOrThrow();
+  const sourceReference = monthlyDepreciationSourceReference(plan.periodMonth);
+  const mapped = mapMonthlyDepreciation({ totalCharge: plan.totalCharge, month: plan.periodMonth });
+
+  let entry: { id: number; entryNumber: string } | null = null;
+  if (!isSkipped(mapped)) {
+    // Percobaan sebelumnya boleh saja gagal setelah jurnalnya tertulis tetapi sebelum penanda
+    // periodenya tersimpan. Memakai ulang jurnal itu memulihkan keadaan tersebut; menulis yang
+    // kedua hanya akan menabrak kunci unik dan mengunci bulan itu selamanya.
+    const existing = (
+      await db
+        .select({ id: journalEntries.id, entryNumber: journalEntries.entryNumber })
+        .from(journalEntries)
+        .where(and(eq(journalEntries.sourceType, "PENYUSUTAN"), eq(journalEntries.sourceReference, sourceReference)))
+        .limit(1)
+    )[0];
+    entry =
+      existing ??
+      (await postJournalEntry(
+        {
+          entryDate: dbDate(plan.periodEnd),
+          description: `Penyusutan aset tetap ${plan.periodMonth}`,
+          sourceType: "PENYUSUTAN",
+          sourceReference,
+          lines: mapped.lines,
+        },
+        actor,
+      ));
+  }
+
+  const postedAt = new Date();
+  // Baris rincian dan penanda periodenya harus jatuh bersama. Baris tanpa penanda membuat
+  // penyusutan tampak belum berjalan padahal jurnalnya sudah ada; penanda tanpa baris membuat
+  // beban 6-1700 kehilangan bukti per asetnya — persis yang temuan 7.1 permasalahkan.
+  await db.transaction(async (tx) => {
+    if (plan.rows.length && entry) {
+      await tx.insert(fixedAssetDepreciationEntries).values(
+        plan.rows.map((row) => ({
+          assetId: row.assetId,
+          periodMonth: plan.periodMonth,
+          periodId: plan.periodId,
+          charge: row.charge,
+          accumulatedAfter: row.accumulatedAfter,
+          carryingAfter: row.carryingAfter,
+          journalEntryId: entry.id,
+        })),
+      );
+    }
+    await tx
+      .update(accountingPeriods)
+      .set({ depreciationPostedAt: postedAt, depreciationJournalEntryId: entry?.id ?? null })
+      .where(eq(accountingPeriods.id, input.periodId));
+  });
+
+  await writeAudit({
+    actorUserId: actor.id,
+    action: "MONTHLY_DEPRECIATION_POSTED",
+    entityType: "accounting_periods",
+    entityId: String(input.periodId),
+    afterState: {
+      periodMonth: plan.periodMonth,
+      entryNumber: entry?.entryNumber ?? null,
+      totalCharge: plan.totalCharge,
+      assets: plan.rows.map((row) => ({
+        assetId: row.assetId,
+        assetName: row.assetName,
+        charge: row.charge,
+        accumulatedAfter: row.accumulatedAfter,
+      })),
+    },
+    reason: isSkipped(mapped) ? mapped.skipped : null,
+  });
+
+  return {
+    periodId: input.periodId,
+    entryNumber: entry?.entryNumber ?? null,
+    rows: plan.rows,
+    skipped: isSkipped(mapped) ? mapped.skipped : null,
+  };
 }
