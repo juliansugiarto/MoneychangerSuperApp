@@ -1154,6 +1154,15 @@ export const accountingPeriods = mysqlTable("accounting_periods", {
   /** Penanda jurnal penutup laba ke 3-2100; hanya periode yang berakhir 31 Desember mengisinya. */
   profitClosingPostedAt: datetime("profitClosingPostedAt"),
   profitClosingJournalEntryId: int("profitClosingJournalEntryId"),
+  /**
+   * Penanda bahwa penyusutan bulan ini sudah dijurnal.
+   *
+   * Kolom, bukan hitungan baris: outlet tanpa aset tersusutkan menghasilkan nol baris beban, dan
+   * itu keadaan sah yang tetap harus bisa ditutup. Menghitung baris akan mencampur "belum
+   * disusutkan" dengan "sudah disusutkan, hasilnya memang kosong".
+   */
+  depreciationPostedAt: datetime("depreciationPostedAt"),
+  depreciationJournalEntryId: int("depreciationJournalEntryId"),
   createdByUserId: int("createdByUserId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -1200,6 +1209,118 @@ export const periodClosingValuations = mysqlTable("period_closing_valuations", {
 
 export type PeriodClosingValuation = typeof periodClosingValuations.$inferSelect;
 
+export const fixedAssetCategories = [
+  "TANAH",
+  "BANGUNAN",
+  "KENDARAAN",
+  "PERALATAN_KANTOR",
+  "PERANGKAT_KERAS",
+  "PERANGKAT_LUNAK",
+  "INVENTARIS_LAIN",
+] as const;
+
+/**
+ * Kelompok penyusutan DJP. **Hanya label asal default umur manfaat**, bukan kebijakan akuntansi:
+ * SAK EP Bab 17 menuntut umur manfaat sebenarnya yang ditinjau tahunan, sementara kelompok ini
+ * aturan pajak (PMK 72/2023). Karena itu `usefulLifeMonths` disimpan terpisah dan dapat berbeda.
+ */
+export const fixedAssetTaxGroups = [
+  "KELOMPOK_1",
+  "KELOMPOK_2",
+  "KELOMPOK_3",
+  "KELOMPOK_4",
+  "BANGUNAN_PERMANEN",
+  "BANGUNAN_NON_PERMANEN",
+  "TIDAK_DISUSUTKAN",
+] as const;
+
+/**
+ * Register aset tetap.
+ *
+ * Baris Penyusutan pada B0003 tidak punya asal sampai tabel ini ada. Setiap beban penyusutan dapat
+ * ditelusuri kembali ke satu baris di sini beserta harga perolehan, tanggal, dan umur manfaat yang
+ * dipakai menghitungnya — jawaban atas temuan 7.1 pada tingkat baris.
+ *
+ * `acquisitionJournalEntryId` NULL menandai **aset warisan**: aset yang sudah dimiliki sebelum buku
+ * besar ini dipakai, yang saldo 1-1510 dan 1-1520-nya masuk lewat jalur `SALDO_AWAL` yang sudah ada.
+ * Register tidak boleh menjadi modul kedua yang menulis saldo awal.
+ */
+export const fixedAssets = mysqlTable("fixed_assets", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Nomor inventaris fisik yang tertempel di asetnya; boleh kosong, unik bila diisi. */
+  assetCode: varchar("assetCode", { length: 60 }),
+  name: varchar("name", { length: 200 }).notNull(),
+  category: mysqlEnum("category", fixedAssetCategories).notNull(),
+  taxGroup: mysqlEnum("taxGroup", fixedAssetTaxGroups),
+  acquisitionDate: date("acquisitionDate").notNull(),
+  acquisitionCost: decimal("acquisitionCost", { precision: 24, scale: 2 }).notNull(),
+  residualValue: decimal("residualValue", { precision: 24, scale: 2 }).default("0.00").notNull(),
+  /** NULL berarti tidak disusutkan. Tanah, dan hanya tanah, secara sah tidak pernah menyusut. */
+  usefulLifeMonths: int("usefulLifeMonths"),
+  /** Bulan pertama yang boleh dijurnal sistem, "YYYY-MM". Sengaja bukan kolom `date`. */
+  firstJournalMonth: varchar("firstJournalMonth", { length: 7 }).notNull(),
+  /** Akumulasi yang sudah tercatat sebelum `firstJournalMonth`; nol untuk aset yang baru dibeli. */
+  openingAccumulatedDepreciation: decimal("openingAccumulatedDepreciation", { precision: 24, scale: 2 }).default("0.00").notNull(),
+  /** NULL menandai aset warisan — lihat keterangan tabel. */
+  acquisitionJournalEntryId: int("acquisitionJournalEntryId"),
+  status: mysqlEnum("status", ["AKTIF", "DILEPAS"]).default("AKTIF").notNull(),
+  disposalDate: date("disposalDate"),
+  disposalProceeds: decimal("disposalProceeds", { precision: 24, scale: 2 }),
+  disposalJournalEntryId: int("disposalJournalEntryId"),
+  disposalNotes: text("disposalNotes"),
+  notes: text("notes"),
+  recordedByUserId: int("recordedByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("fixed_assets_code_uq").on(table.assetCode),
+  index("fixed_assets_status_idx").on(table.status, table.acquisitionDate),
+  index("fixed_assets_category_idx").on(table.category),
+]);
+
+export type FixedAsset = typeof fixedAssets.$inferSelect;
+
+/**
+ * Beban penyusutan per aset per bulan yang **benar-benar dijurnal**.
+ *
+ * Bukan jadwal teoretis: baris hanya ada untuk bulan yang jurnalnya sudah ditulis. Pelepasan
+ * membaca akumulasi dari sini, bukan dari jadwalnya, karena bulan yang belum dijurnal belum pernah
+ * menyentuh 1-1520 — mengeluarkan lebih banyak daripada yang pernah masuk membuat neracanya tetap
+ * seimbang sementara angkanya salah.
+ */
+export const fixedAssetDepreciationEntries = mysqlTable("fixed_asset_depreciation_entries", {
+  id: int("id").autoincrement().primaryKey(),
+  assetId: int("assetId").notNull(),
+  /** "YYYY-MM". */
+  periodMonth: varchar("periodMonth", { length: 7 }).notNull(),
+  periodId: int("periodId").notNull(),
+  charge: decimal("charge", { precision: 24, scale: 2 }).notNull(),
+  accumulatedAfter: decimal("accumulatedAfter", { precision: 24, scale: 2 }).notNull(),
+  carryingAfter: decimal("carryingAfter", { precision: 24, scale: 2 }).notNull(),
+  journalEntryId: int("journalEntryId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("fixed_asset_depreciation_asset_month_uq").on(table.assetId, table.periodMonth),
+  index("fixed_asset_depreciation_month_idx").on(table.periodMonth),
+  index("fixed_asset_depreciation_period_idx").on(table.periodId),
+]);
+
+export type FixedAssetDepreciationEntry = typeof fixedAssetDepreciationEntries.$inferSelect;
+
+/**
+ * Kebijakan akuntansi aset tetap. Satu baris, `id = 1`.
+ *
+ * Sengaja **bukan** kolom pada `operational_settings`: tabel itu menyatakan dirinya "configurable
+ * compliance thresholds" dan dibaca `adminProcedure`, sementara batas kapitalisasi menentukan apa
+ * yang masuk neraca dan apa yang masuk laba rugi — itu keputusan Controller.
+ */
+export const fixedAssetSettings = mysqlTable("fixed_asset_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  capitalisationThresholdIdr: decimal("capitalisationThresholdIdr", { precision: 24, scale: 2 }).default("1000000.00").notNull(),
+  updatedByUserId: int("updatedByUserId"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 /**
  * Asal sebuah jurnal. `MANUAL` diketik manusia; sisanya dihasilkan sistem dari catatan operasional
  * yang sudah ada, sehingga tidak ada entri ulang dan tidak ada kesempatan angka buku besar berbeda
@@ -1213,6 +1334,13 @@ export const journalSourceTypes = [
   "MUTASI_KAS",
   "MUTASI_BANK",
   "PENYUSUTAN",
+  /**
+   * Perolehan dan pelepasan aset tetap. Dipisahkan dari `PENYUSUTAN` karena paket F menyusun
+   * bagian **investasi** Arus Kas dengan mengenali kedua kejadian ini, dan `sourceType` adalah
+   * satu-satunya penanda yang tidak menebak.
+   */
+  "PEROLEHAN_ASET",
+  "PELEPASAN_ASET",
   "REVALUASI_KURS",
   "TUTUP_PERIODE",
 ] as const;
