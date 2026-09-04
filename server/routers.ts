@@ -111,6 +111,7 @@ import {
   reverseJournalEntry, verifyLedgerIntegrity,
 } from "./ledgerOperations";
 import { postOperationsToLedger } from "./ledgerPosting";
+import { buildPeriodValuation, postPeriodClosing, postYearEndProfitClosing } from "./periodClosing";
 import { buildFinancialStatements } from "./financialStatements";
 import { KUPVA_WORK_AREA, competencyCodesForArea } from "../shared/sdmCompetency";
 import {
@@ -521,6 +522,20 @@ export const appRouter = router({
       periodId: z.number().int().positive(),
       reason: z.string().trim().min(5).max(2000),
     })).mutation(({ input, ctx }) => reopenAccountingPeriod(input, ctx.user)),
+
+    /**
+     * Penutupan periode. Dibaca dan dijalankan Controller ke atas, sama seperti seluruh router ini —
+     * angkanya angka laporan keuangan, bukan informasi operasional harian.
+     */
+    closingValuation: controllerProcedure
+      .input(z.object({ periodId: z.number().int().positive() }))
+      .query(({ input }) => buildPeriodValuation(input.periodId)),
+    postClosingValuation: controllerProcedure
+      .input(z.object({ periodId: z.number().int().positive() }))
+      .mutation(({ input, ctx }) => postPeriodClosing(input, ctx.user)),
+    postYearEndClosing: controllerProcedure
+      .input(z.object({ periodId: z.number().int().positive() }))
+      .mutation(({ input, ctx }) => postYearEndProfitClosing(input, ctx.user)),
 
     entries: controllerProcedure.input(z.object({
       from: z.coerce.date().optional(),

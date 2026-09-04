@@ -22,7 +22,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 5 — `postPeriodClosing`: tulis penilaian dan jurnalnya
 - [x] Tugas 6 — Penutup laba tahunan dan gerbang `closeAccountingPeriod`
 - [x] Tugas 7 — Neraca memakai laba sejak penutupan tahunan terakhir
-- [ ] Tugas 8 — Tiga prosedur tRPC
+- [x] Tugas 8 — Tiga prosedur tRPC
 - [ ] Tugas 9 — Panel Penutupan Periode
 - [ ] Tugas 10 — Skenario menyeluruh dan dokumentasi
 
@@ -1052,20 +1052,20 @@ git commit -m "Neraca memakai laba sejak penutupan tahunan terakhir"
   - `ledger.postYearEndClosing` — `controllerProcedure.input({ periodId })`, mutation
   - **Dipakai tugas 9**; tugas 9 tidak boleh memanggil endpoint lain.
 
-- [ ] **Step 1: Tulis uji otorisasi yang gagal**
+- [x] **Step 1: Tulis uji otorisasi yang gagal**
 
 Buat `server/periodClosing.authorization.test.ts` mengikuti pola
 `server/regulatoryReporting.authorization.test.ts`: `vi.mock("./periodClosing", ...)`, `appRouter.createCaller`,
 lalu pastikan `STAFF` dan `ADMIN` mendapat `FORBIDDEN` pada ketiga prosedur sementara `CONTROLLER`
 lolos. Otorisasi ditegakkan di server, bukan disembunyikan di UI.
 
-- [ ] **Step 2: Jalankan uji, pastikan gagal**
+- [x] **Step 2: Jalankan uji, pastikan gagal**
 
 ```bash
 ./node_modules/.bin/vitest run server/periodClosing.authorization.test.ts
 ```
 
-- [ ] **Step 3: Tulis implementasi**
+- [x] **Step 3: Tulis implementasi**
 
 Di `server/routers.ts`, di dalam `ledger: router({ ... })`, tepat di bawah `reopenPeriod`:
 
@@ -1085,14 +1085,14 @@ Di `server/routers.ts`, di dalam `ledger: router({ ... })`, tepat di bawah `reop
       .mutation(({ input, ctx }) => postYearEndProfitClosing(input, ctx.user)),
 ```
 
-- [ ] **Step 4: Jalankan uji dan gerbang mutu**
+- [x] **Step 4: Jalankan uji dan gerbang mutu**
 
 ```bash
 ./node_modules/.bin/vitest run server/periodClosing.authorization.test.ts
 ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vitest run
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/routers.ts server/periodClosing.authorization.test.ts
