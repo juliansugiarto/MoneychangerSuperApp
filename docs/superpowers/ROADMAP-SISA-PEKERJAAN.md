@@ -41,7 +41,7 @@ Rencana: `plans/2026-09-04-penilaian-kas-uka-tutup-periode.md`
 - [x] Sesi rancangan — spec dan rencana bertugas
 - [x] Tugas 1 — Migrasi penilaian penutupan periode (0047)
 - [x] Tugas 2 — Penilaian kurs tengah murni di `shared/`
-- [ ] Tugas 3 — Pemetaan jurnal penutupan dan penutup laba
+- [x] Tugas 3 — Pemetaan jurnal penutupan dan penutup laba
 - [ ] Tugas 4 — `buildPeriodValuation`: bukti kuantitas dan kurs
 - [ ] Tugas 5 — `postPeriodClosing`: tulis penilaian dan jurnalnya
 - [ ] Tugas 6 — Penutup laba tahunan dan gerbang `closeAccountingPeriod`

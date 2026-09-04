@@ -10,7 +10,8 @@
  */
 
 import type { ExpenseCategory } from "./expenseCategories";
-import type { JournalSide } from "./ledger";
+import { findAccount, isBalanceSheetAccount, RETAINED_EARNINGS_ACCOUNT_CODE } from "./chartOfAccounts";
+import { formatAmount, oppositeSide, parseAmount, type JournalSide } from "./ledger";
 
 export type MappedLine = { accountCode: string; side: JournalSide; amount: string; memo?: string };
 export type MappingResult = { lines: MappedLine[] } | { skipped: string };
@@ -237,4 +238,98 @@ export function mapBankMovement(input: {
   return input.category === "CAPITAL_WITHDRAWAL"
     ? pair(DIVIDEND_ACCOUNT, BANK_ACCOUNT, parsed.amount, memo)
     : pair(BANK_ACCOUNT, PAID_IN_CAPITAL_ACCOUNT, parsed.amount, memo);
+}
+
+/**
+ * Penutupan periode: penilaian persediaan valuta.
+ *
+ * Persediaan periodik berarti akun 1-1210 Kas UKA hanya bergerak di sini — `mapExchangeTransaction`
+ * sengaja tidak menyentuhnya per transaksi karena itu menuntut harga pokok per lot yang sistem ini
+ * tidak melacak. Satu jurnal memuat kedua sisi sekaligus (keputusan pengguna 4 September 2026):
+ * membalik nilai persediaan akhir periode sebelumnya ke 5-1100, lalu membukukan nilai baru ke
+ * 5-1300. Keduanya jatuh di dalam periode yang ditutup, sehingga tidak ada jurnal yang ditulis ke
+ * periode lain dan idempotensinya cukup dijaga satu kunci sumber.
+ */
+export const FX_INVENTORY_ACCOUNT = "1-1210";
+export const OPENING_INVENTORY_ACCOUNT = "5-1100";
+export const CLOSING_INVENTORY_ACCOUNT = "5-1300";
+
+export function mapPeriodInventoryClosing(input: {
+  priorClosingValue: string;
+  closingValue: string;
+  memo: string;
+}): MappingResult {
+  const prior = toLedgerAmount(input.priorClosingValue);
+  const closing = toLedgerAmount(input.closingValue);
+  if (!prior || !closing) return { skipped: "nilai penilaian memiliki pecahan di bawah sen" };
+  if (prior.negative || closing.negative) {
+    return { skipped: "nilai persediaan negatif; hitungan fisik tidak pernah negatif dan angkanya harus diperiksa lebih dulu" };
+  }
+
+  const memo = input.memo.slice(0, 500);
+  const lines: MappedLine[] = [];
+  if (prior.amount !== "0.00") {
+    lines.push({ accountCode: OPENING_INVENTORY_ACCOUNT, side: "DEBIT", amount: prior.amount, memo });
+    lines.push({ accountCode: FX_INVENTORY_ACCOUNT, side: "KREDIT", amount: prior.amount, memo });
+  }
+  if (closing.amount !== "0.00") {
+    lines.push({ accountCode: FX_INVENTORY_ACCOUNT, side: "DEBIT", amount: closing.amount, memo });
+    lines.push({ accountCode: CLOSING_INVENTORY_ACCOUNT, side: "KREDIT", amount: closing.amount, memo });
+  }
+  if (!lines.length) return { skipped: "tidak ada persediaan UKA untuk dinilai pada periode ini" };
+  return { lines };
+}
+
+/**
+ * Penutup laba tahun buku ke 3-2100 Laba Ditahan.
+ *
+ * Hanya akhir tahun buku, bukan tiap bulan (keputusan pengguna 4 September 2026): menutup tiap bulan
+ * membuat laba rugi bulanan dan laba ditahan sama-sama bergerak, dan laporan laba rugi tahunan tidak
+ * lagi dapat disusun dari buku besar tanpa membaca balik jurnal penutup tiap bulan.
+ *
+ * Akun mana yang ditutup ditentukan `isBalanceSheetAccount`, bukan daftar kode yang ditulis ulang di
+ * sini — dua daftar yang harus dijaga serempak adalah dua daftar yang akan berbeda.
+ */
+export function mapYearEndProfitClosing(input: {
+  balances: { accountCode: string; balance: string }[];
+  memo: string;
+}): MappingResult {
+  const memo = input.memo.slice(0, 500);
+  const lines: MappedLine[] = [];
+  let net = 0n; // positif berarti laba
+
+  for (const row of input.balances) {
+    const account = findAccount(row.accountCode);
+    if (!account) return { skipped: `akun ${row.accountCode} tidak ada pada bagan akun` };
+    if (isBalanceSheetAccount(account.type)) continue;
+
+    const parsed = toLedgerAmount(row.balance);
+    if (!parsed) return { skipped: `saldo akun ${row.accountCode} memiliki pecahan di bawah sen` };
+    const magnitude = parseAmount(parsed.amount);
+    if (magnitude === 0n) continue;
+
+    // Saldo datang searah saldo normal akunnya; menolkannya berarti membukukan sisi sebaliknya.
+    const naturalSide: JournalSide = account.normalBalance === "DEBIT" ? "DEBIT" : "KREDIT";
+    const signed = parsed.negative ? -magnitude : magnitude;
+    lines.push({
+      accountCode: row.accountCode,
+      side: signed > 0n ? oppositeSide(naturalSide) : naturalSide,
+      amount: formatAmount(magnitude),
+      memo,
+    });
+    // Akun bersaldo normal kredit menambah laba; yang bersaldo normal debit menguranginya. Akun
+    // lawan ikut benar apa adanya: 5-1300 bersaldo normal kredit dan memang menambah laba.
+    net += naturalSide === "KREDIT" ? signed : -signed;
+  }
+
+  if (!lines.length) return { skipped: "tidak ada saldo laba rugi untuk ditutup pada tahun buku ini" };
+  if (net !== 0n) {
+    lines.push({
+      accountCode: RETAINED_EARNINGS_ACCOUNT_CODE,
+      side: net > 0n ? "KREDIT" : "DEBIT",
+      amount: formatAmount(net > 0n ? net : -net),
+      memo,
+    });
+  }
+  return { lines };
 }

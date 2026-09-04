@@ -17,7 +17,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 
 - [x] Tugas 1 — Migrasi penilaian penutupan periode (0047)
 - [x] Tugas 2 — Penilaian kurs tengah murni di `shared/`
-- [ ] Tugas 3 — Pemetaan jurnal penutupan dan penutup laba
+- [x] Tugas 3 — Pemetaan jurnal penutupan dan penutup laba
 - [ ] Tugas 4 — `buildPeriodValuation`: bukti kuantitas dan kurs
 - [ ] Tugas 5 — `postPeriodClosing`: tulis penilaian dan jurnalnya
 - [ ] Tugas 6 — Penutup laba tahunan dan gerbang `closeAccountingPeriod`
@@ -381,7 +381,7 @@ Pemetaan murni. Inilah yang menentukan setiap angka penutupan pada laporan keuan
   - `mapYearEndProfitClosing(input: { balances: { accountCode: string; balance: string }[]; memo: string }): MappingResult`
   - Dipakai tugas 5 dan 6.
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 Buat `server/periodClosingMapping.test.ts`:
 
@@ -518,14 +518,14 @@ describe("pemetaan jurnal penutup laba tahunan", () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan uji, pastikan gagal**
+- [x] **Step 2: Jalankan uji, pastikan gagal**
 
 ```bash
 ./node_modules/.bin/vitest run server/periodClosingMapping.test.ts
 ```
 Harapan: GAGAL — kedua fungsi belum diekspor dari `shared/journalMapping.ts`.
 
-- [ ] **Step 3: Tulis implementasi**
+- [x] **Step 3: Tulis implementasi**
 
 Di `shared/journalMapping.ts`, tambahkan impor pada bagian atas berkas:
 
@@ -633,7 +633,7 @@ export function mapYearEndProfitClosing(input: {
 }
 ```
 
-- [ ] **Step 4: Jalankan uji, pastikan lulus**
+- [x] **Step 4: Jalankan uji, pastikan lulus**
 
 ```bash
 ./node_modules/.bin/vitest run server/periodClosingMapping.test.ts server/journalMapping.test.ts server/cashJournalMapping.test.ts
@@ -641,7 +641,7 @@ export function mapYearEndProfitClosing(input: {
 ```
 Harapan: seluruh uji lulus. Uji pemetaan lama **tidak boleh** berubah — bila ada yang gagal, impor baru menabrak sesuatu; berhenti dan laporkan.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add shared/journalMapping.ts server/periodClosingMapping.test.ts
