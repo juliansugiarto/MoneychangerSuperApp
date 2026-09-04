@@ -22,7 +22,7 @@ Rencana: `plans/2026-09-04-batas-tanggal-opname-checklist.md`
 Rencana: `plans/2026-09-04-setoran-modal-persiapan-go-live.md`
 - [x] Tugas 1 — Kartu "Modal disetor" dan urutan langkah go-live
 - [x] Tugas 2 — Peringatan urutan pada pencatatan kas awal
-- [ ] Tugas 3 — Uji dan dokumentasi
+- [x] Tugas 3 — Uji dan dokumentasi
 
 ### Paket D — Opname menyeluruh: pecahan dan brankas (temuan BI 6)
 - [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*

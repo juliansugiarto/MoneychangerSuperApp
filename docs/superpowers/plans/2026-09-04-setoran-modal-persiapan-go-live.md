@@ -25,7 +25,7 @@ Pengerjaan di ROADMAP.
 
 - [x] Tugas 1 — Kartu "Modal disetor" dan urutan langkah go-live
 - [x] Tugas 2 — Peringatan urutan pada pencatatan kas awal
-- [ ] Tugas 3 — Uji dan dokumentasi
+- [x] Tugas 3 — Uji dan dokumentasi
 
 Urutannya mengikat: 2 sebelum 3. Tugas 1 boleh dikerjakan kapan saja.
 
@@ -239,7 +239,7 @@ git commit -m "Peringatkan bila kas awal Rupiah dicatat sebelum setoran modal"
 - Consumes: `capitalWarning` dari tugas 2
 - Produces: —
 
-- [ ] **Langkah 1: Tulis ujinya**
+- [x] **Langkah 1: Tulis ujinya**
 
 Ikuti pola `getDb` yang dipalsukan seperti pada `server/capitalMovement.test.ts` — **jangan
 menyentuh basis data**. Tiga perilaku yang harus dijaga:
@@ -254,13 +254,13 @@ Buka `server/capitalMovement.test.ts` lebih dulu dan tiru cara berkas itu memals
 termasuk cara `tx.select(...).from(...).where(...).limit(...)` dirantai — menyalin bentuk yang sudah
 ada jauh lebih cepat daripada menyusun ulang tiruannya.
 
-- [ ] **Langkah 2: Jalankan dan pastikan lulus**
+- [x] **Langkah 2: Jalankan dan pastikan lulus**
 
 ```bash
 ./node_modules/.bin/vitest run server/openingCashOrder.test.ts
 ```
 
-- [ ] **Langkah 3: Perbarui panduan A–Z**
+- [x] **Langkah 3: Perbarui panduan A–Z**
 
 Panduan sudah memuat §5.6a "Modal dan Pemindahan Kas ke Bank" yang menjelaskan urutan modal sebelum
 kas awal. Yang perlu ditambahkan adalah **rujukan silang di tempat orang membaca lebih dulu**:
@@ -272,7 +272,7 @@ kas awal. Yang perlu ditambahkan adalah **rujukan silang di tempat orang membaca
   dan pencatatannya tetap berhasil.
 - Di **§12 Checklist Harian Ringkas**, bagian Pembukaan, tambahkan butir modal untuk hari pertama.
 
-- [ ] **Langkah 4: Gerbang mutu**
+- [x] **Langkah 4: Gerbang mutu**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -284,7 +284,7 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 
 Laporkan jumlah uji yang benar-benar dilihat.
 
-- [ ] **Langkah 5: Commit, lalu centang Status Pengerjaan**
+- [x] **Langkah 5: Commit, lalu centang Status Pengerjaan**
 
 ```bash
 git add server/openingCashOrder.test.ts docs/

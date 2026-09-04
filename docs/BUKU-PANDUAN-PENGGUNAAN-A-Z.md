@@ -44,10 +44,11 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 2. Bila sistem meminta penggantian kata sandi awal, buat kata sandi baru yang hanya diketahui pemilik akun.
 3. Controller membuka **Pengawasan → Mulai Go-Live** dan **Kesiapan Operasional** untuk memeriksa kontrol yang belum siap.
 4. Admin memeriksa **Kontrol Outlet → Kurs Operasional** dan **Bandingkan Kurs**; pastikan daftar kurs aktif benar-benar milik outlet dan bukan data demo/historis.
-5. Staff membuka **Buka & Tutup Outlet** dan **Kas Awal** untuk memastikan checklist serta mata uang kas dapat ditampilkan.
-6. Shareholder membuka **Pelaporan Regulator** hanya untuk membaca panduan; jangan membuat paket dengan data percobaan.
-7. Controller membuka **Akses Staf** dan menonaktifkan akun yang tidak digunakan atau belum diverifikasi.
-8. Jika ada halaman kosong, pesan gagal memuat, atau angka yang tidak dikenal, **jangan lanjutkan transaksi**. Catat waktu, halaman, dan pesan yang tampil; lalu eskalasi ke Controller.
+5. Controller mencatat **setoran modal** pemilik lewat **Kas & Persediaan → Modal & Bank** sebelum hitungan kas pagi yang pertama diisi. Kas awal pertama untuk sebuah mata uang tidak dijurnal bila asal uangnya belum tercatat, sehingga urutan terbalik meninggalkan Kas Rupiah timpang di buku besar (lihat §5.6a).
+6. Staff membuka **Buka & Tutup Outlet** dan **Kas Awal** untuk memastikan checklist serta mata uang kas dapat ditampilkan.
+7. Shareholder membuka **Pelaporan Regulator** hanya untuk membaca panduan; jangan membuat paket dengan data percobaan.
+8. Controller membuka **Akses Staf** dan menonaktifkan akun yang tidak digunakan atau belum diverifikasi.
+9. Jika ada halaman kosong, pesan gagal memuat, atau angka yang tidak dikenal, **jangan lanjutkan transaksi**. Catat waktu, halaman, dan pesan yang tampil; lalu eskalasi ke Controller.
 
 ## 4. Peta Menu
 
@@ -140,7 +141,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 
 Menu ini adalah **satu halaman** ("Kas & Persediaan") dengan tab di dalamnya — **Kas Awal**, **Stok Saat Ini**, **Stock Opname**, **Penyesuaian Brankas**, dan **Modal & Bank** (dua terakhir khusus Controller ke atas). Pindah tab tidak berpindah halaman; setiap tab tetap menampilkan konteksnya secara penuh.
 
-1. Buka tab **Kas Awal** terlebih dahulu, **termasuk rincian pecahan** (wajib) — ini stok fisik awal per pecahan yang jadi acuan sistem sepanjang hari. Cari mata uang lewat kotak pencarian, **termasuk IDR** untuk modal kerja Rupiah (dibutuhkan agar bon beli bisa diselesaikan — sistem menolak bon beli bila modal Rupiah tidak cukup) — tidak dibatasi ke mata uang yang sudah disinkronkan otomatis. Nilai pecahan dipilih dari daftar pecahan asli mata uang tersebut (bukan diketik bebas), supaya angka seperti "IDR 131.250.000, 1 lembar" tidak mungkin masuk sebagai pecahan.
+1. Buka tab **Kas Awal** terlebih dahulu, **termasuk rincian pecahan** (wajib) — ini stok fisik awal per pecahan yang jadi acuan sistem sepanjang hari. Cari mata uang lewat kotak pencarian, **termasuk IDR** untuk modal kerja Rupiah (dibutuhkan agar bon beli bisa diselesaikan — sistem menolak bon beli bila modal Rupiah tidak cukup) — tidak dibatasi ke mata uang yang sudah disinkronkan otomatis. Nilai pecahan dipilih dari daftar pecahan asli mata uang tersebut (bukan diketik bebas), supaya angka seperti "IDR 131.250.000, 1 lembar" tidak mungkin masuk sebagai pecahan. **Pada hari pertama, catat setoran modal lebih dulu lewat tab Modal & Bank** (§5.6a); bila urutannya terbalik, sistem memunculkan peringatan pada kas awal Rupiah pertama — pencatatannya tetap berhasil, tetapi mutasi itu tidak akan dijurnal ke buku besar sampai modalnya dicatat.
 1a. Di tab yang sama juga tersedia **Rekening Bank Perusahaan** — Controller ke atas dapat menambahkan rekening (nama bank, nama pemilik, nomor rekening, saldo awal), mengedit datanya, menonaktifkannya, atau mencatat penyesuaian saldo manual (mis. biaya bank). Staff hanya bisa melihat daftar dan memilihnya saat membuat bon Transfer Bank (§5.4 langkah 6b) — tidak bisa menambah/mengubah rekening.
 2. Selama hari berjalan, kas dan stok pecahan **kedua sisi** (valuta asing dan Rupiah untuk pembayaran tunai) bergerak otomatis begitu bon **disetujui** — posting kas/stok sekarang langsung terjadi saat persetujuan, tidak perlu tombol "Selesaikan" terpisah lagi (lihat §5.4). Jangan melakukan pembukuan paralel tanpa rekonsiliasi. Buka tab **Stok Saat Ini** untuk melihat angka sistem berjalan per pecahan (kategori IDR mencakup kas fisik maupun saldo rekening bank secara terpisah); **cek fisik hanya perlu dilakukan sekali saat mau tutup**, bukan sepanjang hari.
 3. Setor/ambil dari brankas atau penjualan luar jam kerja dicatat lewat tab **Penyesuaian Brankas** — rincian pecahan wajib diisi di sini juga.
@@ -328,6 +329,7 @@ Dashboard Shareholder memiliki bagian **Manajemen pengguna** untuk memudahkan pe
 ### Pembukaan
 
 - [ ] Akun pribadi sudah digunakan dan sesi sebelumnya sudah ditutup.
+- [ ] **Hari pertama saja:** setoran modal pemilik telah dicatat di Modal & Bank sebelum kas awal.
 - [ ] Kas awal per mata uang telah dicatat dari hitungan fisik.
 - [ ] Lampu UV dan mesin hitung telah diperiksa.
 - [ ] Checklist pembukaan telah disimpan.
