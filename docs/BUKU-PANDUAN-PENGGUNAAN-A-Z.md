@@ -146,8 +146,8 @@ Menu ini adalah **satu halaman** ("Kas & Persediaan") dengan tab di dalamnya —
 2. Selama hari berjalan, kas dan stok pecahan **kedua sisi** (valuta asing dan Rupiah untuk pembayaran tunai) bergerak otomatis begitu bon **disetujui** — posting kas/stok sekarang langsung terjadi saat persetujuan, tidak perlu tombol "Selesaikan" terpisah lagi (lihat §5.4). Jangan melakukan pembukuan paralel tanpa rekonsiliasi. Buka tab **Stok Saat Ini** untuk melihat angka sistem berjalan per pecahan (kategori IDR mencakup kas fisik maupun saldo rekening bank secara terpisah); **cek fisik hanya perlu dilakukan sekali saat mau tutup**, bukan sepanjang hari.
 3. Setor/ambil dari brankas atau penjualan luar jam kerja dicatat lewat tab **Penyesuaian Brankas** — rincian pecahan wajib diisi di sini juga.
 3a. Setoran/penarikan modal pemilik dan pemindahan kas ke/dari rekening bank **tidak** dicatat di sini, melainkan di tab **Modal & Bank** (lihat §5.6a) — hanya kategori itulah yang dapat dijurnal ke buku besar.
-4. Menjelang tutup, buka tab **Stock Opname**, masukkan hitungan fisik per mata uang (bandingkan dengan rincian pecahan di tab Stok Saat Ini), lalu kirim hasil hitung.
-5. Telaah varians yang tampil. Varians memerlukan peninjauan Supervisor; Direksi harus memperoleh informasi pengawasan sesuai workflow.
+4. Menjelang tutup, buka tab **Stock Opname** dan hitung uangnya **per pecahan untuk dua tempat sekaligus — laci dan brankas**. Nominalnya dijumlahkan dari rincian itu; tidak ada lagi angka yang diketik. Rincian **laci wajib** diisi. Brankas yang memang kosong **tetap harus dinyatakan kosong** (biarkan daftarnya tanpa baris) — itu berbeda artinya dari "tidak dihitung", dan brankas yang menurut sistem berisi akan langsung menyalakan varians. Layar menampilkan selisih per pecahan terhadap angka sistem **sebelum** dikirim; selisih bukan galat, dan hasil hitung tetap boleh dikirim.
+5. Telaah varians yang tampil. Varians memerlukan peninjauan Supervisor; Direksi harus memperoleh informasi pengawasan sesuai workflow. **Selisih komposisi pecahan yang totalnya nol tetap memerlukan peninjauan** — komposisi yang meleset berarti ada pergerakan tak tercatat, tukar pecahan yang tak dibukukan, atau salah hitung, dan total yang kebetulan cocok justru menyembunyikannya.
 6. Jangan menyembunyikan selisih dengan mengubah angka fisik agar sama dengan sistem.
 
 ### 5.6a Modal dan Pemindahan Kas ke Bank — Controller ke atas
@@ -346,6 +346,7 @@ Dashboard Shareholder memiliki bagian **Manajemen pengguna** untuk memudahkan pe
 ### Penutupan
 
 - [ ] Stock opname fisik selesai untuk mata uang terkait.
+- [ ] Isi brankas ikut dihitung per pecahan, dan brankas yang kosong dinyatakan kosong.
 - [ ] Varians ditinjau, bukan disembunyikan.
 - [ ] Checklist penutupan disimpan setelah serah-terima dan penguncian brankas benar-benar selesai.
 - [ ] Arsip PDF penutupan dicetak/disimpan sesuai kebijakan arsip perusahaan.

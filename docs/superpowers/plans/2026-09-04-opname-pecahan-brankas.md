@@ -24,7 +24,7 @@ Pengerjaan di ROADMAP.
 - [x] Tugas 3 — Angka sistem per pecahan untuk laci dan brankas
 - [x] Tugas 4 — `submitStockOpname` menerima pecahan dua lokasi
 - [x] Tugas 5 — UI tab Stock Opname
-- [ ] Tugas 6 — Dokumentasi dan gerbang akhir
+- [x] Tugas 6 — Dokumentasi dan gerbang akhir
 
 Urutannya **mengikat seluruhnya**: 1 → 2 → 3 → 4 → 5 → 6. Tugas 4 memakai hasil 2 dan 3; tugas 5
 memakai kontrak tRPC dari tugas 4.
@@ -512,7 +512,7 @@ git commit -m "Tab Stock Opname menghitung pecahan laci dan brankas"
 **Files:**
 - Modify: `docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md`, `docs/SKEMA-DATABASE-PROJECT.md`
 
-- [ ] **Langkah 1: Panduan A–Z**
+- [x] **Langkah 1: Panduan A–Z**
 
 - **§5.6 langkah 4** (tab Stock Opname): hitungan fisik kini dirinci per pecahan untuk **laci dan
   brankas**, dan nominalnya dihitung dari rincian itu — tidak ada lagi angka yang diketik. Brankas
@@ -521,14 +521,14 @@ git commit -m "Tab Stock Opname menghitung pecahan laci dan brankas"
   memerlukan peninjauan Supervisor, dengan satu kalimat alasannya.
 - **§12 Checklist Harian Ringkas**, bagian Penutupan: butir hitung brankas per pecahan.
 
-- [ ] **Langkah 2: Skema database**
+- [x] **Langkah 2: Skema database**
 
 Tambahkan `stock_opname_denominations` dan empat kolom baru `stock_opnames` ke
 `docs/SKEMA-DATABASE-PROJECT.md`, mengikuti bentuk tabel lain di sana. Sebutkan bahwa
 `closingSystemBalance` tetap berarti **laci saja** dan brankas punya kolomnya sendiri — itu justru
 yang paling mudah salah dibaca kelak.
 
-- [ ] **Langkah 3: Gerbang akhir**
+- [x] **Langkah 3: Gerbang akhir**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -540,7 +540,7 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 
 Laporkan jumlah uji yang benar-benar dilihat.
 
-- [ ] **Langkah 4: Commit, lalu centang Status Pengerjaan**
+- [x] **Langkah 4: Commit, lalu centang Status Pengerjaan**
 
 ```bash
 git add docs/

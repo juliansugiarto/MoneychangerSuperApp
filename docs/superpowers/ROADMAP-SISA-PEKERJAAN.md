@@ -28,12 +28,12 @@ Rencana: `plans/2026-09-04-setoran-modal-persiapan-go-live.md`
 Spec: `specs/2026-09-04-opname-pecahan-brankas-design.md`
 Rencana: `plans/2026-09-04-opname-pecahan-brankas.md`
 - [x] Sesi rancangan — spec dan rencana bertugas
-- [ ] Tugas 1 — Skema dan migrasi aditif
-- [ ] Tugas 2 — Pembanding pecahan murni di `shared/`
-- [ ] Tugas 3 — Angka sistem per pecahan untuk laci dan brankas
-- [ ] Tugas 4 — `submitStockOpname` menerima pecahan dua lokasi
-- [ ] Tugas 5 — UI tab Stock Opname
-- [ ] Tugas 6 — Dokumentasi dan gerbang akhir
+- [x] Tugas 1 — Skema dan migrasi aditif
+- [x] Tugas 2 — Pembanding pecahan murni di `shared/`
+- [x] Tugas 3 — Angka sistem per pecahan untuk laci dan brankas
+- [x] Tugas 4 — `submitStockOpname` menerima pecahan dua lokasi
+- [x] Tugas 5 — UI tab Stock Opname
+- [x] Tugas 6 — Dokumentasi dan gerbang akhir
 
 ### Paket C — Penilaian kas UKA dan penutupan periode (temuan BI 7.1)
 - [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
