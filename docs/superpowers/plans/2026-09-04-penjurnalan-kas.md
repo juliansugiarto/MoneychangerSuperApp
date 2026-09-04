@@ -21,7 +21,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 4 — `recordCapitalMovement`
 - [x] Tugas 5 — `recordCashBankTransfer`
 - [x] Tugas 6 — Posting ke buku besar
-- [ ] Tugas 7 — Tab Modal & Bank
+- [x] Tugas 7 — Tab Modal & Bank
 - [ ] Tugas 8 — Panel rekonsiliasi kas
 - [ ] Tugas 9 — Skenario dan dokumentasi
 
@@ -1193,11 +1193,11 @@ git commit -m "Jurnalkan mutasi kas dan bank, dan ganti penjaga uji yang sudah u
 - Consumes: `trpc.cash.recordCapitalMovement` (tugas 4), `trpc.cash.recordBankTransfer` (tugas 5), `trpc.cash.balances`, `trpc.bankAccounts.list`.
 - Produces: tab `"modal-bank"` pada `initialTab()` dan daftar tab.
 
-- [ ] **Step 1: Tambahkan nilai tab baru**
+- [x] **Step 1: Tambahkan nilai tab baru**
 
 Di `client/src/pages/StockControl.tsx:21`, perluas tipe kembalian `initialTab()` menjadi `"kas-awal" | "saat-ini" | "opname" | "penyesuaian" | "modal-bank"`, dan tambahkan `TabsTrigger` berlabel **"Modal & Bank"** pada daftar tab di `StockControl()`.
 
-- [ ] **Step 2: Tulis panelnya**
+- [x] **Step 2: Tulis panelnya**
 
 Tambahkan komponen `ModalBankPanel` mengikuti bentuk `PenyesuaianPanel` (`:298`) — gunakan `emptyRow`, `addRow`, `updateRow`, `removeRow` yang sudah ada di berkas itu. Panel berisi dua kartu:
 
@@ -1214,21 +1214,21 @@ Tambahkan komponen `ModalBankPanel` mengikuti bentuk `PenyesuaianPanel` (`:298`)
 
 Kedua kartu wajib memiliki state loading (tombol `disabled={mutation.isPending}`), state kosong (bila belum ada rekening bank: "Belum ada rekening bank. Tambahkan lebih dulu di tab Rekening Bank."), dan menampilkan galat lewat `toast.error`.
 
-- [ ] **Step 3: Sembunyikan dari peran di bawah CONTROLLER**
+- [x] **Step 3: Sembunyikan dari peran di bawah CONTROLLER**
 
 Panel hanya dirender bila peran pengguna `CONTROLLER` atau `SHAREHOLDER`, mengikuti cara panel lain di berkas ini membaca peran. **Ini hanya kenyamanan tampilan** — otorisasi sebenarnya sudah ditegakkan `controllerProcedure` di tugas 4 dan 5.
 
-- [ ] **Step 4: Pastikan tipe dan build bersih**
+- [x] **Step 4: Pastikan tipe dan build bersih**
 
 ```bash
 ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build
 ```
 
-- [ ] **Step 5: Verifikasi visual**
+- [x] **Step 5: Verifikasi visual**
 
 Server pengembangan sudah berjalan di http://localhost:3003 dan sesi peramban sudah login sebagai Development Shareholder — pakai itu, jangan menyalakan yang baru. Buka `/operasional/stock`, pilih tab **Modal & Bank**, dan ambil tangkapan layar kedua kartu. **Jangan mengirim formulirnya** — menulis data kas memerlukan izin pengguna pada giliran itu juga.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add client/src/pages/StockControl.tsx

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatPlainAmount } from "@/lib/money";
 import { trpc } from "@/lib/trpc";
-import { Banknote, CheckCircle2, CircleAlert, ClipboardCheck, Plus, RefreshCw, ScanLine, ShieldCheck, Vault, Wallet } from "lucide-react";
+import { ArrowLeftRight, Banknote, CheckCircle2, CircleAlert, ClipboardCheck, Landmark, Plus, RefreshCw, ScanLine, ShieldCheck, Vault, Wallet } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -18,33 +18,37 @@ type DenominationRow = { value: string; quantity: string };
 const emptyRow = (): DenominationRow => ({ value: "", quantity: "" });
 
 /** Which context is currently visible, decided once from the URL path so every "Kas & Persediaan" link keeps working — switching between them afterward is pure client state, no page navigation, per the "satu halaman, breadcrumb" ask. */
-function initialTab(): "kas-awal" | "saat-ini" | "opname" | "penyesuaian" {
+function initialTab(): "kas-awal" | "saat-ini" | "opname" | "penyesuaian" | "modal-bank" {
   const path = window.location.pathname;
   if (path.includes("saat-ini")) return "saat-ini";
   if (path.includes("opname")) return "opname";
   if (path.includes("penyesuaian")) return "penyesuaian";
+  if (path.includes("modal-bank")) return "modal-bank";
   return "kas-awal";
 }
 
 export default function StockControl() {
   const { user } = useAuth();
   const [tab, setTab] = useState(initialTab());
-  const canSeePenyesuaian = user?.role !== "STAFF" && user?.role !== "ADMIN";
+  /** CONTROLLER ke atas. Ini kenyamanan tampilan saja — otorisasinya ditegakkan `controllerProcedure` di server. */
+  const canSeeControllerPanels = user?.role !== "STAFF" && user?.role !== "ADMIN";
 
   return <div className="mx-auto max-w-5xl space-y-6">
-    <header><p className="mt-2 max-w-2xl text-sm text-[#334155]">Kas awal, stok saat ini, stock opname, dan penyesuaian brankas — semua di sini, pindah lewat tab tanpa ganti halaman.</p>
+    <header><p className="mt-2 max-w-2xl text-sm text-[#334155]">Kas awal, stok saat ini, stock opname, penyesuaian brankas, serta modal dan pemindahan kas ke bank — semua di sini, pindah lewat tab tanpa ganti halaman.</p>
     </header>
     <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
       <TabsList className="h-auto w-full flex-wrap gap-1.5 rounded-2xl border-2 border-[#183f70]/15 bg-[#eef3f9] p-1.5">
         <TabsTrigger value="kas-awal" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white data-[state=active]:shadow-md"><Banknote className="mr-1.5 size-4" />Kas Awal</TabsTrigger>
         <TabsTrigger value="saat-ini" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white data-[state=active]:shadow-md"><Wallet className="mr-1.5 size-4" />Stok Saat Ini</TabsTrigger>
         <TabsTrigger value="opname" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white data-[state=active]:shadow-md"><ClipboardCheck className="mr-1.5 size-4" />Stock Opname</TabsTrigger>
-        {canSeePenyesuaian ? <TabsTrigger value="penyesuaian" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white data-[state=active]:shadow-md"><Vault className="mr-1.5 size-4" />Penyesuaian Brankas</TabsTrigger> : null}
+        {canSeeControllerPanels ? <TabsTrigger value="penyesuaian" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white data-[state=active]:shadow-md"><Vault className="mr-1.5 size-4" />Penyesuaian Brankas</TabsTrigger> : null}
+        {canSeeControllerPanels ? <TabsTrigger value="modal-bank" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#18395f] data-[state=active]:bg-[#183f70] data-[state=active]:text-white data-[state=active]:shadow-md"><Landmark className="mr-1.5 size-4" />Modal &amp; Bank</TabsTrigger> : null}
       </TabsList>
       <TabsContent value="kas-awal" className="mt-5"><KasAwalPanel /></TabsContent>
       <TabsContent value="saat-ini" className="mt-5"><StokSaatIniPanel /></TabsContent>
       <TabsContent value="opname" className="mt-5"><StockOpnamePanel /></TabsContent>
-      {canSeePenyesuaian ? <TabsContent value="penyesuaian" className="mt-5"><PenyesuaianPanel /></TabsContent> : null}
+      {canSeeControllerPanels ? <TabsContent value="penyesuaian" className="mt-5"><PenyesuaianPanel /></TabsContent> : null}
+      {canSeeControllerPanels ? <TabsContent value="modal-bank" className="mt-5"><ModalBankPanel /></TabsContent> : null}
     </Tabs>
   </div>;
 }
@@ -348,6 +352,145 @@ function PenyesuaianPanel() {
         <p className={`mt-2 text-xs ${mismatch ? "font-semibold text-rose-600" : "text-[#475569]"}`}>Total rincian: {formatPlainAmount(total)} {mismatch ? "— belum sama dengan jumlah di atas" : "— sudah sama dengan jumlah di atas"}</p>
       </div>
       <Button disabled={!selectedCurrency || !amount || notes.trim().length < 5 || !isComplete || mismatch || adjustment.isPending} onClick={submit} className="press-scale w-full bg-[#183f70] text-white hover:bg-[#12345d]">{adjustment.isPending ? "Menyimpan…" : "Catat penyesuaian"}</Button>
+    </CardContent>
+  </Card>;
+}
+
+/** Rincian pecahan dipakai dua kali di panel ini dengan bentuk yang sama persis; satu komponen kecil menjaga keduanya tidak berbeda diam-diam. */
+function DenominationEditor({ currencyCode, rows, total, mismatch, onAdd, onUpdate, onRemove }: {
+  currencyCode?: string;
+  rows: DenominationRow[];
+  total: number;
+  mismatch: boolean;
+  onAdd: () => void;
+  onUpdate: (index: number, field: keyof DenominationRow, value: string) => void;
+  onRemove: (index: number) => void;
+}) {
+  return <div className="rounded-xl border border-[#cbd9e7] bg-[#f8fbfe] p-3">
+    <div className="flex items-center justify-between"><Label className="text-xs font-semibold text-[#18395f]">Rincian pecahan (wajib)</Label><Button type="button" size="sm" variant="outline" className="h-7 border-[#bcd2e5] text-xs text-[#183f70]" onClick={onAdd}><Plus className="mr-1 size-3" />Tambah pecahan</Button></div>
+    {rows.map((row, index) => <div key={index} className="mt-2 grid grid-cols-[1fr_100px_auto] items-start gap-2">
+      <DenominationValueInput currencyCode={currencyCode} value={row.value} onChange={(value) => onUpdate(index, "value", value)} />
+      <Input required inputMode="numeric" value={row.quantity} onChange={(event) => onUpdate(index, "quantity", event.target.value)} placeholder="Lembar" />
+      <Button type="button" size="sm" variant="ghost" className="text-rose-600" disabled={rows.length === 1} onClick={() => onRemove(index)}>Hapus</Button>
+    </div>)}
+    <p className={`mt-2 text-xs ${mismatch ? "font-semibold text-rose-600" : "text-[#475569]"}`}>Total rincian: {formatPlainAmount(total)} {mismatch ? "— belum sama dengan jumlah di atas" : "— sudah sama dengan jumlah di atas"}</p>
+  </div>;
+}
+
+function ModalBankPanel() {
+  return <div className="space-y-6">
+    <SetoranModalCard />
+    <PindahKasBankCard />
+  </div>;
+}
+
+function SetoranModalCard() {
+  const { user } = useAuth();
+  const utils = trpc.useUtils();
+  const [direction, setDirection] = useState<"IN" | "OUT">("IN");
+  const [amount, setAmount] = useState("");
+  const [notes, setNotes] = useState("");
+  const [denominations, setDenominations] = useState<DenominationRow[]>([emptyRow()]);
+  const { data: currencyList } = trpc.currencies.list.useQuery(undefined, { enabled: Boolean(user) });
+  // Server menolak modal dalam valuta asing (kursnya tidak tersimpan pada tabel mutasi), jadi pilihannya dikunci ke Rupiah.
+  const idrCurrencyId = currencyList?.find((currency) => currency.code === "IDR")?.id;
+
+  const addRow = () => setDenominations((rows) => [...rows, emptyRow()]);
+  const updateRow = (index: number, field: keyof DenominationRow, value: string) => setDenominations((rows) => rows.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+  const removeRow = (index: number) => setDenominations((rows) => (rows.length > 1 ? rows.filter((_, i) => i !== index) : rows));
+  const total = denominations.reduce((sum, row) => sum + (Number(row.value) || 0) * (Number(row.quantity) || 0), 0);
+  const mismatch = Boolean(amount) && Math.abs(total - Number(amount)) > 0.005;
+  const isComplete = denominations.length > 0 && denominations.every((row) => row.value && row.quantity);
+
+  const capital = trpc.cash.recordCapitalMovement.useMutation({
+    onSuccess: () => {
+      toast.success("Pergerakan modal tercatat. Jurnalkan lewat Buku Besar untuk memasukkannya ke laporan.");
+      setAmount(""); setNotes(""); setDenominations([emptyRow()]); setDirection("IN");
+      utils.cash.balances.invalidate(); utils.cash.denominationBalances.invalidate(); utils.dashboard.overview.invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const submit = () => {
+    if (!idrCurrencyId) return toast.error("Mata uang Rupiah belum terdaftar di sistem.");
+    if (!amount) return toast.error("Isi jumlah setoran atau penarikan.");
+    if (notes.trim().length < 5) return toast.error("Catatan wajib diisi (minimal 5 karakter).");
+    if (!isComplete) return toast.error("Rincian pecahan wajib diisi untuk setiap pergerakan modal.");
+    if (mismatch) return toast.error("Total rincian pecahan belum sama dengan jumlah di atas.");
+    capital.mutate({ currencyId: idrCurrencyId, direction, amount, notes, denominations: denominations.map((row) => ({ value: row.value, quantity: Number(row.quantity) })) });
+  };
+
+  return <Card className="border-[#dce6f0]">
+    <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Setoran &amp; penarikan modal</CardTitle><CardDescription>Uang pemilik yang masuk atau keluar dari usaha — bukan hasil transaksi. Rincian pecahan wajib diisi karena stok pecahan kas ikut bergerak.</CardDescription></CardHeader>
+    <CardContent className="space-y-4">
+      <div>
+        <Label className="text-xs">Mata uang</Label>
+        <p className="mt-1 rounded-lg bg-[#f1f5f9] px-3 py-2 text-xs text-[#334155]">Rupiah (IDR). Setoran dan penarikan modal dalam valuta asing tidak dapat dicatat di sini karena kursnya tidak tersimpan pada catatan mutasi kas.</p>
+      </div>
+      <div><Label className="text-xs">Arah</Label><Select value={direction} onValueChange={(value) => setDirection(value as typeof direction)}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="IN">Setoran modal pemilik (kas bertambah)</SelectItem><SelectItem value="OUT">Penarikan pemilik / prive / dividen (kas berkurang)</SelectItem></SelectContent></Select></div>
+      <div><Label className="text-xs">Jumlah (Rp)</Label><Input className="mt-1" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0" /></div>
+      <div><Label className="text-xs">Catatan (wajib, minimal 5 karakter)</Label><Input className="mt-1" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Contoh: Setoran modal pemilik untuk tambahan kas loket" /></div>
+      <DenominationEditor currencyCode="IDR" rows={denominations} total={total} mismatch={mismatch} onAdd={addRow} onUpdate={updateRow} onRemove={removeRow} />
+      {currencyList && !idrCurrencyId ? <p className="text-xs font-semibold text-rose-600">Mata uang Rupiah belum terdaftar. Daftarkan IDR lebih dulu sebelum mencatat modal.</p> : null}
+      <Button disabled={!idrCurrencyId || !amount || notes.trim().length < 5 || !isComplete || mismatch || capital.isPending} onClick={submit} className="press-scale w-full bg-[#183f70] text-white hover:bg-[#12345d]">{capital.isPending ? "Menyimpan…" : "Catat pergerakan modal"}</Button>
+    </CardContent>
+  </Card>;
+}
+
+function PindahKasBankCard() {
+  const { user } = useAuth();
+  const utils = trpc.useUtils();
+  const [bankAccountId, setBankAccountId] = useState<string>("");
+  const [direction, setDirection] = useState<"TO_BANK" | "TO_CASH">("TO_BANK");
+  const [amount, setAmount] = useState("");
+  const [notes, setNotes] = useState("");
+  const [denominations, setDenominations] = useState<DenominationRow[]>([emptyRow()]);
+  const { data: accounts, isLoading: accountsLoading } = trpc.bankAccounts.list.useQuery(undefined, { enabled: Boolean(user) });
+  const activeAccounts = useMemo(() => (accounts ?? []).filter(({ account }) => account.active), [accounts]);
+  const selected = activeAccounts.find(({ account }) => String(account.id) === bankAccountId);
+
+  const addRow = () => setDenominations((rows) => [...rows, emptyRow()]);
+  const updateRow = (index: number, field: keyof DenominationRow, value: string) => setDenominations((rows) => rows.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+  const removeRow = (index: number) => setDenominations((rows) => (rows.length > 1 ? rows.filter((_, i) => i !== index) : rows));
+  const total = denominations.reduce((sum, row) => sum + (Number(row.value) || 0) * (Number(row.quantity) || 0), 0);
+  const mismatch = Boolean(amount) && Math.abs(total - Number(amount)) > 0.005;
+  const isComplete = denominations.length > 0 && denominations.every((row) => row.value && row.quantity);
+
+  const transfer = trpc.cash.recordBankTransfer.useMutation({
+    onSuccess: () => {
+      toast.success("Pemindahan kas tercatat. Jurnalkan lewat Buku Besar untuk memasukkannya ke laporan.");
+      setAmount(""); setNotes(""); setDenominations([emptyRow()]); setDirection("TO_BANK");
+      utils.cash.balances.invalidate(); utils.cash.denominationBalances.invalidate(); utils.bankAccounts.list.invalidate(); utils.dashboard.overview.invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const submit = () => {
+    if (!selected) return toast.error("Pilih rekening bank tujuan.");
+    if (!amount) return toast.error("Isi jumlah pemindahan.");
+    if (notes.trim().length < 5) return toast.error("Catatan wajib diisi (minimal 5 karakter).");
+    if (!isComplete) return toast.error("Rincian pecahan wajib diisi untuk setiap pemindahan kas.");
+    if (mismatch) return toast.error("Total rincian pecahan belum sama dengan jumlah di atas.");
+    transfer.mutate({ currencyId: selected.account.currencyId, bankAccountId: selected.account.id, direction, amount, notes, denominations: denominations.map((row) => ({ value: row.value, quantity: Number(row.quantity) })) });
+  };
+
+  return <Card className="border-[#dce6f0]">
+    <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Pindah kas ↔ bank</CardTitle><CardDescription>Uang yang sama berpindah tempat: kas fisik ke rekening perusahaan, atau sebaliknya. Kedua sisi bergerak dalam satu pencatatan.</CardDescription></CardHeader>
+    <CardContent className="space-y-4">
+      {accountsLoading
+        ? <p className="py-6 text-center text-sm text-[#475569]">Memuat rekening bank…</p>
+        : activeAccounts.length === 0
+        ? <div className="rounded-2xl border border-dashed border-[#cbd9e7] bg-[#f8fbfe] px-5 py-10 text-center text-sm leading-6 text-[#475569]">Belum ada rekening bank. Tambahkan lebih dulu di panel <strong>Rekening bank perusahaan</strong> pada tab Kas Awal.</div>
+        : <>
+          <div><Label className="text-xs">Rekening bank</Label><Select value={bankAccountId} onValueChange={setBankAccountId}><SelectTrigger className="mt-1"><SelectValue placeholder="Pilih rekening" /></SelectTrigger><SelectContent>{activeAccounts.map(({ account, currency }) => <SelectItem key={account.id} value={String(account.id)}>{account.bankName} · {account.accountNumber} ({currency.code})</SelectItem>)}</SelectContent></Select>
+            {selected ? <p className="mt-1 text-xs text-[#475569]">Saldo rekening saat ini: {formatPlainAmount(selected.account.availableAmount)} {selected.currency.code}</p> : null}
+          </div>
+          <div><Label className="text-xs">Arah</Label><Select value={direction} onValueChange={(value) => setDirection(value as typeof direction)}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="TO_BANK">Setor kas ke rekening (kas berkurang)</SelectItem><SelectItem value="TO_CASH">Tarik dari rekening ke kas (kas bertambah)</SelectItem></SelectContent></Select></div>
+          <div><Label className="text-xs">Jumlah{selected ? ` (${selected.currency.code})` : ""}</Label><Input className="mt-1" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0" /></div>
+          <div><Label className="text-xs">Catatan (wajib, minimal 5 karakter)</Label><Input className="mt-1" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Contoh: Setor kas loket sore ke rekening BCA" /></div>
+          <DenominationEditor currencyCode={selected?.currency.code} rows={denominations} total={total} mismatch={mismatch} onAdd={addRow} onUpdate={updateRow} onRemove={removeRow} />
+          <Button disabled={!selected || !amount || notes.trim().length < 5 || !isComplete || mismatch || transfer.isPending} onClick={submit} className="press-scale w-full bg-[#183f70] text-white hover:bg-[#12345d]"><ArrowLeftRight className="mr-1.5 size-4" />{transfer.isPending ? "Menyimpan…" : "Catat pemindahan"}</Button>
+        </>}
     </CardContent>
   </Card>;
 }
