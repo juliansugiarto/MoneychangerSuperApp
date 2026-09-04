@@ -15,7 +15,7 @@
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu**, supaya sesi
 berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 
-- [ ] Tugas 1 — Migrasi kategori mutasi (0044)
+- [x] Tugas 1 — Migrasi kategori mutasi (0044)
 - [ ] Tugas 2 — Pemetaan jurnal mutasi kas dan bank
 - [ ] Tugas 3 — Helper `applyCashMovement`
 - [ ] Tugas 4 — `recordCapitalMovement`
@@ -73,7 +73,7 @@ Urutannya mengikat: 3 sebelum 4 dan 5; 2 sebelum 6. Tugas 7 dan 8 boleh ditukar.
 - Consumes: —
 - Produces: nilai enum `"CAPITAL_INJECTION" | "CAPITAL_WITHDRAWAL" | "BANK_DEPOSIT" | "BANK_WITHDRAWAL"` pada `cashBalanceMovements.category`; `"CAPITAL_INJECTION" | "CAPITAL_WITHDRAWAL" | "CASH_TRANSFER"` pada `bankAccountMovements.category`. Dipakai tugas 2–7.
 
-- [ ] **Step 1: Ubah enum kategori mutasi kas**
+- [x] **Step 1: Ubah enum kategori mutasi kas**
 
 Di `drizzle/schema.ts`, ganti baris `category` pada `cashBalanceMovements`:
 
@@ -82,7 +82,7 @@ Di `drizzle/schema.ts`, ganti baris `category` pada `cashBalanceMovements`:
   category: mysqlEnum("category", ["OPENING", "TRANSACTION", "SAFE_DEPOSIT", "SAFE_WITHDRAWAL", "OFF_HOURS_SALE", "DENOMINATION_EXCHANGE", "CAPITAL_INJECTION", "CAPITAL_WITHDRAWAL", "BANK_DEPOSIT", "BANK_WITHDRAWAL", "OTHER"]).default("OTHER").notNull(),
 ```
 
-- [ ] **Step 2: Ubah enum kategori mutasi bank**
+- [x] **Step 2: Ubah enum kategori mutasi bank**
 
 Ganti baris `category` pada `bankAccountMovements`:
 
@@ -91,14 +91,14 @@ Ganti baris `category` pada `bankAccountMovements`:
   category: mysqlEnum("category", ["OPENING", "TRANSACTION", "ADJUSTMENT", "CAPITAL_INJECTION", "CAPITAL_WITHDRAWAL", "CASH_TRANSFER", "OTHER"]).default("OTHER").notNull(),
 ```
 
-- [ ] **Step 3: Hasilkan migrasi**
+- [x] **Step 3: Hasilkan migrasi**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
 ./node_modules/.bin/drizzle-kit generate
 ```
 
-- [ ] **Step 4: Baca SQL yang dihasilkan sebelum menerapkannya**
+- [x] **Step 4: Baca SQL yang dihasilkan sebelum menerapkannya**
 
 ```bash
 cat drizzle/0044_*.sql
@@ -106,21 +106,21 @@ cat drizzle/0044_*.sql
 
 Harapan: hanya dua pernyataan `ALTER TABLE ... MODIFY COLUMN ... enum(...)`. **Bila ada `DROP`, `TRUNCATE`, atau perubahan kolom di luar dua `category` itu, berhenti dan laporkan** — migrasi ini harus murni aditif.
 
-- [ ] **Step 5: Terapkan ke dua basis data lokal**
+- [x] **Step 5: Terapkan ke dua basis data lokal**
 
 ```bash
 export TENANT_REGISTRY="ibukota=mysql://root@127.0.0.1:3306/moneychanger;abcvalas=mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 node scripts/tenant.mjs migrate-all
 ```
 
-- [ ] **Step 6: Pastikan tipe masih bersih**
+- [x] **Step 6: Pastikan tipe masih bersih**
 
 ```bash
 ./node_modules/.bin/tsc --noEmit
 ```
 Harapan: tanpa galat.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add drizzle/schema.ts drizzle/0044_*.sql drizzle/meta

@@ -400,8 +400,8 @@ export const cashBalanceMovements = mysqlTable("cash_balance_movements", {
   direction: mysqlEnum("direction", ["IN", "OUT", "ADJUSTMENT"]).notNull(),
   amount: decimal("amount", { precision: 24, scale: 6 }).notNull(),
   reason: varchar("reason", { length: 255 }).notNull(),
-  /** Classifies why the movement exists, mainly for BI stock reporting; TRANSACTION rows keep the prior default behavior. */
-  category: mysqlEnum("category", ["OPENING", "TRANSACTION", "SAFE_DEPOSIT", "SAFE_WITHDRAWAL", "OFF_HOURS_SALE", "DENOMINATION_EXCHANGE", "OTHER"]).default("OTHER").notNull(),
+  /** Classifies why the movement exists, mainly for BI stock reporting; TRANSACTION rows keep the prior default behavior. Kategori CAPITAL_* dan BANK_* mencatat uang yang melintasi batas usaha — tanpanya setoran modal menyamar sebagai selisih hitungan kas pagi dan tidak dapat dijurnal. */
+  category: mysqlEnum("category", ["OPENING", "TRANSACTION", "SAFE_DEPOSIT", "SAFE_WITHDRAWAL", "OFF_HOURS_SALE", "DENOMINATION_EXCHANGE", "CAPITAL_INJECTION", "CAPITAL_WITHDRAWAL", "BANK_DEPOSIT", "BANK_WITHDRAWAL", "OTHER"]).default("OTHER").notNull(),
   createdByUserId: int("createdByUserId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [
@@ -464,7 +464,8 @@ export const bankAccountMovements = mysqlTable("bank_account_movements", {
   direction: mysqlEnum("direction", ["IN", "OUT", "ADJUSTMENT"]).notNull(),
   amount: decimal("amount", { precision: 24, scale: 6 }).notNull(),
   reason: varchar("reason", { length: 255 }).notNull(),
-  category: mysqlEnum("category", ["OPENING", "TRANSACTION", "ADJUSTMENT", "OTHER"]).default("OTHER").notNull(),
+  /** CASH_TRANSFER adalah sisi bank dari pemindahan kas↔bank; sengaja tidak dijurnal karena sisi kasnya sudah menjurnal pemindahan itu. */
+  category: mysqlEnum("category", ["OPENING", "TRANSACTION", "ADJUSTMENT", "CAPITAL_INJECTION", "CAPITAL_WITHDRAWAL", "CASH_TRANSFER", "OTHER"]).default("OTHER").notNull(),
   createdByUserId: int("createdByUserId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [
