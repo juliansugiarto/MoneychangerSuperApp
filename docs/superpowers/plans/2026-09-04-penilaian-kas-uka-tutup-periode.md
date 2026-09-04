@@ -16,7 +16,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 
 - [x] Tugas 1 — Migrasi penilaian penutupan periode (0047)
-- [ ] Tugas 2 — Penilaian kurs tengah murni di `shared/`
+- [x] Tugas 2 — Penilaian kurs tengah murni di `shared/`
 - [ ] Tugas 3 — Pemetaan jurnal penutupan dan penutup laba
 - [ ] Tugas 4 — `buildPeriodValuation`: bukti kuantitas dan kurs
 - [ ] Tugas 5 — `postPeriodClosing`: tulis penilaian dan jurnalnya
@@ -214,7 +214,7 @@ angka yang **sama persis** dengan yang akan dijurnal server.
   - `valueForeignInventory(input: ClosingRateSnapshot & { quantity: string }): { midRatePerUnit: string; rupiahValue: string }`
   - Dipakai tugas 4, 5, dan 9.
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 Buat `shared/inventoryValuation.test.ts`:
 
@@ -274,14 +274,14 @@ describe("penilaian persediaan valuta", () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan uji, pastikan gagal**
+- [x] **Step 2: Jalankan uji, pastikan gagal**
 
 ```bash
 ./node_modules/.bin/vitest run shared/inventoryValuation.test.ts
 ```
 Harapan: GAGAL — berkas `shared/inventoryValuation.ts` belum ada.
 
-- [ ] **Step 3: Tulis implementasi**
+- [x] **Step 3: Tulis implementasi**
 
 Buat `shared/inventoryValuation.ts`:
 
@@ -346,7 +346,7 @@ export function valueForeignInventory(
 }
 ```
 
-- [ ] **Step 4: Jalankan uji, pastikan lulus**
+- [x] **Step 4: Jalankan uji, pastikan lulus**
 
 ```bash
 ./node_modules/.bin/vitest run shared/inventoryValuation.test.ts
@@ -354,7 +354,7 @@ export function valueForeignInventory(
 ```
 Harapan: seluruh uji lulus, tanpa galat tipe.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add shared/inventoryValuation.ts shared/inventoryValuation.test.ts
