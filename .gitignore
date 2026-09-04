@@ -9,5 +9,5 @@ backups/
 
 # Skill pihak ketiga yang dipasang lewat `npx skills add` — alat bantu agen, bukan bagian produk.
 .agents/
-.claude/
+.claude/skills/
 skills-lock.json
