@@ -20,7 +20,7 @@ terutama bagian "Yang sudah diputuskan pengguna". Empat keputusan di sana mengik
 Pengerjaan di ROADMAP.
 
 - [x] Tugas 1 — Skema dan migrasi aditif
-- [ ] Tugas 2 — Pembanding pecahan murni di `shared/`
+- [x] Tugas 2 — Pembanding pecahan murni di `shared/`
 - [ ] Tugas 3 — Angka sistem per pecahan untuk laci dan brankas
 - [ ] Tugas 4 — `submitStockOpname` menerima pecahan dua lokasi
 - [ ] Tugas 5 — UI tab Stock Opname
@@ -154,7 +154,7 @@ Ditaruh di `shared/` justru supaya UI dapat menunjukkan selisihnya **sebelum** p
 memakai aturan yang sama persis dengan yang dipakai server saat menilai. Fungsi murni, tanpa
 basis data, tanpa Drizzle.
 
-- [ ] **Langkah 1: Tulis fungsinya**
+- [x] **Langkah 1: Tulis fungsinya**
 
 ```ts
 /**
@@ -202,7 +202,7 @@ export function compareDenominationCounts(system: DenominationCount[], physical:
 Impor `Decimal` dari `decimal.js` seperti berkas `shared/` lain yang sudah ada — periksa dulu cara
 `shared/ledger.ts` mengimpornya dan ikuti persis.
 
-- [ ] **Langkah 2: Ujinya**
+- [x] **Langkah 2: Ujinya**
 
 Lima perilaku yang harus dijaga:
 
@@ -219,7 +219,7 @@ Lima perilaku yang harus dijaga:
 ./node_modules/.bin/vitest run shared/denominationVariance.test.ts
 ```
 
-- [ ] **Langkah 3: Gerbang mutu dan commit**
+- [x] **Langkah 3: Gerbang mutu dan commit**
 
 ```bash
 ./node_modules/.bin/vitest run
