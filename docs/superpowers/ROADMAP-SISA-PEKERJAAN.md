@@ -66,8 +66,13 @@ Rencana: `plans/2026-09-05-aset-tetap-penyusutan.md`
 - [x] Tugas 10 — Halaman Aset Tetap dan panel Penyusutan Bulanan
 - [x] Tugas 11 — Skenario menyeluruh dan dokumentasi
 
-### Paket F — Arus Kas dan CALK
-- [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
+### Paket F1 — Kas valuta asing dan revaluasi kurs
+Spec: `specs/2026-09-05-kas-valas-revaluasi-kurs-design.md`
+Rencana: `plans/2026-09-05-kas-valas-revaluasi-kurs.md`
+- [x] Sesi rancangan — spec dan rencana bertugas
+
+### Paket F2 — Arus Kas dan CALK
+- [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan; **F1 lebih dulu**)*
 
 ### Paket G — Ekspor B0002/B0003/B0004 dari buku besar
 - [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
@@ -98,14 +103,15 @@ Rencana: `plans/2026-09-05-aset-tetap-penyusutan.md`
 | 3 | **D** opname menyeluruh | Temuan BI 6, lewat tenggat; **mengubah `stock_opnames`, dan paket C membaca tabel itu** |
 | 4 | **C** penilaian kas UKA | Membuat neraca seimbang — sisa langsung temuan 7.1 |
 | 5 | **E** aset tetap | Memasok baris Penyusutan B0003 yang belum punya asal |
-| 6 | **F** Arus Kas dan CALK | Arus Kas metode tidak langsung menambahkan kembali penyusutan dari E |
-| 7 | **G** ekspor B-form | Diletakkan setelah C–F supaya yang diekspor sudah lengkap |
-| 8 | **H** profil transaksi | Berdiri sendiri |
-| 9 | **I** arsip dokumen | Berdiri sendiri |
-| 10 | **J** IRA | Paling besar; sebagian sisi risiko inherennya dihitung dari data yang sudah ada |
-| 11 | **K2/K3** | Kebersihan; K3 menunggu naskah SE |
+| 6 | **F1** kas valas dan revaluasi kurs | Menyelesaikan pekerjaan yang `mapBankMovement` sendiri tandai *belum*; menghidupkan `REVALUASI_KURS`, 7-1500, dan 1-1220 yang sudah disediakan tetapi menganggur |
+| 7 | **F2** Arus Kas dan CALK | Arus Kas metode tidak langsung menambahkan kembali penyusutan dari E, dan barisnya "Pengaruh perubahan kurs atas kas" hanya berisi angka bila F1 sudah ada |
+| 8 | **G** ekspor B-form | Diletakkan setelah C–F supaya yang diekspor sudah lengkap |
+| 9 | **H** profil transaksi | Berdiri sendiri |
+| 10 | **I** arsip dokumen | Berdiri sendiri |
+| 11 | **J** IRA | Paling besar; sebagian sisi risiko inherennya dihitung dari data yang sudah ada |
+| 12 | **K2/K3** | Kebersihan; K3 menunggu naskah SE |
 
-**Yang mengikat hanya empat:** K1 sebelum D, D sebelum C, E sebelum F, C–F sebelum G.
+**Yang mengikat hanya lima:** K1 sebelum D, D sebelum C, E sebelum F2, F1 sebelum F2, C–F2 sebelum G.
 H, I, dan J berdiri sendiri dan boleh disisipkan kapan saja — dahulukan bila tekanan pemeriksaan
 BI lebih mendesak daripada kerapian laporan keuangan.
 
@@ -384,7 +390,27 @@ lurus, `postDepreciation` bersumber `PENYUSUTAN` dan idempoten per aset per bula
 
 ---
 
-# Paket F — Arus Kas dan CALK
+# Paket F1 — Kas valuta asing dan revaluasi kurs
+
+**Rencana rinci sudah ada:** `specs/2026-09-05-kas-valas-revaluasi-kurs-design.md` dan
+`plans/2026-09-05-kas-valas-revaluasi-kurs.md`.
+
+Dipisahkan dari Paket F pada sesi rancangan 5 September 2026, dengan preseden Paket K1: kekurangan
+yang ditemukan saat merancang paket lain, dikeluarkan menjadi paket kecil tersendiri yang dikerjakan
+lebih dulu.
+
+Outlet dapat membuka rekening USD hari ini, tetapi `mapBankMovement` menolak menjurnalnya —
+*"rekening valuta asing belum dinilai"*. Uang yang benar-benar ada karena itu tidak muncul pada
+laporan mana pun. Paket ini menjurnal mutasinya ke 1-1220 pada kurs tanggal mutasi, lalu
+meretranslasi saldonya pada kurs penutup tiap akhir periode dengan selisih ke 7-1500 — yang SAK EP
+Bab 30 wajibkan dan tidak akan pernah dikerjakan orang yang mengisi formulir Excel.
+
+Menghidupkan tiga hal yang sudah disediakan tetapi menganggur: nilai `REVALUASI_KURS`, akun 7-1500,
+dan akun 1-1220.
+
+---
+
+# Paket F2 — Arus Kas dan CALK
 
 ## Keadaan sekarang
 
@@ -394,11 +420,25 @@ Perubahan Ekuitas — sudah lengkap dengan kolom pembanding periode sebelumnya
 
 SAK EP menuntut **lima**. Arus Kas dan CALK belum ada sama sekali.
 
-## Sketsa ruang lingkup
+## Yang sudah diputuskan pada sesi rancangan 5 September 2026
 
-Arus Kas metode tidak langsung disusun dari buku besar (karena itu paket E lebih dulu: penyusutan
-adalah penambahan kembali non-kas yang pertama), dan CALK terstruktur — kebijakan akuntansi,
-rincian pos, dan hal-hal yang wajib diungkapkan.
+- **Kas dan setara kas** = `1-1110` + `1-1120` + `1-1220`. Kas UKA fisik (`1-1210`) **bukan** kas —
+  ia persediaan, dinilai lewat jalur Paket C.
+- **Arus Kas mengikuti rentang tanggal bebas** yang sama dengan ketiga laporan lain, beserta kolom
+  pembandingnya dari `priorRange`. Bukan tahunan, bukan per periode bulanan.
+- **CALK hibrida:** catatan yang angkanya diketahui buku besar (rincian aset tetap, kas, ekuitas,
+  beban) dibangkitkan dan tidak pernah diketik; catatan yang memang pertimbangan (kebijakan
+  akuntansi, dasar penyusunan, peristiwa setelah periode, pihak berelasi) berupa teks tersimpan.
+  Angka tidak pernah diketik ulang, sehingga tidak dapat berselisih dengan laporannya.
+- **Bagian investasi dibaca dari `sourceType`,** bukan dari selisih saldo: `PEROLEHAN_ASET` dan
+  `PELEPASAN_ASET` disajikan bruto, sesuai SAK EP, dan tiap barisnya menunjuk nomor jurnalnya.
+- **Ada keranjang "Belum terklasifikasi" yang terlihat,** beserta nomor jurnalnya, dan penanda
+  `reconciled` yang membandingkan perubahan kas hasil hitungan dengan pergerakan nyata
+  `1-1110`+`1-1120`+`1-1220`. Selisih muncul sebagai peringatan, tidak pernah sebagai pos penyeimbang.
+
+## Yang masih perlu diputuskan sesi rancangannya
+
+Daftar catatan CALK yang wajib ada, tempat penyimpanan teksnya, dan bentuk panelnya.
 
 ---
 
