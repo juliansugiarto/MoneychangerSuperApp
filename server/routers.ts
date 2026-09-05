@@ -122,6 +122,7 @@ import {
   updateFixedAssetSettings,
 } from "./fixedAssets";
 import { fixedAssetCategories, fixedAssetTaxGroups } from "../drizzle/schema";
+import { buildCurrencyRevaluation, postCurrencyRevaluation } from "./currencyRevaluation";
 import { buildFinancialStatements } from "./financialStatements";
 import { KUPVA_WORK_AREA, competencyCodesForArea } from "../shared/sdmCompetency";
 import {
@@ -558,6 +559,18 @@ export const appRouter = router({
     postMonthlyDepreciation: controllerProcedure
       .input(z.object({ periodId: z.number().int().positive() }))
       .mutation(({ input, ctx }) => postMonthlyDepreciation(input, ctx.user)),
+
+    /**
+     * Revaluasi kurs bulanan. Diletakkan pada router `ledger` bersama penyusutan, dengan alasan
+     * yang sama: yang dilakukan orang di tab Periode adalah menutup bulan, dan revaluasi adalah
+     * langkah kedua — sesudah penyusutan, sebelum penilaian persediaan.
+     */
+    currencyRevaluation: controllerProcedure
+      .input(z.object({ periodId: z.number().int().positive() }))
+      .query(({ input }) => buildCurrencyRevaluation(input.periodId)),
+    postCurrencyRevaluation: controllerProcedure
+      .input(z.object({ periodId: z.number().int().positive() }))
+      .mutation(({ input, ctx }) => postCurrencyRevaluation(input, ctx.user)),
 
     entries: controllerProcedure.input(z.object({
       from: z.coerce.date().optional(),

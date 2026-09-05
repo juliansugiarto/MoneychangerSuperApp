@@ -102,6 +102,7 @@ export default function BukuBesar() {
     utils.ledger.cashReconciliation.invalidate();
     utils.ledger.closingValuation.invalidate();
     utils.ledger.monthlyDepreciation.invalidate();
+    utils.ledger.currencyRevaluation.invalidate();
   };
 
   const seedAccounts = trpc.ledger.seedAccounts.useMutation({
@@ -157,6 +158,17 @@ export default function BukuBesar() {
         result.entryNumber
           ? `Penyusutan dijurnal sebagai ${result.entryNumber}.`
           : "Bulan ini ditandai sudah disusutkan; tidak ada aset tersusutkan untuk dijurnal.",
+      );
+      refresh();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const postCurrencyRevaluation = trpc.ledger.postCurrencyRevaluation.useMutation({
+    onSuccess: (result) => {
+      toast.success(
+        result.entryNumber
+          ? `Revaluasi kurs dijurnal sebagai ${result.entryNumber}.`
+          : "Bulan ini ditandai sudah direvaluasi; tidak ada selisih kurs untuk dijurnal.",
       );
       refresh();
     },
@@ -788,9 +800,11 @@ export default function BukuBesar() {
                       valuationPending={postClosingValuation.isPending}
                       yearEndPending={postYearEndClosing.isPending}
                       depreciationPending={postMonthlyDepreciation.isPending}
+                      revaluationPending={postCurrencyRevaluation.isPending}
                       onPostValuation={() => postClosingValuation.mutate({ periodId: period.id })}
                       onPostYearEnd={() => postYearEndClosing.mutate({ periodId: period.id })}
                       onPostDepreciation={() => postMonthlyDepreciation.mutate({ periodId: period.id })}
+                      onPostRevaluation={() => postCurrencyRevaluation.mutate({ periodId: period.id })}
                       onClose={(notes) => closePeriod.mutate({ periodId: period.id, notes: notes || undefined })}
                       onReopen={(reason) => reopenPeriod.mutate({ periodId: period.id, reason })}
                     />
@@ -813,9 +827,11 @@ function PeriodRow({
   valuationPending,
   yearEndPending,
   depreciationPending,
+  revaluationPending,
   onPostValuation,
   onPostYearEnd,
   onPostDepreciation,
+  onPostRevaluation,
   onClose,
   onReopen,
 }: {
@@ -826,9 +842,11 @@ function PeriodRow({
   valuationPending: boolean;
   yearEndPending: boolean;
   depreciationPending: boolean;
+  revaluationPending: boolean;
   onPostValuation: () => void;
   onPostYearEnd: () => void;
   onPostDepreciation: () => void;
+  onPostRevaluation: () => void;
   onClose: (notes: string) => void;
   onReopen: (reason: string) => void;
 }) {
@@ -836,9 +854,11 @@ function PeriodRow({
   const closed = period.status === "DITUTUP";
   const valuation = trpc.ledger.closingValuation.useQuery({ periodId: period.id }, { enabled: inspected });
   const depreciation = trpc.ledger.monthlyDepreciation.useQuery({ periodId: period.id }, { enabled: inspected });
+  const revaluation = trpc.ledger.currencyRevaluation.useQuery({ periodId: period.id }, { enabled: inspected });
   const blocked = Boolean(valuation.data?.blockers.length);
   const valued = Boolean(valuation.data?.valuationPostedAt);
   const depreciated = Boolean(depreciation.data?.depreciationPostedAt);
+  const revalued = Boolean(revaluation.data?.revaluationPostedAt);
   const needsYearEnd = Boolean(valuation.data?.isFiscalYearEnd) && !valuation.data?.profitClosingPostedAt;
 
   return (
@@ -882,10 +902,12 @@ function PeriodRow({
             */}
             <Button
               variant="outline"
-              disabled={pending || (inspected && (!depreciated || !valued))}
+              disabled={pending || (inspected && (!depreciated || !revalued || !valued))}
               title={
                 inspected && !depreciated
                   ? "Jurnalkan penyusutan bulan ini lebih dulu."
+                  : inspected && !revalued
+                    ? "Jurnalkan revaluasi kurs bulan ini lebih dulu."
                   : inspected && !valued
                     ? "Jalankan penilaian persediaan akhir UKA lebih dulu."
                     : undefined
@@ -903,6 +925,14 @@ function PeriodRow({
           depreciation={depreciation}
           pending={depreciationPending}
           onPost={onPostDepreciation}
+        />
+      ) : null}
+
+      {inspected && !closed ? (
+        <CurrencyRevaluationPanel
+          revaluation={revaluation}
+          pending={revaluationPending}
+          onPost={onPostRevaluation}
         />
       ) : null}
 
@@ -1048,6 +1078,139 @@ function MonthlyDepreciationPanel({
           onClick={onPost}
         >
           <Scale className="mr-2 size-4" />Jurnalkan penyusutan bulan ini
+        </Button>
+      )}
+    </div>
+  );
+}
+
+type CurrencyRevaluation = inferRouterOutputs<AppRouter>["ledger"]["currencyRevaluation"];
+
+/**
+ * Panel Revaluasi Kurs: selisih tiap mata uang sebelum bulannya dijurnal.
+ *
+ * Diletakkan di antara panel penyusutan dan panel penilaian karena urutan di layar mengikuti
+ * urutan gerbangnya: penyusutan, lalu revaluasi kurs, lalu penilaian persediaan, lalu penguncian.
+ * Angkanya datang dari `currencyRevaluation`, sumber yang sama dengan yang dipakai server saat
+ * menjurnalnya — layar dan buku besar karena itu mustahil berbeda.
+ */
+function CurrencyRevaluationPanel({
+  revaluation,
+  pending,
+  onPost,
+}: {
+  revaluation: { data: CurrencyRevaluation | undefined; isLoading: boolean; isError: boolean; error: { message: string } | null };
+  pending: boolean;
+  onPost: () => void;
+}) {
+  if (revaluation.isLoading) {
+    return <p className="mt-4 border-t border-[#eef2f7] pt-4 text-sm text-[#475569]">Memuat revaluasi kurs…</p>;
+  }
+  if (revaluation.isError) {
+    return (
+      <div className="mt-4 border-t border-[#eef2f7] pt-4">
+        <p className="rounded-xl border border-[#f0d6d6] bg-[#fdf6f6] p-4 text-sm text-[#9a4b4b]">
+          Revaluasi kurs tidak dapat dimuat: {revaluation.error?.message ?? "sambungan ke server terputus."}
+        </p>
+      </div>
+    );
+  }
+
+  const data = revaluation.data;
+  if (!data) return null;
+  const posted = Boolean(data.revaluationPostedAt);
+
+  return (
+    <div className="mt-4 space-y-4 border-t border-[#eef2f7] pt-4">
+      <div>
+        <p className="font-semibold text-[#213f63]">Revaluasi kurs {data.periodMonth}</p>
+        <p className="text-xs text-[#718398]">
+          Saldo rekening valuta asing diukur ulang pada kurs tengah BI akhir periode; selisihnya
+          masuk Laba/(Rugi) Selisih Kurs. Uang tunai UKA di laci tidak ikut — ia dinilai dari stock
+          opname. Selisihnya bukan uang yang masuk atau keluar.
+        </p>
+      </div>
+
+      {data.blockers.length ? (
+        <div className="rounded-xl border border-[#f2e2c9] bg-[#fdfaf3] p-4">
+          <p className="flex items-center gap-2 text-sm font-semibold text-[#8a6320]">
+            <ShieldAlert className="size-4" />Revaluasi belum dapat dijalankan
+          </p>
+          <ul className="mt-2 space-y-1 text-sm text-[#8a6320]">
+            {data.blockers.map((blocker) => (
+              <li key={blocker.currencyCode}>
+                <span className="font-semibold">{blocker.currencyCode}</span> — {blocker.reason}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {data.rows.length ? (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[48rem] text-left text-sm">
+            <thead className="text-xs uppercase tracking-wide text-[#8194aa]">
+              <tr className="border-b border-[#e6edf5]">
+                <th className="py-2 pr-4">Mata uang</th>
+                <th className="py-2 pr-4 text-right">Saldo valuta</th>
+                <th className="py-2 pr-4 text-right">Kurs tengah</th>
+                <th className="py-2 pr-4">Tanggal kurs</th>
+                <th className="py-2 pr-4 text-right">Nilai tercatat</th>
+                <th className="py-2 pr-4 text-right">Nilai sesudahnya</th>
+                <th className="py-2 text-right">Selisih</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.rows.map((row) => (
+                <tr key={row.currencyCode} className="border-b border-[#eef2f7]">
+                  <td className="py-2 pr-4 font-semibold text-[#213f63]">{row.currencyCode}</td>
+                  <td className="py-2 pr-4 text-right tabular-nums text-[#475569]">{row.foreignBalance}</td>
+                  <td className="py-2 pr-4 text-right tabular-nums text-[#475569]">{formatRupiah(row.midRatePerUnit)}</td>
+                  <td className="py-2 pr-4 text-[#475569]">
+                    {row.rateReferenceDate}
+                    {row.rateReferenceDate < data.periodEnd ? (
+                      <span className="block text-xs text-[#8a6320]">Mundur dari akhir periode</span>
+                    ) : null}
+                  </td>
+                  <td className="py-2 pr-4 text-right tabular-nums text-[#475569]">{formatRupiah(row.carryingBefore)}</td>
+                  <td className="py-2 pr-4 text-right tabular-nums text-[#475569]">{formatRupiah(row.carryingAfter)}</td>
+                  <td className={`py-2 text-right tabular-nums ${row.difference.startsWith("-") ? "text-[#9a4b4b]" : "text-[#4d8548]"}`}>
+                    {formatRupiah(row.difference)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td className="py-2 pr-4 font-semibold text-[#213f63]" colSpan={6}>Total selisih kurs</td>
+                <td className={`py-2 text-right font-semibold tabular-nums ${data.totalDifference.startsWith("-") ? "text-[#9a4b4b]" : "text-[#213f63]"}`}>
+                  {formatRupiah(data.totalDifference)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      ) : (
+        <EmptyNote
+          text={
+            data.blockers.length
+              ? "Tidak ada mata uang lain yang perlu direvaluasi bulan ini."
+              : "Tidak ada saldo rekening valuta asing pada bulan ini. Menjalankannya tetap menandai bulan ini sudah direvaluasi, tanpa menulis jurnal — dan gerbang penutupan periode tetap menuntutnya."
+          }
+        />
+      )}
+
+      {posted ? (
+        <p className="text-sm text-[#4d8548]">
+          Sudah dijurnal {formatDate(data.revaluationPostedAt)}.
+        </p>
+      ) : (
+        <Button
+          disabled={pending || Boolean(data.blockers.length)}
+          title={data.blockers.length ? "Selesaikan penghalangnya lebih dulu." : undefined}
+          onClick={onPost}
+        >
+          <Scale className="mr-2 size-4" />Jurnalkan revaluasi bulan ini
         </Button>
       )}
     </div>
