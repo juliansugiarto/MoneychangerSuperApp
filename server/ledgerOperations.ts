@@ -213,6 +213,15 @@ export async function closeAccountingPeriod(input: { periodId: number; notes?: s
       "Periode tidak dapat ditutup: penyusutan aset tetap belum dijurnal. Jalankan penyusutan bulanan pada panel Periode lebih dulu.",
     );
   }
+  // Revaluasi sesudah penyusutan, sebelum penilaian persediaan. Penyusutan dan revaluasi sama-sama
+  // mengubah laba periode ini dan tidak bergantung satu sama lain, sedangkan penilaian persediaan
+  // membaca hasil opname yang tidak terpengaruh keduanya. Bulan yang terlupa membiarkan saldo
+  // rekening valuta asing tetap pada kurs lama, dan tidak ada satu pun laporan yang menolaknya.
+  if (!period.revaluationPostedAt) {
+    throw new Error(
+      "Periode tidak dapat ditutup: revaluasi kurs belum dijurnal. Jalankan revaluasi kurs pada panel Periode lebih dulu.",
+    );
+  }
   if (!period.valuationPostedAt) {
     throw new Error(
       "Periode tidak dapat ditutup: penilaian persediaan akhir UKA belum dijalankan. Jalankan penilaian pada panel Penutupan Periode lebih dulu.",

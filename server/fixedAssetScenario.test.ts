@@ -71,6 +71,7 @@ type PeriodRow = {
   status: "TERBUKA" | "DITUTUP";
   depreciationPostedAt: Date | null;
   depreciationJournalEntryId: number | null;
+  revaluationPostedAt: Date | null;
   valuationPostedAt: Date | null;
   profitClosingPostedAt: Date | null;
   closedAt: Date | null;
@@ -230,6 +231,9 @@ const bulan2026 = (month: number): PeriodRow => {
     status: "TERBUKA",
     depreciationPostedAt: null,
     depreciationJournalEntryId: null,
+    // Revaluasi kurs (paket F1) disetel sudah berjalan: cerita ini tentang penyusutan, dan
+    // gerbang revaluasinya punya berkasnya sendiri di `revaluationGate.test.ts`.
+    revaluationPostedAt: new Date("2026-01-01T00:00:00"),
     valuationPostedAt: new Date("2026-01-01T00:00:00"),
     profitClosingPostedAt: null,
     closedAt: null,

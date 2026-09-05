@@ -22,7 +22,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 5 — `postBankMovements` memasok nilai Rupiah
 - [x] Tugas 6 — `buildCurrencyRevaluation`: bukti per mata uang
 - [x] Tugas 7 — `postCurrencyRevaluation`: jurnal periode yang idempoten
-- [ ] Tugas 8 — Gerbang penutupan periode dan penutup laba tahunan
+- [x] Tugas 8 — Gerbang penutupan periode dan penutup laba tahunan
 - [ ] Tugas 9 — Prosedur tRPC dan panel Revaluasi Kurs
 - [ ] Tugas 10 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 

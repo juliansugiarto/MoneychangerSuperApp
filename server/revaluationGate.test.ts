@@ -3,6 +3,7 @@ import {
   accountingPeriods,
   cashBalances,
   currencies,
+  currencyRevaluations,
   journalEntries,
   journalEntryLines,
   periodClosingValuations,
@@ -14,7 +15,7 @@ import * as db from "./db";
 /**
  * `closeAccountingPeriod` yang asli ikut diuji, jadi `./ledgerOperations` hanya ditambal pada dua
  * fungsi yang dipanggil `periodClosing.ts` — bukan diganti seluruhnya. Bentuknya sama seperti
- * `periodCloseGate.test.ts`, yang menguji gerbang penilaian paket C.
+ * `depreciationGate.test.ts`.
  */
 vi.mock("./ledgerOperations", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./ledgerOperations")>();
@@ -67,8 +68,6 @@ const september = (overrides: Record<string, unknown> = {}) => ({
   periodEnd: dbDay("2026-09-30"),
   status: "TERBUKA" as const,
   depreciationPostedAt: posted,
-  // Gerbang revaluasi kurs (paket F1) berdiri di antara penyusutan dan penilaian; uji ini menguji
-  // gerbang penyusutan, jadi revaluasinya disetel sudah berjalan.
   revaluationPostedAt: posted,
   valuationPostedAt: posted,
   profitClosingPostedAt: null,
@@ -76,35 +75,30 @@ const september = (overrides: Record<string, unknown> = {}) => ({
 });
 
 const december = (overrides: Record<string, unknown> = {}) => ({
+  ...september(),
   id: 12,
   periodStart: dbDay("2026-12-01"),
   periodEnd: dbDay("2026-12-31"),
-  status: "TERBUKA" as const,
-  depreciationPostedAt: posted,
-  // Gerbang revaluasi kurs (paket F1) berdiri di antara penyusutan dan penilaian; uji ini menguji
-  // gerbang penyusutan, jadi revaluasinya disetel sudah berjalan.
-  revaluationPostedAt: posted,
-  valuationPostedAt: posted,
-  profitClosingPostedAt: null,
   ...overrides,
 });
 
-/** Dua belas bulan 2026, seluruhnya sudah disusutkan kecuali yang disebut `missing`. */
+/** Dua belas bulan 2026; yang disebut `missing` belum direvaluasi. */
 const twelveMonths = (missing: string[] = []) =>
   Array.from({ length: 12 }, (_, index) => {
     const month = `${index + 1}`.padStart(2, "0");
     return {
       periodStart: dbDay(`2026-${month}-01`),
-      depreciationPostedAt: missing.includes(`2026-${month}`) ? null : posted,
-      revaluationPostedAt: posted,
+      depreciationPostedAt: posted,
+      revaluationPostedAt: missing.includes(`2026-${month}`) ? null : posted,
     };
   });
 
-const reads = (periods: unknown[][], extra: { journal?: unknown[] } = {}) => [
+const reads = (periods: unknown[][]) => [
   { table: accountingPeriods, results: periods },
-  { table: journalEntries, results: [extra.journal ?? []] },
+  { table: journalEntries, results: [[]] },
   { table: journalEntryLines, results: [[]] },
   { table: currencies, results: [[]] },
+  { table: currencyRevaluations, results: [[]] },
   { table: stockOpnames, results: [[]] },
   { table: rateReferenceSnapshots, results: [[]] },
   { table: periodClosingValuations, results: [[]] },
@@ -118,38 +112,33 @@ beforeEach(() => {
   vi.mocked(accountBalancesFor).mockReset().mockResolvedValue([]);
 });
 
-describe("closeAccountingPeriod menuntut penyusutan", () => {
-  it("menolak periode yang penyusutannya belum dijurnal", async () => {
-    const { spy, writes } = mockDb(reads([[september({ depreciationPostedAt: null })]]));
+describe("closeAccountingPeriod menuntut revaluasi kurs", () => {
+  it("menolak periode yang revaluasinya belum dijurnal", async () => {
+    const { spy, writes } = mockDb(reads([[september({ revaluationPostedAt: null })]]));
 
-    await expect(closeAccountingPeriod({ periodId: 9 }, actor)).rejects.toThrow(/penyusutan aset tetap belum dijurnal/i);
+    await expect(closeAccountingPeriod({ periodId: 9 }, actor)).rejects.toThrow(/revaluasi kurs belum dijurnal/i);
     expect(writes).toEqual([]);
     spy.mockRestore();
   });
 
-  it("mendahulukan pesan jurnal tidak utuh daripada pesan penyusutan", async () => {
-    // Jurnal yang tidak utuh adalah masalah yang lebih besar, dan pesannyalah yang harus sampai
-    // lebih dulu — urutan yang sama seperti gerbang penilaian paket C.
-    const { spy } = mockDb(
-      reads([[september({ depreciationPostedAt: null })]], {
-        journal: [{ id: 1, entryNumber: "JU-2026-09-0001", totalDebit: "10.00", totalCredit: "10.00" }],
-      }),
-    );
-
-    await expect(closeAccountingPeriod({ periodId: 9 }, actor)).rejects.toThrow(/tidak utuh/i);
-    spy.mockRestore();
-  });
-
-  it("memeriksa penyusutan sebelum penilaian persediaan", async () => {
-    // Penyusutan mengubah laba periode itu; penilaian persediaan tidak bergantung padanya. Bila
-    // keduanya sama-sama belum berjalan, pesan penyusutanlah yang lebih dulu sampai.
-    const { spy } = mockDb(reads([[september({ depreciationPostedAt: null, valuationPostedAt: null })]]));
+  it("memeriksa penyusutan sebelum revaluasi", async () => {
+    // Keduanya kosong: pesan penyusutanlah yang lebih dulu sampai, karena ia langkah pertama pada
+    // urutan tutup bulan yang tertulis di panduan.
+    const { spy } = mockDb(reads([[september({ depreciationPostedAt: null, revaluationPostedAt: null })]]));
 
     await expect(closeAccountingPeriod({ periodId: 9 }, actor)).rejects.toThrow(/penyusutan/i);
     spy.mockRestore();
   });
 
-  it("meloloskan periode yang penyusutan dan penilaiannya sudah dijalankan", async () => {
+  it("memeriksa revaluasi sebelum penilaian persediaan", async () => {
+    // Revaluasi mengubah laba periode ini; penilaian persediaan tidak bergantung padanya.
+    const { spy } = mockDb(reads([[september({ revaluationPostedAt: null, valuationPostedAt: null })]]));
+
+    await expect(closeAccountingPeriod({ periodId: 9 }, actor)).rejects.toThrow(/revaluasi kurs/i);
+    spy.mockRestore();
+  });
+
+  it("meloloskan periode yang ketiganya sudah dijalankan", async () => {
     const { spy, writes } = mockDb(reads([[september()]]));
 
     await expect(closeAccountingPeriod({ periodId: 9 }, actor)).resolves.toEqual({ id: 9 });
@@ -160,13 +149,13 @@ describe("closeAccountingPeriod menuntut penyusutan", () => {
   });
 });
 
-describe("postYearEndProfitClosing menuntut dua belas bulan penyusutan", () => {
-  it("menolak dan menyebut bulan yang penyusutannya belum dijurnal", async () => {
-    // Penutup laba menolkan 6-1700; menutupnya sebelum bebannya lengkap memindahkan angka yang
-    // salah ke 3-2100, dan 3-2100 tidak pernah ditinjau lagi.
+describe("postYearEndProfitClosing menuntut dua belas bulan revaluasi", () => {
+  it("menolak dan menyebut bulan yang revaluasinya belum dijurnal", async () => {
+    // Penutup laba menolkan 7-1500; menutupnya sebelum selisih kursnya lengkap memindahkan angka
+    // yang salah ke 3-2100, dan 3-2100 tidak pernah ditinjau lagi.
     const { spy } = mockDb(reads([[december()], [], twelveMonths(["2026-12"]), []]));
 
-    await expect(postYearEndProfitClosing({ periodId: 12 }, actor)).rejects.toThrow(/2026-12/);
+    await expect(postYearEndProfitClosing({ periodId: 12 }, actor)).rejects.toThrow(/revaluasi kurs belum dijurnal untuk .*2026-12/i);
     expect(postJournalEntry).not.toHaveBeenCalled();
     spy.mockRestore();
   });
@@ -180,7 +169,7 @@ describe("postYearEndProfitClosing menuntut dua belas bulan penyusutan", () => {
     spy.mockRestore();
   });
 
-  it("meloloskan tahun yang seluruh bulannya sudah disusutkan", async () => {
+  it("meloloskan tahun yang seluruh bulannya sudah direvaluasi", async () => {
     const { spy } = mockDb(reads([[december()], [], twelveMonths(), []]));
 
     await expect(postYearEndProfitClosing({ periodId: 12 }, actor)).resolves.toBeTruthy();

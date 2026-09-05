@@ -75,13 +75,16 @@ const period = (id: number, start: string, end: string, overrides: Record<string
   // Penyusutan bulanan (paket E) sudah dijalankan; skenario ini menguji penilaian dan penutup laba,
   // bukan gerbang penyusutannya — gerbang itu punya berkasnya sendiri di `depreciationGate.test.ts`.
   depreciationPostedAt: new Date("2027-01-02T03:00:00Z"),
+  // Revaluasi kurs (paket F1) juga sudah dijalankan; gerbangnya punya berkasnya sendiri.
+  revaluationPostedAt: new Date("2027-01-02T03:00:00Z"),
   valuationPostedAt: null, profitClosingPostedAt: null, ...overrides,
 });
 
-/** Dua belas bulan tahun buku yang penyusutannya sudah dijurnal — dibaca `postYearEndProfitClosing`. */
+/** Dua belas bulan tahun buku yang penyusutan dan revaluasinya sudah dijurnal. */
 const twelveMonthsPosted = Array.from({ length: 12 }, (_, index) => ({
   periodStart: dbDay(`2026-${`${index + 1}`.padStart(2, "0")}-01`),
   depreciationPostedAt: new Date("2027-01-02T03:00:00Z"),
+  revaluationPostedAt: new Date("2027-01-02T03:00:00Z"),
 }));
 
 const reads = (options: {

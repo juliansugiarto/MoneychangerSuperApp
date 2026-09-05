@@ -64,6 +64,9 @@ const december = (overrides: Record<string, unknown> = {}) => ({
   periodEnd: dbDay("2026-12-31"),
   status: "TERBUKA" as const,
   depreciationPostedAt: new Date("2027-01-02T03:00:00Z"),
+  // Revaluasi kurs (paket F1) juga sudah dijalankan; gerbangnya punya berkasnya sendiri di
+  // `revaluationGate.test.ts`.
+  revaluationPostedAt: new Date("2027-01-02T03:00:00Z"),
   valuationPostedAt: new Date("2027-01-02T03:00:00Z"),
   profitClosingPostedAt: null,
   ...overrides,
@@ -75,6 +78,9 @@ const september = (overrides: Record<string, unknown> = {}) => ({
   periodEnd: dbDay("2026-09-30"),
   status: "TERBUKA" as const,
   depreciationPostedAt: new Date("2026-10-01T03:00:00Z"),
+  // Revaluasi kurs (paket F1) juga sudah dijalankan; gerbangnya punya berkasnya sendiri di
+  // `revaluationGate.test.ts`.
+  revaluationPostedAt: new Date("2026-10-01T03:00:00Z"),
   valuationPostedAt: new Date("2026-10-01T03:00:00Z"),
   profitClosingPostedAt: null,
   ...overrides,
@@ -101,6 +107,7 @@ const reads = (periods: unknown[][], extra: { balances?: unknown[]; journal?: un
 const twelveMonthsPosted = Array.from({ length: 12 }, (_, index) => ({
   periodStart: dbDay(`2026-${`${index + 1}`.padStart(2, "0")}-01`),
   depreciationPostedAt: new Date("2027-01-02T03:00:00Z"),
+  revaluationPostedAt: new Date("2027-01-02T03:00:00Z"),
 }));
 
 const actor = { id: 42 };

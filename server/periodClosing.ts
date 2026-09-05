@@ -460,6 +460,7 @@ export async function postYearEndProfitClosing(input: { periodId: number }, acto
     .select({
       periodStart: accountingPeriods.periodStart,
       depreciationPostedAt: accountingPeriods.depreciationPostedAt,
+      revaluationPostedAt: accountingPeriods.revaluationPostedAt,
     })
     .from(accountingPeriods)
     .where(
@@ -475,6 +476,17 @@ export async function postYearEndProfitClosing(input: { periodId: number }, acto
   if (missingDepreciation.length) {
     throw new Error(
       `Penutup laba tidak dapat dijalankan: penyusutan belum dijurnal untuk ${missingDepreciation.join(", ")}.`,
+    );
+  }
+
+  // Alasan yang sama untuk 7-1500 Laba/(Rugi) Selisih Kurs: penutup laba menolkannya juga, dan
+  // menutupnya sebelum selisih kursnya lengkap memindahkan angka yang salah ke 3-2100.
+  const missingRevaluation = monthsInYear
+    .filter((row) => !row.revaluationPostedAt)
+    .map((row) => calendarDay(row.periodStart).slice(0, 7));
+  if (missingRevaluation.length) {
+    throw new Error(
+      `Penutup laba tidak dapat dijalankan: revaluasi kurs belum dijurnal untuk ${missingRevaluation.join(", ")}.`,
     );
   }
 
