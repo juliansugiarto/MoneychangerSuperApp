@@ -121,6 +121,8 @@ export const CASH_ACCOUNT = "1-1110";
 export const BANK_ACCOUNT = "1-1120";
 /** Rekening bank dalam valuta asing — pos moneter, diretranslasi tiap akhir periode (paket F1). */
 export const FX_BANK_ACCOUNT = "1-1220";
+/** Muara selisih retranslasi pos moneter; baris B0003 yang sampai paket F1 tidak pernah terisi. */
+export const FX_RATE_DIFFERENCE_ACCOUNT = "7-1500";
 export const PAID_IN_CAPITAL_ACCOUNT = "3-1100";
 /** Penarikan pemilik dicatat sebagai distribusi, bukan pengurangan setoran — keputusan pengguna 4 September 2026. */
 export const DIVIDEND_ACCOUNT = "3-4100";
@@ -270,6 +272,31 @@ export function mapBankMovement(input: {
 export const FX_INVENTORY_ACCOUNT = "1-1210";
 export const OPENING_INVENTORY_ACCOUNT = "5-1100";
 export const CLOSING_INVENTORY_ACCOUNT = "5-1300";
+
+/**
+ * Retranslasi pos moneter valuta asing pada akhir periode.
+ *
+ * Satu jurnal untuk seluruh mata uang sekaligus, alasannya sama seperti penyusutan: jurnal kecil
+ * per mata uang setiap bulan mengubur jurnal transaksi di antara derau, dan rincian per mata uangnya
+ * sudah tersimpan pada `currency_revaluations` tempat ia dapat diurutkan dan dijumlahkan.
+ *
+ * `difference` adalah `carryingAfter - carryingBefore` seluruh mata uang. Positif berarti Rupiah
+ * melemah terhadap valuta yang dipegang, sehingga nilai tercatatnya naik dan selisihnya laba.
+ *
+ * Hanya pos **moneter** yang sampai ke sini. Kas UKA fisik (1-1210) adalah persediaan yang dinilai
+ * dari hitungan fisik lewat 5-1300 pada paket C; meretranslasinya juga akan menghitung pergerakan
+ * kurs yang sama dua kali sementara neracanya tetap seimbang.
+ */
+export function mapCurrencyRevaluation(input: { difference: string; month: string }): MappingResult {
+  const parsed = toLedgerAmount(input.difference);
+  if (!parsed) return { skipped: "selisih revaluasi memiliki pecahan di bawah sen; menjurnalnya menuntut pembulatan uang" };
+  if (parsed.amount === "0.00") return { skipped: `tidak ada selisih kurs pada ${input.month}` };
+
+  const memo = `Revaluasi kurs ${input.month}`;
+  return parsed.negative
+    ? pair(FX_RATE_DIFFERENCE_ACCOUNT, FX_BANK_ACCOUNT, parsed.amount, memo)
+    : pair(FX_BANK_ACCOUNT, FX_RATE_DIFFERENCE_ACCOUNT, parsed.amount, memo);
+}
 
 export function mapPeriodInventoryClosing(input: {
   priorClosingValue: string;
