@@ -15,16 +15,16 @@
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu**, supaya sesi
 berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 
-- [ ] Tugas 1 — Migrasi register aset tetap (0048)
-- [ ] Tugas 2 — Jadwal penyusutan murni di `shared/`
-- [ ] Tugas 3 — Tiga pemetaan jurnal aset tetap
-- [ ] Tugas 4 — Batas kapitalisasi dan pendaftaran aset
-- [ ] Tugas 5 — `buildMonthlyDepreciation`: bukti beban per aset
-- [ ] Tugas 6 — `postMonthlyDepreciation`: jurnal bulanan yang idempoten
-- [ ] Tugas 7 — Pelepasan aset
-- [ ] Tugas 8 — Gerbang penutupan periode dan penutup laba tahunan
-- [ ] Tugas 9 — Prosedur tRPC dan navigasi
-- [ ] Tugas 10 — Halaman Aset Tetap dan panel Penyusutan Bulanan
+- [x] Tugas 1 — Migrasi register aset tetap (0048)
+- [x] Tugas 2 — Jadwal penyusutan murni di `shared/`
+- [x] Tugas 3 — Tiga pemetaan jurnal aset tetap
+- [x] Tugas 4 — Batas kapitalisasi dan pendaftaran aset
+- [x] Tugas 5 — `buildMonthlyDepreciation`: bukti beban per aset
+- [x] Tugas 6 — `postMonthlyDepreciation`: jurnal bulanan yang idempoten
+- [x] Tugas 7 — Pelepasan aset
+- [x] Tugas 8 — Gerbang penutupan periode dan penutup laba tahunan
+- [x] Tugas 9 — Prosedur tRPC dan navigasi
+- [x] Tugas 10 — Halaman Aset Tetap dan panel Penyusutan Bulanan
 - [ ] Tugas 11 — Skenario menyeluruh dan dokumentasi
 
 Urutannya mengikat: 1 sebelum 4–8; 2 dan 3 sebelum 5; 5 sebelum 6; 6 sebelum 7 dan 8;

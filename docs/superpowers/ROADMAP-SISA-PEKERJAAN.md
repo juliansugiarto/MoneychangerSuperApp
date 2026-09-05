@@ -54,16 +54,16 @@ Rencana: `plans/2026-09-04-penilaian-kas-uka-tutup-periode.md`
 Spec: `specs/2026-09-05-aset-tetap-penyusutan-design.md`
 Rencana: `plans/2026-09-05-aset-tetap-penyusutan.md`
 - [x] Sesi rancangan — spec dan rencana bertugas
-- [ ] Tugas 1 — Migrasi register aset tetap (0048)
-- [ ] Tugas 2 — Jadwal penyusutan murni di `shared/`
-- [ ] Tugas 3 — Tiga pemetaan jurnal aset tetap
-- [ ] Tugas 4 — Batas kapitalisasi dan pendaftaran aset
-- [ ] Tugas 5 — `buildMonthlyDepreciation`: bukti beban per aset
-- [ ] Tugas 6 — `postMonthlyDepreciation`: jurnal bulanan yang idempoten
-- [ ] Tugas 7 — Pelepasan aset
-- [ ] Tugas 8 — Gerbang penutupan periode dan penutup laba tahunan
-- [ ] Tugas 9 — Prosedur tRPC dan navigasi
-- [ ] Tugas 10 — Halaman Aset Tetap dan panel Penyusutan Bulanan
+- [x] Tugas 1 — Migrasi register aset tetap (0048)
+- [x] Tugas 2 — Jadwal penyusutan murni di `shared/`
+- [x] Tugas 3 — Tiga pemetaan jurnal aset tetap
+- [x] Tugas 4 — Batas kapitalisasi dan pendaftaran aset
+- [x] Tugas 5 — `buildMonthlyDepreciation`: bukti beban per aset
+- [x] Tugas 6 — `postMonthlyDepreciation`: jurnal bulanan yang idempoten
+- [x] Tugas 7 — Pelepasan aset
+- [x] Tugas 8 — Gerbang penutupan periode dan penutup laba tahunan
+- [x] Tugas 9 — Prosedur tRPC dan navigasi
+- [x] Tugas 10 — Halaman Aset Tetap dan panel Penyusutan Bulanan
 - [ ] Tugas 11 — Skenario menyeluruh dan dokumentasi
 
 ### Paket F — Arus Kas dan CALK
