@@ -160,7 +160,7 @@ describe("pemetaan mutasi bank", () => {
       amount: "1000.000000", currencyCode: "USD", rupiahAmount: "16300000.00",
       reason: "Setoran modal USD",
     })))).toEqual([
-      { accountCode: "1-1220", side: "DEBIT", amount: "16300000.00", memo: "Setoran modal USD" },
+      { accountCode: "1-1220", side: "DEBIT", amount: "16300000.00", memo: "Setoran modal USD", currencyCode: "USD", foreignAmount: "1000.000000" },
       { accountCode: "3-1100", side: "KREDIT", amount: "16300000.00", memo: "Setoran modal USD" },
     ]);
   });
@@ -172,7 +172,7 @@ describe("pemetaan mutasi bank", () => {
       reason: "Penarikan pemilik USD",
     })))).toEqual([
       { accountCode: "3-4100", side: "DEBIT", amount: "8150000.00", memo: "Penarikan pemilik USD" },
-      { accountCode: "1-1220", side: "KREDIT", amount: "8150000.00", memo: "Penarikan pemilik USD" },
+      { accountCode: "1-1220", side: "KREDIT", amount: "8150000.00", memo: "Penarikan pemilik USD", currencyCode: "USD", foreignAmount: "500.000000" },
     ]);
   });
 
@@ -192,6 +192,15 @@ describe("pemetaan mutasi bank", () => {
       { accountCode: "1-1120", side: "DEBIT", amount: "100000000.00", memo: "Saldo awal rekening BCA 123" },
       { accountCode: "3-1100", side: "KREDIT", amount: "100000000.00", memo: "Saldo awal rekening BCA 123" },
     ]);
+  });
+
+  it("tidak menandai baris rekening IDR dengan mata uang", () => {
+    // Penanda valuta hanya untuk baris 1-1220. Menandai baris Rupiah akan membuat revaluasi
+    // menghitungnya sebagai pos moneter valuta asing.
+    for (const line of linesOf(mapBankMovement(bank()))) {
+      expect(line.currencyCode).toBeUndefined();
+      expect(line.foreignAmount).toBeUndefined();
+    }
   });
 
   it("melewati kategori yang tidak dapat dipetakan sebelum menuntut kurs", () => {

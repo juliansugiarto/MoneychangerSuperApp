@@ -13,7 +13,20 @@ import type { ExpenseCategory } from "./expenseCategories";
 import { findAccount, isBalanceSheetAccount, RETAINED_EARNINGS_ACCOUNT_CODE } from "./chartOfAccounts";
 import { formatAmount, oppositeSide, parseAmount, type JournalSide } from "./ledger";
 
-export type MappedLine = { accountCode: string; side: JournalSide; amount: string; memo?: string };
+/**
+ * `currencyCode` dan `foreignAmount` terisi hanya pada baris yang berasal dari pergerakan valuta
+ * asing. Keduanya diteruskan apa adanya ke `journal_entry_lines`, tempat revaluasi kurs (paket F1)
+ * membacanya kembali — itulah satu-satunya cara mengetahui berapa Rupiah yang tercatat pada 1-1220
+ * untuk sebuah mata uang, tanpa menambah kolom mata uang ke inti buku besar.
+ */
+export type MappedLine = {
+  accountCode: string;
+  side: JournalSide;
+  amount: string;
+  memo?: string;
+  currencyCode?: string;
+  foreignAmount?: string;
+};
 export type MappingResult = { lines: MappedLine[] } | { skipped: string };
 
 export const isSkipped = (result: MappingResult): result is { skipped: string } => "skipped" in result;
@@ -154,7 +167,8 @@ function toLedgerAmount(raw: string): { amount: string; negative: boolean } | nu
   return { amount: `${whole}.${padded}`, negative };
 }
 
-const pair = (debit: string, credit: string, amount: string, memo: string): MappingResult => ({
+/** Sengaja mengembalikan tipe sempit, bukan `MappingResult`: pemanggil boleh menyunting `lines`. */
+const pair = (debit: string, credit: string, amount: string, memo: string): { lines: MappedLine[] } => ({
   lines: [
     { accountCode: debit, side: "DEBIT", amount, memo },
     { accountCode: credit, side: "KREDIT", amount, memo },
@@ -254,9 +268,22 @@ export function mapBankMovement(input: {
   const memo = input.reason.slice(0, 500);
   const bankAccount = isRupiah ? BANK_ACCOUNT : FX_BANK_ACCOUNT;
 
-  return input.category === "CAPITAL_WITHDRAWAL"
+  const mapped = input.category === "CAPITAL_WITHDRAWAL"
     ? pair(DIVIDEND_ACCOUNT, bankAccount, parsed.amount, memo)
     : pair(bankAccount, PAID_IN_CAPITAL_ACCOUNT, parsed.amount, memo);
+
+  // Baris 1-1220 membawa mata uang dan nominal valutanya. Revaluasi akhir periode membacanya
+  // kembali untuk mengetahui saldo valuta dan nilai Rupiah yang tercatat per mata uang; tanpa
+  // penanda ini, 1-1220 hanyalah satu akun berisi seluruh mata uang bercampur dan revaluasinya
+  // harus menebak. Sisi Rupiahnya (3-1100/3-4100) sengaja tidak ditandai — ia memang Rupiah.
+  if (!isRupiah) {
+    for (const line of mapped.lines) {
+      if (line.accountCode !== FX_BANK_ACCOUNT) continue;
+      line.currencyCode = input.currencyCode.trim().toUpperCase();
+      line.foreignAmount = input.amount;
+    }
+  }
+  return mapped;
 }
 
 /**

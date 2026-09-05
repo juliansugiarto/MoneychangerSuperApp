@@ -74,8 +74,10 @@ describe("postBankMovements untuk rekening valuta asing", () => {
     const [entry] = vi.mocked(postJournalEntry).mock.calls[0];
     expect(entry.sourceType).toBe("MUTASI_BANK");
     expect(entry.sourceReference).toBe("BANK-11");
+    // Baris 1-1220 membawa mata uang dan nominal valutanya; revaluasi akhir periode membacanya
+    // kembali untuk mengetahui saldo dan nilai tercatat per mata uang.
     expect(entry.lines).toEqual([
-      { accountCode: "1-1220", side: "DEBIT", amount: "16300000.00", memo: "Setoran modal USD" },
+      { accountCode: "1-1220", side: "DEBIT", amount: "16300000.00", memo: "Setoran modal USD", currencyCode: "USD", foreignAmount: "1000.000000" },
       { accountCode: "3-1100", side: "KREDIT", amount: "16300000.00", memo: "Setoran modal USD" },
     ]);
   });

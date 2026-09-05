@@ -177,13 +177,24 @@ jurnalnya. Karena itu nilai tercatat sebuah mata uang dijumlahkan dari dua sumbe
 sudah tersedia:
 
 ```
-carryingBefore(C) = Σ baris jurnal 1-1220 (debit − kredit) milik mutasi mata uang C sampai akhir periode
-                  + Σ difference revaluasi mata uang C pada periode-periode sebelumnya
+foreignBalance(C)  = Σ foreignAmount baris 1-1220 bermata uang C (debit − kredit) sampai akhir periode
+carryingBefore(C)  = Σ amount baris yang sama (debit − kredit)
+                   + Σ difference revaluasi mata uang C pada periode-periode sebelumnya
 ```
 
-Baris jurnalnya dikenali lewat `sourceType = "MUTASI_BANK"` dan `sourceReference = "BANK-{movementId}"`,
-lalu `movementId` dipetakan ke mata uangnya lewat `bank_account_movements`. Mata uang yang belum
-pernah direvaluasi memakai nol sebagai suku kedua.
+`journal_entry_lines` **sudah** punya kolom `currencyCode` dan `foreignAmount`, dengan keterangan
+"terisi bila baris ini berasal dari pergerakan valuta asing, untuk penelusuran dan revaluasi" —
+disediakan sejak migrasi buku besar dan tidak pernah ada yang mengisinya. `mapBankMovement` kini
+mengisinya pada baris 1-1220, sehingga inti buku besar tidak perlu kolom mata uang baru.
+
+**Saldo valuta dan nilai tercatat wajib datang dari baris yang sama.** Mengambil saldo valuta dari
+`bank_account_movements` sementara nilai Rupiahnya dari buku besar akan berselisih setiap kali ada
+mutasi yang dilewati karena kursnya belum tersedia — dan selisih palsu itu akan dijurnal sebagai
+laba/rugi kurs yang tidak pernah terjadi.
+
+Baris 1-1220 **tanpa** `currencyCode` adalah jurnal revaluasi itu sendiri, yang satu untuk seluruh
+mata uang dan karena itu tidak bermata uang; ia diabaikan pada penjumlahan mutasi, dan sukunya
+diambil dari `currency_revaluations`. Mata uang yang belum pernah direvaluasi memakai nol.
 
 **Menghitung ulang dari nominal valuta dikali kurs hari ini adalah kekeliruan yang menggoda:** ia
 membuat `carryingBefore` selalu sama dengan `carryingAfter`, sehingga selisihnya selalu nol dan
