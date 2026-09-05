@@ -22,6 +22,23 @@ Perubahan kode tidak selesai tanpa test Vitest yang relevan, pemeriksaan tipe, d
 - Jangan mengubah `server/_core` tanpa kebutuhan infrastruktur yang telah dianalisis.
 - Gunakan dokumentasi `docs/INSTRUKSI-CLAUDE-CODE.md` untuk prompt, handoff, dan prioritas pengembangan.
 
+## Fitur Harus Punya Sumber Data
+
+- **Jangan membangun tampilan, laporan, atau baris laporan yang tidak ada penulis datanya.** Bila
+  sebuah fitur menuntut data yang belum pernah ditulis kode mana pun, bangun juga penulisnya dalam
+  paket yang sama — atau jangan bangun fiturnya sama sekali. "Fiturnya ada, nilainya selalu nol"
+  bukan penyelesaian, dan tidak boleh dilaporkan sebagai penyelesaian.
+- Enum yang tidak pernah dipakai, akun yang tidak pernah dijurnal, dan kolom yang tidak pernah diisi
+  adalah **pekerjaan yang belum selesai**, bukan keadaan sah. Sebelum menyimpulkan sebuah nilai
+  memang selalu kosong, telusuri rantainya sampai ke penulisnya dan sebutkan siapa yang seharusnya
+  mengisinya.
+- Setiap fitur baru harus dapat diperagakan **end-to-end** di basis data lokal (`moneychanger` /
+  `mc_t_abcvalas`): buat datanya, jalankan alurnya, tunjukkan hasilnya di layar. Verifikasi visual
+  yang berhenti pada halaman kosong belum membuktikan apa pun.
+- Batas yang tetap berlaku: pembukuan produksi, data nasabah nyata, dan `audit_logs` tidak boleh
+  dikarang atau disunting. Aturan "selalu buat datanya" berlaku pada lingkungan lokal dan pada
+  penulis data di dalam kode — bukan pada data produksi.
+
 ## Aturan Keras Operasional
 
 - Jangan membuat, menyuntikkan, atau mengubah data nasabah, transaksi, kas, snapshot, paket pelaporan, arsip, atau audit produksi untuk demo/test.
