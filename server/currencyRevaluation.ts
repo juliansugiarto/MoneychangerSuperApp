@@ -24,10 +24,11 @@ import {
 } from "../drizzle/schema";
 import { snapshotOnOrBefore, valueMonetaryBalance } from "../shared/currencyRevaluation";
 import { midClosingRate } from "../shared/inventoryValuation";
-import { FX_BANK_ACCOUNT } from "../shared/journalMapping";
+import { FX_BANK_ACCOUNT, isSkipped, mapCurrencyRevaluation } from "../shared/journalMapping";
 import { calendarDay } from "../shared/ledger";
 import { monthKey } from "../shared/depreciation";
-import { databaseOrThrow, retryTransientDatabaseRead } from "./operations";
+import { postJournalEntry } from "./ledgerOperations";
+import { databaseOrThrow, retryTransientDatabaseRead, writeAudit } from "./operations";
 
 /**
  * Tanggal yang dikirim ke kolom `date`.
@@ -221,4 +222,117 @@ export async function buildCurrencyRevaluation(periodId: number): Promise<Curren
       revaluationPostedAt: period.revaluationPostedAt,
     };
   });
+}
+
+export const currencyRevaluationSourceReference = (periodMonth: string) => `REVAL-${periodMonth}`;
+
+/**
+ * Menjurnal revaluasi sebuah periode: menulis buktinya, jurnalnya, dan menandai periodenya.
+ *
+ * Angkanya tidak dihitung ulang di sini — seluruhnya datang dari `buildCurrencyRevaluation`, yang
+ * juga dipakai panel untuk menampilkannya sebelum tombol ditekan. Itu membuat angka yang dilihat
+ * pengguna dan angka yang dijurnal server mustahil berbeda.
+ *
+ * Revaluasi tidak pernah berjalan sebagian: satu penghalang membatalkan seluruhnya. Buku besar yang
+ * setengah diretranslasi jauh lebih sulit ditelusuri daripada yang belum diretranslasi.
+ */
+export async function postCurrencyRevaluation(input: { periodId: number }, actor: { id: number }) {
+  const plan = await buildCurrencyRevaluation(input.periodId);
+  if (plan.status === "DITUTUP") {
+    throw new Error("Periode ini sudah ditutup; revaluasi kursnya tidak dapat dijalankan lagi.");
+  }
+  if (plan.revaluationPostedAt) {
+    throw new Error(
+      "Revaluasi kurs periode ini sudah dijalankan; balik jurnalnya lebih dulu bila angkanya perlu diperbaiki.",
+    );
+  }
+  if (plan.blockers.length) {
+    const detail = plan.blockers.map((blocker) => `${blocker.currencyCode} (${blocker.reason})`).join(", ");
+    throw new Error(`Revaluasi kurs tidak dapat dijalankan: ${detail}.`);
+  }
+
+  const db = await databaseOrThrow();
+  const sourceReference = currencyRevaluationSourceReference(plan.periodMonth);
+  const mapped = mapCurrencyRevaluation({ difference: plan.totalDifference, month: plan.periodMonth });
+
+  let entry: { id: number; entryNumber: string } | null = null;
+  if (!isSkipped(mapped)) {
+    // Percobaan sebelumnya boleh saja gagal setelah jurnalnya tertulis tetapi sebelum penanda
+    // periodenya tersimpan. Memakai ulang jurnal itu memulihkan keadaan tersebut; menulis yang
+    // kedua hanya akan menabrak kunci unik dan mengunci bulan itu selamanya.
+    const existing = (
+      await db
+        .select({ id: journalEntries.id, entryNumber: journalEntries.entryNumber })
+        .from(journalEntries)
+        .where(and(eq(journalEntries.sourceType, "REVALUASI_KURS"), eq(journalEntries.sourceReference, sourceReference)))
+        .limit(1)
+    )[0];
+    entry =
+      existing ??
+      (await postJournalEntry(
+        {
+          entryDate: dbDate(plan.periodEnd),
+          description: `Revaluasi kurs ${plan.periodMonth}`,
+          sourceType: "REVALUASI_KURS",
+          sourceReference,
+          lines: mapped.lines,
+        },
+        actor,
+      ));
+  }
+
+  const postedAt = new Date();
+  // Baris bukti dan penanda periodenya harus jatuh bersama. Baris tanpa penanda membuat revaluasi
+  // tampak belum berjalan padahal jurnalnya sudah ada; penanda tanpa baris membuat selisih 7-1500
+  // kehilangan bukti per mata uangnya.
+  await db.transaction(async (tx) => {
+    if (plan.rows.length && entry) {
+      await tx.insert(currencyRevaluations).values(
+        plan.rows.map((row) => ({
+          periodId: plan.periodId,
+          currencyId: row.currencyId,
+          foreignBalance: row.foreignBalance,
+          carryingBefore: row.carryingBefore,
+          rateSnapshotId: row.rateSnapshotId,
+          rateReferenceDate: dbDate(row.rateReferenceDate),
+          midRatePerUnit: row.midRatePerUnit,
+          carryingAfter: row.carryingAfter,
+          difference: row.difference,
+          journalEntryId: entry.id,
+        })),
+      );
+    }
+    await tx
+      .update(accountingPeriods)
+      .set({ revaluationPostedAt: postedAt, revaluationJournalEntryId: entry?.id ?? null })
+      .where(eq(accountingPeriods.id, input.periodId));
+  });
+
+  await writeAudit({
+    actorUserId: actor.id,
+    action: "CURRENCY_REVALUATION_POSTED",
+    entityType: "accounting_periods",
+    entityId: String(input.periodId),
+    afterState: {
+      periodMonth: plan.periodMonth,
+      entryNumber: entry?.entryNumber ?? null,
+      totalDifference: plan.totalDifference,
+      currencies: plan.rows.map((row) => ({
+        currencyCode: row.currencyCode,
+        foreignBalance: row.foreignBalance,
+        carryingBefore: row.carryingBefore,
+        carryingAfter: row.carryingAfter,
+        difference: row.difference,
+        rateReferenceDate: row.rateReferenceDate,
+      })),
+    },
+    reason: isSkipped(mapped) ? mapped.skipped : null,
+  });
+
+  return {
+    periodId: input.periodId,
+    entryNumber: entry?.entryNumber ?? null,
+    rows: plan.rows,
+    skipped: isSkipped(mapped) ? mapped.skipped : null,
+  };
 }
