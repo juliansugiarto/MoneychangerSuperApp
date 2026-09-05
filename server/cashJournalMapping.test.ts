@@ -152,8 +152,53 @@ describe("pemetaan mutasi bank", () => {
     expect(reasonOf(mapBankMovement(bank({ category, direction: "IN" })))).toMatch(pattern);
   });
 
-  it("melewati rekening valuta asing", () => {
-    expect(reasonOf(mapBankMovement(bank({ currencyCode: "USD" })))).toMatch(/valuta|IDR/i);
+  it("menjurnal rekening valuta asing ke 1-1220 memakai nilai Rupiah yang dipasok", () => {
+    // Rekening bank valuta asing adalah pos moneter, bukan persediaan: nilainya masuk buku besar
+    // pada kurs tanggal mutasi, lalu diretranslasi pada kurs penutup tiap akhir periode.
+    expect(linesOf(mapBankMovement(bank({
+      category: "CAPITAL_INJECTION", direction: "IN",
+      amount: "1000.000000", currencyCode: "USD", rupiahAmount: "16300000.00",
+      reason: "Setoran modal USD",
+    })))).toEqual([
+      { accountCode: "1-1220", side: "DEBIT", amount: "16300000.00", memo: "Setoran modal USD" },
+      { accountCode: "3-1100", side: "KREDIT", amount: "16300000.00", memo: "Setoran modal USD" },
+    ]);
+  });
+
+  it("memakai 1-1220 pada sisi kredit untuk penarikan pemilik dari rekening valuta asing", () => {
+    expect(linesOf(mapBankMovement(bank({
+      category: "CAPITAL_WITHDRAWAL", direction: "OUT",
+      amount: "500.000000", currencyCode: "USD", rupiahAmount: "8150000.00",
+      reason: "Penarikan pemilik USD",
+    })))).toEqual([
+      { accountCode: "3-4100", side: "DEBIT", amount: "8150000.00", memo: "Penarikan pemilik USD" },
+      { accountCode: "1-1220", side: "KREDIT", amount: "8150000.00", memo: "Penarikan pemilik USD" },
+    ]);
+  });
+
+  it("melewati mutasi valuta asing yang kursnya belum tersedia, beserta jalan keluarnya", () => {
+    // Menebak kurs jauh lebih buruk daripada tidak menjurnalnya: angka yang salah di buku besar
+    // tidak pernah ditinjau lagi, sedangkan baris `skipped` terlihat pada ringkasan penjurnalan.
+    expect(reasonOf(mapBankMovement(bank({
+      category: "CAPITAL_INJECTION", direction: "IN",
+      amount: "1000.000000", currencyCode: "USD",
+      reason: "Setoran modal USD",
+    })))).toMatch(/kurs BI pada tanggal mutasi belum tersedia/i);
+  });
+
+  it("tidak mengubah perilaku rekening IDR meski nilai Rupiah ikut dipasok", () => {
+    // `rupiahAmount` hanya untuk rekening non-IDR; nominal rekening Rupiah sudah ada pada `amount`.
+    expect(linesOf(mapBankMovement(bank({ rupiahAmount: "999.99" })))).toEqual([
+      { accountCode: "1-1120", side: "DEBIT", amount: "100000000.00", memo: "Saldo awal rekening BCA 123" },
+      { accountCode: "3-1100", side: "KREDIT", amount: "100000000.00", memo: "Saldo awal rekening BCA 123" },
+    ]);
+  });
+
+  it("melewati kategori yang tidak dapat dipetakan sebelum menuntut kurs", () => {
+    // Mutasi bon valuta asing tetap dilewati karena bonnya sendiri sudah menjurnalnya — bukan
+    // karena kursnya belum ada. Alasan yang benar penting: yang satu tidak perlu ditindaklanjuti,
+    // yang lain menuntut sinkronisasi kurs.
+    expect(reasonOf(mapBankMovement(bank({ category: "TRANSACTION", direction: "IN", currencyCode: "USD" })))).toMatch(/bon/i);
   });
 });
 

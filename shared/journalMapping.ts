@@ -119,6 +119,8 @@ export function mapExpense(input: { category: ExpenseCategory; amount: string; d
 
 export const CASH_ACCOUNT = "1-1110";
 export const BANK_ACCOUNT = "1-1120";
+/** Rekening bank dalam valuta asing — pos moneter, diretranslasi tiap akhir periode (paket F1). */
+export const FX_BANK_ACCOUNT = "1-1220";
 export const PAID_IN_CAPITAL_ACCOUNT = "3-1100";
 /** Penarikan pemilik dicatat sebagai distribusi, bukan pengurangan setoran — keputusan pengguna 4 September 2026. */
 export const DIVIDEND_ACCOUNT = "3-4100";
@@ -212,14 +214,21 @@ export function mapCashMovement(input: {
 export function mapBankMovement(input: {
   category: BankMovementCategory;
   direction: "IN" | "OUT" | "ADJUSTMENT";
+  /** Nominal dalam valuta rekening. */
   amount: string;
   currencyCode: string;
+  /**
+   * Nilai Rupiah mutasi ini pada kurs tanggal mutasi. Wajib untuk rekening non-IDR; diabaikan untuk
+   * rekening IDR, yang nominal Rupiahnya sudah ada pada `amount`.
+   */
+  rupiahAmount?: string;
   reason: string;
 }): MappingResult {
-  if (input.currencyCode.trim().toUpperCase() !== "IDR") {
-    return { skipped: "rekening valuta asing belum dinilai; hanya rekening IDR yang dijurnal" };
-  }
+  const isRupiah = input.currencyCode.trim().toUpperCase() === "IDR";
 
+  // Kategori diperiksa lebih dulu daripada kurs. Mutasi bon valuta asing dilewati karena bonnya
+  // sendiri sudah menjurnalnya, bukan karena kursnya belum ada — dan alasan yang benar menentukan
+  // apakah operator perlu menjalankan sinkronisasi kurs atau tidak perlu berbuat apa-apa.
   switch (input.category) {
     case "TRANSACTION":
       return { skipped: "sisi bank bon sudah terjurnal lewat bonnya sendiri" };
@@ -230,14 +239,22 @@ export function mapBankMovement(input: {
       return { skipped: "penyesuaian rekening bercatatan bebas tidak dapat dipetakan tanpa menebak akunnya" };
   }
 
-  const parsed = toLedgerAmount(input.amount);
+  // Rekening valuta asing dinilai pada kurs tanggal mutasinya, dan lapisan server yang memasoknya —
+  // pemetaan ini murni dan tidak membaca basis data. Tanpa kurs, tidak dijurnal: menebaknya menaruh
+  // angka yang salah di buku besar, tempat ia tidak pernah ditinjau lagi.
+  if (!isRupiah && !input.rupiahAmount) {
+    return { skipped: "kurs BI pada tanggal mutasi belum tersedia; jalankan sinkronisasi kurs lebih dulu" };
+  }
+
+  const parsed = toLedgerAmount(isRupiah ? input.amount : input.rupiahAmount!);
   if (!parsed) return { skipped: "nominal mutasi memiliki pecahan di bawah sen; menjurnalnya menuntut pembulatan uang" };
   if (parsed.amount === "0.00") return { skipped: "mutasi rekening bernilai nol" };
   const memo = input.reason.slice(0, 500);
+  const bankAccount = isRupiah ? BANK_ACCOUNT : FX_BANK_ACCOUNT;
 
   return input.category === "CAPITAL_WITHDRAWAL"
-    ? pair(DIVIDEND_ACCOUNT, BANK_ACCOUNT, parsed.amount, memo)
-    : pair(BANK_ACCOUNT, PAID_IN_CAPITAL_ACCOUNT, parsed.amount, memo);
+    ? pair(DIVIDEND_ACCOUNT, bankAccount, parsed.amount, memo)
+    : pair(bankAccount, PAID_IN_CAPITAL_ACCOUNT, parsed.amount, memo);
 }
 
 /**
