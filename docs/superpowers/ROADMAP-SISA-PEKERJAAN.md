@@ -64,7 +64,7 @@ Rencana: `plans/2026-09-05-aset-tetap-penyusutan.md`
 - [x] Tugas 8 — Gerbang penutupan periode dan penutup laba tahunan
 - [x] Tugas 9 — Prosedur tRPC dan navigasi
 - [x] Tugas 10 — Halaman Aset Tetap dan panel Penyusutan Bulanan
-- [ ] Tugas 11 — Skenario menyeluruh dan dokumentasi
+- [x] Tugas 11 — Skenario menyeluruh dan dokumentasi
 
 ### Paket F — Arus Kas dan CALK
 - [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*

@@ -71,6 +71,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 | Pengawasan | Direksi Mengetahui | Daftar informasi pengawasan yang perlu diakui Direksi. | Controller |
 | Pengawasan | Mulai Go-Live | Checklist kesiapan penggunaan produksi. | Controller |
 | Pengawasan | Laporan | Ringkasan internal dan arsip cetak/PDF yang tersedia. | Controller |
+| Pengawasan | Aset Tetap | Daftar aset tetap outlet, pendaftaran aset baru, pelepasan aset, dan batas kapitalisasi. | Controller |
 | Pengawasan | Pelaporan Regulator | LKU, snapshot B0002/B0003/B0004, insidental, maker-checker, dan ekspor manual. | Controller |
 | Pengawasan | Jejak Audit | Melihat tindakan penting yang tercatat sistem. | Controller |
 | Pengawasan | Impor Nasabah | Memetakan file pelanggan sesuai format yang ditetapkan. | Controller |
@@ -222,12 +223,13 @@ Gunakan **Laporan** untuk melihat ringkasan yang disediakan dan **Jejak Audit** 
 
 ### 6.4 Penutupan Periode Pembukuan — Controller ke atas
 
-Buka **Buku Besar → Periode**. Setiap periode terbuka punya tombol **Penutupan periode** yang membuka panel penilaian persediaan akhir UKA. Urutannya mengikat dan tidak dapat dilompati:
+Buka **Buku Besar → Periode**. Setiap periode terbuka punya tombol **Penutupan periode**; menekannya membuka dua panel berurutan — **Penyusutan aset tetap** lebih dulu, lalu penilaian persediaan akhir UKA. Urutannya mengikat dan tidak dapat dilompati:
 
-1. **Stock opname akhir bulan sudah ditinjau** (§5.6 langkah 4–5). Penilaian hanya menerima opname berstatus **RECONCILED** atau **VARIANCE** — hitungan fisik yang belum ditinjau bukan bukti. Opname yang masih OPEN atau SUBMITTED akan muncul sebagai penghalang.
-2. **Jalankan penilaian.** Panel menampilkan, per mata uang: kuantitas hasil hitung fisik, tanggal opname yang dipakai, kurs tengah BI, tanggal kurs yang dipakai, dan nilai Rupiahnya. Di bawahnya tertera **Persediaan awal (5-1100)** dan **Persediaan akhir (5-1300)** — itulah angka yang akan dijurnal, terlihat **sebelum** tombolnya ditekan. Kurs tengah adalah (kurs beli + kurs jual) ÷ 2, dibagi satuan kuotasi BI (JPY dikutip per 100 unit).
-3. **Khusus periode yang berakhir 31 Desember:** tombol **Jurnal penutup laba tahunan** muncul setelah penilaian dijalankan. Ia memindahkan seluruh saldo laba rugi tahun itu ke 3-2100 Laba Ditahan. Wajib dijalankan sebelum periodenya dapat ditutup.
-4. **Tutup periode.** Tombolnya tetap tidak aktif selama penilaian belum dijalankan, dan pada Desember selama penutup labanya belum dijalankan.
+1. **Jalankan penyusutan bulan itu lebih dulu** (§6.5). Selama penyusutan belum dijurnal, tombol tutup periode menolak dengan pesan “penyusutan aset tetap belum dijurnal”. Outlet yang belum punya satu pun aset tetap tetap harus menekan tombolnya — hasilnya nol beban, dan itu keadaan sah yang tetap perlu dicatat sudah diperiksa.
+2. **Stock opname akhir bulan sudah ditinjau** (§5.6 langkah 4–5). Penilaian hanya menerima opname berstatus **RECONCILED** atau **VARIANCE** — hitungan fisik yang belum ditinjau bukan bukti. Opname yang masih OPEN atau SUBMITTED akan muncul sebagai penghalang.
+3. **Jalankan penilaian.** Panel menampilkan, per mata uang: kuantitas hasil hitung fisik, tanggal opname yang dipakai, kurs tengah BI, tanggal kurs yang dipakai, dan nilai Rupiahnya. Di bawahnya tertera **Persediaan awal (5-1100)** dan **Persediaan akhir (5-1300)** — itulah angka yang akan dijurnal, terlihat **sebelum** tombolnya ditekan. Kurs tengah adalah (kurs beli + kurs jual) ÷ 2, dibagi satuan kuotasi BI (JPY dikutip per 100 unit).
+4. **Khusus periode yang berakhir 31 Desember:** tombol **Jurnal penutup laba tahunan** muncul setelah penilaian dijalankan. Ia memindahkan seluruh saldo laba rugi tahun itu ke 3-2100 Laba Ditahan. Wajib dijalankan sebelum periodenya dapat ditutup, dan ia sendiri menolak berjalan bila ada bulan sepanjang tahun itu yang penyusutannya belum dijurnal — pesannya menyebut bulan-bulannya satu per satu.
+5. **Tutup periode.** Tombolnya tetap tidak aktif selama penyusutan atau penilaian belum dijalankan, dan pada Desember selama penutup labanya belum dijalankan.
 
 **Tanggal opname atau tanggal kurs yang berbeda dari akhir periode diberi tanda "Mundur dari akhir periode".** Itu keadaan sah, bukan kekeliruan: outlet tidak menghitung uang pada hari tutup, dan BI tidak mengumumkan kurs pada Sabtu, Minggu, dan hari libur. Yang dipakai adalah opname terakhir di dalam periode dan snapshot kurs terakhir yang tidak melewati akhir periode. Tanggal yang benar-benar dipakai disimpan pada baris penilaian dan jejak audit, sehingga pemeriksa dapat menunjuknya — pemunduran tanggal tidak pernah terjadi diam-diam.
 
@@ -243,6 +245,29 @@ Buka **Buku Besar → Periode**. Setiap periode terbuka punya tombol **Penutupan
 Mata uang yang stoknya memang nol — laci kosong dan brankas kosong — dilewati tanpa penghalang dan tanpa baris penilaian. IDR tidak pernah ikut dinilai: kas Rupiah sudah tercatat pada 1-1110, dan menilainya lagi pada 1-1210 akan menghitungnya dua kali sementara neracanya tetap seimbang.
 
 Penilaian yang sudah dijalankan **tidak dapat diulang**. Bila angkanya perlu diperbaiki, catat jurnal baliknya lebih dulu seperti koreksi jurnal lainnya.
+
+### 6.5 Aset Tetap dan Penyusutan — Controller ke atas
+
+Buka **Aset Tetap**. Halaman ini memuat daftar aset outlet beserta harga perolehan, akumulasi penyusutan, dan nilai bukunya; tombol **Daftarkan aset**; tombol **Lepaskan** pada tiap aset yang masih aktif; dan kartu **Batas kapitalisasi**.
+
+**Mana yang masuk register, mana yang masuk Catat Pengeluaran.** Barang yang dipakai lebih dari satu tahun dan harganya **Rp 1.000.000 atau lebih** didaftarkan di sini, lalu dibebankan sedikit demi sedikit tiap bulan. Yang di bawah itu — kalkulator, gunting, tinta printer — dicatat lewat **Catat Pengeluaran** dan habis pada bulan itu juga. Bila harganya di bawah batas, form pendaftaran menolak dan menyebut angkanya.
+
+Batasnya dapat diubah pada kartu **Batas kapitalisasi** di halaman yang sama, oleh Controller ke atas. Ubah hanya bila kebijakan perusahaannya memang berubah, dan sebutkan alasannya kepada Direksi — perubahan tercatat di **Jejak Audit**. Batas yang baru berlaku untuk pendaftaran berikutnya; aset yang sudah terdaftar tidak ikut berubah.
+
+**Kelompok pajak hanya mengisi umur manfaat.** Memilih *Kelompok 1 — 4 tahun* mengisi kolom umur manfaat menjadi 48 bulan, dan setelah itu **angkanya boleh diubah**. Kelompok pajak adalah aturan Direktorat Jenderal Pajak; yang dipakai buku besar adalah umur manfaat **sebenarnya** menurut penilaian perusahaan, yang menurut SAK EP Bab 17 harus ditinjau setiap tahun. Bila brankas yang menurut pajak berumur empat tahun ternyata dipakai delapan tahun, isi 96 dan catat alasannya pada kolom Catatan. Tanah dipilih dengan kategori **Tanah** dan tidak pernah disusutkan.
+
+**Aset yang dibeli tengah bulan disusutkan penuh pada bulan itu.** Brankas Rp 24.000.000 berumur 48 bulan yang dibeli 17 Maret tetap dibebani 500.000 untuk bulan Maret, bukan setengahnya. Tidak ada perhitungan harian.
+
+**Aset yang sudah dimiliki sebelum aplikasi ini dipakai** didaftarkan dengan menyalakan penanda **Aset warisan** pada form. Isi tanggal perolehan yang sebenarnya (boleh bertahun-tahun lalu), harga perolehan aslinya, lalu dua kolom tambahan: **Bulan jurnal pertama** — bulan pertama yang akan dijurnal oleh aplikasi ini, biasanya bulan berjalan — dan **Akumulasi penyusutan sampai saat itu**, diambil dari pembukuan lama. Aplikasi menghitung sisa bulannya sendiri dari tanggal perolehan, sehingga asetnya berakhir tepat pada nilai residu, tidak lebih cepat dan tidak lebih lambat. Aset warisan **tidak** dijurnal perolehannya — saldo 1-1510 dan 1-1520-nya sudah masuk lewat saldo awal, dan menjurnalnya lagi akan menghitungnya dua kali. Barisnya diberi tanda **Warisan** pada daftar.
+
+**Menjurnal penyusutan bulanan** dilakukan dari **Buku Besar → Periode**, panel **Penyusutan aset tetap**. Panel menampilkan beban tiap aset, akumulasi, dan nilai buku setelahnya — semuanya terlihat **sebelum** tombolnya ditekan, dan angka itulah yang persis dijurnal. Satu jurnal untuk seluruh aset: Penyusutan Aset Tetap (6-1700) di debit, Akumulasi Penyusutan (1-1520) di kredit. Rincian per asetnya tersimpan dan dapat ditunjuk kepada pemeriksa.
+
+Penyusutan sebuah bulan **tidak dapat dijalankan dua kali**. Bila angkanya perlu diperbaiki, catat jurnal baliknya lebih dulu seperti koreksi jurnal lainnya. Menekan tombolnya berkali-kali tidak pernah menghasilkan jurnal ganda.
+
+**Melepas aset** — dijual, dihibahkan, atau dibuang — dilakukan dengan tombol **Lepaskan**. Isi tanggal pelepasan dan hasil pelepasannya (isi nol untuk penghapusan tanpa hasil). Selisih antara hasil dan nilai bukunya masuk ke Laba/(Rugi) Penjualan Aset Tetap (7-1400). Syaratnya: **penyusutan seluruh bulan sampai dengan bulan pelepasan harus sudah dijurnal lebih dulu**. Bila belum, pelepasan ditolak dan pesannya menyebut bulan-bulan yang tertinggal — jalankan penyusutan bulan-bulan itu, lalu ulangi. Aset yang dilepas tetap ada di daftar dengan tanda **Dilepas** beserta tanggalnya; ia tidak pernah dihapus.
+
+**Perolehan dan hasil pelepasan tidak menyentuh kas.** Membeli brankas mendebit Aset Tetap — Harga Perolehan (1-1510) dan mengkredit **Kewajiban Lain-Lain (2-1900)**; melepasnya mendebit **Piutang Lain-Lain (1-1320)**. Uangnya sendiri dicatat terpisah saat benar-benar bergerak — lewat **Catat Pengeluaran** untuk pembayarannya, atau lewat penerimaan bank untuk hasil penjualannya. Alasannya: kas pada buku besar harus selalu sama dengan kas yang dihitung di laci dan brankas, dan modul di luar sistem kas yang menyentuh 1-1110 akan membuat keduanya berbeda tanpa ketahuan. Jangan mencatat pembelian aset sebagai pengeluaran biasa **dan** mendaftarkannya di sini — itu menghitungnya dua kali.
+
 
 ## 7. Pelaporan Regulator Internal
 
