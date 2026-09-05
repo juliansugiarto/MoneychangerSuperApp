@@ -1163,6 +1163,17 @@ export const accountingPeriods = mysqlTable("accounting_periods", {
    */
   depreciationPostedAt: datetime("depreciationPostedAt"),
   depreciationJournalEntryId: int("depreciationJournalEntryId"),
+
+  /**
+   * Penanda bahwa revaluasi kurs bulan ini sudah dijurnal.
+   *
+   * Kolom, bukan hitungan baris: outlet tanpa rekening valuta asing menghasilkan nol baris
+   * revaluasi, dan itu keadaan sah yang tetap harus bisa ditutup. Menghitung baris akan mencampur
+   * "belum direvaluasi" dengan "sudah direvaluasi, hasilnya memang kosong" — alasan yang sama
+   * persis dengan `depreciationPostedAt`.
+   */
+  revaluationPostedAt: datetime("revaluationPostedAt"),
+  revaluationJournalEntryId: int("revaluationJournalEntryId"),
   createdByUserId: int("createdByUserId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -1320,6 +1331,43 @@ export const fixedAssetSettings = mysqlTable("fixed_asset_settings", {
   updatedByUserId: int("updatedByUserId"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+
+/**
+ * Bukti retranslasi pos moneter valuta asing pada akhir periode.
+ *
+ * SAK EP Bab 30 menuntut saldo pos moneter dalam valuta asing diukur ulang pada kurs penutup, dengan
+ * selisihnya ke laba rugi. Barisnya dibuat **berdiri sendiri**: `carryingAfter` dapat diturunkan
+ * ulang dari `foreignBalance` dikali `midRatePerUnit` tanpa membuka tabel lain, dan
+ * `rateReferenceDate` memperlihatkan bila kurs yang dipakai mundur dari akhir periode. Pola dan
+ * alasannya sama dengan `period_closing_valuations`.
+ *
+ * Hanya pos **moneter**. Kas UKA fisik (1-1210) tidak pernah masuk ke sini — ia persediaan, dinilai
+ * dari hitungan fisik lewat 5-1300, dan meretranslasinya di sini menghitung pergerakan kurs yang
+ * sama dua kali sementara neracanya tetap seimbang.
+ */
+export const currencyRevaluations = mysqlTable("currency_revaluations", {
+  id: int("id").autoincrement().primaryKey(),
+  periodId: int("periodId").notNull(),
+  currencyId: int("currencyId").notNull(),
+  /** Saldo rekening dalam valuta aslinya pada akhir periode; skala 6 seperti mutasi bank. */
+  foreignBalance: decimal("foreignBalance", { precision: 24, scale: 6 }).notNull(),
+  /** Nilai Rupiah yang tercatat pada 1-1220 untuk mata uang ini sebelum revaluasi. */
+  carryingBefore: decimal("carryingBefore", { precision: 24, scale: 2 }).notNull(),
+  rateSnapshotId: int("rateSnapshotId").notNull(),
+  rateReferenceDate: date("rateReferenceDate").notNull(),
+  midRatePerUnit: decimal("midRatePerUnit", { precision: 30, scale: 12 }).notNull(),
+  /** foreignBalance × midRatePerUnit, dibulatkan ke sen. */
+  carryingAfter: decimal("carryingAfter", { precision: 24, scale: 2 }).notNull(),
+  /** carryingAfter − carryingBefore. Positif berarti laba selisih kurs. */
+  difference: decimal("difference", { precision: 24, scale: 2 }).notNull(),
+  journalEntryId: int("journalEntryId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("currency_revaluation_period_currency_uq").on(table.periodId, table.currencyId),
+  index("currency_revaluation_period_idx").on(table.periodId),
+]);
+
+export type CurrencyRevaluationRecord = typeof currencyRevaluations.$inferSelect;
 
 /**
  * Asal sebuah jurnal. `MANUAL` diketik manusia; sisanya dihasilkan sistem dari catatan operasional
