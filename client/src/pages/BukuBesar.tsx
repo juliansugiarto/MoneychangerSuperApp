@@ -101,6 +101,7 @@ export default function BukuBesar() {
     utils.ledger.statements.invalidate();
     utils.ledger.cashReconciliation.invalidate();
     utils.ledger.closingValuation.invalidate();
+    utils.ledger.monthlyDepreciation.invalidate();
   };
 
   const seedAccounts = trpc.ledger.seedAccounts.useMutation({
@@ -145,6 +146,17 @@ export default function BukuBesar() {
         result.entryNumber
           ? `Penilaian tersimpan dan dijurnal sebagai ${result.entryNumber}.`
           : "Penilaian tersimpan; tidak ada persediaan UKA untuk dijurnal.",
+      );
+      refresh();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const postMonthlyDepreciation = trpc.ledger.postMonthlyDepreciation.useMutation({
+    onSuccess: (result) => {
+      toast.success(
+        result.entryNumber
+          ? `Penyusutan dijurnal sebagai ${result.entryNumber}.`
+          : "Bulan ini ditandai sudah disusutkan; tidak ada aset tersusutkan untuk dijurnal.",
       );
       refresh();
     },
@@ -775,8 +787,10 @@ export default function BukuBesar() {
                       onInspect={() => setInspectedPeriodId(inspectedPeriodId === period.id ? null : period.id)}
                       valuationPending={postClosingValuation.isPending}
                       yearEndPending={postYearEndClosing.isPending}
+                      depreciationPending={postMonthlyDepreciation.isPending}
                       onPostValuation={() => postClosingValuation.mutate({ periodId: period.id })}
                       onPostYearEnd={() => postYearEndClosing.mutate({ periodId: period.id })}
+                      onPostDepreciation={() => postMonthlyDepreciation.mutate({ periodId: period.id })}
                       onClose={(notes) => closePeriod.mutate({ periodId: period.id, notes: notes || undefined })}
                       onReopen={(reason) => reopenPeriod.mutate({ periodId: period.id, reason })}
                     />
@@ -798,8 +812,10 @@ function PeriodRow({
   onInspect,
   valuationPending,
   yearEndPending,
+  depreciationPending,
   onPostValuation,
   onPostYearEnd,
+  onPostDepreciation,
   onClose,
   onReopen,
 }: {
@@ -809,16 +825,20 @@ function PeriodRow({
   onInspect: () => void;
   valuationPending: boolean;
   yearEndPending: boolean;
+  depreciationPending: boolean;
   onPostValuation: () => void;
   onPostYearEnd: () => void;
+  onPostDepreciation: () => void;
   onClose: (notes: string) => void;
   onReopen: (reason: string) => void;
 }) {
   const [note, setNote] = useState("");
   const closed = period.status === "DITUTUP";
   const valuation = trpc.ledger.closingValuation.useQuery({ periodId: period.id }, { enabled: inspected });
+  const depreciation = trpc.ledger.monthlyDepreciation.useQuery({ periodId: period.id }, { enabled: inspected });
   const blocked = Boolean(valuation.data?.blockers.length);
   const valued = Boolean(valuation.data?.valuationPostedAt);
+  const depreciated = Boolean(depreciation.data?.depreciationPostedAt);
   const needsYearEnd = Boolean(valuation.data?.isFiscalYearEnd) && !valuation.data?.profitClosingPostedAt;
 
   return (
@@ -862,8 +882,14 @@ function PeriodRow({
             */}
             <Button
               variant="outline"
-              disabled={pending || (inspected && !valued)}
-              title={inspected && !valued ? "Jalankan penilaian persediaan akhir UKA lebih dulu." : undefined}
+              disabled={pending || (inspected && (!depreciated || !valued))}
+              title={
+                inspected && !depreciated
+                  ? "Jurnalkan penyusutan bulan ini lebih dulu."
+                  : inspected && !valued
+                    ? "Jalankan penilaian persediaan akhir UKA lebih dulu."
+                    : undefined
+              }
               onClick={() => onClose(note)}
             >
               <Lock className="mr-2 size-4" />Tutup periode
@@ -871,6 +897,14 @@ function PeriodRow({
           </>
         )}
       </div>
+
+      {inspected && !closed ? (
+        <MonthlyDepreciationPanel
+          depreciation={depreciation}
+          pending={depreciationPending}
+          onPost={onPostDepreciation}
+        />
+      ) : null}
 
       {inspected && !closed ? (
         <PeriodClosingPanel
@@ -897,6 +931,129 @@ function PeriodRow({
  * ulang di layar akan menciptakan kemungkinan angka layar berbeda dari angka buku besar, dan itu
  * pertanyaan pertama yang akan diajukan pemeriksa.
  */
+type MonthlyDepreciation = inferRouterOutputs<AppRouter>["ledger"]["monthlyDepreciation"];
+
+/**
+ * Panel Penyusutan Bulanan: beban tiap aset sebelum bulannya dijurnal.
+ *
+ * Diletakkan **di atas** panel penutupan karena urutan di layar mengikuti urutan gerbangnya:
+ * penyusutan lebih dulu, lalu penilaian persediaan, lalu penguncian. Angkanya datang dari
+ * `monthlyDepreciation`, sumber yang sama dengan yang dipakai server saat menjurnalnya — layar dan
+ * buku besar karena itu mustahil berbeda.
+ */
+function MonthlyDepreciationPanel({
+  depreciation,
+  pending,
+  onPost,
+}: {
+  depreciation: { data: MonthlyDepreciation | undefined; isLoading: boolean; isError: boolean; error: { message: string } | null };
+  pending: boolean;
+  onPost: () => void;
+}) {
+  if (depreciation.isLoading) {
+    return <p className="mt-4 border-t border-[#eef2f7] pt-4 text-sm text-[#475569]">Memuat penyusutan bulanan…</p>;
+  }
+  if (depreciation.isError) {
+    return (
+      <div className="mt-4 border-t border-[#eef2f7] pt-4">
+        <p className="rounded-xl border border-[#f0d6d6] bg-[#fdf6f6] p-4 text-sm text-[#9a4b4b]">
+          Penyusutan tidak dapat dimuat: {depreciation.error?.message ?? "sambungan ke server terputus."}
+        </p>
+      </div>
+    );
+  }
+
+  const data = depreciation.data;
+  if (!data) return null;
+  const posted = Boolean(data.depreciationPostedAt);
+
+  return (
+    <div className="mt-4 space-y-4 border-t border-[#eef2f7] pt-4">
+      <div>
+        <p className="font-semibold text-[#213f63]">Penyusutan aset tetap {data.periodMonth}</p>
+        <p className="text-xs text-[#718398]">
+          Garis lurus atas umur manfaat tiap aset. Bulan perolehan disusutkan penuh. Beban bulan ini
+          harus dijurnal sebelum periodenya dapat ditutup.
+        </p>
+      </div>
+
+      {data.blockers.length ? (
+        <div className="rounded-xl border border-[#f2e2c9] bg-[#fdfaf3] p-4">
+          <p className="flex items-center gap-2 text-sm font-semibold text-[#8a6320]">
+            <ShieldAlert className="size-4" />Penyusutan belum dapat dijalankan
+          </p>
+          <ul className="mt-2 space-y-1 text-sm text-[#8a6320]">
+            {data.blockers.map((blocker) => (
+              <li key={blocker.assetName}>
+                <span className="font-semibold">{blocker.assetName}</span> — {blocker.reason}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {data.rows.length ? (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[44rem] text-left text-sm">
+            <thead className="text-xs uppercase tracking-wide text-[#8194aa]">
+              <tr className="border-b border-[#e6edf5]">
+                <th className="py-2 pr-4">Aset</th>
+                <th className="py-2 pr-4">Kategori</th>
+                <th className="py-2 pr-4 text-right">Beban bulan ini</th>
+                <th className="py-2 pr-4 text-right">Akumulasi sesudahnya</th>
+                <th className="py-2 text-right">Nilai buku sesudahnya</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.rows.map((row) => (
+                <tr key={row.assetId} className="border-b border-[#eef2f7]">
+                  <td className="py-2 pr-4 font-semibold text-[#213f63]">
+                    {row.assetName}
+                    {row.assetCode ? <span className="ml-2 text-xs font-normal text-[#8194aa]">{row.assetCode}</span> : null}
+                  </td>
+                  <td className="py-2 pr-4 text-[#475569]">{row.category.replace(/_/g, " ").toLowerCase()}</td>
+                  <td className="py-2 pr-4 text-right tabular-nums text-[#475569]">{formatRupiah(row.charge)}</td>
+                  <td className="py-2 pr-4 text-right tabular-nums text-[#475569]">{formatRupiah(row.accumulatedAfter)}</td>
+                  <td className="py-2 text-right tabular-nums text-[#475569]">{formatRupiah(row.carryingAfter)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td className="py-2 pr-4 font-semibold text-[#213f63]" colSpan={2}>Total beban penyusutan</td>
+                <td className="py-2 pr-4 text-right font-semibold tabular-nums text-[#213f63]">{formatRupiah(data.totalCharge)}</td>
+                <td colSpan={2} />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      ) : (
+        <EmptyNote
+          text={
+            data.blockers.length
+              ? "Tidak ada aset lain yang perlu disusutkan bulan ini."
+              : "Tidak ada aset tersusutkan pada bulan ini. Menjalankannya tetap menandai bulan ini sudah disusutkan, tanpa menulis jurnal — dan gerbang penutupan periode tetap menuntutnya."
+          }
+        />
+      )}
+
+      {posted ? (
+        <p className="text-sm text-[#4d8548]">
+          Sudah dijurnal {formatDate(data.depreciationPostedAt)}.
+        </p>
+      ) : (
+        <Button
+          disabled={pending || Boolean(data.blockers.length)}
+          title={data.blockers.length ? "Selesaikan penghalangnya lebih dulu." : undefined}
+          onClick={onPost}
+        >
+          <Scale className="mr-2 size-4" />Jurnalkan penyusutan bulan ini
+        </Button>
+      )}
+    </div>
+  );
+}
+
 type ClosingValuation = inferRouterOutputs<AppRouter>["ledger"]["closingValuation"];
 
 function PeriodClosingPanel({
