@@ -8,7 +8,10 @@ import {
   exchangeTransactions,
   journalEntries,
   operationalExpenses,
+  rateReferenceSnapshots,
 } from "../drizzle/schema";
+import { snapshotOnOrBefore, valueMonetaryBalance } from "../shared/currencyRevaluation";
+import { midClosingRate } from "../shared/inventoryValuation";
 import { isSkipped, mapBankMovement, mapCashMovement, mapExchangeTransaction, mapExpense } from "../shared/journalMapping";
 import { calendarDay, isoDay } from "../shared/ledger";
 import { databaseOrThrow, writeAudit } from "./operations";
@@ -235,6 +238,7 @@ export async function postBankMovements(input: { from: Date; to: Date }, actor: 
       reason: bankAccountMovements.reason,
       createdAt: bankAccountMovements.createdAt,
       currencyCode: currencies.code,
+      currencyId: bankAccounts.currencyId,
     })
     .from(bankAccountMovements)
     .innerJoin(bankAccounts, eq(bankAccounts.id, bankAccountMovements.bankAccountId))
@@ -246,6 +250,48 @@ export async function postBankMovements(input: { from: Date; to: Date }, actor: 
       ),
     )
     .orderBy(bankAccountMovements.id);
+
+  // Kurs hanya diambil bila ada mutasi non-IDR. Outlet tanpa rekening valuta asing — yaitu hampir
+  // semuanya — tidak membayar kueri ini sama sekali.
+  const hasForeign = rows.some((row) => row.currencyCode.trim().toUpperCase() !== "IDR");
+  const snapshots = hasForeign
+    ? await db
+        .select({
+          id: rateReferenceSnapshots.id,
+          currencyId: rateReferenceSnapshots.currencyId,
+          referenceDate: rateReferenceSnapshots.referenceDate,
+          buyRate: rateReferenceSnapshots.buyRate,
+          sellRate: rateReferenceSnapshots.sellRate,
+          quoteUnit: rateReferenceSnapshots.quoteUnit,
+        })
+        .from(rateReferenceSnapshots)
+        .where(
+          and(
+            eq(rateReferenceSnapshots.source, "BI_TRANSACTION_RATES"),
+            eq(rateReferenceSnapshots.isDemo, false),
+          ),
+        )
+    : [];
+
+  /**
+   * Nilai Rupiah sebuah mutasi valuta asing pada kurs tengah tanggal mutasinya.
+   *
+   * `undefined` berarti tidak ada kurs yang terbit pada atau sebelum tanggal itu; pemetaannya lalu
+   * melewati mutasi tersebut beserta alasannya. Menebak kurs menaruh angka yang salah di buku
+   * besar, tempat ia tidak pernah ditinjau lagi.
+   */
+  const rupiahValueFor = (row: (typeof rows)[number]): string | undefined => {
+    if (row.currencyCode.trim().toUpperCase() === "IDR") return undefined;
+    const own = snapshots
+      .filter((snapshot) => snapshot.currencyId === row.currencyId)
+      .map((snapshot) => ({ ...snapshot, referenceDate: calendarDay(snapshot.referenceDate) }));
+    const picked = snapshotOnOrBefore(own, calendarDay(row.createdAt));
+    if (!picked) return undefined;
+    return valueMonetaryBalance({
+      foreignBalance: String(row.amount),
+      midRatePerUnit: midClosingRate(picked),
+    });
+  };
 
   const outcome = emptyOutcome();
   const done = await alreadyJournaled("MUTASI_BANK", rows.map((row) => `BANK-${row.id}`));
@@ -261,6 +307,7 @@ export async function postBankMovements(input: { from: Date; to: Date }, actor: 
       direction: row.direction,
       amount: String(row.amount),
       currencyCode: row.currencyCode,
+      rupiahAmount: rupiahValueFor(row),
       reason: row.reason,
     });
     if (isSkipped(mapped)) {

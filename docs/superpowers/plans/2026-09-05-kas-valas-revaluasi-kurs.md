@@ -19,7 +19,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 2 — Kurs dan penilaian pos moneter murni di `shared/`
 - [x] Tugas 3 — Jalur valuta asing pada `mapBankMovement`
 - [x] Tugas 4 — Pemetaan `mapCurrencyRevaluation`
-- [ ] Tugas 5 — `postBankMovements` memasok nilai Rupiah
+- [x] Tugas 5 — `postBankMovements` memasok nilai Rupiah
 - [ ] Tugas 6 — `buildCurrencyRevaluation`: bukti per mata uang
 - [ ] Tugas 7 — `postCurrencyRevaluation`: jurnal periode yang idempoten
 - [ ] Tugas 8 — Gerbang penutupan periode dan penutup laba tahunan
