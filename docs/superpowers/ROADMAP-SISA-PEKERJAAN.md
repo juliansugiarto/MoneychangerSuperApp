@@ -70,6 +70,16 @@ Rencana: `plans/2026-09-05-aset-tetap-penyusutan.md`
 Spec: `specs/2026-09-05-kas-valas-revaluasi-kurs-design.md`
 Rencana: `plans/2026-09-05-kas-valas-revaluasi-kurs.md`
 - [x] Sesi rancangan — spec dan rencana bertugas
+- [x] Tugas 1 — Migrasi revaluasi kurs (0049)
+- [x] Tugas 2 — Kurs dan penilaian pos moneter murni di `shared/`
+- [x] Tugas 3 — Jalur valuta asing pada `mapBankMovement`
+- [x] Tugas 4 — Pemetaan `mapCurrencyRevaluation`
+- [x] Tugas 5 — `postBankMovements` memasok nilai Rupiah
+- [x] Tugas 6 — `buildCurrencyRevaluation`: bukti per mata uang
+- [x] Tugas 7 — `postCurrencyRevaluation`: jurnal periode yang idempoten
+- [x] Tugas 8 — Gerbang penutupan periode dan penutup laba tahunan
+- [x] Tugas 9 — Prosedur tRPC dan panel Revaluasi Kurs
+- [x] Tugas 10 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 ### Paket F2 — Arus Kas dan CALK
 - [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan; **F1 lebih dulu**)*

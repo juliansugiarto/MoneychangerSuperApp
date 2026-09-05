@@ -131,16 +131,22 @@ function BankAccountsPanel() {
   const { data: accounts } = trpc.bankAccounts.list.useQuery(undefined, { enabled: Boolean(user) });
   const [adding, setAdding] = useState(false);
   const [managingId, setManagingId] = useState<number | null>(null);
-  const [form, setForm] = useState({ bankName: "", accountHolderName: "", accountNumber: "", openingBalance: "", notes: "" });
+  const [form, setForm] = useState({ bankName: "", accountHolderName: "", accountNumber: "", openingBalance: "", notes: "", currencyId: "" });
   const [editForm, setEditForm] = useState({ bankName: "", accountHolderName: "", accountNumber: "", active: true, notes: "" });
   const [adjustForm, setAdjustForm] = useState({ direction: "IN" as "IN" | "OUT", amount: "", notes: "" });
   const { data: currencyList } = trpc.currencies.list.useQuery(undefined, { enabled: Boolean(user) });
   const idrCurrencyId = currencyList?.find((currency) => currency.code === "IDR")?.id;
+  // Mata uang rekening dapat dipilih, dengan Rupiah sebagai bawaan. Rekening valuta asing dijurnal
+  // ke 1-1220 pada kurs BI tanggal mutasi dan diretranslasi tiap akhir periode (paket F1);
+  // mengunci form ini ke IDR membuat modul itu tidak dapat dicapai dari antarmuka sama sekali.
+  const selectedCurrencyId = form.currencyId ? Number(form.currencyId) : idrCurrencyId;
+  const selectedCurrency = currencyList?.find((currency) => currency.id === selectedCurrencyId);
+  const isForeignAccount = Boolean(selectedCurrency && selectedCurrency.code !== "IDR");
 
   const invalidateAll = () => utils.bankAccounts.list.invalidate();
 
   const create = trpc.bankAccounts.create.useMutation({
-    onSuccess: () => { toast.success("Rekening bank ditambahkan."); setForm({ bankName: "", accountHolderName: "", accountNumber: "", openingBalance: "", notes: "" }); setAdding(false); invalidateAll(); },
+    onSuccess: () => { toast.success("Rekening bank ditambahkan."); setForm({ bankName: "", accountHolderName: "", accountNumber: "", openingBalance: "", notes: "", currencyId: "" }); setAdding(false); invalidateAll(); },
     onError: (error) => toast.error(error.message),
   });
   const update = trpc.bankAccounts.update.useMutation({
@@ -171,10 +177,22 @@ function BankAccountsPanel() {
           <div><Label className="text-xs">Nama bank</Label><Input className="mt-1" value={form.bankName} onChange={(e) => setForm({ ...form, bankName: e.target.value })} placeholder="Contoh: BCA" /></div>
           <div><Label className="text-xs">Nama pemilik rekening</Label><Input className="mt-1" value={form.accountHolderName} onChange={(e) => setForm({ ...form, accountHolderName: e.target.value })} placeholder="PT Ibukota Valasindo" /></div>
           <div><Label className="text-xs">Nomor rekening</Label><Input className="mt-1" value={form.accountNumber} onChange={(e) => setForm({ ...form, accountNumber: e.target.value })} placeholder="Nomor rekening" /></div>
-          <div><Label className="text-xs">Saldo awal (Rp)</Label><Input className="mt-1" inputMode="decimal" value={form.openingBalance} onChange={(e) => setForm({ ...form, openingBalance: e.target.value })} placeholder="0" /></div>
+          <div>
+            <Label className="text-xs">Mata uang</Label>
+            <Select value={form.currencyId || String(idrCurrencyId ?? "")} onValueChange={(value) => setForm({ ...form, currencyId: value })}>
+              <SelectTrigger className="mt-1 w-full"><SelectValue placeholder="Pilih mata uang" /></SelectTrigger>
+              <SelectContent>
+                {(currencyList ?? []).map((currency) => (
+                  <SelectItem key={currency.id} value={String(currency.id)}>{currency.code} — {currency.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div><Label className="text-xs">Saldo awal ({selectedCurrency?.code ?? "Rp"})</Label><Input className="mt-1" inputMode="decimal" value={form.openingBalance} onChange={(e) => setForm({ ...form, openingBalance: e.target.value })} placeholder="0" /></div>
         </div>
+        {isForeignAccount ? <p className="rounded-lg bg-[#fdfaf3] p-2 text-xs text-[#8a6320]">Rekening valuta asing dicatat pada Bank UKA (1-1220) memakai kurs tengah BI tanggal mutasinya, lalu diukur ulang pada kurs penutup tiap akhir bulan lewat panel Revaluasi Kurs. Mutasi pada tanggal yang belum punya kurs BI tidak dijurnal sampai kursnya tersedia.</p> : null}
         <div><Label className="text-xs">Catatan (opsional)</Label><Input className="mt-1" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-        <Button type="button" disabled={!form.bankName || !form.accountHolderName || !form.accountNumber || !form.openingBalance || !idrCurrencyId || create.isPending} onClick={() => create.mutate({ ...form, currencyId: idrCurrencyId!, notes: form.notes || undefined })} className="w-full bg-[#183f70] text-white hover:bg-[#12345d]">{create.isPending ? "Menyimpan…" : "Simpan rekening"}</Button>
+        <Button type="button" disabled={!form.bankName || !form.accountHolderName || !form.accountNumber || !form.openingBalance || !selectedCurrencyId || create.isPending} onClick={() => create.mutate({ bankName: form.bankName, accountHolderName: form.accountHolderName, accountNumber: form.accountNumber, openingBalance: form.openingBalance, currencyId: selectedCurrencyId!, notes: form.notes || undefined })} className="w-full bg-[#183f70] text-white hover:bg-[#12345d]">{create.isPending ? "Menyimpan…" : "Simpan rekening"}</Button>
       </div> : null}
 
       {accounts?.length ? <div className="space-y-2">{accounts.map(({ account, currency }) => <div key={account.id} className="rounded-xl border border-[#e2eaf2] bg-[#fbfdff] p-3">

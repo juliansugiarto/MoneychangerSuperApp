@@ -223,13 +223,14 @@ Gunakan **Laporan** untuk melihat ringkasan yang disediakan dan **Jejak Audit** 
 
 ### 6.4 Penutupan Periode Pembukuan — Controller ke atas
 
-Buka **Buku Besar → Periode**. Setiap periode terbuka punya tombol **Penutupan periode**; menekannya membuka dua panel berurutan — **Penyusutan aset tetap** lebih dulu, lalu penilaian persediaan akhir UKA. Urutannya mengikat dan tidak dapat dilompati:
+Buka **Buku Besar → Periode**. Setiap periode terbuka punya tombol **Penutupan periode**; menekannya membuka tiga panel berurutan — **Penyusutan aset tetap**, lalu **Revaluasi kurs**, lalu penilaian persediaan akhir UKA. Urutannya mengikat dan tidak dapat dilompati:
 
 1. **Jalankan penyusutan bulan itu lebih dulu** (§6.5). Selama penyusutan belum dijurnal, tombol tutup periode menolak dengan pesan “penyusutan aset tetap belum dijurnal”. Outlet yang belum punya satu pun aset tetap tetap harus menekan tombolnya — hasilnya nol beban, dan itu keadaan sah yang tetap perlu dicatat sudah diperiksa.
-2. **Stock opname akhir bulan sudah ditinjau** (§5.6 langkah 4–5). Penilaian hanya menerima opname berstatus **RECONCILED** atau **VARIANCE** — hitungan fisik yang belum ditinjau bukan bukti. Opname yang masih OPEN atau SUBMITTED akan muncul sebagai penghalang.
-3. **Jalankan penilaian.** Panel menampilkan, per mata uang: kuantitas hasil hitung fisik, tanggal opname yang dipakai, kurs tengah BI, tanggal kurs yang dipakai, dan nilai Rupiahnya. Di bawahnya tertera **Persediaan awal (5-1100)** dan **Persediaan akhir (5-1300)** — itulah angka yang akan dijurnal, terlihat **sebelum** tombolnya ditekan. Kurs tengah adalah (kurs beli + kurs jual) ÷ 2, dibagi satuan kuotasi BI (JPY dikutip per 100 unit).
-4. **Khusus periode yang berakhir 31 Desember:** tombol **Jurnal penutup laba tahunan** muncul setelah penilaian dijalankan. Ia memindahkan seluruh saldo laba rugi tahun itu ke 3-2100 Laba Ditahan. Wajib dijalankan sebelum periodenya dapat ditutup, dan ia sendiri menolak berjalan bila ada bulan sepanjang tahun itu yang penyusutannya belum dijurnal — pesannya menyebut bulan-bulannya satu per satu.
-5. **Tutup periode.** Tombolnya tetap tidak aktif selama penyusutan atau penilaian belum dijalankan, dan pada Desember selama penutup labanya belum dijalankan.
+2. **Jalankan revaluasi kurs** (§6.6). Saldo rekening bank valuta asing diukur ulang pada kurs tengah BI akhir periode. Outlet tanpa rekening valuta asing tetap harus menekan tombolnya — hasilnya nol selisih, dan itu keadaan sah yang tetap perlu dicatat sudah diperiksa.
+3. **Stock opname akhir bulan sudah ditinjau** (§5.6 langkah 4–5). Penilaian hanya menerima opname berstatus **RECONCILED** atau **VARIANCE** — hitungan fisik yang belum ditinjau bukan bukti. Opname yang masih OPEN atau SUBMITTED akan muncul sebagai penghalang.
+4. **Jalankan penilaian.** Panel menampilkan, per mata uang: kuantitas hasil hitung fisik, tanggal opname yang dipakai, kurs tengah BI, tanggal kurs yang dipakai, dan nilai Rupiahnya. Di bawahnya tertera **Persediaan awal (5-1100)** dan **Persediaan akhir (5-1300)** — itulah angka yang akan dijurnal, terlihat **sebelum** tombolnya ditekan. Kurs tengah adalah (kurs beli + kurs jual) ÷ 2, dibagi satuan kuotasi BI (JPY dikutip per 100 unit).
+5. **Khusus periode yang berakhir 31 Desember:** tombol **Jurnal penutup laba tahunan** muncul setelah penilaian dijalankan. Ia memindahkan seluruh saldo laba rugi tahun itu ke 3-2100 Laba Ditahan. Wajib dijalankan sebelum periodenya dapat ditutup, dan ia sendiri menolak berjalan bila ada bulan sepanjang tahun itu yang penyusutan **atau** revaluasi kursnya belum dijurnal — pesannya menyebut bulan-bulannya satu per satu.
+6. **Tutup periode.** Tombolnya tetap tidak aktif selama penyusutan, revaluasi kurs, atau penilaian belum dijalankan, dan pada Desember selama penutup labanya belum dijalankan. Keterangan pada tombolnya menyebut langkah mana yang masih kurang.
 
 **Tanggal opname atau tanggal kurs yang berbeda dari akhir periode diberi tanda "Mundur dari akhir periode".** Itu keadaan sah, bukan kekeliruan: outlet tidak menghitung uang pada hari tutup, dan BI tidak mengumumkan kurs pada Sabtu, Minggu, dan hari libur. Yang dipakai adalah opname terakhir di dalam periode dan snapshot kurs terakhir yang tidak melewati akhir periode. Tanggal yang benar-benar dipakai disimpan pada baris penilaian dan jejak audit, sehingga pemeriksa dapat menunjuknya — pemunduran tanggal tidak pernah terjadi diam-diam.
 
@@ -267,6 +268,29 @@ Penyusutan sebuah bulan **tidak dapat dijalankan dua kali**. Bila angkanya perlu
 **Melepas aset** — dijual, dihibahkan, atau dibuang — dilakukan dengan tombol **Lepaskan**. Isi tanggal pelepasan dan hasil pelepasannya (isi nol untuk penghapusan tanpa hasil). Selisih antara hasil dan nilai bukunya masuk ke Laba/(Rugi) Penjualan Aset Tetap (7-1400). Syaratnya: **penyusutan seluruh bulan sampai dengan bulan pelepasan harus sudah dijurnal lebih dulu**. Bila belum, pelepasan ditolak dan pesannya menyebut bulan-bulan yang tertinggal — jalankan penyusutan bulan-bulan itu, lalu ulangi. Aset yang dilepas tetap ada di daftar dengan tanda **Dilepas** beserta tanggalnya; ia tidak pernah dihapus.
 
 **Perolehan dan hasil pelepasan tidak menyentuh kas.** Membeli brankas mendebit Aset Tetap — Harga Perolehan (1-1510) dan mengkredit **Kewajiban Lain-Lain (2-1900)**; melepasnya mendebit **Piutang Lain-Lain (1-1320)**. Uangnya sendiri dicatat terpisah saat benar-benar bergerak — lewat **Catat Pengeluaran** untuk pembayarannya, atau lewat penerimaan bank untuk hasil penjualannya. Alasannya: kas pada buku besar harus selalu sama dengan kas yang dihitung di laci dan brankas, dan modul di luar sistem kas yang menyentuh 1-1110 akan membuat keduanya berbeda tanpa ketahuan. Jangan mencatat pembelian aset sebagai pengeluaran biasa **dan** mendaftarkannya di sini — itu menghitungnya dua kali.
+
+
+### 6.6 Rekening Valuta Asing dan Revaluasi Kurs — Controller ke atas
+
+**Rekening bank dalam mata uang asing kini masuk pembukuan.** Sebelumnya rekening USD boleh dibuat dan mutasinya boleh dicatat, tetapi tidak pernah masuk buku besar — uang yang benar-benar ada tidak muncul di laporan mana pun. Sekarang setiap mutasinya dinilai ke Rupiah dan dicatat pada **Bank UKA (1-1220)**.
+
+**Nilai Rupiahnya dipakai kurs tengah BI pada tanggal mutasi itu**, bukan kurs hari ini. Kalau di tanggal itu BI tidak mengumumkan kurs — Sabtu, Minggu, hari libur — dipakai kurs hari kerja terakhir sebelumnya.
+
+**Kalau belum ada kurs BI sama sekali sampai tanggal mutasi, mutasinya tidak dijurnal.** Ia muncul pada ringkasan penjurnalan sebagai dilewati, dengan alasannya. Jalan keluarnya adalah menjalankan sinkronisasi kurs BI lebih dulu, lalu mengulang penjurnalannya. **Jangan mengarang kurs** supaya angkanya masuk — kurs karangan di buku besar tidak pernah ditinjau lagi.
+
+**Apa itu revaluasi akhir bulan.** Uang USD 1.000 di rekening tetap USD 1.000 sepanjang bulan, tetapi nilainya dalam Rupiah berubah mengikuti kurs. Kalau dicatat Rp 16.300.000 pada 15 September dan kurs akhir September menjadi 16.500, nilainya sekarang Rp 16.500.000. Selisih Rp 200.000 itu harus tercatat — itulah yang dilakukan tombol **Jurnalkan revaluasi bulan ini** pada panel Revaluasi Kurs di **Buku Besar → Periode**.
+
+Selisihnya masuk **Laba/(Rugi) Selisih Kurs (7-1500)**. Kalau kurs naik, laba; kalau turun, rugi.
+
+**Selisih ini bukan uang yang masuk atau keluar.** Tidak ada Rupiah yang berpindah; yang berubah hanya nilai catatan atas uang yang sudah ada. Jangan mencarinya di kas atau di rekening.
+
+**Uang tunai UKA di laci dan brankas tidak ikut direvaluasi di sini.** Ia dinilai lewat stock opname pada langkah penilaian persediaan (§6.4). Merevaluasinya di dua tempat akan menghitung pergerakan kurs yang sama dua kali, dan neracanya akan tetap terlihat seimbang meski angkanya salah — kekeliruan yang tidak akan terlihat dari laporan mana pun.
+
+**Panel menunjukkan angkanya sebelum tombolnya ditekan:** per mata uang — saldo valutanya, kurs tengah BI, tanggal kurs yang dipakai, nilai yang tercatat sekarang, nilai sesudahnya, dan selisihnya. Tanggal kurs yang lebih awal daripada akhir periode diberi tanda **"Mundur dari akhir periode"**; itu keadaan sah, dan tanggal yang benar-benar dipakai tersimpan supaya pemeriksa dapat menunjuknya.
+
+**Kalau ada penghalang,** tombolnya tidak aktif dan penghalangnya disebut beserta mata uangnya — biasanya karena belum ada kurs BI sampai akhir periode itu. Revaluasi **tidak pernah berjalan sebagian**.
+
+**Revaluasi sebuah bulan tidak dapat diulang.** Bila angkanya perlu diperbaiki, catat jurnal baliknya lebih dulu seperti koreksi jurnal lainnya. Menekan tombolnya berkali-kali tidak pernah menghasilkan jurnal ganda.
 
 
 ## 7. Pelaporan Regulator Internal

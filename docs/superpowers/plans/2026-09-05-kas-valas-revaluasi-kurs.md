@@ -24,7 +24,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 7 — `postCurrencyRevaluation`: jurnal periode yang idempoten
 - [x] Tugas 8 — Gerbang penutupan periode dan penutup laba tahunan
 - [x] Tugas 9 — Prosedur tRPC dan panel Revaluasi Kurs
-- [ ] Tugas 10 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+- [x] Tugas 10 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 Urutannya mengikat: 1 sebelum 5–9; 2 sebelum 3, 5, dan 6; 4 sebelum 7; 6 sebelum 7; 7 sebelum 8
 dan 9. Tugas 10 terakhir.
