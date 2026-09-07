@@ -39,8 +39,13 @@ dengan *Jumlah Record* pada headernya, dan tiap sel punya tepat satu akun penyus
 | Form | Jumlah Record | Rincian |
 |---|---|---|
 | B0002 | **19** | 11 aset + 5 kewajiban + 3 ekuitas |
-| B0003 | **25** | 2 pendapatan + 3 harga pokok + 1 pengiriman uang + 9 beban + 8 lain-lain + 1 pajak + 1 pajak penghasilan |
+| B0003 | **25** | 2 pendapatan + 3 harga pokok + 1 pengiriman uang + 9 beban + 9 lain-lain + 1 pajak penghasilan |
 | B0004 | **7** | Saldo positif/negatif, laba/rugi, dividen, menambah/mengurangi ekuitas |
+
+Sembilan baris lain-lain B0003 adalah tiga akun tunggal (`7-1100`, `7-1200`, `7-1300`) ditambah
+tiga pasang sisi positif/negatif (`7-1400`, `7-1500`, `7-1900`). Pada B0004 sebuah **record adalah
+baris berisi, bukan sel berisi**: baris *- Saldo Positif* mengisi dua kolom sekaligus namun tetap
+dihitung satu.
 
 Komentar pada bagan akun berbunyi *"setiap akun di sini dipetakan langsung ke satu baris pada form
 B0002/B0003/B0004"*. Paket ini menuliskan pemetaan itu sebagai data, bukan sebagai klaim di dalam
@@ -83,34 +88,34 @@ bagan akun, dan dengan alasan yang sama: form regulator ditinjau sekali, dan kek
 menurun ke setiap pelanggan sekaligus.
 
 ```ts
-export type FormRowSource =
+export type FormValueSource =
   /** Saldo satu akun, searah saldo normalnya. */
   | { kind: "AKUN"; code: string }
-  /** Sisi positif atau negatif dari sebuah saldo bertanda; sisi yang tidak terpakai bernilai nol. */
-  | { kind: "SISI"; code: string; side: "POSITIF" | "NEGATIF" }
-  /** Jumlah beberapa baris di atasnya — dihitung, tidak diisi. */
-  | { kind: "SUBTOTAL"; of: string[] }
-  /** Baris berlabel tanpa nilai (judul kelompok). */
-  | { kind: "JUDUL" };
+  /** Satu sisi dari saldo bertanda; sisi yang tidak terpakai bernilai nol. */
+  | { kind: "SISI"; code: string; side: ValueSide }
+  /** Pos perubahan ekuitas B0004 — bukan saldo satu akun. */
+  | { kind: "EKUITAS"; measure: EquityMeasure; side?: ValueSide }
+  /** Dihitung dari sel lain, masing-masing beserta tandanya. */
+  | { kind: "SUBTOTAL"; of: SubtotalTerm[] };
+
+export type FormCell = { column: FormColumn; source: FormValueSource };
 
 export type FormRow = {
-  /** Kunci internal yang stabil; bukan nomor baris pada berkas. */
   key: string;
-  label: string;
-  /** Kolom pada B0002: aset di kiri, kewajiban dan ekuitas di kanan. */
-  column?: "KIRI" | "KANAN";
+  label: string;              // `{TAHUN}`/`{TAHUN-1}` diganti saat menulis berkas
   indent: 0 | 1 | 2;
-  source: FormRowSource;
+  side?: "KIRI" | "KANAN";    // hanya B0002
+  cells: FormCell[];          // kosong = baris judul
+  alwaysZeroReason?: string;
 };
 
-export type RegulatoryForm = {
-  code: "B0002" | "B0003" | "B0004";
-  title: string;
-  /** Jumlah baris ber-nilai yang wajib terisi — angka pada header form. */
-  recordCount: 19 | 25 | 7;
-  rows: FormRow[];
-};
+export type RegulatoryForm = { code: FormCode; title: string; recordCount: number; rows: FormRow[] };
 ```
+
+Bentuk ini berbeda dari sketsa sesi rancangan pada dua hal, keduanya dimenangkan form aslinya:
+`cells` menggantikan satu `source` karena B0004 berkolom tiga, dan `SubtotalTerm` membawa tanda tiap
+sukunya karena baris "(net)" B0004 dicetak di atas rinciannya sehingga posisi tidak dapat dipakai.
+Baris judul dinyatakan `cells: []`, bukan `kind: "JUDUL"`.
 
 `recordCount` bukan hiasan: ia **invarian yang diuji**. Ekspor yang menghasilkan jumlah baris isian
 berbeda dari angka pada header formnya sendiri adalah ekspor yang salah, dan itu harus gagal di uji,
@@ -223,6 +228,39 @@ regulator.
 
 ---
 
+## Hasil verifikasi terhadap form asli (7 September 2026, Tugas 1)
+
+Pengguna menunjukkan ketiga form terisi tahun buku 2025. Strukturnya diambil; tidak satu pun
+nominalnya masuk ke kode, uji, atau dokumen ini. **Empat hal pada rancangan di atas dimenangkan
+formnya dan sudah diperbaiki di `shared/regulatoryForms.ts`:**
+
+1. **Rincian B0003 meleset.** Bukan "8 lain-lain + 1 pajak + 1 pajak penghasilan" melainkan sembilan
+   baris lain-lain dan satu baris *Taksiran Pajak Penghasilan (-)*. Jumlahnya tetap 25.
+
+2. **B0004 berkolom tiga, dan satu baris dapat mengisi dua kolom.** Kolomnya *Modal disetor*, *Laba
+   ditahan/(akumulasi rugi)*, dan *Jumlah*. Baris *- Saldo Positif* mengisi dua kolom pertama
+   sekaligus. Karena itu `FormRow` membawa `cells: FormCell[]` — satu sel per kolom — bukan satu
+   `source` seperti pada rancangan awal.
+
+3. **Label pos tidak unik.** B0002 memuat dua baris *Bank* (Rupiah dan UKA); B0003 memuat dua baris
+   *Laba* dan dua baris *Rugi (-)* di bawah *Penjualan Aset Tetap* dan *Selisih Kurs*. Mencocokkan
+   impor lewat label saja — seperti tertulis pada bagian 6 — akan menabrakkan baris-baris itu.
+   Kunci pencocokannya karena itu **judul kelompok + label**, keduanya dinormalkan
+   (`formMatchKey`, `groupHeadingFor`).
+
+4. **Baris "(net)" pada B0004 dicetak di atas rinciannya**, bukan di bawah seperti subtotal pada
+   B0002/B0003. Aturan "subtotal hanya menunjuk baris di atasnya" karena itu tidak berlaku dan
+   diganti aturan yang memang penting: setiap subtotal membawa sukunya beserta tandanya
+   (`SubtotalTerm`), dan seluruh rujukan wajib bebas lingkaran — itulah yang diuji.
+
+Dua hal lagi yang tetap sesuai rancangan: `Jumlah Record` 19/25/7 cocok persis dengan jumlah baris
+berisi, dan tiap baris berisi punya tepat satu akun penyusun pada bagan akun — kecuali B0004 yang
+memang meminta pos perubahan ekuitas (`EquityMeasure`), bukan saldo akun.
+
+Baris `Lain-lain (net)` pada B0004 terbukti tidak punya akun penyusun dan memang selalu nol; sesuai
+bagian 3 ia tetap ada, dan alasannya kini tertulis pada `alwaysZeroReason` sehingga ikut tercetak di
+lembar penelusuran.
+
 ## Yang sengaja tidak dikerjakan
 
 - **Tidak ada pengiriman otomatis ke BI.** Ekspor menghasilkan berkas; manusia yang mengirim.
@@ -241,9 +279,15 @@ regulator.
 
 ## Risiko residual
 
-- **Struktur form pada spec ini diturunkan dari tangkapan layar, bukan dari berkasnya.** Tugas 1
-  wajib memverifikasinya terhadap berkas asli yang disediakan pengguna sebelum kode lain
-  dibangun di atasnya. Label yang meleset satu kata akan membuat importir melewati barisnya.
+- **Struktur diambil dari tangkapan layar ketiga form, bukan dari berkas `.xlsx`-nya.** Label,
+  urutan, indentasi, kolom, dan Jumlah Record terbaca jelas dan sudah diverifikasi (bagian
+  "Hasil verifikasi"). Yang **tidak** dapat diambil dari tangkapan layar adalah geometri selnya:
+  alamat sel, lebar kolom, dan baris kosong pemisah yang persis. Ekspor karena itu **meniru tata
+  letaknya, bukan menyalin koordinatnya** — cukup untuk dibaca manusia dan untuk diimpor kembali
+  oleh aplikasi ini, tetapi bukan berkas yang identik sel-per-sel dengan milik BI.
+- **Pencocokan impor bergantung pada judul kelompok.** Bila BI merevisi form dan mengubah judul
+  kelompoknya saja — labelnya tetap — barisnya akan terbaca sebagai pos tidak dikenal. Itu memang
+  yang harus terjadi, dan daftarnya dikembalikan beserta labelnya, bukan diabaikan.
 - **Form BI dapat direvisi.** Struktur berada di satu berkas dan `recordCount` diuji, sehingga
   revisinya terlihat sebagai uji yang gagal — tetapi tetap menuntut manusia membaca form barunya.
 - **`Lain-lain (net)` pada B0004 selalu nol** sampai ada modul yang menuliskannya. Bila kelak

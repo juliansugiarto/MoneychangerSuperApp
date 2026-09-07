@@ -107,8 +107,8 @@ Buku besar sesudahnya: 1-1110 Rp 170.000.000, 1-1220 Rp 16.300.000, 3-1100 Rp 21
 Spec: `specs/2026-09-07-ekspor-laporan-b-form-design.md`
 Rencana: `plans/2026-09-07-ekspor-laporan-b-form.md`
 - [x] Sesi rancangan — spec dan rencana bertugas
-- [ ] **Menunggu pengguna:** berkas form B0002/B0003/B0004 asli belum ada di proyek
-- [ ] Tugas 1 — Verifikasi struktur form terhadap berkas asli, lalu `shared/regulatoryForms.ts`
+- [x] **Penghalang dicabut 7 September 2026:** pengguna menunjukkan ketiga form terisi; struktur diambil dari tangkapan layarnya, nominalnya tidak
+- [x] Tugas 1 — Verifikasi struktur form terhadap berkas asli, lalu `shared/regulatoryForms.ts`
 - [ ] Tugas 2 — Nilai tiap baris form dari laporan, murni dan teruji
 - [ ] Tugas 3 — Penulis workbook tiga form
 - [ ] Tugas 4 — Lembar penelusuran
@@ -146,7 +146,7 @@ Rencana: `plans/2026-09-07-ekspor-laporan-b-form.md`
 | 5 | **E** aset tetap | Memasok baris Penyusutan B0003 yang belum punya asal |
 | 6 | **F1** kas valas dan revaluasi kurs | Menyelesaikan pekerjaan yang `mapBankMovement` sendiri tandai *belum*; menghidupkan `REVALUASI_KURS`, 7-1500, dan 1-1220 yang sudah disediakan tetapi menganggur |
 | 7 | **F2** Arus Kas dan CALK | Arus Kas metode tidak langsung menambahkan kembali penyusutan dari E, dan barisnya "Pengaruh perubahan kurs atas kas" hanya berisi angka bila F1 sudah ada |
-| 8 | **G** ekspor B-form | Diletakkan setelah C–F supaya yang diekspor sudah lengkap; **menunggu berkas form asli** |
+| 8 | **G** ekspor B-form | Diletakkan setelah C–F supaya yang diekspor sudah lengkap |
 | 9 | **H** profil transaksi | Berdiri sendiri |
 | 10 | **I** arsip dokumen | Berdiri sendiri |
 | 11 | **J** IRA | Paling besar; sebagian sisi risiko inherennya dihitung dari data yang sudah ada |

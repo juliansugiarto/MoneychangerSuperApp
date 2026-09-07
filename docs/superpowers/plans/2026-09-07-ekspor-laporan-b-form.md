@@ -14,7 +14,7 @@
 
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu.**
 
-- [ ] Tugas 1 — Verifikasi struktur form terhadap berkas asli, lalu `shared/regulatoryForms.ts`
+- [x] Tugas 1 — Verifikasi struktur form terhadap berkas asli, lalu `shared/regulatoryForms.ts`
 - [ ] Tugas 2 — Nilai tiap baris form dari laporan, murni dan teruji
 - [ ] Tugas 3 — Penulis workbook tiga form
 - [ ] Tugas 4 — Lembar penelusuran
@@ -27,15 +27,20 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 Urutannya mengikat: **1 sebelum segalanya**; 2 sebelum 3 dan 4; 3 sebelum 6; 5 sebelum 6; 3 dan 7
 sebelum 8. Tugas 9 terakhir.
 
-## Prasyarat yang memblokir
+## Prasyarat yang sudah terpenuhi
 
-**Tugas 1 tidak dapat dimulai sebelum berkas form B0002/B0003/B0004 asli ada di dalam proyek.**
-Struktur pada spec diturunkan dari tangkapan layar; label yang meleset satu kata membuat importir
-melewati barisnya, dan menebak label regulator dilarang aturan proyek (preseden Paket K3).
+**Penghalangnya dicabut 7 September 2026.** Pengguna menunjukkan ketiga form terisi tahun buku 2025
+sebagai tangkapan layar, dan itu memuat seluruh yang dibutuhkan Tugas 1: label, urutan, indentasi,
+kolom, dan *Jumlah Record* 19/25/7. Pengguna juga memutuskan bahwa **penomoran record pada form
+tidak perlu dikejar** — yang harus benar adalah angkanya jatuh pada pos yang tepat.
 
-Yang dibutuhkan: satu berkas Excel form BI (boleh yang sudah terisi tahun 2025, boleh yang kosong).
-Bila berkasnya memuat pembukuan asli, **angkanya tidak boleh masuk kode, uji, fixture, maupun
-dokumentasi** — hanya strukturnya yang diambil, dan berkas sumbernya tidak di-commit.
+Yang tidak dapat diambil dari tangkapan layar hanyalah geometri selnya (alamat sel, lebar kolom,
+baris pemisah yang persis). Ekspor karena itu **meniru tata letaknya, bukan menyalin koordinatnya**.
+Hasil verifikasi dan empat koreksi yang dimenangkan formnya tercatat pada spec bagian
+"Hasil verifikasi terhadap form asli".
+
+Nominal pada tangkapan layar itu adalah pembukuan asli perusahaan: **tidak satu pun boleh masuk
+kode, uji, fixture, log, dokumentasi, maupun commit.** Uji memakai angka karangan sendiri.
 
 ## Global Constraints
 
@@ -101,7 +106,7 @@ dokumentasi** — hanya strukturnya yang diambil, dan berkas sumbernya tidak di-
 - Consumes: berkas form asli dari pengguna; `shared/chartOfAccounts.ts`.
 - Produces: `REGULATORY_FORMS`, tipe `FormRow`/`FormRowSource`. Dipakai seluruh tugas berikutnya.
 
-- [ ] **Step 1: Baca berkas aslinya, jangan percaya spec**
+- [x] **Step 1: Baca berkas aslinya, jangan percaya spec**
 
 ```bash
 ./node_modules/.bin/tsx -e 'import * as XLSX from "xlsx"; const wb = XLSX.readFile(process.argv[1]!); for (const name of wb.SheetNames) { console.log("=== " + name); console.log(XLSX.utils.sheet_to_csv(wb.Sheets[name]).slice(0, 4000)); }' <path-berkas>
@@ -110,7 +115,7 @@ dokumentasi** — hanya strukturnya yang diambil, dan berkas sumbernya tidak di-
 Cocokkan label, urutan, indentasi, dan *Jumlah Record* dengan tabel pada spec bagian 1. **Setiap
 perbedaan dimenangkan berkasnya**, dan spec diperbarui sambil lewat.
 
-- [ ] **Step 2: Tulis uji yang gagal**
+- [x] **Step 2: Tulis uji yang gagal**
 
 ```ts
 describe("struktur form regulator", () => {
@@ -128,10 +133,10 @@ describe("struktur form regulator", () => {
 });
 ```
 
-- [ ] **Step 3: Tulis strukturnya**, mengikuti bentuk pada spec bagian 1. Beri komentar pada baris
+- [x] **Step 3: Tulis strukturnya**, mengikuti bentuk pada spec bagian 1. Beri komentar pada baris
       yang tidak punya akun penyusun, menyebut mengapa ia tetap ada (spec bagian 3).
 
-- [ ] **Step 4: Perintah mutu dan commit**
+- [x] **Step 4: Perintah mutu dan commit**
 
 ```bash
 ./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build
