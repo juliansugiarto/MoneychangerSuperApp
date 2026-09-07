@@ -549,7 +549,131 @@ function ModalBankPanel() {
   return <div className="space-y-6">
     <SetoranModalCard />
     <PindahKasBankCard />
+    <PelunasanKewajibanCard />
   </div>;
+}
+
+/** Tanggal hari ini menurut jam operasional outlet (WIB), bukan menurut zona waktu perambannya. */
+const todayInJakarta = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+
+/**
+ * Pelunasan kewajiban dan penagihan piutang.
+ *
+ * Beban dan perolehan aset tetap sengaja dicatat sebagai kewajiban 2-1900 lebih dulu — modul di
+ * luar sistem kas yang menyentuh 1-1110 membuat kas buku besar berbeda dari kas operasional. Kartu
+ * inilah sisi kasnya, dan tanpanya bagian operasi serta investasi Laporan Arus Kas tidak pernah
+ * berisi apa pun.
+ */
+function PelunasanKewajibanCard() {
+  const { user } = useAuth();
+  const utils = trpc.useUtils();
+  const [selectedKey, setSelectedKey] = useState("");
+  const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState<"KAS" | "BANK">("KAS");
+  const [bankAccountId, setBankAccountId] = useState("");
+  const [settlementDate, setSettlementDate] = useState(todayInJakarta);
+  const [notes, setNotes] = useState("");
+  const [denominations, setDenominations] = useState<DenominationRow[]>([emptyRow()]);
+
+  const outstanding = trpc.cash.outstandingSettlements.useQuery(undefined, { enabled: Boolean(user) });
+  const { data: currencyList } = trpc.currencies.list.useQuery(undefined, { enabled: Boolean(user) });
+  const { data: accounts } = trpc.bankAccounts.list.useQuery(undefined, { enabled: Boolean(user) });
+  const idrCurrencyId = currencyList?.find((currency) => currency.code === "IDR")?.id;
+  const activeAccounts = useMemo(() => (accounts ?? []).filter(({ account }) => account.active), [accounts]);
+
+  const items = useMemo(
+    () => [...(outstanding.data?.payables ?? []), ...(outstanding.data?.receivables ?? [])],
+    [outstanding.data],
+  );
+  const keyOf = (item: (typeof items)[number]) => `${item.direction}:${item.targetType}:${item.targetId}`;
+  const selected = items.find((item) => keyOf(item) === selectedKey);
+
+  const addRow = () => setDenominations((rows) => [...rows, emptyRow()]);
+  const updateRow = (index: number, field: keyof DenominationRow, value: string) => setDenominations((rows) => rows.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
+  const removeRow = (index: number) => setDenominations((rows) => (rows.length > 1 ? rows.filter((_, i) => i !== index) : rows));
+  const total = denominations.reduce((sum, row) => sum + (Number(row.value) || 0) * (Number(row.quantity) || 0), 0);
+  const needsDenominations = method === "KAS";
+  const mismatch = needsDenominations && Boolean(amount) && Math.abs(total - Number(amount)) > 0.005;
+  const isComplete = !needsDenominations || (denominations.length > 0 && denominations.every((row) => row.value && row.quantity));
+  const exceedsOutstanding = Boolean(selected && amount) && Number(amount) - Number(selected!.outstandingAmount) > 0.005;
+
+  const settle = trpc.cash.recordSettlement.useMutation({
+    onSuccess: () => {
+      toast.success("Pelunasan tercatat. Jurnalkan lewat Buku Besar untuk memasukkannya ke laporan.");
+      setSelectedKey(""); setAmount(""); setNotes(""); setDenominations([emptyRow()]);
+      outstanding.refetch();
+      utils.cash.balances.invalidate(); utils.cash.denominationBalances.invalidate();
+      utils.bankAccounts.list.invalidate(); utils.dashboard.overview.invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const submit = () => {
+    if (!selected) return toast.error("Pilih tagihan atau piutang yang dilunasi.");
+    if (!amount) return toast.error("Isi jumlah pelunasan.");
+    if (exceedsOutstanding) return toast.error("Jumlah pelunasan melebihi sisa tagihan.");
+    if (notes.trim().length < 5) return toast.error("Catatan wajib diisi (minimal 5 karakter).");
+    if (method === "KAS" && !idrCurrencyId) return toast.error("Mata uang Rupiah belum terdaftar di sistem.");
+    if (method === "BANK" && !bankAccountId) return toast.error("Pilih rekening yang dipakai.");
+    if (!isComplete) return toast.error("Rincian pecahan wajib diisi untuk pelunasan tunai.");
+    if (mismatch) return toast.error("Total rincian pecahan belum sama dengan jumlah di atas.");
+    settle.mutate({
+      direction: selected.direction, targetType: selected.targetType,
+      expenseId: selected.targetType === "BEBAN" ? selected.targetId : undefined,
+      fixedAssetId: selected.targetType === "ASET_TETAP" ? selected.targetId : undefined,
+      amount, method,
+      currencyId: method === "KAS" ? idrCurrencyId : undefined,
+      bankAccountId: method === "BANK" ? Number(bankAccountId) : undefined,
+      settlementDate, notes,
+      denominations: method === "KAS" ? denominations.map((row) => ({ value: row.value, quantity: Number(row.quantity) })) : [],
+    });
+  };
+
+  return <Card className="border-[#dce6f0]">
+    <CardHeader>
+      <CardTitle className="font-display text-lg text-[#18395f]">Pelunasan kewajiban &amp; penagihan piutang</CardTitle>
+      <CardDescription>
+        Beban dan perolehan aset tetap tercatat sebagai kewajiban lebih dulu; di sinilah uangnya benar-benar keluar.
+        Sampai pelunasannya dicatat, Laporan Arus Kas tidak memperlihatkan pengeluaran itu sama sekali.
+      </CardDescription>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      {outstanding.isLoading ? <p className="py-6 text-center text-sm text-[#475569]">Memuat daftar tagihan…</p>
+        : outstanding.error ? <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+            <p className="text-sm font-semibold text-red-900">Daftar tagihan gagal dibaca</p>
+            <p className="mt-1 text-sm text-red-800">{outstanding.error.message}</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => outstanding.refetch()}><RefreshCw className="mr-1.5 size-4" />Coba lagi</Button>
+          </div>
+        : items.length === 0 ? <div className="rounded-2xl border border-dashed border-[#cbd9e7] bg-[#f8fbfe] px-5 py-10 text-center text-sm leading-6 text-[#475569]">Tidak ada kewajiban terutang maupun piutang yang belum ditagih.</div>
+        : <>
+          <div>
+            <Label className="text-xs">Yang dilunasi</Label>
+            <Select value={selectedKey} onValueChange={(value) => { setSelectedKey(value); const picked = items.find((item) => keyOf(item) === value); setAmount(picked?.outstandingAmount ?? ""); }}>
+              <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih tagihan atau piutang" /></SelectTrigger>
+              <SelectContent>
+                {items.map((item) => <SelectItem key={keyOf(item)} value={keyOf(item)}>
+                  {item.direction === "PEMBAYARAN" ? "Bayar" : "Tagih"} · {item.label} · sisa {formatPlainAmount(item.outstandingAmount)}
+                </SelectItem>)}
+              </SelectContent>
+            </Select>
+            {selected ? <p className="mt-1 text-xs text-[#475569]">
+              {selected.targetType === "BEBAN" ? "Beban" : "Aset tetap"} bertanggal {selected.originDate} · nilai asal {formatPlainAmount(selected.originalAmount)} · sudah dilunasi {formatPlainAmount(selected.settledAmount)}
+            </p> : null}
+          </div>
+          <div><Label className="text-xs">Jumlah (Rp)</Label><Input className="mt-1" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0" />
+            {exceedsOutstanding ? <p className="mt-1 text-xs font-semibold text-rose-600">Melebihi sisa tagihan {formatPlainAmount(selected!.outstandingAmount)}.</p> : null}
+          </div>
+          <div><Label className="text-xs">Dibayar lewat</Label><Select value={method} onValueChange={(value) => setMethod(value as typeof method)}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="KAS">Kas fisik (Rupiah)</SelectItem><SelectItem value="BANK">Rekening perusahaan</SelectItem></SelectContent></Select></div>
+          {method === "BANK" ? <div><Label className="text-xs">Rekening</Label><Select value={bankAccountId} onValueChange={setBankAccountId}><SelectTrigger className="mt-1"><SelectValue placeholder="Pilih rekening" /></SelectTrigger><SelectContent>{activeAccounts.map(({ account, currency }) => <SelectItem key={account.id} value={String(account.id)}>{account.bankName} · {account.accountNumber} ({currency.code})</SelectItem>)}</SelectContent></Select></div> : null}
+          <div><Label className="text-xs" htmlFor="lunas-tanggal">Tanggal pelunasan</Label><Input id="lunas-tanggal" type="date" className="mt-1" value={settlementDate} onChange={(event) => setSettlementDate(event.target.value)} /></div>
+          <div><Label className="text-xs">Catatan (wajib, minimal 5 karakter)</Label><Input className="mt-1" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Contoh: Pelunasan sewa ruko September ke pemilik bangunan" /></div>
+          {method === "KAS" ? <DenominationEditor currencyCode="IDR" rows={denominations} total={total} mismatch={mismatch} onAdd={addRow} onUpdate={updateRow} onRemove={removeRow} /> : null}
+          <Button disabled={!selected || !amount || exceedsOutstanding || notes.trim().length < 5 || !isComplete || mismatch || settle.isPending} onClick={submit} className="press-scale w-full bg-[#183f70] text-white hover:bg-[#12345d]">
+            <Wallet className="mr-1.5 size-4" />{settle.isPending ? "Menyimpan…" : "Catat pelunasan"}
+          </Button>
+        </>}
+    </CardContent>
+  </Card>;
 }
 
 function SetoranModalCard() {

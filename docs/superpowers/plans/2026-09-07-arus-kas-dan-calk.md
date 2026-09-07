@@ -18,7 +18,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 1 — Migrasi pelunasan dan catatan CALK (0050)
 - [x] Tugas 2 — Dua kategori pelunasan pada pemetaan kas dan bank
 - [x] Tugas 3 — `recordSettlement`: penulis pelunasan beserta pecahannya
-- [ ] Tugas 4 — Prosedur tRPC dan panel Pelunasan pada tab Modal & Bank
+- [x] Tugas 4 — Prosedur tRPC dan panel Pelunasan pada tab Modal & Bank
 - [ ] Tugas 5 — `classifyCashEntry` murni di `shared/cashFlow.ts`
 - [ ] Tugas 6 — `buildCashFlowStatement` dan penanda `reconciled`
 - [ ] Tugas 7 — Arus Kas masuk `buildFinancialStatements` beserta peringatannya
@@ -350,14 +350,14 @@ git commit -m "recordSettlement: pelunasan kewajiban dan penerimaan piutang bese
 - Consumes: `recordSettlement`, `listOutstandingPayables`.
 - Produces: `cash.outstandingPayables`, `cash.recordSettlement`. Dipakai UI dan tugas 12.
 
-- [ ] **Step 1: Uji otorisasi lebih dulu** — STAFF dan ADMIN ditolak, CONTROLLER diterima.
-- [ ] **Step 2: Dua prosedur `controllerProcedure`.** Tanggal dikirim sebagai `"YYYY-MM-DD"`,
+- [x] **Step 1: Uji otorisasi lebih dulu** — STAFF dan ADMIN ditolak, CONTROLLER diterima.
+- [x] **Step 2: Dua prosedur `controllerProcedure`.** Tanggal dikirim sebagai `"YYYY-MM-DD"`,
       **bukan** `z.coerce.date()` — alasannya tercatat pada komentar router `fixedAssets`.
-- [ ] **Step 3: Panel "Pelunasan Kewajiban"** di bawah panel Modal & Bank yang sudah ada: daftar
+- [x] **Step 3: Panel "Pelunasan Kewajiban"** di bawah panel Modal & Bank yang sudah ada: daftar
       tagihan terutang beserta umurnya, pilih satu, isi nominal (default sisa penuh), pilih kas atau
       rekening, lalu form pecahan yang sudah ada bila kas. Keadaan kosong berbunyi *"Tidak ada
       kewajiban terutang."*, bukan tabel kosong tanpa keterangan.
-- [ ] **Step 4:** Perintah mutu, lalu commit `"Prosedur dan panel pelunasan kewajiban"`.
+- [x] **Step 4:** Perintah mutu, lalu commit `"Prosedur dan panel pelunasan kewajiban"`.
 
 ---
 

@@ -124,6 +124,7 @@ import {
 import { fixedAssetCategories, fixedAssetTaxGroups } from "../drizzle/schema";
 import { buildCurrencyRevaluation, postCurrencyRevaluation } from "./currencyRevaluation";
 import { buildFinancialStatements } from "./financialStatements";
+import { listOutstandingSettlements, recordSettlement } from "./settlements";
 import { KUPVA_WORK_AREA, competencyCodesForArea } from "../shared/sdmCompetency";
 import {
   assignPicRole, buildAnnualSdmPlan, buildProfileReviewSchedule, buildTrainingRecap, decideCandidate, listCandidates, listProfileReviews, listTrainingSessions, recordCandidate, recordProfileReview, recordTrainingSession, screenCandidate, buildSdmQuarterlyReport, buildSdmRealisasiReport, createEmployee, endEmployment, exportSdmTextFile,
@@ -792,6 +793,32 @@ export const appRouter = router({
       notes: z.string().trim().min(5).max(500),
       denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).min(1, "Rincian pecahan wajib diisi untuk pemindahan kas.").max(50),
     })).mutation(({ input, ctx }) => recordCashBankTransfer(input, ctx.user)),
+    /**
+     * Pelunasan kewajiban dan penagihan piutang — Controller ke atas, sama seperti setoran modal:
+     * uang yang keluar melunasi 2-1900 adalah angka laporan keuangan, bukan catatan operasional
+     * harian.
+     *
+     * Tanggal dikirim sebagai "YYYY-MM-DD", **bukan** `z.coerce.date()`: `coerce` menghasilkan
+     * tengah malam UTC, dan mengirimnya ke kolom `date` dari mesin WIB memundurkan tanggalnya satu
+     * hari (bug paket K1).
+     */
+    outstandingSettlements: controllerProcedure.query(() => listOutstandingSettlements()),
+    recordSettlement: controllerProcedure.input(z.object({
+      direction: z.enum(["PEMBAYARAN", "PENERIMAAN"]),
+      targetType: z.enum(["BEBAN", "ASET_TETAP"]),
+      expenseId: z.number().int().positive().optional(),
+      fixedAssetId: z.number().int().positive().optional(),
+      amount: decimalString,
+      method: z.enum(["KAS", "BANK"]),
+      currencyId: z.number().int().positive().optional(),
+      bankAccountId: z.number().int().positive().optional(),
+      settlementDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal harus berbentuk YYYY-MM-DD."),
+      notes: z.string().trim().min(5).max(500),
+      denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).max(50).default([]),
+    }).refine((value) => value.method !== "KAS" || value.denominations.length > 0, {
+      message: "Rincian pecahan wajib diisi untuk pelunasan tunai.",
+      path: ["denominations"],
+    })).mutation(({ input, ctx }) => recordSettlement(input, ctx.user)),
     suggestDenominationBreakdown: staffProcedure.input(z.object({ currencyId: z.number().int().positive(), targetAmount: decimalString })).query(({ input }) => suggestDenominationBreakdown(input)),
     suggestDenominationExchange: staffProcedure.input(z.object({ currencyId: z.number().int().positive(), shortfallAmount: decimalString })).query(({ input }) => suggestDenominationExchange(input)),
     recordDenominationExchange: staffProcedure.input(z.object({ currencyId: z.number().int().positive(), give: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).min(1), receive: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).min(1), notes: z.string().trim().max(500).optional() })).mutation(({ input, ctx }) => recordDenominationExchange(input, ctx.user)),
