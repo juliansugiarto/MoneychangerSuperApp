@@ -19,7 +19,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 3 — Penulis workbook tiga form
 - [x] Tugas 4 — Lembar penelusuran
 - [x] Tugas 5 — Importir mengenali format resmi
-- [ ] Tugas 6 — Uji pulang-pergi ekspor → impor
+- [x] Tugas 6 — Uji pulang-pergi ekspor → impor
 - [ ] Tugas 7 — Gerbang tahun buku penuh dan snapshot bersumber buku besar
 - [ ] Tugas 8 — Rute unduhan, otorisasi, dan tombol pada halaman Laporan Keuangan
 - [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
@@ -210,11 +210,11 @@ git commit -m "Struktur form B0002/B0003/B0004 sebagai data"
 
 **Files:** Create `server/financialFormRoundTrip.test.ts`
 
-- [ ] **Step 1:** Susun laporan dari saldo karangan, ekspor, lalu `parseFinancialWorkbook` atas
+- [x] **Step 1:** Susun laporan dari saldo karangan, ekspor, lalu `parseFinancialWorkbook` atas
       buffer hasilnya, lalu bandingkan **nilai tiap pos** dengan keluaran `buildFinancialStatements`.
-- [ ] **Step 2:** Sertakan kasus bertanda negatif dan kasus nol — keduanya yang paling mungkin
+- [x] **Step 2:** Sertakan kasus bertanda negatif dan kasus nol — keduanya yang paling mungkin
       hilang dalam penulisan dan pembacaan.
-- [ ] **Step 3:** Perintah mutu, lalu commit `"Uji pulang-pergi ekspor dan impor form"`.
+- [x] **Step 3:** Perintah mutu, lalu commit `"Uji pulang-pergi ekspor dan impor form"`.
 
 ---
 
