@@ -268,6 +268,19 @@ Baris `Lain-lain (net)` pada B0004 terbukti tidak punya akun penyusun dan memang
 bagian 3 ia tetap ada, dan alasannya kini tertulis pada `alwaysZeroReason` sehingga ikut tercetak di
 lembar penelusuran.
 
+**Baris dividen berbeda, dan sengaja tidak ditandai selalu nol.** Pengguna menyatakan 7 September
+2026 bahwa **seluruh laba ditahan dan tidak ada yang dibagikan sebagai dividen**, sehingga baris
+*Pembagian dividen (-/-)* memang berisi nol pada periode pelaporan yang sebenarnya — itulah sebabnya
+form 2025 milik perusahaan menampilkan Rp 0 di sana. Meski begitu akunnya **punya penulis**:
+penarikan pemilik dijurnal ke `3-4100` lewat `CAPITAL_WITHDRAWAL` (`shared/journalMapping.ts`,
+`DIVIDEND_ACCOUNT`), keputusan 4 September 2026 yang mencatat penarikan sebagai distribusi alih-alih
+pengurangan setoran modal. Nolnya karena kebijakan perusahaan, bukan karena mekanismenya belum ada,
+jadi `alwaysZeroReason` tidak dipasang dan tidak ada modul dividen yang perlu dibangun.
+
+Konsekuensinya pertanyaan penyajian tanda pada kolom *Jumlah* baris dividen tidak pernah terlihat
+pada praktiknya. Nilainya tetap dihitung bertanda negatif di sana supaya kolom *Jumlah* menutup pada
+saldo akhir bila kelak sebuah penarikan pemilik benar-benar dicatat.
+
 ## Yang sengaja tidak dikerjakan
 
 - **Tidak ada pengiriman otomatis ke BI.** Ekspor menghasilkan berkas; manusia yang mengirim.
