@@ -103,7 +103,7 @@ setoran modal Rupiah @ Rp 100.000.000, dua beban sewa @ Rp 5.000.000 yang sudah 
 pelunasan sebagian Rp 20.000.000 atas aset "Brankas Uji Paket E" (sisa Rp 4.000.000 di 2-1900).
 Buku besar sesudahnya: 1-1110 Rp 170.000.000, 1-1220 Rp 16.300.000, 3-1100 Rp 217.636.000.
 
-### Paket G — Ekspor B0002/B0003/B0004 dari buku besar
+### Paket G — Ekspor B0002/B0003/B0004 dari buku besar — **SELESAI 7 September 2026**
 Spec: `specs/2026-09-07-ekspor-laporan-b-form-design.md`
 Rencana: `plans/2026-09-07-ekspor-laporan-b-form.md`
 - [x] Sesi rancangan — spec dan rencana bertugas
@@ -115,8 +115,8 @@ Rencana: `plans/2026-09-07-ekspor-laporan-b-form.md`
 - [x] Tugas 5 — Importir mengenali format resmi
 - [x] Tugas 6 — Uji pulang-pergi ekspor → impor
 - [x] Tugas 7 — Gerbang tahun buku penuh dan snapshot bersumber buku besar
-- [ ] Tugas 8 — Rute unduhan, otorisasi, dan tombol pada halaman Laporan Keuangan
-- [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+- [x] Tugas 8 — Rute unduhan, otorisasi, dan tombol pada halaman Laporan Keuangan
+- [x] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 ### Paket H — Profil transaksi dan pemantauan berkala (temuan BI 9 sisa, 10)
 - [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*

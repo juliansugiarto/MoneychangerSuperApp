@@ -21,8 +21,8 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 5 — Importir mengenali format resmi
 - [x] Tugas 6 — Uji pulang-pergi ekspor → impor
 - [x] Tugas 7 — Gerbang tahun buku penuh dan snapshot bersumber buku besar
-- [ ] Tugas 8 — Rute unduhan, otorisasi, dan tombol pada halaman Laporan Keuangan
-- [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+- [x] Tugas 8 — Rute unduhan, otorisasi, dan tombol pada halaman Laporan Keuangan
+- [x] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 Urutannya mengikat: **1 sebelum segalanya**; 2 sebelum 3 dan 4; 3 sebelum 6; 5 sebelum 6; 3 dan 7
 sebelum 8. Tugas 9 terakhir.
@@ -241,9 +241,9 @@ git commit -m "Struktur form B0002/B0003/B0004 sebagai data"
       bernama tahunnya.
 - [x] **Step 3: Tombol pada halaman Laporan Keuangan**, dengan keterangan bahwa berkasnya **tidak**
       dikirim ke BI oleh aplikasi, dan tombolnya mati beralasan bila rentangnya bukan tahun penuh.
-- [ ] **Step 4: Verifikasi visual** rute dan tombolnya. Login dilakukan pengguna; minta pada
+- [x] **Step 4: Verifikasi visual** rute dan tombolnya. Login dilakukan pengguna; minta pada
       giliran itu.
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Unduhan ekspor form dan tombolnya"`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Unduhan ekspor form dan tombolnya"`.
 
 ---
 
@@ -251,14 +251,14 @@ git commit -m "Struktur form B0002/B0003/B0004 sebagai data"
 
 **Files:** Create `server/financialFormScenario.test.ts`; Modify panduan A–Z, skema database, ROADMAP
 
-- [ ] **Step 1: Skenario satu tahun buku penuh** dari saldo karangan: ekspor → ketiga sheet terisi
+- [x] **Step 1: Skenario satu tahun buku penuh** dari saldo karangan: ekspor → ketiga sheet terisi
       sesuai `recordCount` → impor kembali → snapshot tertulis → paket regulator dapat dibuat.
-- [ ] **Step 2: Skenario yang gagal dengan benar** — sandi pelapor kosong, rentang bukan tahun
+- [x] **Step 2: Skenario yang gagal dengan benar** — sandi pelapor kosong, rentang bukan tahun
       penuh, dan label form yang diubah manusia.
-- [ ] **Step 3: Peragaan end-to-end** pada `moneychanger` memakai data paket E/F1/F2 yang sudah ada.
+- [x] **Step 3: Peragaan end-to-end** pada `moneychanger` memakai data paket E/F1/F2 yang sudah ada.
       **Minta izin pengguna pada giliran itu juga** sebelum menulis data uji apa pun.
-- [ ] **Step 4: Perbarui dokumentasi** — panduan A–Z (cara mengekspor dan apa yang tidak dilakukan
+- [x] **Step 4: Perbarui dokumentasi** — panduan A–Z (cara mengekspor dan apa yang tidak dilakukan
       aplikasi), skema database (tidak ada tabel baru; sebut struktur form sebagai konstanta), dan
       ROADMAP.
-- [ ] **Step 5:** Perintah mutu, sebutkan angka uji yang benar-benar dilihat, lalu commit
+- [x] **Step 5:** Perintah mutu, sebutkan angka uji yang benar-benar dilihat, lalu commit
       `"Skenario ekspor form menyeluruh, peragaan, dan dokumentasi"`.

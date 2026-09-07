@@ -21,7 +21,7 @@
 | Kas valuta asing | `currency_revaluations` | Bukti retranslasi pos moneter valuta asing pada kurs penutup tiap akhir periode (migrasi `0049`). Aritmetikanya di `shared/currencyRevaluation.ts`, operasinya di `server/currencyRevaluation.ts`. Menghidupkan `REVALUASI_KURS`, akun 7-1500, dan akun 1-1220 yang sebelumnya disediakan tanpa satu pun penulis. |
 | Kepegawaian dan kompetensi | `employees`, `employee_certifications`, `employee_pic_assignments`, `sdm_competency_plans`, `apu_training_sessions`, `apu_training_attendance`, `employee_profile_reviews`, `employee_candidates` | Pegawai dan jenjangnya, sertifikat kompetensi SP, penunjukan penanggung jawab fungsi, rencana/realisasi kompetensi triwulanan, pelatihan APU PPT beserta daftar hadir, peninjauan berkala profil pegawai (migrasi `0041`), dan penyaringan calon pegawai (migrasi `0042`). |
 | Audit dan pengawasan | `audit_logs`, `director_acknowledgements` | Jejak perubahan serta tugas Direksi mengetahui. |
-| Pelaporan internal | `regulatory_report_packages`, `financial_statement_snapshots`, `regulatory_incident_reports` | Paket manual, snapshot B0002/B0003/B0004, dan register insidental. |
+| Pelaporan internal | `regulatory_report_packages`, `financial_statement_snapshots`, `regulatory_incident_reports` | Paket manual, snapshot B0002/B0003/B0004, dan register insidental. Snapshot dapat berasal dari impor berkas luar atau dari buku besar sendiri lewat ekspor form (`sourceLabel` membedakannya: `"Buku besar"` untuk yang bersumber buku besar). **Struktur ketiga form B bukan tabel** — ia konstanta pada `shared/regulatoryForms.ts`, ditinjau sekali seperti bagan akun; paket G tidak menambah tabel maupun migrasi. |
 
 ## Relasi Operasional Utama
 

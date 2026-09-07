@@ -353,6 +353,29 @@ Saat menyimpan, ada pilihan **"Khusus periode ini"**. Kosongkan untuk teks yang 
 
 **Catatan yang belum diisi muncul sebagai peringatan**, bukan sebagai penghalang. Laporan tetap dapat disusun; tetapi CALK yang kosong berarti laporannya belum lengkap menurut SAK EP.
 
+### 6.9 Ekspor form B0002/B0003/B0004 — Controller ke atas
+
+Selama ini angka laporan keuangan **diketik ulang** ke berkas Excel BI. Pengetikan ulang itulah risiko yang dituju temuan pemeriksaan 7.1: begitu angka berpindah lewat tangan, buku besar berhenti menjadi dasar laporan. Sekarang berkasnya dihasilkan aplikasi.
+
+**Cara mengekspor.** Pada halaman **Laporan → Laporan Keuangan**, atur rentangnya ke **1 Januari sampai 31 Desember tahun yang sama**, lalu tekan **"Ekspor form B0002–B0004 tahun ⟨tahun⟩"** di samping rentangnya.
+
+**Hanya tahun buku penuh yang dapat diekspor.** Rentang lain membuat tombolnya mati beserta alasannya. Alasannya tertulis pada formnya sendiri: *Periode: Tahun* dan *Jenis Periode: A*. Laporan bulanan tetap dapat dibaca di layar seperti biasa; yang dibatasi hanya berkas ekspornya.
+
+**Sandi Pelapor wajib terisi lebih dulu** pada **Pengaturan → Profil Perusahaan**. Tanpa itu ekspor berhenti dengan alasannya, dan itu disengaja: berkas laporan tanpa sandi pelapor tidak dapat dipakai BI, dan mengetahuinya saat mengunduh jauh lebih murah daripada mengetahuinya di hadapan pemeriksa.
+
+**Isi berkasnya** empat lembar:
+
+- **B0002 Neraca**, **B0003 Laba Rugi**, dan **B0004 Ekuitas** — bertata letak sama dengan form resminya, berheader *Sandi Pelapor*, *Periode*, *Nomor Form*, *Jumlah Record*, dan *Jenis Periode*.
+- **Penelusuran** — satu baris untuk tiap pos berisi, menyebut akun penyusunnya, saldo buku besarnya, dan nilai yang masuk ke form. Inilah jawaban temuan 7.1 di dalam satu berkas: pemeriksa dapat menunjuk sebuah pos dan langsung melihat akunnya, tanpa membuka aplikasi ini.
+
+**Yang aplikasi tidak lakukan.** Berkas hasil ekspor **tidak dikirim ke Bank Indonesia** oleh aplikasi, dan ia **tidak memiliki tombol *Simpan*** milik form BI — tombol itu makro milik berkas mereka. Alurnya tetap: unduh, periksa, salin angkanya ke berkas resmi BI, lalu tekan tombol resminya sendiri.
+
+**Beberapa baris memang selalu nol.** *Lain-lain (net)* pada B0004 — *Menambah Ekuitas* dan *Mengurangi Ekuitas* — belum punya modul yang menjurnalnya. Barisnya tetap ada karena form memintanya, dan alasannya tercetak pada lembar Penelusuran, bukan disembunyikan.
+
+**Setiap ekspor menuliskan snapshot** bersumber **"Buku besar"** untuk tahun itu, sehingga paket regulator (§7) dapat dibuat tanpa mengimpor kembali berkas yang baru saja dihasilkan sendiri. Mengekspor dua kali dengan angka yang sama **tidak** menambah snapshot kedua; kalau angkanya berubah, snapshot barunya tersimpan sehingga riwayatnya utuh.
+
+**Berkasnya dapat diimpor kembali.** Impor snapshot (§7) sekarang mengenali dua tata letak: form resmi seperti ini, dan berkas ber-kolom *Record No* yang selama ini dipakai. Pos dikenali lewat **judul kelompok dan label**-nya. Kalau seseorang mengubah label sebuah pos, pos itu dilaporkan sebagai **tidak dikenal beserta labelnya** — bukan diabaikan diam-diam.
+
 
 ## 7. Pelaporan Regulator Internal
 
@@ -361,7 +384,7 @@ Halaman **Pelaporan Regulator** adalah pusat persiapan internal. Halaman ini tid
 | Tahap | Pembuat | Pemeriksa | Aturan penting |
 |---|---|---|---|
 | LKU dari transaksi hidup | Controller | Shareholder | Hanya transaksi produksi `COMPLETED` yang diperhitungkan. Data demo, historis, simulasi, draf, atau transaksi batal tidak masuk. |
-| Snapshot B0002/B0003/B0004 | Controller | Shareholder | Gunakan input manual atau template; periksa pos sebelum simpan snapshot. |
+| Snapshot B0002/B0003/B0004 | Controller | Shareholder | Gunakan ekspor dari buku besar (§6.9), input manual, atau template; periksa pos sebelum simpan snapshot. |
 | Bundle tiga workbook | Controller | Shareholder | Pemetaan dilakukan di memori; tidak menyimpan file, snapshot, atau paket sebelum tombol simpan snapshot ditekan. |
 | Paket laporan | Controller | Shareholder | Status bergerak manual: `DRAFT → PREPARED → APPROVED → EXPORTED`. |
 | Pengembalian paket | Shareholder | Controller | Catatan wajib. Controller memperbaiki sumber dan membuat draf baru; jejak paket lama tidak dihapus. |
