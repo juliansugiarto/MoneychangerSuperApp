@@ -89,6 +89,20 @@ const renderEquity = (equity: EquityStatement) => ({
  * menyajikan angka pembanding yang tidak pernah ada.
  */
 export async function buildFinancialStatements(input: { from: Date; to: Date }) {
+  const computed = await computeFinancialStatements(input);
+  return renderFinancialStatements(computed);
+}
+
+/**
+ * Bentuk bertipe laporan, sebelum nominalnya dijadikan teks.
+ *
+ * Dipisahkan pada paket G supaya ekspor form B dapat memakai angka yang **sama persis** dengan yang
+ * tampil di layar. Ekspor yang menghitung ulang saldonya sendiri akan dapat berbeda pendapat dengan
+ * layar tanpa satu pun dari keduanya terlihat salah.
+ */
+export type ComputedFinancialStatements = Awaited<ReturnType<typeof computeFinancialStatements>>;
+
+export async function computeFinancialStatements(input: { from: Date; to: Date }) {
   if (input.from > input.to) throw new Error("Tanggal mulai tidak boleh melewati tanggal akhir.");
 
   return retryTransientDatabaseRead(async () => {
@@ -126,9 +140,9 @@ export async function buildFinancialStatements(input: { from: Date; to: Date }) 
     return {
       period: { from: isoDay(input.from), to: isoDay(input.to) },
       comparativePeriod: prior,
-      incomeStatement: renderIncome(income),
-      balanceSheet: renderBalanceSheet(balanceSheet),
-      equityStatement: renderEquity(equity),
+      income,
+      balanceSheet,
+      equity,
       cashFlowStatement: cashFlow,
       cashFlowComparative: cashFlowPrior,
       warnings: statementWarnings(balanceSheet, sheetNow, {
@@ -146,6 +160,16 @@ export async function buildFinancialStatements(input: { from: Date; to: Date }) 
       unmappedAccounts: unmapped(cumulativeNow),
     };
   });
+}
+
+function renderFinancialStatements(computed: ComputedFinancialStatements) {
+  const { income, balanceSheet, equity, ...rest } = computed;
+  return {
+    ...rest,
+    incomeStatement: renderIncome(income),
+    balanceSheet: renderBalanceSheet(balanceSheet),
+    equityStatement: renderEquity(equity),
+  };
 }
 
 function unmapped(accounts: StatementAccount[]) {

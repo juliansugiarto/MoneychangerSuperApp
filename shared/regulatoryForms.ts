@@ -404,3 +404,9 @@ export function normalizeFormLabel(label: string) {
     .replace(/[^a-z]+/g, " ")
     .trim();
 }
+
+/**
+ * Pos pendapatan utama B0003. Validasi snapshot memakainya untuk mengenali laba rugi bersumber buku
+ * besar, yang berkode kunci baris form dan bukan Record No.
+ */
+export const PRIMARY_REVENUE_ROW_KEY = "penjualan-uka";

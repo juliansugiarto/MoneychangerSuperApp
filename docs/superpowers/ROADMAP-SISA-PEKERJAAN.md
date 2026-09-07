@@ -114,7 +114,7 @@ Rencana: `plans/2026-09-07-ekspor-laporan-b-form.md`
 - [x] Tugas 4 — Lembar penelusuran
 - [x] Tugas 5 — Importir mengenali format resmi
 - [x] Tugas 6 — Uji pulang-pergi ekspor → impor
-- [ ] Tugas 7 — Gerbang tahun buku penuh dan snapshot bersumber buku besar
+- [x] Tugas 7 — Gerbang tahun buku penuh dan snapshot bersumber buku besar
 - [ ] Tugas 8 — Rute unduhan, otorisasi, dan tombol pada halaman Laporan Keuangan
 - [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 

@@ -20,7 +20,10 @@ import {
   type FormColumn,
   type RegulatoryForm,
 } from "../shared/regulatoryForms";
-import type { FormRowValue, FormValues } from "../shared/regulatoryFormValues";
+import { buildFormValues, type FormRowValue, type FormValues } from "../shared/regulatoryFormValues";
+import { computeFinancialStatements } from "./financialStatements";
+import { createFinancialStatementSnapshot, getCompanyProfile, listFinancialStatementSnapshots } from "./operations";
+import { isoDay } from "../shared/ledger";
 
 export type FormWorkbookHeader = {
   /** `company_profile.biReporterCode`. Kosong ditolak, bukan dibiarkan kosong pada berkasnya. */
@@ -228,4 +231,168 @@ export function renderFormWorkbook(values: FormValues[], header: FormWorkbookHea
 export function filledRows(values: FormValues) {
   const structure: RegulatoryForm = REGULATORY_FORMS.find((candidate) => candidate.code === values.code)!;
   return values.rows.filter((row) => structure.rows.find((candidate) => candidate.key === row.key)!.cells.some(isValueCell));
+}
+
+/* ── Gerbang tahun buku dan snapshot ────────────────────────────────────────────────────────── */
+
+/**
+ * Hanya tahun buku penuh yang dapat diekspor.
+ *
+ * Alasannya tertulis pada formnya sendiri: *Periode: Tahun* dan *Jenis Periode: A*. Laporan bulanan
+ * tetap dapat dibaca di layar seperti sebelumnya; yang dibatasi hanya berkas ekspornya.
+ */
+export function assertFullFiscalYear(from: Date, to: Date): number {
+  const start = isoDay(from);
+  const end = isoDay(to);
+  const year = Number(start.slice(0, 4));
+
+  if (start === `${year}-01-01` && end === `${year}-12-31`) return year;
+  throw new Error(
+    `Ekspor form B hanya untuk satu tahun buku penuh, karena formnya menyatakan Jenis Periode A. `
+    + `Rentang ${start} sampai ${end} bukan tahun penuh; tahun terdekat yang dapat diekspor adalah ${year} `
+    + `(1 Januari ${year} sampai 31 Desember ${year}).`,
+  );
+}
+
+export const fiscalYearRange = (year: number) => ({
+  from: new Date(`${year}-01-01T00:00:00Z`),
+  to: new Date(`${year}-12-31T00:00:00Z`),
+});
+
+export const formExportFileName = (year: number) => `Laporan-Keuangan-B0002-B0003-B0004-${year}.xlsx`;
+
+/** Baris snapshot dari nilai form: `code` berisi kunci baris form, bukan kode akun. */
+export function snapshotRows(values: FormValues) {
+  const rows: { code: string; label: string; value: string }[] = [];
+  for (const row of filledRows(values)) {
+    const cells = row.cells.filter((cell) => cell.trace.kind !== "SUBTOTAL");
+    for (const cell of cells) {
+      rows.push({
+        code: cells.length > 1 ? `${row.key}:${cell.column}` : row.key,
+        label: row.label.trim(),
+        value: rupiah(cell.value).toFixed(2),
+      });
+    }
+  }
+  return rows;
+}
+
+export type FinancialFormExport = {
+  workbook: Buffer;
+  fileName: string;
+  fiscalYear: number;
+  values: FormValues[];
+  snapshotId: number;
+  /** Salah bila tahun ini sudah punya snapshot buku besar dengan angka yang sama persis. */
+  snapshotCreated: boolean;
+  warnings: string[];
+};
+
+/**
+ * Menyusun berkas ekspor satu tahun buku dan menuliskan snapshotnya.
+ *
+ * Snapshot bersumber `"Buku besar"` menutup lingkaran paket regulator: maker-checker berjalan tanpa
+ * mengimpor kembali berkas yang baru saja dihasilkan sendiri. `sourceDigest` yang sudah ada membuat
+ * ekspor kedua atas tahun dan angka yang sama tidak menyisipkan baris kembar — snapshot yang identik
+ * bukan snapshot baru. Bila angkanya berubah, digestnya berbeda dan snapshot barunya tersimpan,
+ * sehingga riwayat perubahannya utuh.
+ *
+ * Aplikasi ini **tidak** mengirim berkasnya ke Bank Indonesia. Ia menghasilkan berkas; manusia yang
+ * mengirim.
+ */
+export async function createFinancialFormExport(input: { year: number; actorUserId: number }): Promise<FinancialFormExport> {
+  const { from, to } = fiscalYearRange(input.year);
+  const fiscalYear = assertFullFiscalYear(from, to);
+
+  const profile = await getCompanyProfile();
+  const reporterCode = profile?.biReporterCode?.trim() ?? "";
+  if (!reporterCode) throw new MissingReporterCodeError();
+
+  const computed = await computeFinancialStatements({ from, to });
+  const values = buildFormValues(
+    { balanceSheet: computed.balanceSheet, incomeStatement: computed.income, equityStatement: computed.equity },
+    fiscalYear,
+  );
+
+  const workbook = XLSX.write(renderFormWorkbook(values, { reporterCode, fiscalYear }), { type: "buffer", bookType: "xlsx" }) as Buffer;
+
+  const snapshot = await createLedgerSnapshot({ from, to, fiscalYear, values, actorUserId: input.actorUserId });
+
+  return {
+    workbook,
+    fileName: formExportFileName(fiscalYear),
+    fiscalYear,
+    values,
+    snapshotId: snapshot.snapshotId,
+    snapshotCreated: snapshot.created,
+    warnings: computed.warnings,
+  };
+}
+
+/**
+ * Menuliskan snapshot bersumber buku besar, sekali per angka.
+ *
+ * `financial_statement_snapshots.sourceDigest` **tidak** berindeks unik, jadi menyisipkan dua kali
+ * tidak gagal dengan sendirinya — ia hanya menumpuk baris kembar yang tidak berarti apa-apa dan
+ * membuat `createFinancialStatementSnapshot` mengembalikan baris yang lebih tua. Karena itu
+ * pemeriksaannya dilakukan di sini: bila tahun buku ini sudah punya snapshot buku besar dengan
+ * baris yang sama persis, snapshot keduanya tidak ditulis dan `snapshotId` berisi baris yang sudah
+ * ada. Bila angkanya berubah, snapshot barunya tersimpan sehingga riwayat perubahannya utuh.
+ */
+async function createLedgerSnapshot(input: {
+  from: Date;
+  to: Date;
+  fiscalYear: number;
+  values: FormValues[];
+  actorUserId: number;
+}) {
+  const rows = {
+    balanceSheetRows: snapshotRows(input.values.find((form) => form.code === "B0002")!),
+    profitLossRows: snapshotRows(input.values.find((form) => form.code === "B0003")!),
+    equityRows: snapshotRows(input.values.find((form) => form.code === "B0004")!),
+  };
+
+  const existing = await findLedgerSnapshot({ from: input.from, to: input.to, rows });
+  if (existing) return { snapshotId: existing, created: false };
+
+  const created = await createFinancialStatementSnapshot(
+    {
+      periodStart: input.from,
+      periodEnd: input.to,
+      sourceLabel: LEDGER_SOURCE_LABEL,
+      sourceReference: `Tahun buku ${input.fiscalYear}`,
+      sourceFileName: formExportFileName(input.fiscalYear),
+      sourceMimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ...rows,
+    },
+    input.actorUserId,
+  );
+  return { snapshotId: created.id, created: true };
+}
+
+export const LEDGER_SOURCE_LABEL = "Buku besar";
+
+type SnapshotRowGroups = { balanceSheetRows: SnapshotRow[]; profitLossRows: SnapshotRow[]; equityRows: SnapshotRow[] };
+type SnapshotRow = { code: string; label: string; value: string };
+
+const sameRows = (left: unknown, right: SnapshotRow[]) =>
+  Array.isArray(left)
+  && left.length === right.length
+  && left.every((row, index) => {
+    const candidate = row as Partial<SnapshotRow>;
+    return candidate?.code === right[index]!.code && String(candidate?.value) === right[index]!.value;
+  });
+
+async function findLedgerSnapshot(input: { from: Date; to: Date; rows: SnapshotRowGroups }) {
+  const snapshots = await listFinancialStatementSnapshots();
+  const match = snapshots.find(
+    (snapshot) =>
+      snapshot.sourceLabel === LEDGER_SOURCE_LABEL
+      && isoDay(snapshot.periodStart) === isoDay(input.from)
+      && isoDay(snapshot.periodEnd) === isoDay(input.to)
+      && sameRows(snapshot.balanceSheetRows, input.rows.balanceSheetRows)
+      && sameRows(snapshot.profitLossRows, input.rows.profitLossRows)
+      && sameRows(snapshot.equityRows, input.rows.equityRows),
+  );
+  return match?.id ?? null;
 }

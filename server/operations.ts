@@ -41,6 +41,7 @@ import {
 } from "../drizzle/schema";
 import { getDb } from "./db";
 import { knownDenominationsFor } from "../shared/currencyDenominations";
+import { PRIMARY_REVENUE_ROW_KEY } from "../shared/regulatoryForms";
 import { isKnownSuspiciousIndicatorCode } from "../shared/suspiciousTransactionIndicators";
 import { buildSipesatCsv, buildSipesatInitialFileName, buildSipesatTriwulanFileName } from "../shared/sipesatExport";
 import { buildGoAmlLtktReportXml, buildGoAmlLtkmReportXml, type GoAmlCustomer, type GoAmlLtktLine, type GoAmlLtkmLine } from "../shared/goAmlExport";
@@ -3319,7 +3320,12 @@ export function validateFinancialStatementSnapshot(input: Omit<FinancialStatemen
       if (!validFinancialNumber(row.value)) errors.push(`${name} pos ${row.code || index + 1} memiliki nilai tidak valid.`);
     });
   }
-  if (!input.profitLossRows.some((row) => /^0?1/.test(row.code.trim()))) warnings.push("Periksa kembali apakah pendapatan utama telah dimasukkan pada laba rugi.");
+  // Dua penamaan kode hidup berdampingan: Record No pada berkas yang disusun di luar aplikasi, dan
+  // kunci baris form pada snapshot bersumber buku besar.
+  const hasPrimaryRevenue = input.profitLossRows.some(
+    (row) => /^0?1/.test(row.code.trim()) || row.code.trim() === PRIMARY_REVENUE_ROW_KEY,
+  );
+  if (!hasPrimaryRevenue) warnings.push("Periksa kembali apakah pendapatan utama telah dimasukkan pada laba rugi.");
   return { valid: errors.length === 0, errors, warnings, counts: { profitLoss: input.profitLossRows.length, balanceSheet: input.balanceSheetRows.length, equity: input.equityRows.length } };
 }
 

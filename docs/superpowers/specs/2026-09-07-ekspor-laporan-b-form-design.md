@@ -205,7 +205,14 @@ Sesudah workbook tersusun, ekspor memanggil `createFinancialStatementSnapshot`
 tahun bukunya. Baris snapshot memakai `{ code, label, value }` yang sudah ada — `code` diisi kunci
 baris form, bukan kode akun, supaya paket regulator membaca pos yang sama dengan yang tercetak.
 
-`sourceDigest` yang sudah ada membuat ekspor kedua atas tahun yang sama dan angka yang sama gagal
+**Koreksi Tugas 7:** `financial_statement_snapshots.sourceDigest` ternyata **tidak** berindeks unik
+(`drizzle/schema.ts`), jadi sisipan kedua tidak gagal dengan sendirinya — ia menumpuk baris kembar dan
+membuat `createFinancialStatementSnapshot` mengembalikan baris yang lebih tua. Karena paket ini tidak
+boleh bermigrasi, pemeriksaannya dilakukan pada jalur ekspor: bila tahun buku itu sudah punya snapshot
+bersumber `"Buku besar"` dengan baris yang sama persis, snapshot keduanya tidak ditulis dan berkasnya
+tetap diserahkan. Jalur impor tidak disentuh.
+
+Rancangan semula berbunyi: `sourceDigest` yang sudah ada membuat ekspor kedua atas tahun yang sama dan angka yang sama gagal
 menyisipkan baris kembar — dan itu perilaku yang benar: snapshot yang identik bukan snapshot baru.
 Bila angkanya **berubah**, digestnya berbeda dan snapshot barunya tersimpan, sehingga riwayat
 perubahannya utuh.

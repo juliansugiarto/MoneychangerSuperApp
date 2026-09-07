@@ -20,7 +20,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 4 — Lembar penelusuran
 - [x] Tugas 5 — Importir mengenali format resmi
 - [x] Tugas 6 — Uji pulang-pergi ekspor → impor
-- [ ] Tugas 7 — Gerbang tahun buku penuh dan snapshot bersumber buku besar
+- [x] Tugas 7 — Gerbang tahun buku penuh dan snapshot bersumber buku besar
 - [ ] Tugas 8 — Rute unduhan, otorisasi, dan tombol pada halaman Laporan Keuangan
 - [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
@@ -222,12 +222,12 @@ git commit -m "Struktur form B0002/B0003/B0004 sebagai data"
 
 **Files:** Modify `server/financialFormExport.ts`; Test `server/financialFormSnapshot.test.ts`
 
-- [ ] **Step 1: Uji yang gagal** — rentang selain 1 Januari–31 Desember ditolak beserta pesan yang
+- [x] **Step 1: Uji yang gagal** — rentang selain 1 Januari–31 Desember ditolak beserta pesan yang
       menyebut tahun terdekat; ekspor menulis satu snapshot bersumber `"Buku besar"`; ekspor kedua
       atas angka yang sama tidak menghasilkan snapshot kembar (`sourceDigest`); angka yang berubah
       menghasilkan snapshot baru.
-- [ ] **Step 2: Panggil `createFinancialStatementSnapshot`** dengan `code` berisi kunci baris form.
-- [ ] **Step 3:** Perintah mutu, lalu commit `"Gerbang tahun buku dan snapshot bersumber buku besar"`.
+- [x] **Step 2: Panggil `createFinancialStatementSnapshot`** dengan `code` berisi kunci baris form.
+- [x] **Step 3:** Perintah mutu, lalu commit `"Gerbang tahun buku dan snapshot bersumber buku besar"`.
 
 ---
 
