@@ -15,8 +15,8 @@
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu**, supaya sesi
 berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 
-- [ ] Tugas 1 — Migrasi pelunasan dan catatan CALK (0050)
-- [ ] Tugas 2 — Dua kategori pelunasan pada pemetaan kas dan bank
+- [x] Tugas 1 — Migrasi pelunasan dan catatan CALK (0050)
+- [x] Tugas 2 — Dua kategori pelunasan pada pemetaan kas dan bank
 - [ ] Tugas 3 — `recordSettlement`: penulis pelunasan beserta pecahannya
 - [ ] Tugas 4 — Prosedur tRPC dan panel Pelunasan pada tab Modal & Bank
 - [ ] Tugas 5 — `classifyCashEntry` murni di `shared/cashFlow.ts`
@@ -27,6 +27,11 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [ ] Tugas 10 — Penyimpanan teks naratif dan prosedurnya
 - [ ] Tugas 11 — Halaman Laporan Keuangan dan navigasinya
 - [ ] Tugas 12 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+
+**Tugas 1 dan 2 digabung menjadi satu commit** (7 September 2026). Menambah nilai enum pada
+`drizzle/schema.ts` membuat kolomnya lebih lebar daripada `CashMovementCategory`, sehingga Tugas 1
+sendirian tidak dapat lulus `tsc --noEmit` — dan tugas yang tidak dapat melewati gerbang mutunya
+bukan commit yang berdiri sendiri. Cacat urutan pada rencana ini, bukan pada kodenya.
 
 Urutannya mengikat: 1 sebelum 2–4 dan 9–10; 2 sebelum 3; 3 sebelum 4; 5 sebelum 6; 6 sebelum 7;
 8 sebelum 9 dan 10; 7, 9, dan 10 sebelum 11. Tugas 12 terakhir.
@@ -117,7 +122,7 @@ Urutannya mengikat: 1 sebelum 2–4 dan 9–10; 2 sebelum 3; 3 sebelum 4; 5 sebe
 - Produces: dua nilai enum kategori; tabel `ledger_settlements` dan `financial_statement_notes`.
   Dipakai tugas 2–4 dan 9–11.
 
-- [ ] **Step 1: Tambah dua kategori pada kedua tabel mutasi**
+- [x] **Step 1: Tambah dua kategori pada kedua tabel mutasi**
 
 Pada `cashBalanceMovements.category` dan `bankAccountMovements.category`, tambahkan di akhir daftar
 — **sebelum** `"OTHER"` tidak perlu, urutan enum MySQL tidak bermakna di sini, tetapi menambah di
@@ -132,18 +137,18 @@ benar-benar keluar melunasi 2-1900 atau masuk menagih 1-1320 — sisi kas yang s
 `mapExpense` tetapi tidak pernah ditulis. Baris `ledger_settlements` yang menyebut apa yang
 dilunasi."*
 
-- [ ] **Step 2: Tambah tabel `ledger_settlements`**
+- [x] **Step 2: Tambah tabel `ledger_settlements`**
 
 Salin bentuknya dari spec bagian 1 apa adanya, termasuk komentarnya. Yang tidak boleh hilang: dua
 indeks unik pada `cashMovementId` dan `bankMovementId` — itu yang mencegah satu mutasi kas dihitung
 dua kali sebagai pelunasan.
 
-- [ ] **Step 3: Tambah tabel `financial_statement_notes`**
+- [x] **Step 3: Tambah tabel `financial_statement_notes`**
 
 Salin dari spec bagian 1. `periodKey` **boleh NULL** dan itu bermakna: teks yang berlaku terus.
 Indeks uniknya `(noteKey, periodKey)`.
 
-- [ ] **Step 4: Generate migrasi dan baca SQL-nya**
+- [x] **Step 4: Generate migrasi dan baca SQL-nya**
 
 ```bash
 ./node_modules/.bin/drizzle-kit generate
@@ -153,14 +158,14 @@ cat drizzle/0050_*.sql
 Yang wajib diperiksa sebelum melanjutkan: pernyataan `ALTER TABLE … MODIFY` atas kedua kolom enum
 **tidak boleh** menghilangkan satu pun nilai lama, dan tidak boleh ada satu pun `DROP`.
 
-- [ ] **Step 5: Terapkan ke dua basis data lokal**
+- [x] **Step 5: Terapkan ke dua basis data lokal**
 
 ```bash
 node scripts/tenant.mjs migrate-all
 mysql -uroot -h127.0.0.1 moneychanger -e "SHOW COLUMNS FROM cash_balance_movements LIKE 'category'; SHOW CREATE TABLE ledger_settlements\G"
 ```
 
-- [ ] **Step 6: Perintah mutu dan commit**
+- [x] **Step 6: Perintah mutu dan commit**
 
 ```bash
 ./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build
@@ -180,7 +185,7 @@ git commit -m "Migrasi pelunasan kewajiban dan catatan CALK (0050)"
 - Consumes: `EXPENSE_PAYABLE_ACCOUNT`, `OTHER_RECEIVABLE_ACCOUNT`, `CASH_ACCOUNT`, `BANK_ACCOUNT`, `FX_BANK_ACCOUNT` — semuanya sudah ada.
 - Produces: jurnal pelunasan. Dipakai tugas 3, 6, dan 12.
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 `server/settlementMapping.test.ts`, tabel penuh:
 
@@ -229,12 +234,12 @@ describe("mapBankMovement — pelunasan", () => {
 });
 ```
 
-- [ ] **Step 2: Tambahkan kedua kategori pada kedua tipe**
+- [x] **Step 2: Tambahkan kedua kategori pada kedua tipe**
 
 `CashMovementCategory` dan `BankMovementCategory` masing-masing bertambah
 `"KEWAJIBAN_DIBAYAR" | "PIUTANG_DITERIMA"`.
 
-- [ ] **Step 3: Tangani keduanya pada `mapCashMovement`**
+- [x] **Step 3: Tangani keduanya pada `mapCashMovement`**
 
 Sesudah blok `switch` yang melewati kategori, sebelum `switch` yang memetakan:
 
@@ -248,7 +253,7 @@ Sesudah blok `switch` yang melewati kategori, sebelum `switch` yang memetakan:
 Penjaga IDR di kepala fungsi sudah menolak kas valuta asing, dan itu benar: kas fisik valuta asing
 adalah persediaan, bukan alat bayar.
 
-- [ ] **Step 4: Tangani keduanya pada `mapBankMovement`**
+- [x] **Step 4: Tangani keduanya pada `mapBankMovement`**
 
 Sesudah `bankAccount` ditentukan, dan **sebelum** penandaan `currencyCode`/`foreignAmount` supaya
 baris 1-1220 tetap ikut ditandai:
@@ -263,7 +268,7 @@ baris 1-1220 tetap ikut ditandai:
         : pair(bankAccount, PAID_IN_CAPITAL_ACCOUNT, parsed.amount, memo);
 ```
 
-- [ ] **Step 5: Perintah mutu dan commit**
+- [x] **Step 5: Perintah mutu dan commit**
 
 ```bash
 ./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build

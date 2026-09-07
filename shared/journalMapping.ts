@@ -144,11 +144,11 @@ export const CASH_VARIANCE_ACCOUNT = "7-1900";
 export type CashMovementCategory =
   | "OPENING" | "TRANSACTION" | "SAFE_DEPOSIT" | "SAFE_WITHDRAWAL" | "OFF_HOURS_SALE"
   | "DENOMINATION_EXCHANGE" | "CAPITAL_INJECTION" | "CAPITAL_WITHDRAWAL"
-  | "BANK_DEPOSIT" | "BANK_WITHDRAWAL" | "OTHER";
+  | "BANK_DEPOSIT" | "BANK_WITHDRAWAL" | "KEWAJIBAN_DIBAYAR" | "PIUTANG_DITERIMA" | "OTHER";
 
 export type BankMovementCategory =
   | "OPENING" | "TRANSACTION" | "ADJUSTMENT" | "CAPITAL_INJECTION" | "CAPITAL_WITHDRAWAL"
-  | "CASH_TRANSFER" | "OTHER";
+  | "CASH_TRANSFER" | "KEWAJIBAN_DIBAYAR" | "PIUTANG_DITERIMA" | "OTHER";
 
 /**
  * Kolom mutasi berskala enam desimal, buku besar hanya menerima dua.
@@ -207,6 +207,14 @@ export function mapCashMovement(input: {
   if (parsed.amount === "0.00") return { skipped: "tidak ada selisih untuk dijurnal" };
 
   switch (input.category) {
+    // Pelunasan kewajiban dan penagihan piutang: sisi kas yang dijanjikan `mapExpense` sejak paket
+    // A. Jurnalnya sama persis untuk beban maupun aset tetap, karena 2-1900 memang satu akun —
+    // yang memisahkan bagian operasi dari bagian investasi pada Arus Kas adalah baris
+    // `ledger_settlements`, yang tercatat dan tidak perlu ditebak dari akun lawannya.
+    case "KEWAJIBAN_DIBAYAR":
+      return pair(EXPENSE_PAYABLE_ACCOUNT, CASH_ACCOUNT, parsed.amount, memo);
+    case "PIUTANG_DITERIMA":
+      return pair(CASH_ACCOUNT, OTHER_RECEIVABLE_ACCOUNT, parsed.amount, memo);
     case "CAPITAL_INJECTION":
       return pair(CASH_ACCOUNT, PAID_IN_CAPITAL_ACCOUNT, parsed.amount, memo);
     case "CAPITAL_WITHDRAWAL":
@@ -268,9 +276,13 @@ export function mapBankMovement(input: {
   const memo = input.reason.slice(0, 500);
   const bankAccount = isRupiah ? BANK_ACCOUNT : FX_BANK_ACCOUNT;
 
-  const mapped = input.category === "CAPITAL_WITHDRAWAL"
-    ? pair(DIVIDEND_ACCOUNT, bankAccount, parsed.amount, memo)
-    : pair(bankAccount, PAID_IN_CAPITAL_ACCOUNT, parsed.amount, memo);
+  const mapped = input.category === "KEWAJIBAN_DIBAYAR"
+    ? pair(EXPENSE_PAYABLE_ACCOUNT, bankAccount, parsed.amount, memo)
+    : input.category === "PIUTANG_DITERIMA"
+      ? pair(bankAccount, OTHER_RECEIVABLE_ACCOUNT, parsed.amount, memo)
+      : input.category === "CAPITAL_WITHDRAWAL"
+        ? pair(DIVIDEND_ACCOUNT, bankAccount, parsed.amount, memo)
+        : pair(bankAccount, PAID_IN_CAPITAL_ACCOUNT, parsed.amount, memo);
 
   // Baris 1-1220 membawa mata uang dan nominal valutanya. Revaluasi akhir periode membacanya
   // kembali untuk mengetahui saldo valuta dan nilai Rupiah yang tercatat per mata uang; tanpa

@@ -85,8 +85,8 @@ Rencana: `plans/2026-09-05-kas-valas-revaluasi-kurs.md`
 Spec: `specs/2026-09-07-arus-kas-dan-calk-design.md`
 Rencana: `plans/2026-09-07-arus-kas-dan-calk.md`
 - [x] Sesi rancangan — spec dan rencana bertugas
-- [ ] Tugas 1 — Migrasi pelunasan dan catatan CALK (0050)
-- [ ] Tugas 2 — Dua kategori pelunasan pada pemetaan kas dan bank
+- [x] Tugas 1 — Migrasi pelunasan dan catatan CALK (0050)
+- [x] Tugas 2 — Dua kategori pelunasan pada pemetaan kas dan bank *(satu commit dengan Tugas 1)*
 - [ ] Tugas 3 — `recordSettlement`: penulis pelunasan beserta pecahannya
 - [ ] Tugas 4 — Prosedur tRPC dan panel Pelunasan pada tab Modal & Bank
 - [ ] Tugas 5 — `classifyCashEntry` murni di `shared/cashFlow.ts`

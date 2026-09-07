@@ -400,8 +400,16 @@ export const cashBalanceMovements = mysqlTable("cash_balance_movements", {
   direction: mysqlEnum("direction", ["IN", "OUT", "ADJUSTMENT"]).notNull(),
   amount: decimal("amount", { precision: 24, scale: 6 }).notNull(),
   reason: varchar("reason", { length: 255 }).notNull(),
-  /** Classifies why the movement exists, mainly for BI stock reporting; TRANSACTION rows keep the prior default behavior. Kategori CAPITAL_* dan BANK_* mencatat uang yang melintasi batas usaha — tanpanya setoran modal menyamar sebagai selisih hitungan kas pagi dan tidak dapat dijurnal. */
-  category: mysqlEnum("category", ["OPENING", "TRANSACTION", "SAFE_DEPOSIT", "SAFE_WITHDRAWAL", "OFF_HOURS_SALE", "DENOMINATION_EXCHANGE", "CAPITAL_INJECTION", "CAPITAL_WITHDRAWAL", "BANK_DEPOSIT", "BANK_WITHDRAWAL", "OTHER"]).default("OTHER").notNull(),
+  /**
+   * Classifies why the movement exists, mainly for BI stock reporting; TRANSACTION rows keep the prior default behavior. Kategori CAPITAL_* dan BANK_* mencatat uang yang melintasi batas usaha — tanpanya setoran modal menyamar sebagai selisih hitungan kas pagi dan tidak dapat dijurnal.
+   *
+   * `KEWAJIBAN_DIBAYAR` dan `PIUTANG_DITERIMA` mencatat uang yang benar-benar keluar melunasi
+   * 2-1900 atau masuk menagih 1-1320 — sisi kas yang dijanjikan komentar `mapExpense`
+   * ("pelunasannya dijurnal terpisah saat kas benar-benar keluar") tetapi sampai paket F2 tidak
+   * pernah ditulis. Baris `ledger_settlements` yang menyebut apa yang dilunasi; kategori ini
+   * sendiri sengaja tidak membedakan beban dari aset tetap, karena jurnalnya memang sama.
+   */
+  category: mysqlEnum("category", ["OPENING", "TRANSACTION", "SAFE_DEPOSIT", "SAFE_WITHDRAWAL", "OFF_HOURS_SALE", "DENOMINATION_EXCHANGE", "CAPITAL_INJECTION", "CAPITAL_WITHDRAWAL", "BANK_DEPOSIT", "BANK_WITHDRAWAL", "KEWAJIBAN_DIBAYAR", "PIUTANG_DITERIMA", "OTHER"]).default("OTHER").notNull(),
   createdByUserId: int("createdByUserId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [
@@ -464,8 +472,14 @@ export const bankAccountMovements = mysqlTable("bank_account_movements", {
   direction: mysqlEnum("direction", ["IN", "OUT", "ADJUSTMENT"]).notNull(),
   amount: decimal("amount", { precision: 24, scale: 6 }).notNull(),
   reason: varchar("reason", { length: 255 }).notNull(),
-  /** CASH_TRANSFER adalah sisi bank dari pemindahan kas↔bank; sengaja tidak dijurnal karena sisi kasnya sudah menjurnal pemindahan itu. */
-  category: mysqlEnum("category", ["OPENING", "TRANSACTION", "ADJUSTMENT", "CAPITAL_INJECTION", "CAPITAL_WITHDRAWAL", "CASH_TRANSFER", "OTHER"]).default("OTHER").notNull(),
+  /**
+   * CASH_TRANSFER adalah sisi bank dari pemindahan kas↔bank; sengaja tidak dijurnal karena sisi kasnya sudah menjurnal pemindahan itu.
+   *
+   * `KEWAJIBAN_DIBAYAR` dan `PIUTANG_DITERIMA` adalah pelunasan lewat rekening, kembaran kategori
+   * bernama sama pada `cash_balance_movements`. Rekening valuta asing memakai jalur `rupiahAmount`
+   * paket F1: tanpa kurs tanggal mutasi, pelunasannya dilewati beralasan, bukan ditebak.
+   */
+  category: mysqlEnum("category", ["OPENING", "TRANSACTION", "ADJUSTMENT", "CAPITAL_INJECTION", "CAPITAL_WITHDRAWAL", "CASH_TRANSFER", "KEWAJIBAN_DIBAYAR", "PIUTANG_DITERIMA", "OTHER"]).default("OTHER").notNull(),
   createdByUserId: int("createdByUserId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [
@@ -1368,6 +1382,78 @@ export const currencyRevaluations = mysqlTable("currency_revaluations", {
 ]);
 
 export type CurrencyRevaluationRecord = typeof currencyRevaluations.$inferSelect;
+
+/**
+ * Pelunasan kewajiban dan penagihan piutang — sisi kas yang selama ini hilang.
+ *
+ * `mapExpense` dan `mapFixedAssetAcquisition` sama-sama mengkredit 2-1900, dan
+ * `mapFixedAssetDisposal` mendebit 1-1320, karena modul di luar sistem kas yang menyentuh 1-1110
+ * akan membuat kas buku besar berbeda dari `cash_balances` — temuan pemeriksaan 7.2/7.3. Yang
+ * dijanjikan sebagai lanjutannya ("pelunasannya dijurnal terpisah saat kas benar-benar keluar")
+ * tidak pernah ditulis sampai paket F2, sehingga tidak ada satu pun pembayaran beban maupun
+ * perolehan aset yang pernah menjadi arus kas.
+ *
+ * Baris di sini mengikat mutasi kas/bank ke **apa** yang dilunasinya, dan hanya itu tugasnya.
+ * Jurnalnya sendiri sama untuk beban maupun aset tetap (Dr 2-1900 / Cr kas), sehingga `targetType`
+ * inilah satu-satunya penanda yang memisahkan bagian operasi dari bagian investasi pada Laporan
+ * Arus Kas — dan ia tercatat, bukan ditebak dari akun lawan yang memang tidak membedakannya.
+ */
+export const ledgerSettlements = mysqlTable("ledger_settlements", {
+  id: int("id").autoincrement().primaryKey(),
+  settlementDate: date("settlementDate").notNull(),
+  direction: mysqlEnum("direction", ["PEMBAYARAN", "PENERIMAAN"]).notNull(),
+  targetType: mysqlEnum("targetType", ["BEBAN", "ASET_TETAP"]).notNull(),
+  expenseId: int("expenseId"),
+  fixedAssetId: int("fixedAssetId"),
+  amount: decimal("amount", { precision: 24, scale: 2 }).notNull(),
+  /**
+   * Tepat satu dari keduanya terisi; menentukan akun kas mana yang bergerak. Keduanya berindeks
+   * unik, dan itulah yang mencegah satu mutasi kas dihitung dua kali sebagai pelunasan — MySQL
+   * mengizinkan banyak NULL menembus indeks unik, sehingga sisi yang tidak dipakai tidak saling
+   * menghalangi (pola yang sama dengan `cash_balance_transaction_line_movement_uq`).
+   */
+  cashMovementId: int("cashMovementId"),
+  bankMovementId: int("bankMovementId"),
+  notes: varchar("notes", { length: 500 }).notNull(),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("ledger_settlement_cash_movement_uq").on(table.cashMovementId),
+  uniqueIndex("ledger_settlement_bank_movement_uq").on(table.bankMovementId),
+  index("ledger_settlement_expense_idx").on(table.expenseId),
+  index("ledger_settlement_asset_idx").on(table.fixedAssetId),
+  index("ledger_settlement_date_idx").on(table.settlementDate),
+]);
+
+export type LedgerSettlement = typeof ledgerSettlements.$inferSelect;
+
+/**
+ * Teks naratif Catatan atas Laporan Keuangan.
+ *
+ * CALK-nya hibrida: catatan yang angkanya diketahui buku besar dibangkitkan dan tidak pernah
+ * diketik, sehingga mustahil berselisih dengan laporannya; yang tersimpan di sini hanya catatan
+ * yang memang pertimbangan manajemen — kebijakan akuntansi, dasar penyusunan, peristiwa setelah
+ * periode pelaporan, pihak berelasi.
+ *
+ * `periodKey` NULL berarti teks yang berlaku terus, dan itu bukan penyederhanaan: kebijakan
+ * akuntansi tidak berganti tiap bulan, sedangkan peristiwa setelah periode pelaporan selalu
+ * berganti. Baris berperiode menang atas baris NULL, sehingga laporan periode lampau tetap
+ * menampilkan teks yang berlaku baginya alih-alih teks yang diubah sesudahnya.
+ */
+export const financialStatementNotes = mysqlTable("financial_statement_notes", {
+  id: int("id").autoincrement().primaryKey(),
+  noteKey: varchar("noteKey", { length: 60 }).notNull(),
+  /** "YYYY-MM" bulan akhir laporan, atau NULL untuk teks yang berlaku terus. */
+  periodKey: varchar("periodKey", { length: 7 }),
+  bodyText: text("bodyText").notNull(),
+  updatedByUserId: int("updatedByUserId").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("financial_note_key_period_uq").on(table.noteKey, table.periodKey),
+]);
+
+export type FinancialStatementNote = typeof financialStatementNotes.$inferSelect;
+
 
 /**
  * Asal sebuah jurnal. `MANUAL` diketik manusia; sisanya dihasilkan sistem dari catatan operasional
