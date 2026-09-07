@@ -38,7 +38,28 @@ export type FormColumn = "RINCI" | "POKOK" | "MODAL_DISETOR" | "LABA_DITAHAN" | 
  * Pos perubahan ekuitas. B0004 tidak meminta saldo satu akun melainkan angka yang hanya laporan
  * yang tahu: saldo awal tahun, laba periode berjalan, dan dividen periode berjalan.
  */
-export type EquityMeasure = "MODAL_AWAL" | "LABA_DITAHAN_AWAL" | "LABA_PERIODE" | "DIVIDEN" | "EKUITAS_LAIN";
+export type EquityMeasure =
+  | "MODAL_AWAL"
+  | "LABA_DITAHAN_AWAL"
+  | "LABA_DITAHAN_AKHIR"
+  | "LABA_PERIODE"
+  | "DIVIDEN"
+  | "EKUITAS_LAIN";
+
+/**
+ * Akun yang menyusun tiap pos ekuitas, untuk lembar penelusuran dan untuk uji kelengkapan.
+ *
+ * `LABA_DITAHAN_AKHIR` juga memuat laba periode berjalan — yang berasal dari seluruh akun laba rugi,
+ * bukan dari satu akun — sehingga daftarnya di sini sengaja hanya menyebut akun neracanya.
+ */
+export const EQUITY_MEASURE_ACCOUNTS: Record<EquityMeasure, string[]> = {
+  MODAL_AWAL: ["3-1100"],
+  LABA_DITAHAN_AWAL: ["3-2100"],
+  LABA_DITAHAN_AKHIR: ["3-2100", "3-4100"],
+  LABA_PERIODE: [],
+  DIVIDEN: ["3-4100"],
+  EKUITAS_LAIN: [],
+};
 
 /** Satu suku penjumlahan sebuah subtotal. `column` hanya perlu bila baris rujukannya berkolom banyak. */
 export type SubtotalTerm = { key: string; column?: FormColumn; sign: 1 | -1 };
@@ -154,8 +175,12 @@ const B0002: RegulatoryForm = {
     { key: "ekuitas", label: "EKUITAS", indent: 0, side: "KANAN", cells: [] },
     { key: "ekuitas-modal-disetor", label: "Modal Disetor", indent: 0, side: "KANAN", cells: [akun("POKOK", "3-1100")] },
     { key: "ekuitas-laba-ditahan", label: "Laba ditahan/(akum. rugi) - net", indent: 0, side: "KANAN", cells: [] },
-    { key: "ekuitas-laba-ditahan-laba", label: "- Laba", indent: 1, side: "KANAN", cells: [sisi("POKOK", "3-2100", "POSITIF")] },
-    { key: "ekuitas-laba-ditahan-rugi", label: "- Rugi (-/-)", indent: 1, side: "KANAN", cells: [sisi("POKOK", "3-2100", "NEGATIF")] },
+    // Bukan saldo 3-2100 saja: form menyajikan laba ditahan AKHIR, yaitu saldo 3-2100 ditambah laba
+    // periode berjalan dan dikurangi dividen. Selama jurnal penutup tahunan belum dijalankan, laba
+    // periode masih berada di akun laba ruginya, dan memakai 3-2100 saja akan membuat neraca
+    // berselisih persis sebesar laba periode itu.
+    { key: "ekuitas-laba-ditahan-laba", label: "- Laba", indent: 1, side: "KANAN", cells: [ekuitas("POKOK", "LABA_DITAHAN_AKHIR", "POSITIF")] },
+    { key: "ekuitas-laba-ditahan-rugi", label: "- Rugi (-/-)", indent: 1, side: "KANAN", cells: [ekuitas("POKOK", "LABA_DITAHAN_AKHIR", "NEGATIF")] },
     {
       key: "ekuitas-jumlah",
       label: "",

@@ -15,7 +15,7 @@
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu.**
 
 - [x] Tugas 1 — Verifikasi struktur form terhadap berkas asli, lalu `shared/regulatoryForms.ts`
-- [ ] Tugas 2 — Nilai tiap baris form dari laporan, murni dan teruji
+- [x] Tugas 2 — Nilai tiap baris form dari laporan, murni dan teruji
 - [ ] Tugas 3 — Penulis workbook tiga form
 - [ ] Tugas 4 — Lembar penelusuran
 - [ ] Tugas 5 — Importir mengenali format resmi
@@ -155,13 +155,13 @@ git commit -m "Struktur form B0002/B0003/B0004 sebagai data"
 - Consumes: `REGULATORY_FORMS`; keluaran `buildFinancialStatements`.
 - Produces: `buildFormValues(input): { formCode, rows: { key, label, value, indent, column, trace }[] }`.
 
-- [ ] **Step 1: Uji yang gagal** — tiga yang paling mudah salah:
+- [x] **Step 1: Uji yang gagal** — tiga yang paling mudah salah:
       - saldo positif mengisi baris `Laba` dan menyisakan `Rugi (-)` nol;
       - saldo negatif mengisi baris `Rugi (-)` sebagai **bilangan positif**, bukan negatif;
       - subtotal sama dengan jumlah baris yang ditunjuknya, bukan dihitung ulang dari akun.
-- [ ] **Step 2: Tulis fungsinya.** Murni; tidak menyentuh basis data dan tidak memanggil
+- [x] **Step 2: Tulis fungsinya.** Murni; tidak menyentuh basis data dan tidak memanggil
       `accountBalancesFor`. Tiap baris membawa `trace` berisi kode akun dan saldo bertandanya.
-- [ ] **Step 3:** Perintah mutu, lalu commit `"Nilai baris form dari laporan keuangan"`.
+- [x] **Step 3:** Perintah mutu, lalu commit `"Nilai baris form dari laporan keuangan"`.
 
 ---
 

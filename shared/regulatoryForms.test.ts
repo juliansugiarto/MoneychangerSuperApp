@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CHART_OF_ACCOUNTS, findAccount } from "./chartOfAccounts";
 import {
+  EQUITY_MEASURE_ACCOUNTS,
   REGULATORY_FORMS,
   formMatchKey,
   groupHeadingFor,
@@ -53,10 +54,20 @@ describe("struktur form regulator", () => {
     for (const code of ["B0002", "B0003"] as const) {
       const item = form(code);
       const used = new Set(
-        item.rows.flatMap((row) => row.cells.flatMap((cell) => (cell.source.kind === "AKUN" || cell.source.kind === "SISI" ? [cell.source.code] : []))),
+        item.rows.flatMap((row) =>
+          row.cells.flatMap((cell) => {
+            if (cell.source.kind === "AKUN" || cell.source.kind === "SISI") return [cell.source.code];
+            if (cell.source.kind === "EKUITAS") return EQUITY_MEASURE_ACCOUNTS[cell.source.measure];
+            return [];
+          }),
+        ),
       );
+      // Setiap akun yang bagan akun petakan ke form ini wajib punya tempatnya. Akun lain boleh ikut
+      // tertelusur — dividen `3-4100` misalnya mempengaruhi laba ditahan akhir pada B0002 meski
+      // barisnya sendiri berada di B0004 — tetapi tidak boleh ada yang hilang.
       const expected = CHART_OF_ACCOUNTS.filter((account) => account.forms.includes(code)).map((account) => account.code);
-      expect([...used].sort(), `akun ${code}`).toEqual(expected.sort());
+      const missing = expected.filter((account) => !used.has(account));
+      expect(missing, `akun ${code} tanpa tempat pada formnya`).toEqual([]);
     }
   });
 
