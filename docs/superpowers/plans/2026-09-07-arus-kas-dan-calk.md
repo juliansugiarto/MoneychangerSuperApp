@@ -23,7 +23,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 6 — `buildCashFlowStatement` dan penanda `reconciled`
 - [x] Tugas 7 — Arus Kas masuk `buildFinancialStatements` beserta peringatannya
 - [x] Tugas 8 — Daftar catatan CALK dan panduannya di `shared/financialNotes.ts`
-- [ ] Tugas 9 — Catatan bangkitan dari buku besar
+- [x] Tugas 9 — Catatan bangkitan dari buku besar
 - [ ] Tugas 10 — Penyimpanan teks naratif dan prosedurnya
 - [ ] Tugas 11 — Halaman Laporan Keuangan dan navigasinya
 - [ ] Tugas 12 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
@@ -449,12 +449,12 @@ it("menandai reconciled salah ketika ada jurnal kas yang tidak terklasifikasi", 
 - Create: `server/financialNotes.ts`
 - Test: `server/financialNotes.test.ts`
 
-- [ ] **Step 1: Tulis uji yang gagal**, termasuk pemeriksaan silang `KEWAJIBAN_LAIN_LAIN`: jumlah
+- [x] **Step 1: Tulis uji yang gagal**, termasuk pemeriksaan silang `KEWAJIBAN_LAIN_LAIN`: jumlah
       sisa terutang harus sama dengan saldo 2-1900, dan bila tidak, catatannya membawa peringatan —
       bukan diam-diam menampilkan angka yang berbeda dari neracanya.
-- [ ] **Step 2: Bangkitkan kedelapan catatan** dari sumber yang disebut spec bagian 6. Angka
+- [x] **Step 2: Bangkitkan kedelapan catatan** dari sumber yang disebut spec bagian 6. Angka
       diambil dari buku besar dan tabel bukti yang sudah ada; **tidak ada satu pun yang diketik.**
-- [ ] **Step 3:** Perintah mutu, lalu commit `"Delapan catatan CALK yang dibangkitkan buku besar"`.
+- [x] **Step 3:** Perintah mutu, lalu commit `"Delapan catatan CALK yang dibangkitkan buku besar"`.
 
 ---
 

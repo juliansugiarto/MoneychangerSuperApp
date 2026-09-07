@@ -93,7 +93,7 @@ Rencana: `plans/2026-09-07-arus-kas-dan-calk.md`
 - [x] Tugas 6 — `buildCashFlowStatement` dan penanda `reconciled`
 - [x] Tugas 7 — Arus Kas masuk `buildFinancialStatements` beserta peringatannya
 - [x] Tugas 8 — Daftar catatan CALK dan panduannya di `shared/financialNotes.ts`
-- [ ] Tugas 9 — Catatan bangkitan dari buku besar
+- [x] Tugas 9 — Catatan bangkitan dari buku besar
 - [ ] Tugas 10 — Penyimpanan teks naratif dan prosedurnya
 - [ ] Tugas 11 — Halaman Laporan Keuangan dan navigasinya
 - [ ] Tugas 12 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
