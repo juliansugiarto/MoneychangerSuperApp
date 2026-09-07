@@ -38,8 +38,8 @@ const grid = (sheet: XLSX.WorkSheet) => XLSX.utils.sheet_to_json<unknown[]>(shee
 const at = (rows: unknown[][], row: number, column: number) => rows[row]?.[column] ?? null;
 
 describe("penulis workbook form", () => {
-  it("menulis tiga sheet, satu per form", () => {
-    expect(workbook().SheetNames).toEqual(["B0002 Neraca", "B0003 Laba Rugi", "B0004 Ekuitas"]);
+  it("menulis satu sheet per form, ditutup lembar penelusuran", () => {
+    expect(workbook().SheetNames).toEqual(["B0002 Neraca", "B0003 Laba Rugi", "B0004 Ekuitas", "Penelusuran"]);
   });
 
   it("menulis header yang sama dengan form aslinya pada setiap sheet", () => {
@@ -120,7 +120,7 @@ describe("penulis workbook form", () => {
     for (const form of values()) {
       expect(filledRows(form), form.code).toHaveLength(form.recordCount);
     }
-    expect(book.SheetNames).toHaveLength(3);
+    expect(book.SheetNames).toHaveLength(4);
   });
 
   it("tidak memasang tombol Simpan milik form BI dan tidak menyebut pengiriman otomatis", () => {

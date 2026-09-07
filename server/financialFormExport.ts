@@ -15,6 +15,7 @@ import * as XLSX from "xlsx";
 import {
   REGULATORY_FORMS,
   isValueCell,
+  type EquityMeasure,
   type FormCode,
   type FormColumn,
   type RegulatoryForm,
@@ -133,6 +134,77 @@ export function renderFormSheet(values: FormValues, header: FormWorkbookHeader):
   return XLSX.utils.aoa_to_sheet(rows.map((row) => Array.from({ length: layout.width + 3 }, (_, index) => row[index] ?? null)));
 }
 
+/**
+ * Lembar penelusuran: satu baris per pos berisi, beserta akun penyusun dan saldonya.
+ *
+ * Inilah jawaban temuan 7.1 di dalam satu berkas. Pemeriksa dapat menunjuk sebuah pos pada form dan
+ * langsung melihat akun yang menyusunnya, tanpa membuka aplikasi ini dan tanpa mempercayai klaim
+ * siapa pun. Baris yang memang selalu nol menyebutkan alasannya, bukan disembunyikan.
+ */
+export function renderTraceSheet(values: FormValues[]): XLSX.WorkSheet {
+  const rows: unknown[][] = [
+    ["PENELUSURAN POS LAPORAN KE AKUN BUKU BESAR"],
+    ["Setiap pos berisi pada ketiga form, beserta akun penyusun dan saldonya pada buku besar."],
+    ["Berkas ini tidak dikirim ke Bank Indonesia oleh aplikasi."],
+    [],
+    ["Form", "Pos", "Kolom", "Sumber", "Akun", "Nama akun", "Saldo buku besar (Rp)", "Nilai pada form (Rp)", "Keterangan"],
+  ];
+
+  for (const form of values) {
+    for (const row of filledRows(form)) {
+      for (const cell of row.cells) {
+        const trace = cell.trace;
+        if (trace.kind === "SUBTOTAL") continue;
+
+        const shared = [form.code, row.label.trim(), cell.column];
+        const value = rupiah(cell.value);
+        const note = row.alwaysZeroReason ?? "";
+
+        if (trace.kind === "AKUN") {
+          rows.push([...shared, "Saldo akun", trace.code, trace.accountName, rupiah(trace.balance), value, note]);
+          continue;
+        }
+        if (trace.kind === "SISI") {
+          rows.push([
+            ...shared,
+            `Sisi ${trace.side.toLowerCase()}`,
+            trace.code,
+            trace.accountName,
+            rupiah(trace.balance),
+            value,
+            note || (trace.used
+              ? `Saldo bertanda ${rupiah(trace.balance)} jatuh pada sisi ini.`
+              : `Saldo bertanda ${rupiah(trace.balance)} jatuh pada sisi lain, jadi baris ini nol.`),
+          ]);
+          continue;
+        }
+        rows.push([
+          ...shared,
+          "Pos ekuitas",
+          trace.accounts.join(", ") || "—",
+          EQUITY_MEASURE_LABELS[trace.measure],
+          rupiah(trace.amount),
+          value,
+          note || (trace.side && !trace.used
+            ? `Pos bertanda ${rupiah(trace.amount)} jatuh pada sisi lain, jadi baris ini nol.`
+            : ""),
+        ]);
+      }
+    }
+  }
+
+  return XLSX.utils.aoa_to_sheet(rows);
+}
+
+const EQUITY_MEASURE_LABELS: Record<EquityMeasure, string> = {
+  MODAL_AWAL: "Modal disetor",
+  LABA_DITAHAN_AWAL: "Laba ditahan awal periode",
+  LABA_DITAHAN_AKHIR: "Laba ditahan akhir (3-2100 + laba periode - dividen)",
+  LABA_PERIODE: "Laba/(rugi) periode berjalan",
+  DIVIDEN: "Pembagian dividen",
+  EKUITAS_LAIN: "Perubahan ekuitas lain-lain",
+};
+
 const SHEET_NAMES: Record<FormCode, string> = {
   B0002: "B0002 Neraca",
   B0003: "B0003 Laba Rugi",
@@ -148,6 +220,7 @@ export function renderFormWorkbook(values: FormValues[], header: FormWorkbookHea
     if (!form) throw new Error(`Nilai form ${code} tidak tersedia.`);
     XLSX.utils.book_append_sheet(workbook, renderFormSheet(form, header), SHEET_NAMES[code]);
   }
+  XLSX.utils.book_append_sheet(workbook, renderTraceSheet(values), "Penelusuran");
   return workbook;
 }
 

@@ -17,7 +17,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 1 — Verifikasi struktur form terhadap berkas asli, lalu `shared/regulatoryForms.ts`
 - [x] Tugas 2 — Nilai tiap baris form dari laporan, murni dan teruji
 - [x] Tugas 3 — Penulis workbook tiga form
-- [ ] Tugas 4 — Lembar penelusuran
+- [x] Tugas 4 — Lembar penelusuran
 - [ ] Tugas 5 — Importir mengenali format resmi
 - [ ] Tugas 6 — Uji pulang-pergi ekspor → impor
 - [ ] Tugas 7 — Gerbang tahun buku penuh dan snapshot bersumber buku besar
@@ -184,11 +184,11 @@ git commit -m "Struktur form B0002/B0003/B0004 sebagai data"
 
 **Files:** Modify `server/financialFormExport.ts`; Test `server/financialFormTrace.test.ts`
 
-- [ ] **Step 1: Uji yang gagal** — tiap pos berisi muncul satu baris beserta akun dan saldonya;
+- [x] **Step 1: Uji yang gagal** — tiap pos berisi muncul satu baris beserta akun dan saldonya;
       baris `SISI` menyebut saldo bertandanya dan sisi mana yang terpakai; baris yang selalu nol
       menyebut alasannya.
-- [ ] **Step 2: Tulis sheet `Penelusuran`.**
-- [ ] **Step 3:** Perintah mutu, lalu commit `"Lembar penelusuran pos ke akun pada ekspor"`.
+- [x] **Step 2: Tulis sheet `Penelusuran`.**
+- [x] **Step 3:** Perintah mutu, lalu commit `"Lembar penelusuran pos ke akun pada ekspor"`.
 
 ---
 
