@@ -161,7 +161,7 @@ function nonNegativeDecimal(value: string, label: string) {
   return parsed;
 }
 
-function nonNegativeOrZeroDecimal(value: string, label: string) {
+export function nonNegativeOrZeroDecimal(value: string, label: string) {
   let parsed: Decimal;
   try {
     parsed = new Decimal(value);
@@ -1682,7 +1682,7 @@ function denominationRowsFrom(entries: DenominationEntryInput[], currencyCode?: 
   });
 }
 
-function reconcileDenominations(entries: DenominationEntryInput[], expectedTotal: Decimal, currencyCode?: string) {
+export function reconcileDenominations(entries: DenominationEntryInput[], expectedTotal: Decimal, currencyCode?: string) {
   if (!entries.length) return [];
   const rows = denominationRowsFrom(entries, currencyCode);
   const sum = rows.reduce((total, row) => total.plus(row.subtotal), new Decimal(0));
@@ -2676,7 +2676,7 @@ export async function recordOpeningCash(input: { currencyId: number; openingAmou
  * urutan yang sama persis. Menyalinnya berarti tiga salinan logika kas fisik yang harus dijaga
  * serempak, dan stok pecahan berjalan adalah sumber kebenaran operasional — bukan catatan tambahan.
  */
-async function applyCashMovement(
+export async function applyCashMovement(
   tx: any,
   input: {
     currencyId: number;

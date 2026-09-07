@@ -55,7 +55,7 @@ export type JournalLineInput = {
  * tanggal tengah malam lokal — itulah campuran yang membuat 1 September jatuh ke periode Agustus.
  */
 /** Tanggal siap kirim: tengah malam waktu lokal pada hari kalender yang dimaksud. */
-const dbDate = (value: Date | string) => new Date(`${calendarDay(value)}T00:00:00`);
+export const dbDate = (value: Date | string) => new Date(`${calendarDay(value)}T00:00:00`);
 
 /** Hari sebelum sebuah tanggal, dihitung atas teks harinya agar tidak bergantung jam maupun zona. */
 const previousDayIso = (value: Date | string) =>

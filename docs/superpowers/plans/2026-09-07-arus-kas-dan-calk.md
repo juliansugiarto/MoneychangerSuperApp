@@ -17,7 +17,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 
 - [x] Tugas 1 — Migrasi pelunasan dan catatan CALK (0050)
 - [x] Tugas 2 — Dua kategori pelunasan pada pemetaan kas dan bank
-- [ ] Tugas 3 — `recordSettlement`: penulis pelunasan beserta pecahannya
+- [x] Tugas 3 — `recordSettlement`: penulis pelunasan beserta pecahannya
 - [ ] Tugas 4 — Prosedur tRPC dan panel Pelunasan pada tab Modal & Bank
 - [ ] Tugas 5 — `classifyCashEntry` murni di `shared/cashFlow.ts`
 - [ ] Tugas 6 — `buildCashFlowStatement` dan penanda `reconciled`
@@ -286,9 +286,16 @@ git commit -m "Pemetaan jurnal pelunasan kewajiban dan penerimaan piutang"
 
 **Interfaces:**
 - Consumes: `applyCashMovement`, `reconcileDenominations`, `writeAudit`, `dbDate` — semuanya sudah ada di `server/operations.ts`.
-- Produces: `recordSettlement`, `listOutstandingPayables`. Dipakai tugas 4, 9, dan 12.
+- Produces: `recordSettlement`, `listOutstandingSettlements`. Dipakai tugas 4, 9, dan 12.
 
-- [ ] **Step 1: Tulis uji yang gagal**
+**Dua penyimpangan dari rencana, 7 September 2026.** Namanya `listOutstandingSettlements`, bukan
+`listOutstandingPayables`: ia mengembalikan sisa tagihan **dan** sisa piutang hasil pelepasan, dan
+nama lama menyembunyikan separuh isinya. Dan `server/operations.ts` ikut disunting untuk
+meng-`export` `applyCashMovement`, `reconcileDenominations`, serta `nonNegativeOrZeroDecimal`
+(begitu pula `dbDate` pada `server/ledgerOperations.ts`) — menyalin ketiganya akan membuat jalur
+kas kedua yang dapat berbeda pendapat dengan yang pertama.
+
+- [x] **Step 1: Tulis uji yang gagal**
 
 `server/settlements.test.ts` dengan `getDb` dipalsukan, menegakkan:
 
@@ -302,13 +309,13 @@ git commit -m "Pemetaan jurnal pelunasan kewajiban dan penerimaan piutang"
 - listOutstandingPayables menjumlahkan beban dan aset yang belum lunas
 ```
 
-- [ ] **Step 2: Tulis `listOutstandingPayables`**
+- [x] **Step 2: Tulis `listOutstandingPayables`**
 
 Sisa tagihan = nominal asal − Σ pelunasan yang sudah tercatat, untuk `operational_expenses` dan
 `fixed_assets`. Sertakan tanggal asalnya supaya panel dapat menampilkan umurnya, dan sertakan
 `journalEntryId` bila jurnal asalnya sudah ada.
 
-- [ ] **Step 3: Tulis `recordSettlement`**
+- [x] **Step 3: Tulis `recordSettlement`**
 
 Ikuti `recordCapitalMovement` (`server/operations.ts:2745`) baris demi baris: validasi nominal,
 catatan minimal 5 karakter, pecahan wajib untuk jalur kas, `reconcileDenominations`, lalu
@@ -322,7 +329,7 @@ arahnya `OUT` dan `IN`.
 **Jangan menjurnal di sini.** Penjurnalannya lewat `postOperationsToLedger` atas rentang tanggal
 yang dipilih manusia, sama seperti setoran modal — spec bagian 3.
 
-- [ ] **Step 4: Perintah mutu dan commit**
+- [x] **Step 4: Perintah mutu dan commit**
 
 ```bash
 ./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build
