@@ -26,7 +26,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 9 — Catatan bangkitan dari buku besar
 - [x] Tugas 10 — Penyimpanan teks naratif dan prosedurnya
 - [ ] Tugas 11 — Halaman Laporan Keuangan dan navigasinya
-- [~] Tugas 12 — Skenario menyeluruh dan dokumentasi selesai; **peragaan end-to-end menunggu izin pengguna**
+- [x] Tugas 12 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 **Tugas 1 dan 2 digabung menjadi satu commit** (7 September 2026). Menambah nilai enum pada
 `drizzle/schema.ts` membuat kolomnya lebih lebar daripada `CashMovementCategory`, sehingga Tugas 1
@@ -507,7 +507,14 @@ it("menandai reconciled salah ketika ada jurnal kas yang tidak terklasifikasi", 
 - [x] **Step 2: Skenario yang gagal dengan benar** — jurnal manual menyentuh kas, dan pelunasan
       tanpa baris sasaran: keduanya muncul di keranjang beserta nomor jurnalnya, dan tidak ada satu
       pun angka yang dipaksa seimbang.
-- [ ] **Step 3: Peragaan end-to-end** *(menunggu izin pengguna untuk membuat data uji pada basis data lokal)* pada `moneychanger` sesuai spec bagian 10. **Minta izin
+- [x] **Step 3: Peragaan end-to-end** — dijalankan 7 September 2026 dengan izin pengguna pada
+      giliran itu juga, seluruhnya lewat jalur kode produksi (tidak ada satu pun `INSERT` langsung):
+      setoran modal Rupiah → beban dicatat → beban dilunasi tunai → aset paket E dilunasi sebagian
+      → `postOperationsToLedger` → laporan. Hasilnya: bagian operasi −Rp 10.000.000, investasi
+      −Rp 20.000.000, pendanaan +Rp 217.636.000, pengaruh kurs −Rp 1.336.000, keranjang **kosong**,
+      `reconciled: true`, `difference: "0.00"`, dan kedelapan catatan CALK bangkitan berisi angka.
+      Penjaga kelebihan bayar terbukti pada data nyata: percobaan kedua atas aset yang sama ditolak
+      *"melebihi sisa tagihan (4000000.00)"*. pada `moneychanger` sesuai spec bagian 10. **Minta izin
       pengguna pada giliran itu juga** sebelum menulis data uji apa pun.
 - [x] **Step 4: Perbarui dokumentasi** — panduan A–Z (cara membayar tagihan, cara membaca Arus Kas,
       cara mengisi CALK), skema database (tiga perubahan tabel), dan ROADMAP (centang tugasnya).

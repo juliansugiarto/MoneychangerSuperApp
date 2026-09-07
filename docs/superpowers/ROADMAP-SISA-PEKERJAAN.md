@@ -95,8 +95,13 @@ Rencana: `plans/2026-09-07-arus-kas-dan-calk.md`
 - [x] Tugas 8 — Daftar catatan CALK dan panduannya di `shared/financialNotes.ts`
 - [x] Tugas 9 — Catatan bangkitan dari buku besar
 - [x] Tugas 10 — Penyimpanan teks naratif dan prosedurnya
-- [x] Tugas 11 — Halaman Laporan Keuangan dan navigasinya *(verifikasi visual menunggu login pengguna)*
-- [~] Tugas 12 — Skenario dan dokumentasi selesai; **peragaan end-to-end pada basis data lokal menunggu izin pengguna**
+- [x] Tugas 11 — Halaman Laporan Keuangan dan navigasinya *(verifikasi visual di layar menunggu login pengguna)*
+- [x] Tugas 12 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+
+**Data uji paket F2 pada `moneychanger` sengaja dibiarkan**, seperti data paket E dan F1: dua
+setoran modal Rupiah @ Rp 100.000.000, dua beban sewa @ Rp 5.000.000 yang sudah dilunasi tunai, dan
+pelunasan sebagian Rp 20.000.000 atas aset "Brankas Uji Paket E" (sisa Rp 4.000.000 di 2-1900).
+Buku besar sesudahnya: 1-1110 Rp 170.000.000, 1-1220 Rp 16.300.000, 3-1100 Rp 217.636.000.
 
 ### Paket G — Ekspor B0002/B0003/B0004 dari buku besar
 - [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
