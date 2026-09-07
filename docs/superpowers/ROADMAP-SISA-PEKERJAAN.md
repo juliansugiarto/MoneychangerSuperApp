@@ -119,7 +119,22 @@ Rencana: `plans/2026-09-07-ekspor-laporan-b-form.md`
 - [x] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 ### Paket H — Profil transaksi dan pemantauan berkala (temuan BI 9 sisa, 10)
-- [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
+Spec: `specs/2026-09-07-profil-transaksi-pemantauan-design.md`
+Rencana: `plans/2026-09-07-profil-transaksi-pemantauan.md`
+- [x] Sesi rancangan — spec dan rencana bertugas
+- [ ] Tugas 1 — Penilaian penyimpangan dan irama berbasis risiko, murni dan teruji
+- [ ] Tugas 2 — Migrasi: tiga kolom deklarasi dan tabel `customer_profile_reviews`
+- [ ] Tugas 3 — Penulis deklarasi: borang nasabah, `createCustomer`, `updateCustomer`
+- [ ] Tugas 4 — Jendela bulanan WIB bersama dan pembacaan aktivitas nyata
+- [ ] Tugas 5 — Worklist pemantauan: query, otorisasi, dan batas "hanya mencatat"
+- [ ] Tugas 6 — Penulis peninjauan: `recordCustomerProfileReview` beserta auditnya
+- [ ] Tugas 7 — Halaman Pemantauan Profil Nasabah
+- [ ] Tugas 8 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+
+**Keputusan pengguna 7 September 2026 yang mengikat:** deklarasi = nilai + frekuensi + mata uang;
+ambang penyimpangan **nilai bulanan ≥ deklarasi × 2**; mata uang tak terdeklarasi alasan
+tersendiri; frekuensi dideklarasikan tetapi **tidak** menyalakan bendera; irama **HIGH 1 bulan,
+MEDIUM 3 bulan, LOW 12 bulan**; tindak lanjut **worklist Controller yang hanya mencatat**.
 
 ### Paket I — Arsip dokumen perusahaan (temuan BI 3)
 - [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
