@@ -104,7 +104,19 @@ pelunasan sebagian Rp 20.000.000 atas aset "Brankas Uji Paket E" (sisa Rp 4.000.
 Buku besar sesudahnya: 1-1110 Rp 170.000.000, 1-1220 Rp 16.300.000, 3-1100 Rp 217.636.000.
 
 ### Paket G — Ekspor B0002/B0003/B0004 dari buku besar
-- [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
+Spec: `specs/2026-09-07-ekspor-laporan-b-form-design.md`
+Rencana: `plans/2026-09-07-ekspor-laporan-b-form.md`
+- [x] Sesi rancangan — spec dan rencana bertugas
+- [ ] **Menunggu pengguna:** berkas form B0002/B0003/B0004 asli belum ada di proyek
+- [ ] Tugas 1 — Verifikasi struktur form terhadap berkas asli, lalu `shared/regulatoryForms.ts`
+- [ ] Tugas 2 — Nilai tiap baris form dari laporan, murni dan teruji
+- [ ] Tugas 3 — Penulis workbook tiga form
+- [ ] Tugas 4 — Lembar penelusuran
+- [ ] Tugas 5 — Importir mengenali format resmi
+- [ ] Tugas 6 — Uji pulang-pergi ekspor → impor
+- [ ] Tugas 7 — Gerbang tahun buku penuh dan snapshot bersumber buku besar
+- [ ] Tugas 8 — Rute unduhan, otorisasi, dan tombol pada halaman Laporan Keuangan
+- [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 ### Paket H — Profil transaksi dan pemantauan berkala (temuan BI 9 sisa, 10)
 - [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
@@ -134,7 +146,7 @@ Buku besar sesudahnya: 1-1110 Rp 170.000.000, 1-1220 Rp 16.300.000, 3-1100 Rp 21
 | 5 | **E** aset tetap | Memasok baris Penyusutan B0003 yang belum punya asal |
 | 6 | **F1** kas valas dan revaluasi kurs | Menyelesaikan pekerjaan yang `mapBankMovement` sendiri tandai *belum*; menghidupkan `REVALUASI_KURS`, 7-1500, dan 1-1220 yang sudah disediakan tetapi menganggur |
 | 7 | **F2** Arus Kas dan CALK | Arus Kas metode tidak langsung menambahkan kembali penyusutan dari E, dan barisnya "Pengaruh perubahan kurs atas kas" hanya berisi angka bila F1 sudah ada |
-| 8 | **G** ekspor B-form | Diletakkan setelah C–F supaya yang diekspor sudah lengkap |
+| 8 | **G** ekspor B-form | Diletakkan setelah C–F supaya yang diekspor sudah lengkap; **menunggu berkas form asli** |
 | 9 | **H** profil transaksi | Berdiri sendiri |
 | 10 | **I** arsip dokumen | Berdiri sendiri |
 | 11 | **J** IRA | Paling besar; sebagian sisi risiko inherennya dihitung dari data yang sudah ada |
@@ -507,16 +519,36 @@ disusun **di luar** aplikasi, dan `server/financialTemplate.ts` mengunduhkan tem
 Akibatnya buku besar sudah menghitung seluruh angkanya, tetapi untuk melapor angka itu masih harus
 diketik ulang ke Excel. Itu justru mengembalikan risiko yang dituju temuan 7.1.
 
-## Sketsa ruang lingkup
+## Yang diputuskan pada sesi rancangan 7 September 2026
 
-Penulis workbook dari keluaran `buildFinancialStatements`, memakai tata letak yang sudah ada di
-`financialTemplate.ts`. **Uji pulang-pergi wajib:** ekspor lalu impor kembali lewat
-`parseFinancialWorkbook` harus menghasilkan angka yang identik — itu satu-satunya bukti bahwa kedua
-sisi memakai tata letak yang sama.
+**Rencana rinci sudah ada:** `specs/2026-09-07-ekspor-laporan-b-form-design.md` dan
+`plans/2026-09-07-ekspor-laporan-b-form.md`. Ringkasnya:
+
+- **Ekspor meniru tata letak form resmi** sebagai `.xlsx` tanpa makro — tombol *Simpan* pada form BI
+  adalah makro milik berkas mereka dan tidak dapat dibuat ulang.
+- **Importir diajari membaca format resmi** lewat label pos, bukan Record No, sehingga berkas yang
+  sama dapat diekspor lalu diimpor kembali.
+- **Isi: tiga form B ditambah lembar penelusuran** pos → akun → saldo.
+- **Ekspor juga menulis snapshot** bersumber buku besar, menutup lingkaran impor→snapshot→paket.
+- **Hanya tahun buku penuh** yang dapat diekspor (*Jenis Periode: A* pada formnya).
+
+## Yang ditemukan sesi rancangan dan mengubah bentuk paketnya
+
+Pengguna menunjukkan ketiga form BI yang sebenarnya, dan **tata letaknya berbeda dari template
+internal yang selama ini dipakai**: tidak ada kolom *Record No* yang justru menjadi kunci pemetaan
+`parseFinancialWorkbook`. Form resminya berkolom dua pada B0002, memisahkan `Laba` dari `Rugi (-)`
+pada pos bersih, dan menyatakan *Jumlah Record* 19/25/7 pada headernya.
+
+Jumlah record itu **cocok persis** dengan bagan akun: 19 = 11 aset + 5 kewajiban + 3 ekuitas,
+25 = seluruh baris laba rugi, 7 = baris perubahan ekuitas. Komentar bagan akun yang berbunyi
+"dipetakan langsung ke satu baris pada form" karena itu terbukti, dan paket ini menuliskan pemetaan
+itu sebagai data.
 
 ## Batas
 
 Tetap **tidak ada pengiriman otomatis** ke BI. Ekspor menghasilkan berkas; manusia yang mengirim.
+Nominal dari berkas asli perusahaan tidak boleh masuk kode, uji, fixture, maupun dokumentasi —
+hanya strukturnya yang diambil.
 
 ---
 

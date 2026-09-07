@@ -65,6 +65,69 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
+## Sesi berikutnya — keadaan per 7 September 2026
+
+Paket K1, B, D, C, E, F1, dan **F2 sudah selesai** dan diperagakan end-to-end. Sesi rancangan
+Paket G juga sudah selesai, tetapi **Paket G terhalang**: ia menunggu berkas form B0002/B0003/B0004
+asli masuk ke proyek.
+
+Karena H, I, dan J berdiri sendiri, **pekerjaan berikutnya yang dapat langsung dimulai adalah sesi
+rancangan Paket H.** Bloknya siap tempel di bawah.
+
+Baseline uji yang benar-benar dijalankan 7 September 2026 sesudah Paket F2:
+`Test Files 115 passed (115)`, `Tests 870 passed | 2 skipped (872)`.
+
+---
+
+## Prompt siap tempel — sesi rancangan Paket H
+
+```
+Kerjakan sesi rancangan Paket H — Profil transaksi dan pemantauan berkala. Baca dulu bagian
+"Aturan kerja yang berlaku untuk seluruh paket" dan bagian "Paket H" pada
+docs/superpowers/ROADMAP-SISA-PEKERJAAN.md, lalu Prompt A pada docs/superpowers/PROMPT-SESI.md.
+
+Telusuri kodenya sungguhan lebih dulu. Rujukan berkas:baris di ROADMAP ditulis 4 September 2026 dan
+sebagian sudah bergeser — percayai kodenya, lalu perbarui barisnya sambil lewat.
+
+Keluarannya dua berkas, tidak menulis kode aplikasi:
+  docs/superpowers/specs/2026-XX-XX-profil-transaksi-pemantauan-design.md
+  docs/superpowers/plans/2026-XX-XX-profil-transaksi-pemantauan.md
+Ikuti bentuk spec dan rencana Paket F2 (2026-09-07-arus-kas-dan-calk-*).
+
+Pertanyaan kebijakan — ambang mana yang dianggap menyimpang dari profil, seberapa sering
+pemantauan berkala dijalankan, siapa yang menindaklanjuti, dan apa yang terjadi pada nasabah yang
+melewatinya — TANYAKAN kepada saya, jangan ditebak. Ini menyentuh kepatuhan APU-PPT, dan menebaknya
+menghasilkan alat yang tampak bekerja sementara ambangnya karangan.
+
+Batas yang sudah pasti dan tidak perlu ditanyakan: hasilnya alat bantu penyaringan; ia tidak pernah
+mengubah data nasabah, tidak pernah memblokir transaksi, dan tidak pernah melapor sendiri ke
+regulator — sama seperti pencocokan watchlist yang sudah ada.
+
+Aturan proyek sejak 5 September 2026 (CLAUDE.md, "Fitur Harus Punya Sumber Data"): jangan merancang
+tampilan atau baris laporan yang tidak ada penulis datanya. Bila paket ini menuntut kolom profil
+yang belum pernah diisi siapa pun, penulisnya ikut masuk rencana — atau fiturnya tidak dibangun.
+Paket F2 baru saja menemui persis kasus itu dan menyelesaikannya dengan membangun penulisnya;
+lihat spec F2 bagian "Masalah 2" sebagai preseden.
+
+Baseline uji yang benar-benar dijalankan 7 September 2026:
+Test Files 106 → 115 passed (115), Tests 870 passed | 2 skipped (872). Sebutkan angka yang
+benar-benar dilihat.
+
+Satu uji diketahui flaky dan bukan bagian paket ini: server/tenantIsolation.live.test.ts >
+"setiap ikatan hanya melihat database miliknya sendiri". Ia satu-satunya uji yang menyentuh dua
+basis data sungguhan dan memanggil getDb tanpa retryTransientDatabaseRead. Bila gagal sendirian di
+bawah beban, jalankan ulang berkas itu saja; dugaan pembungkus retry adalah petunjuk, bukan
+diagnosis.
+
+Basis data lokal moneychanger berisi data uji paket E, F1, dan F2 yang SENGAJA DIBIARKAN untuk
+dipakai paket berikutnya — jangan membersihkannya dan jangan membuatnya ulang. Rinciannya ada pada
+ROADMAP di bawah bagian Paket F2.
+
+Verifikasi visual menuntut login — saya akan login sendiri bila diminta.
+```
+
+---
+
 ## Prompt jadi, urut sesuai peta jalan
 
 Tinggal salin. Kerjakan dari atas ke bawah; lewati yang barisnya sudah tercentang di ROADMAP.
@@ -187,14 +250,34 @@ Empat tugas pertamanya membangun penulis pelunasan kewajiban — sisi kas yang s
 komentar `shared/journalMapping.ts:104` tetapi tidak pernah ditulis. Tanpa itu bagian operasi dan
 investasi Arus Kas tidak punya sumber data.
 
-### Paket G — Ekspor B0002/B0003/B0004 (sesi rancangan dulu)
+### Paket G — Ekspor B0002/B0003/B0004 (9 tugas) — **MENUNGGU BERKAS FORM ASLI**
 
-Pakai **Prompt A** dengan `<PAKET>` = `G` dan `<NAMA-BERKAS>` = `ekspor-laporan-b-form`.
-Tambahkan baris ini di akhir prompt:
+Sesi rancangannya selesai 7 September 2026; spec `specs/2026-09-07-ekspor-laporan-b-form-design.md`
+dan rencana `plans/2026-09-07-ekspor-laporan-b-form.md` sudah ada.
+
+**Jangan mulai Tugas 1 sebelum berkas form B0002/B0003/B0004 asli ada di dalam proyek.** Struktur
+pada spec diturunkan dari tangkapan layar; label yang meleset satu kata membuat importir melewati
+barisnya, dan menebak label regulator dilarang aturan proyek (preseden Paket K3). Yang dibutuhkan
+satu berkas Excel form BI — terisi maupun kosong sama-sama cukup, karena yang diambil hanya
+strukturnya.
+
+Begitu berkasnya ada, pakai **Prompt B**:
 
 ```
-Uji pulang-pergi wajib ada dalam rencana: ekspor lalu impor kembali lewat parseFinancialWorkbook
-harus menghasilkan angka yang identik. Itu satu-satunya bukti kedua sisi memakai tata letak sama.
+Baca docs/superpowers/plans/2026-09-07-ekspor-laporan-b-form.md.
+Kerjakan HANYA Tugas <N>, ikuti langkahnya berurutan.
+Centang setiap langkah di berkas rencana setelah selesai,
+lalu centang barisnya di bagian Status Pengerjaan.
+Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
+```
+
+Tambahkan baris ini pada Tugas 1:
+
+```
+Berkas form aslinya ada di <path>. Baca strukturnya, jangan percaya spec: setiap perbedaan
+dimenangkan berkasnya, dan spec diperbarui sambil lewat. Nominal di dalamnya adalah pembukuan asli
+perusahaan — jangan menyalin satu pun angkanya ke kode, uji, fixture, atau dokumentasi, dan jangan
+mem-commit berkas sumbernya.
 ```
 
 ### Paket H — Profil transaksi dan pemantauan berkala (sesi rancangan dulu)
