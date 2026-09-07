@@ -10,9 +10,10 @@
  */
 
 import Decimal from "decimal.js";
-import { and, gte, inArray, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lte } from "drizzle-orm";
 import {
   currencies,
+  financialStatementNotes,
   currencyRevaluations,
   fixedAssetDepreciationEntries,
   fixedAssets,
@@ -23,11 +24,11 @@ import {
 } from "../drizzle/schema";
 import { CHART_OF_ACCOUNTS, findAccount } from "../shared/chartOfAccounts";
 import { CASH_ACCOUNTS } from "../shared/currencyRevaluation";
-import { FINANCIAL_NOTES, type FinancialNoteDefinition } from "../shared/financialNotes";
+import { FINANCIAL_NOTES, findFinancialNote, notePeriodKey, type FinancialNoteDefinition } from "../shared/financialNotes";
 import { priorRange } from "../shared/financialStatements";
 import { calendarDay, formatAmount, isoDay } from "../shared/ledger";
 import { accountBalancesFor, dbDate, loadLines } from "./ledgerOperations";
-import { databaseOrThrow, retryTransientDatabaseRead } from "./operations";
+import { databaseOrThrow, retryTransientDatabaseRead, writeAudit } from "./operations";
 import { listOutstandingSettlements } from "./settlements";
 
 export type NoteTable = { columns: string[]; rows: string[][] };
@@ -277,4 +278,106 @@ function nonCashNote(
     ...definition("TRANSAKSI_NONKAS"), kind: "BANGKITAN",
     table: { columns: ["Jenis", "Keterangan", "Tanggal", "Nilai belum dibayar"], rows },
   };
+}
+
+export type NarrativeNote = FinancialNoteDefinition & {
+  kind: "NARATIF";
+  bodyText: string;
+  /** "PERIODE" bila teksnya khusus periode ini, "BERLAKU_TERUS" bila teks umum, null bila kosong. */
+  scope: "PERIODE" | "BERLAKU_TERUS" | null;
+  updatedAt: string | null;
+};
+
+/**
+ * Teks naratif yang berlaku bagi sebuah laporan.
+ *
+ * Baris berperiode menang atas baris berlaku-terus. Itu bukan penyederhanaan: kebijakan akuntansi
+ * tidak berganti tiap bulan, sedangkan peristiwa setelah periode pelaporan selalu berganti — dan
+ * laporan periode lampau harus tetap menampilkan teks yang berlaku baginya, bukan teks yang diubah
+ * sesudahnya.
+ */
+export async function buildNarrativeNotes(input: { to: Date | string }): Promise<NarrativeNote[]> {
+  const periodKey = notePeriodKey(isoDay(input.to));
+  const db = await databaseOrThrow();
+  const rows = await db.select().from(financialStatementNotes);
+
+  return FINANCIAL_NOTES.filter((note) => note.kind === "NARATIF").map((note) => {
+    const forPeriod = rows.find((row) => row.noteKey === note.key && row.periodKey === periodKey);
+    const standing = rows.find((row) => row.noteKey === note.key && row.periodKey === null);
+    const chosen = forPeriod ?? standing;
+    return {
+      ...note, kind: "NARATIF" as const,
+      bodyText: chosen?.bodyText ?? "",
+      scope: chosen ? (forPeriod ? "PERIODE" : "BERLAKU_TERUS") : null,
+      updatedAt: chosen?.updatedAt ? new Date(chosen.updatedAt).toISOString() : null,
+    };
+  });
+}
+
+/**
+ * Kelima laporan menuntut CALK yang utuh; catatan naratif yang kosong membuatnya belum lengkap
+ * secara standar. Itu disajikan sebagai peringatan, bukan sebagai penghalang — memblokir
+ * penyusunan laporan karena sebuah paragraf belum diketik lebih buruk daripada menyebutkannya.
+ */
+export async function buildFinancialNotes(input: { from: Date | string; to: Date | string }) {
+  const [generated, narrative] = await Promise.all([
+    buildGeneratedNotes(input),
+    buildNarrativeNotes({ to: input.to }),
+  ]);
+  const empty = narrative.filter((note) => !note.bodyText.trim());
+  const warnings = [
+    ...generated.flatMap((note) => (note.warning ? [note.warning] : [])),
+    ...(empty.length ? [`CALK belum lengkap: ${empty.length} catatan naratif belum diisi (${empty.map((note) => note.title).join(", ")}).`] : []),
+  ];
+
+  return {
+    period: { from: isoDay(input.from), to: isoDay(input.to) },
+    periodKey: notePeriodKey(isoDay(input.to)),
+    notes: [...generated, ...narrative].sort(
+      (left, right) => FINANCIAL_NOTES.findIndex((note) => note.key === left.key) - FINANCIAL_NOTES.findIndex((note) => note.key === right.key),
+    ),
+    warnings,
+  };
+}
+
+export async function saveFinancialNoteText(
+  input: { noteKey: string; periodKey: string | null; bodyText: string },
+  actor: { id: number },
+) {
+  const note = findFinancialNote(input.noteKey);
+  if (!note) throw new Error("Catatan tidak dikenal.");
+  // Catatan bangkitan diturunkan dari buku besar. Membiarkannya diketik berarti membuka jalan bagi
+  // angka CALK yang berselisih dengan laporannya — persis yang dicegah rancangan hibridanya.
+  if (note.kind !== "NARATIF") throw new Error("Catatan ini dibangkitkan dari buku besar dan tidak dapat diketik.");
+  if (input.periodKey !== null && !/^\d{4}-\d{2}$/.test(input.periodKey)) throw new Error("Kunci periode harus berbentuk YYYY-MM.");
+
+  const bodyText = input.bodyText.trim();
+  const db = await databaseOrThrow();
+  const existing = (await db
+    .select()
+    .from(financialStatementNotes)
+    .where(and(
+      eq(financialStatementNotes.noteKey, input.noteKey),
+      input.periodKey === null ? isNull(financialStatementNotes.periodKey) : eq(financialStatementNotes.periodKey, input.periodKey),
+    ))
+    .limit(1))[0];
+
+  if (existing) {
+    await db.update(financialStatementNotes)
+      .set({ bodyText, updatedByUserId: actor.id })
+      .where(eq(financialStatementNotes.id, existing.id));
+  } else {
+    await db.insert(financialStatementNotes).values({
+      noteKey: input.noteKey, periodKey: input.periodKey, bodyText, updatedByUserId: actor.id,
+    });
+  }
+
+  await writeAudit({
+    actorUserId: actor.id, action: "FINANCIAL_NOTE_UPDATED", entityType: "financial_statement_notes",
+    entityId: `${input.noteKey}:${input.periodKey ?? "BERLAKU_TERUS"}`,
+    beforeState: { bodyText: existing?.bodyText ?? "" }, afterState: { bodyText },
+    reason: `Pemutakhiran catatan ${note.title}`,
+  });
+
+  return { noteKey: input.noteKey, periodKey: input.periodKey, bodyText };
 }

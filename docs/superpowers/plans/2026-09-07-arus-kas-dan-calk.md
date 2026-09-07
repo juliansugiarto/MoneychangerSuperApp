@@ -24,7 +24,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 7 — Arus Kas masuk `buildFinancialStatements` beserta peringatannya
 - [x] Tugas 8 — Daftar catatan CALK dan panduannya di `shared/financialNotes.ts`
 - [x] Tugas 9 — Catatan bangkitan dari buku besar
-- [ ] Tugas 10 — Penyimpanan teks naratif dan prosedurnya
+- [x] Tugas 10 — Penyimpanan teks naratif dan prosedurnya
 - [ ] Tugas 11 — Halaman Laporan Keuangan dan navigasinya
 - [ ] Tugas 12 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
@@ -464,12 +464,12 @@ it("menandai reconciled salah ketika ada jurnal kas yang tidak terklasifikasi", 
 - Modify: `server/financialNotes.ts`, `server/routers.ts`
 - Test: `server/financialNotesText.test.ts`
 
-- [ ] **Step 1: Uji pemilihan teks** — `(noteKey, periodKey)` menang atas `(noteKey, NULL)`; tanpa
+- [x] **Step 1: Uji pemilihan teks** — `(noteKey, periodKey)` menang atas `(noteKey, NULL)`; tanpa
       keduanya catatannya kosong dan masuk daftar peringatan "CALK belum lengkap".
-- [ ] **Step 2: `getFinancialNotes` dan `saveFinancialNoteText`**, keduanya
+- [x] **Step 2: `getFinancialNotes` dan `saveFinancialNoteText`**, keduanya
       `controllerProcedure`, dengan audit `FINANCIAL_NOTE_UPDATED` yang menyimpan teks sebelum dan
       sesudahnya.
-- [ ] **Step 3:** Perintah mutu, lalu commit `"Teks naratif CALK: penyimpanan, pemilihan, dan audit"`.
+- [x] **Step 3:** Perintah mutu, lalu commit `"Teks naratif CALK: penyimpanan, pemilihan, dan audit"`.
 
 ---
 

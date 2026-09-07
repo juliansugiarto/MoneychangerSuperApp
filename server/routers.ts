@@ -124,6 +124,7 @@ import {
 import { fixedAssetCategories, fixedAssetTaxGroups } from "../drizzle/schema";
 import { buildCurrencyRevaluation, postCurrencyRevaluation } from "./currencyRevaluation";
 import { buildFinancialStatements } from "./financialStatements";
+import { buildFinancialNotes, saveFinancialNoteText } from "./financialNotes";
 import { listOutstandingSettlements, recordSettlement } from "./settlements";
 import { KUPVA_WORK_AREA, competencyCodesForArea } from "../shared/sdmCompetency";
 import {
@@ -614,6 +615,21 @@ export const appRouter = router({
       from: z.coerce.date(),
       to: z.coerce.date(),
     })).query(({ input }) => buildFinancialStatements(input)),
+
+    /**
+     * CALK. Pembacaannya menyusun catatan bangkitan dan naratif sekaligus; penyuntingan hanya
+     * menyentuh yang naratif — catatan bangkitan diturunkan dari buku besar dan menolak diketik.
+     */
+    notes: controllerProcedure.input(z.object({
+      from: z.coerce.date(),
+      to: z.coerce.date(),
+    })).query(({ input }) => buildFinancialNotes(input)),
+    saveNote: controllerProcedure.input(z.object({
+      noteKey: z.string().trim().min(1).max(60),
+      /** Null berarti teks yang berlaku terus, seperti kebijakan akuntansi. */
+      periodKey: z.string().regex(/^\d{4}-\d{2}$/, "Kunci periode harus berbentuk YYYY-MM.").nullable(),
+      bodyText: z.string().max(20000),
+    })).mutation(({ input, ctx }) => saveFinancialNoteText(input, ctx.user)),
 
     postOperations: controllerProcedure.input(z.object({
       from: z.coerce.date(),
