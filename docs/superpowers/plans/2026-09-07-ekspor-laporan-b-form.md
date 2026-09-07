@@ -18,7 +18,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 2 — Nilai tiap baris form dari laporan, murni dan teruji
 - [x] Tugas 3 — Penulis workbook tiga form
 - [x] Tugas 4 — Lembar penelusuran
-- [ ] Tugas 5 — Importir mengenali format resmi
+- [x] Tugas 5 — Importir mengenali format resmi
 - [ ] Tugas 6 — Uji pulang-pergi ekspor → impor
 - [ ] Tugas 7 — Gerbang tahun buku penuh dan snapshot bersumber buku besar
 - [ ] Tugas 8 — Rute unduhan, otorisasi, dan tombol pada halaman Laporan Keuangan
@@ -196,13 +196,13 @@ git commit -m "Struktur form B0002/B0003/B0004 sebagai data"
 
 **Files:** Modify `server/financialImport.ts`; Test `server/financialImportOfficial.test.ts`
 
-- [ ] **Step 1: Uji yang gagal** — berkas berformat resmi terbaca lewat label; berkas ber-Record No
+- [x] **Step 1: Uji yang gagal** — berkas berformat resmi terbaca lewat label; berkas ber-Record No
       **tetap terbaca persis seperti sebelumnya** (uji lama tidak boleh berubah); label yang tidak
       dikenal dikembalikan sebagai daftar pos yang dilewati beserta labelnya, bukan diabaikan.
-- [ ] **Step 2: Normalkan label** — huruf kecil, spasi tunggal, tanpa `(-)`, `(-/-)`, `(net)`.
+- [x] **Step 2: Normalkan label** — huruf kecil, spasi tunggal, tanpa `(-)`, `(-/-)`, `(net)`.
       Normalisasinya fungsi murni tersendiri supaya dapat diuji tanpa workbook.
-- [ ] **Step 3: Bercabang di depan** pada penanda `Nomor Form`; jalur lama tidak disentuh.
-- [ ] **Step 4:** Perintah mutu, lalu commit `"Impor mengenali tata letak form resmi"`.
+- [x] **Step 3: Bercabang di depan** pada penanda `Nomor Form`; jalur lama tidak disentuh.
+- [x] **Step 4:** Perintah mutu, lalu commit `"Impor mengenali tata letak form resmi"`.
 
 ---
 

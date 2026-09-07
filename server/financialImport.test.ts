@@ -13,7 +13,13 @@ describe("impor spreadsheet snapshot keuangan", () => {
     XLSX.utils.book_append_sheet(workbook, formSheet("B0003", "01", "Penjualan UKA", "4800199675"), "Laba Rugi");
     XLSX.utils.book_append_sheet(workbook, formSheet("B0004", "01", "Saldo positif", "250000000"), "Ekuitas");
     const parsed = parseFinancialWorkbook(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));
-    expect(parsed).toEqual({ profitLossRows: [{ code: "01", label: "Penjualan UKA", value: "4800199675" }], balanceSheetRows: [{ code: "101", label: "Kas Rupiah", value: "250000000" }], equityRows: [{ code: "01", label: "Saldo positif", value: "250000000" }] });
+    expect(parsed).toEqual({
+      profitLossRows: [{ code: "01", label: "Penjualan UKA", value: "4800199675" }],
+      balanceSheetRows: [{ code: "101", label: "Kas Rupiah", value: "250000000" }],
+      equityRows: [{ code: "01", label: "Saldo positif", value: "250000000" }],
+      // Jalur Record No tidak melewatkan pos apa pun; daftarnya kosong, bukan tidak ada.
+      skipped: [],
+    });
   });
 
   it("menolak workbook yang tidak memiliki salah satu form keuangan", () => {
