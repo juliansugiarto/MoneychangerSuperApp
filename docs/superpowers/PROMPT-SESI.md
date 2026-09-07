@@ -76,10 +76,18 @@ tidak. Enam koreksi terhadap sesi rancangan tercatat pada spec bagian "Hasil ver
 form asli" dan pada dua commit terkait.
 
 **Sesi rancangan Paket H juga sudah selesai** pada sesi yang sama, beserta enam keputusan kebijakan
-penggunanya. **Pekerjaan berikutnya adalah Tugas 1 Paket H** — bloknya di bawah, bagian Paket H.
+penggunanya dan sembilan tugasnya. **Pekerjaan berikutnya adalah Tugas 1 Paket H** — bloknya di
+bawah, bagian Paket H.
 
-Baseline uji yang benar-benar dijalankan 7 September 2026 sesudah Paket G:
-`Test Files 124 passed (124)`, `Tests 973 passed | 2 skipped (975)`.
+**Diperbaiki di luar paket mana pun, 7 September 2026:** batas jendela harian dan bulanan pada
+`server/operations.ts` memakai penanda tanggal sebagai batas instan, sehingga transaksi antara
+00:00 dan 07:00 WIB jatuh di luar hari bisnisnya sendiri — pada ketiga zona waktu proses yang
+diuji. Kini memakai `startOfOperationalDay`/`startOfOperationalMonth` pada
+`shared/regulatoryActionQueue.ts`. **Jangan menulis helper jendela waktu yang keempat.**
+
+Baseline uji yang benar-benar dijalankan 7 September 2026 sesudah Paket G dan perbaikan jendela
+waktu: `Test Files 125 passed (125)`, `Tests 985 passed | 2 skipped (987)`. Hijau pada `TZ=UTC`
+maupun `TZ=Asia/Jakarta`.
 
 **Basis data lokal `moneychanger` kini juga memuat data peragaan Paket G:** satu baris
 `company_profile` (Sandi Pelapor placeholder `000000000`) dan satu `financial_statement_snapshots`
@@ -217,7 +225,7 @@ diperagakan end-to-end pada basis data lokal: ekspor tahun buku penuh dari buku 
 penelusuran pos ke akun, importir yang mengenali tata letak resmi, dan snapshot bersumber buku
 besar yang tidak menggandakan dirinya.
 
-### Paket H — Profil transaksi dan pemantauan berkala (8 tugas)
+### Paket H — Profil transaksi dan pemantauan berkala (9 tugas)
 
 Sesi rancangannya selesai 7 September 2026; spec `specs/2026-09-07-profil-transaksi-pemantauan-design.md`
 dan rencana `plans/2026-09-07-profil-transaksi-pemantauan.md` sudah ada, beserta enam keputusan
