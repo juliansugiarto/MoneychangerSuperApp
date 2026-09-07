@@ -163,9 +163,32 @@ Fakta SAK EP dan kelompok pajak DJP pada bagian "Fakta yang sudah diverifikasi" 
 diverifikasi dari naskah aslinya — pakai apa adanya, jangan diturunkan ulang atau dicari lagi.
 ```
 
-### Paket F — Arus Kas dan CALK (sesi rancangan dulu)
+### Paket F1 — Kas valuta asing dan revaluasi kurs — **SELESAI 7 September 2026**
 
-Pakai **Prompt A** dengan `<PAKET>` = `F` dan `<NAMA-BERKAS>` = `arus-kas-dan-calk`.
+Spec `specs/2026-09-05-kas-valas-revaluasi-kurs-design.md`, rencana
+`plans/2026-09-05-kas-valas-revaluasi-kurs.md`. Seluruh sepuluh tugasnya sudah dikerjakan dan
+diperagakan end-to-end pada basis data lokal.
+
+### Paket F2 — Arus Kas dan CALK (sesi rancangan dulu)
+
+Pakai **Prompt A** dengan `<PAKET>` = `F2` dan `<NAMA-BERKAS>` = `arus-kas-dan-calk`.
+Tambahkan baris ini di akhir prompt:
+
+```
+Empat keputusan rancangan F2 sudah diambil pengguna pada sesi rancangan 5 September 2026 dan
+tercatat pada ROADMAP bagian "Paket F2 — Yang sudah diputuskan". Pakai apa adanya, JANGAN
+ditanyakan ulang: kas dan setara kas = 1-1110 + 1-1120 + 1-1220 (1-1210 adalah persediaan, bukan
+kas); Arus Kas mengikuti rentang tanggal bebas seperti ketiga laporan lain; CALK hibrida (angka
+dibangkitkan, narasi tersimpan); bagian investasi dibaca dari `sourceType` PEROLEHAN_ASET /
+PELEPASAN_ASET secara bruto; dan ada keranjang "Belum terklasifikasi" yang terlihat beserta
+penanda `reconciled`.
+
+Yang masih perlu diputuskan sesi rancangannya: daftar catatan CALK yang wajib ada, tempat
+penyimpanan teksnya, dan bentuk panelnya.
+
+Paket F1 sudah menyediakan `CASH_ACCOUNTS` di `shared/currencyRevaluation.ts` dan jurnal
+`REVALUASI_KURS` per periode — keduanya masukan langsung baris "Pengaruh perubahan kurs atas kas".
+```
 
 ### Paket G — Ekspor B0002/B0003/B0004 (sesi rancangan dulu)
 
