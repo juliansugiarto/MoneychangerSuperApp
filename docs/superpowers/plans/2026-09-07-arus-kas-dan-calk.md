@@ -489,7 +489,10 @@ it("menandai reconciled salah ketika ada jurnal kas yang tidak terklasifikasi", 
       CALK (bagian yang dapat dilipat; naratif punya tombol sunting dan panduannya, bangkitan tidak).
 - [x] **Step 3: Rute, menu, ikon, dan `pageByPath`.** Uji navigasi akan gagal bila salah satunya
       tertinggal — itu memang gunanya.
-- [ ] **Step 4: Verifikasi visual** *(menunggu pengguna login; kode sudah terpasang)* kedua kartu baru dan halaman lama yang kehilangan tabnya.
+- [x] **Step 4: Verifikasi visual** — dijalankan 7 September 2026 pada `localhost:3000` sesudah
+      pengguna login. Arus Kas, CALK, dan Buku Besar yang kehilangan tabnya terlihat benar.
+      Satu cacat ditemukan dan diperbaiki: nominal pada tabel CALK tampil mentah, kini memakai
+      `moneyColumns`. kedua kartu baru dan halaman lama yang kehilangan tabnya.
       Login dilakukan pengguna sendiri; mintalah pada giliran itu.
 - [x] **Step 5:** Perintah mutu, lalu commit `"Halaman Laporan Keuangan: lima laporan dan CALK"`.
 

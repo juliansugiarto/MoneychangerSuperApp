@@ -95,7 +95,7 @@ Rencana: `plans/2026-09-07-arus-kas-dan-calk.md`
 - [x] Tugas 8 — Daftar catatan CALK dan panduannya di `shared/financialNotes.ts`
 - [x] Tugas 9 — Catatan bangkitan dari buku besar
 - [x] Tugas 10 — Penyimpanan teks naratif dan prosedurnya
-- [x] Tugas 11 — Halaman Laporan Keuangan dan navigasinya *(verifikasi visual di layar menunggu login pengguna)*
+- [x] Tugas 11 — Halaman Laporan Keuangan dan navigasinya
 - [x] Tugas 12 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 **Data uji paket F2 pada `moneychanger` sengaja dibiarkan**, seperti data paket E dan F1: dua
