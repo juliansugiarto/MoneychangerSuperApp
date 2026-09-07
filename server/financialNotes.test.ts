@@ -149,3 +149,27 @@ describe("catatan CALK yang dibangkitkan", () => {
     expect(noteOf(await buildGeneratedNotes(range), "TRANSAKSI_NONKAS").table.rows).toHaveLength(0);
   });
 });
+
+describe("kolom uang pada tabel catatan", () => {
+  it("menandai kolom Rupiah, dan tidak menandai kurs maupun kuantitas valuta", async () => {
+    // Kolom kurs diformat bergaya Rupiah akan kehilangan desimal yang justru menjadi buktinya —
+    // pemeriksa menurunkan ulang nilai penilaian dari kuantitas dikali kurs itu.
+    mockDb();
+    const notes = await buildGeneratedNotes(range);
+    const selisihKurs = noteOf(notes, "SELISIH_KURS");
+    expect(selisihKurs.table.moneyColumns).toEqual([4, 5, 6]);
+    expect(selisihKurs.table.columns[2]).toBe("Kurs tengah");
+
+    const persediaan = noteOf(notes, "PERSEDIAAN_UKA");
+    expect(persediaan.table.moneyColumns).toEqual([5]);
+  });
+
+  it("tidak pernah menunjuk kolom yang tidak ada", async () => {
+    mockDb();
+    for (const note of await buildGeneratedNotes(range)) {
+      for (const index of note.table.moneyColumns) {
+        expect(index).toBeLessThan(note.table.columns.length);
+      }
+    }
+  });
+});

@@ -31,7 +31,16 @@ import { accountBalancesFor, dbDate, loadLines } from "./ledgerOperations";
 import { databaseOrThrow, retryTransientDatabaseRead, writeAudit } from "./operations";
 import { listOutstandingSettlements } from "./settlements";
 
-export type NoteTable = { columns: string[]; rows: string[][] };
+export type NoteTable = {
+  columns: string[];
+  rows: string[][];
+  /**
+   * Indeks kolom yang berisi Rupiah, supaya klien memformatnya seperti seluruh angka uang lain di
+   * aplikasi. Kuantitas valuta, kurs, dan tanggal sengaja **tidak** termasuk: memformat kurs
+   * 16300.000000 bergaya Rupiah akan memotong desimal yang justru menjadi buktinya.
+   */
+  moneyColumns: number[];
+};
 
 export type GeneratedNote = FinancialNoteDefinition & {
   kind: "BANGKITAN";
@@ -112,7 +121,7 @@ function cashNote(cumulative: { accountCode: string; balance: bigint }[], fxLine
 
   return {
     ...definition("KAS_DAN_SETARA_KAS"), kind: "BANGKITAN",
-    table: { columns: ["Akun", "Nama", "Saldo"], rows },
+    table: { columns: ["Akun", "Nama", "Saldo"], rows, moneyColumns: [2] },
   };
 }
 
@@ -135,7 +144,7 @@ function inventoryNote(
 
   return {
     ...definition("PERSEDIAAN_UKA"), kind: "BANGKITAN",
-    table: { columns: ["Mata uang", "Kuantitas", "Tanggal opname", "Kurs tengah", "Tanggal kurs", "Nilai Rupiah"], rows },
+    table: { columns: ["Mata uang", "Kuantitas", "Tanggal opname", "Kurs tengah", "Tanggal kurs", "Nilai Rupiah"], rows, moneyColumns: [5] },
     ...(rows.length && valued.toFixed(2) !== money(carrying)
       ? { warning: `Jumlah penilaian (${valued.toFixed(2)}) berbeda dari saldo 1-1210 (${money(carrying)}). Periode setelah penilaian terakhir kemungkinan belum dinilai.` }
       : {}),
@@ -172,7 +181,7 @@ function fixedAssetNote(assets: any[], depreciation: any[]): GeneratedNote {
 
   return {
     ...definition("ASET_TETAP"), kind: "BANGKITAN",
-    table: { columns: ["Aset", "Kelompok", "Perolehan", "Harga perolehan", "Akumulasi", "Nilai buku", "Umur manfaat", "Beban periode", "Status"], rows },
+    table: { columns: ["Aset", "Kelompok", "Perolehan", "Harga perolehan", "Akumulasi", "Nilai buku", "Umur manfaat", "Beban periode", "Status"], rows, moneyColumns: [3, 4, 5, 7] },
   };
 }
 
@@ -197,7 +206,7 @@ function payableNote(cumulative: { accountCode: string; balance: bigint }[], pay
 
   return {
     ...definition("KEWAJIBAN_LAIN_LAIN"), kind: "BANGKITAN",
-    table: { columns: ["Asal", "Keterangan", "Tanggal", "Nilai asal", "Sudah dilunasi", "Sisa terutang"], rows },
+    table: { columns: ["Asal", "Keterangan", "Tanggal", "Nilai asal", "Sudah dilunasi", "Sisa terutang"], rows, moneyColumns: [3, 4, 5] },
     ...(total.toFixed(2) !== money(carrying)
       ? { warning: `Jumlah sisa terutang (${total.toFixed(2)}) berbeda dari saldo 2-1900 (${money(carrying)}). Ada beban yang belum dijurnal, atau jurnal yang menyentuh 2-1900 di luar modulnya.` }
       : {}),
@@ -208,7 +217,7 @@ function equityNote(cumulative: { accountCode: string; balance: bigint }[]): Gen
   const rows = ["3-1100", "3-2100", "3-4100"].map((code) => [code, findAccount(code)?.name ?? code, money(balanceOf(cumulative, code))]);
   return {
     ...definition("EKUITAS"), kind: "BANGKITAN",
-    table: { columns: ["Akun", "Nama", "Saldo"], rows },
+    table: { columns: ["Akun", "Nama", "Saldo"], rows, moneyColumns: [2] },
   };
 }
 
@@ -224,7 +233,7 @@ function revenueExpenseNote(
 
   return {
     ...definition("PENDAPATAN_DAN_BEBAN"), kind: "BANGKITAN",
-    table: { columns: ["Akun", "Nama", "Periode berjalan", "Pembanding"], rows },
+    table: { columns: ["Akun", "Nama", "Periode berjalan", "Pembanding"], rows, moneyColumns: [2, 3] },
   };
 }
 
@@ -240,7 +249,7 @@ function fxDifferenceNote(revaluations: any[], currencyById: Map<number, string>
   ]);
   return {
     ...definition("SELISIH_KURS"), kind: "BANGKITAN",
-    table: { columns: ["Mata uang", "Saldo valuta", "Kurs tengah", "Tanggal kurs", "Nilai sebelum", "Nilai sesudah", "Selisih"], rows },
+    table: { columns: ["Mata uang", "Saldo valuta", "Kurs tengah", "Tanggal kurs", "Nilai sebelum", "Nilai sesudah", "Selisih"], rows, moneyColumns: [4, 5, 6] },
   };
 }
 
@@ -276,7 +285,7 @@ function nonCashNote(
 
   return {
     ...definition("TRANSAKSI_NONKAS"), kind: "BANGKITAN",
-    table: { columns: ["Jenis", "Keterangan", "Tanggal", "Nilai belum dibayar"], rows },
+    table: { columns: ["Jenis", "Keterangan", "Tanggal", "Nilai belum dibayar"], rows, moneyColumns: [3] },
   };
 }
 

@@ -422,14 +422,23 @@ function NotesCard({
                         <div className="overflow-x-auto">
                           <table className="w-full min-w-[560px] text-left text-sm">
                             <thead className="border-b border-[#dce6f0] text-xs uppercase tracking-wide text-[#475569]">
-                              <tr>{note.table.columns.map((column) => <th key={column} className="px-2 py-2">{column}</th>)}</tr>
+                              <tr>{note.table.columns.map((column, columnIndex) => (
+                                <th key={column} className={note.table.moneyColumns.includes(columnIndex) ? "px-2 py-2 text-right" : "px-2 py-2"}>{column}</th>
+                              ))}</tr>
                             </thead>
                             <tbody>
                               {note.table.rows.map((row, rowIndex) => (
                                 <tr key={rowIndex} className="border-b border-[#eef2f7]">
-                                  {row.map((cell, cellIndex) => (
-                                    <td key={cellIndex} className={cellIndex === 0 ? "px-2 py-2 text-[#475569]" : "px-2 py-2 tabular-nums text-[#475569]"}>{cell}</td>
-                                  ))}
+                                  {row.map((cell, cellIndex) => {
+                                    // Kolom Rupiah diformat seperti seluruh angka uang lain di aplikasi; kuantitas
+                                    // valuta, kurs, dan tanggal dibiarkan apa adanya karena desimalnya itulah buktinya.
+                                    const isMoney = note.table.moneyColumns.includes(cellIndex);
+                                    return (
+                                      <td key={cellIndex} className={isMoney ? "px-2 py-2 text-right tabular-nums text-[#475569]" : "px-2 py-2 text-[#475569]"}>
+                                        {isMoney ? formatRupiah(cell) : cell}
+                                      </td>
+                                    );
+                                  })}
                                 </tr>
                               ))}
                             </tbody>
