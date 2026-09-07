@@ -129,7 +129,8 @@ Rencana: `plans/2026-09-07-profil-transaksi-pemantauan.md`
 - [ ] Tugas 5 — Worklist pemantauan: query, otorisasi, dan batas "hanya mencatat"
 - [ ] Tugas 6 — Penulis peninjauan: `recordCustomerProfileReview` beserta auditnya
 - [ ] Tugas 7 — Halaman Pemantauan Profil Nasabah
-- [ ] Tugas 8 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+- [ ] Tugas 8 — `profileMismatch` menjadi perbandingan sungguhan pada jalur transaksi
+- [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 **Keputusan pengguna 7 September 2026 yang mengikat:** deklarasi = nilai + frekuensi + mata uang;
 ambang penyimpangan **nilai bulanan ≥ deklarasi × 2**; mata uang tak terdeklarasi alasan

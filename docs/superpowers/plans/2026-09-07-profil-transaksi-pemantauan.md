@@ -21,10 +21,11 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [ ] Tugas 5 — Worklist pemantauan: query, otorisasi, dan batas "hanya mencatat"
 - [ ] Tugas 6 — Penulis peninjauan: `recordCustomerProfileReview` beserta auditnya
 - [ ] Tugas 7 — Halaman Pemantauan Profil Nasabah
-- [ ] Tugas 8 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+- [ ] Tugas 8 — `profileMismatch` menjadi perbandingan sungguhan pada jalur transaksi
+- [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
-Urutannya mengikat: **1 dan 2 sebelum segalanya**; 3 sebelum 8; 4 sebelum 5; 5 sebelum 6 dan 7;
-6 sebelum 7. Tugas 8 terakhir.
+Urutannya mengikat: **1 dan 2 sebelum segalanya**; 3 sebelum 8 dan 9; 4 sebelum 5; 5 sebelum 6 dan
+7; 6 sebelum 7; 1 dan 3 sebelum 8. Tugas 9 terakhir.
 
 ## Keputusan pengguna yang mengikat
 
@@ -58,8 +59,11 @@ Ditetapkan 7 September 2026. **Jangan menurunkannya ulang dan jangan menawarnya.
 - **Migrasi hanya lewat `node scripts/tenant.mjs migrate-all`**, tidak pernah menjalankan `.sql`
   langsung. Dua basis data lokal saja: `moneychanger` dan `mc_t_abcvalas`. **Jangan menerapkan
   migrasi ke produksi.**
-- **Jangan mengubah `assessReviewRequirement`** (`server/operations.ts:219`). Spec bagian 7.
-- **Jangan memperbaiki `server/operations.ts:1444`** pada paket ini. Spec bagian 5.
+- **Jangan mengubah `assessReviewRequirement`** (`server/operations.ts:219`) **sebelum Tugas 8**,
+  dan pada Tugas 8 hanya sebatas yang tertulis di sana.
+- Batas jendela harian dan bulanan **sudah diperbaiki** 7 September 2026 di luar paket ini: ia
+  memakai `startOfOperationalDay`/`startOfOperationalMonth` pada `shared/regulatoryActionQueue.ts`.
+  **Pakai helper yang sama** untuk jendela bulanan pemantauan; jangan menulis yang ketiga.
 - **Jangan menulis ke `customers` dari jalur pemantauan.** Satu-satunya tulisan paket ini adalah
   baris `customer_profile_reviews`.
 - **Jangan menambahkan pelaporan otomatis** ke PPATK, BI, atau siapa pun.
@@ -86,8 +90,10 @@ Ditetapkan 7 September 2026. **Jangan menurunkannya ulang dan jangan menawarnya.
 | `server/customerProfileMonitoring.authorization.test.ts` | Uji otorisasi dan batas "hanya mencatat" | 5, 6 |
 | `client/src/pages/PemantauanProfil.tsx` | Halaman worklist Controller | 7 |
 | `client/src/App.tsx`, `shared/backOfficeNavigation.ts` | Rute dan menu | 7 |
-| `server/customerProfileScenario.test.ts` | Skenario menyeluruh | 8 |
-| `docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md`, `docs/SKEMA-DATABASE-PROJECT.md` | Perilaku dan skema yang berubah | 8 |
+| `server/operations.ts` | `profileMismatch` membandingkan aktivitas terhadap profil | 8 |
+| `server/profileMismatchReview.test.ts` | Uji bendera baru dan bendera lama yang tidak berubah | 8 |
+| `server/customerProfileScenario.test.ts` | Skenario menyeluruh | 9 |
+| `docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md`, `docs/SKEMA-DATABASE-PROJECT.md` | Perilaku dan skema yang berubah | 9 |
 
 ---
 
@@ -235,7 +241,35 @@ Aturan `CLAUDE.md` "Fitur Harus Punya Sumber Data": **kolomnya tidak boleh ada t
 
 ---
 
-### Task 8: Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+### Task 8: `profileMismatch` menjadi perbandingan sungguhan pada jalur transaksi
+
+**Files:** Modify `server/operations.ts`; Test `server/profileMismatchReview.test.ts`
+
+Menutup temuan yang dicatat spec bagian 2: hari ini `profileMismatch` berbunyi
+`profileStatus === "RESTRICTED" || riskLevel === "HIGH"` — dua kolom kategori yang diisi manusia,
+bukan perbandingan aktivitas terhadap profil. Nasabah `LOW` yang bertransaksi sepuluh kali lipat
+kebiasaannya tidak pernah menyalakannya.
+
+**Batas yang disetujui pengguna 7 September 2026:** transaksi yang menyimpang **dialirkan ke
+review**, sama seperti ambang setara USD yang sudah ada. Ia **tidak memblokir** transaksi dan tidak
+mengubah data nasabah. Bila ini terasa mengubah alur kasir lebih jauh dari yang dikehendaki,
+**berhenti dan laporkan** sebelum melanjutkan.
+
+- [ ] **Step 1: Uji yang gagal** — nasabah `LOW` berprofil terdeklarasi yang akumulasi bulanannya
+      mencapai dua kali lipat menyalakan review beserta alasannya; nasabah yang sama di bawah ambang
+      tidak; nasabah **tanpa deklarasi** tidak menyalakannya (kekosongan bukan penyimpangan pada
+      jalur transaksi — ia urusan worklist, bukan urusan kasir).
+- [ ] **Step 2: Uji bahwa bendera lama tidak berubah** — `RESTRICTED` dan `HIGH` tetap menyalakan
+      review persis seperti sebelumnya, dan ketiga ambang yang sudah ada
+      (`underlyingMonthlyThreshold.test.ts`) tetap hijau tanpa disunting.
+- [ ] **Step 3: Alirkan `assessProfileDeviation`** dari Tugas 1 ke dalam `assessReviewRequirement`,
+      menambah alasan `AKTIVITAS_MENYIMPANG_DARI_PROFIL`. Fungsi murni Tugas 1 **dipakai apa
+      adanya**; jangan menyalin aturannya ke dalam `operations.ts`.
+- [ ] **Step 4:** Perintah mutu, lalu commit `"Ketidaksesuaian profil menjadi perbandingan sungguhan"`.
+
+---
+
+### Task 9: Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 **Files:** Create `server/customerProfileScenario.test.ts`; Modify panduan A–Z, skema database, ROADMAP
 

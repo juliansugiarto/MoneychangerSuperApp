@@ -179,10 +179,13 @@ const monthStart = new Date(businessDate.getFullYear(), businessDate.getMonth(),
 produksi (UTC) dan pada mesin pengembangan WIB keduanya kebetulan menghasilkan bulan yang benar;
 pada zona waktu **negatif** ia memundurkan bulan satu langkah.
 
-Paket ini **tidak memperbaiki baris itu** — ia bukan temuan paket ini dan menyentuhnya berarti
-mengubah jalur transaksi. Yang dilakukan: jendela bulanan pemantauan memakai **satu helper bersama
-yang diuji**, bukan salinan ketiga dari pola yang sama, dan ujinya menyebut zona waktu negatif
-secara eksplisit. Temuan pada baris 1444 dicatat di sini agar tidak hilang.
+**Sudah diperbaiki 7 September 2026, di luar paket ini.** Penyelidikan memperlihatkan cakupannya
+lebih luas daripada dugaan awal: batas **harian** salah pada ketiga zona waktu proses yang diuji,
+bukan hanya batas bulanan, dan akar yang sama juga mengenai jendela "hari ini" pada dasbor
+operasional. Ketiganya kini memakai `startOfOperationalDay`/`startOfOperationalMonth` pada
+`shared/regulatoryActionQueue.ts`, mengikuti `endOfOperationalDay` yang sudah ada di sana.
+
+Paket ini **memakai helper yang sama** untuk jendela bulanan pemantauan; jangan menulis yang ketiga.
 
 ### 6. Worklist Controller — hanya mencatat
 
@@ -198,12 +201,16 @@ Yang **tidak** dilakukannya, dan diuji bahwa tidak dilakukannya:
 
 Satu-satunya tulisannya adalah baris `customer_profile_reviews` saat Controller menutup peninjauan.
 
-### 7. Jalur transaksi sengaja tidak disentuh
+### 7. Jalur transaksi disentuh paling akhir, dan hanya untuk menyalurkan ke review
 
-`assessReviewRequirement` **tidak diubah** pada paket ini, meski `profileMismatch` di dalamnya
-memang lemah (Masalah 2). Alasannya keputusan 6: menyalurkan penyimpangan profil ke sana akan
-membuat transaksi berpindah ke `PENDING_REVIEW`, dan itu bukan "hanya mencatat" — itu mengubah alur
-kerja kasir. Bila kelak diinginkan, ia perubahan kecil di atas fungsi murni yang paket ini bangun.
+Rancangan awal menyisihkan `assessReviewRequirement` sepenuhnya. Pengguna menyetujui 7 September
+2026 bahwa `profileMismatch` (Masalah 2) **ikut diperbaiki**, sebagai **Tugas 8** — sesudah kolom
+deklarasi dan fungsi murninya ada, karena sebelum itu tidak ada yang dapat dibandingkan.
+
+Batasnya: transaksi yang menyimpang **dialirkan ke review**, persis seperti ambang setara USD yang
+sudah ada sejak awal. Ia tetap **tidak memblokir** transaksi dan tetap tidak mengubah data nasabah,
+sehingga keputusan 6 tetap utuh. Nasabah **tanpa deklarasi tidak menyalakannya** pada jalur
+transaksi: kekosongan profil urusan worklist Controller, bukan urusan kasir di depan nasabah.
 
 ---
 
@@ -214,8 +221,7 @@ kerja kasir. Bila kelak diinginkan, ia perubahan kecil di atas fungsi murni yang
 - **Tidak ada pemblokiran transaksi.** Alat bantu penyaringan, sama seperti pencocokan watchlist.
 - **Tidak ada pelaporan otomatis ke PPATK maupun BI.** Penyimpangan profil bukan LTKM; yang menilai
   kecurigaan adalah manusia.
-- **`assessReviewRequirement` tidak diubah** — bagian 7.
-- **Baris `operations.ts:1444` tidak diperbaiki** — bagian 5.
+- **Nasabah tanpa deklarasi tidak menyalakan review pada jalur transaksi** — bagian 7.
 
 ---
 
