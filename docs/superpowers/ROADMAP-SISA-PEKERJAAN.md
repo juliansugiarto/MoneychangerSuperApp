@@ -91,7 +91,7 @@ Rencana: `plans/2026-09-07-arus-kas-dan-calk.md`
 - [x] Tugas 4 — Prosedur tRPC dan panel Pelunasan pada tab Modal & Bank
 - [x] Tugas 5 — `classifyCashEntry` murni di `shared/cashFlow.ts`
 - [x] Tugas 6 — `buildCashFlowStatement` dan penanda `reconciled`
-- [ ] Tugas 7 — Arus Kas masuk `buildFinancialStatements` beserta peringatannya
+- [x] Tugas 7 — Arus Kas masuk `buildFinancialStatements` beserta peringatannya
 - [ ] Tugas 8 — Daftar catatan CALK dan panduannya di `shared/financialNotes.ts`
 - [ ] Tugas 9 — Catatan bangkitan dari buku besar
 - [ ] Tugas 10 — Penyimpanan teks naratif dan prosedurnya

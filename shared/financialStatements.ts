@@ -10,9 +10,32 @@
  */
 
 import { CHART_OF_ACCOUNTS, type AccountType } from "./chartOfAccounts";
-import { formatAmount } from "./ledger";
+import { formatAmount, isoDay } from "./ledger";
 
 export type StatementAccount = { accountCode: string; balance: bigint };
+
+const DAY_MS = 86_400_000;
+
+const asUtcDay = (value: Date | string) => new Date(`${isoDay(value)}T00:00:00Z`);
+
+/** Tanggal `days` hari dari `value`, sebagai "YYYY-MM-DD". */
+export const shiftDays = (value: Date | string, days: number) =>
+  new Date(asUtcDay(value).getTime() + days * DAY_MS).toISOString().slice(0, 10);
+
+/**
+ * Periode pembanding: rentang sepanjang periode berjalan yang berakhir sehari sebelum periode itu
+ * mulai. SAK EP Bab 3 mewajibkan angka pembanding untuk setiap jumlah yang disajikan, dan
+ * membandingkan sebulan dengan setahun akan menyesatkan pembacanya.
+ *
+ * Dipindahkan ke `shared/` pada paket F2 tanpa perubahan perilaku: Arus Kas memakai rentang
+ * pembanding yang sama persis dengan ketiga laporan lain, dan dua salinan aturan rentang yang dapat
+ * berbeda pendapat adalah persis kekeliruan yang tidak terlihat dari laporan mana pun.
+ */
+export function priorRange(from: Date | string, to: Date | string) {
+  const days = Math.round((asUtcDay(to).getTime() - asUtcDay(from).getTime()) / DAY_MS) + 1;
+  return { from: shiftDays(from, -days), to: shiftDays(from, -1) };
+}
+
 
 export type StatementLine = {
   accountCode: string;
@@ -224,7 +247,19 @@ export function buildEquityStatement(
  * Disajikan sebagai peringatan, bukan disembunyikan atau ditambal pos penyeimbang: laporan yang
  * terlihat rapi padahal dasarnya belum lengkap justru lebih berbahaya di hadapan pemeriksa.
  */
-export function statementWarnings(balanceSheet: BalanceSheet, current: StatementAccount[]): string[] {
+export type CashFlowWarningInput = {
+  reconciled: boolean;
+  difference: string;
+  unclassifiedEntryNumbers: string[];
+  /** Benar bila 2-1900 bertambah pada rentang ini tanpa satu pun pelunasan tercatat. */
+  payableGrewUnpaid: boolean;
+};
+
+export function statementWarnings(
+  balanceSheet: BalanceSheet,
+  current: StatementAccount[],
+  cashFlow?: CashFlowWarningInput,
+): string[] {
   const warnings: string[] = [];
   const now = balanceMap(current);
 
@@ -239,6 +274,24 @@ export function statementWarnings(balanceSheet: BalanceSheet, current: Statement
   }
   if ((now.get("3-1100") ?? 0n) === 0n) {
     warnings.push("Modal disetor belum tercatat pada buku besar.");
+  }
+
+  if (cashFlow) {
+    if (cashFlow.unclassifiedEntryNumbers.length) {
+      warnings.push(
+        `${cashFlow.unclassifiedEntryNumbers.length} jurnal kas belum terklasifikasi pada Arus Kas (${cashFlow.unclassifiedEntryNumbers.slice(0, 5).join(", ")}${cashFlow.unclassifiedEntryNumbers.length > 5 ? ", …" : ""}). Periksa akun lawannya sebelum laporan ini dipakai.`,
+      );
+    }
+    if (!cashFlow.reconciled) {
+      warnings.push(
+        `Arus Kas belum sejalan dengan pergerakan kas sebenarnya — selisih ${cashFlow.difference}. Periksa buku besarnya; selisih ini sengaja tidak ditutup dengan pos penyeimbang.`,
+      );
+    }
+    if (cashFlow.payableGrewUnpaid) {
+      warnings.push(
+        "Beban dan perolehan aset tercatat tetapi belum ada yang dibayar. Catat pelunasannya pada tab Modal & Bank agar Arus Kas memperlihatkan pengeluaran yang sebenarnya.",
+      );
+    }
   }
   return warnings;
 }

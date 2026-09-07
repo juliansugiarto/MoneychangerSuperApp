@@ -5,6 +5,8 @@ import {
   buildBalanceSheet,
   buildEquityStatement,
   buildIncomeStatement,
+  priorRange,
+  shiftDays,
   statementWarnings,
   type BalanceSheet,
   type EquityStatement,
@@ -13,23 +15,9 @@ import {
   type StatementSection,
 } from "../shared/financialStatements";
 import { calendarDay, formatAmount, isoDay } from "../shared/ledger";
+import { buildCashFlowStatement } from "./cashFlow";
 import { accountBalancesFor } from "./ledgerOperations";
 import { databaseOrThrow, retryTransientDatabaseRead } from "./operations";
-
-const DAY_MS = 86_400_000;
-
-const asUtcDay = (value: Date | string) => new Date(`${isoDay(value)}T00:00:00Z`);
-const shiftDays = (value: Date | string, days: number) => new Date(asUtcDay(value).getTime() + days * DAY_MS).toISOString().slice(0, 10);
-
-/**
- * Periode pembanding: rentang sepanjang periode berjalan yang berakhir sehari sebelum periode itu
- * mulai. SAK EP Bab 3 mewajibkan angka pembanding untuk setiap jumlah yang disajikan, dan
- * membandingkan sebulan dengan setahun akan menyesatkan pembacanya.
- */
-function priorRange(from: Date | string, to: Date | string) {
-  const days = Math.round((asUtcDay(to).getTime() - asUtcDay(from).getTime()) / DAY_MS) + 1;
-  return { from: shiftDays(from, -days), to: shiftDays(from, -1) };
-}
 
 const money = (value: bigint) => formatAmount(value);
 
@@ -125,6 +113,11 @@ export async function buildFinancialStatements(input: { from: Date; to: Date }) 
     const sheetNow = sinceClosingNow ? mergeForBalanceSheet(cumulativeNow, sinceClosingNow) : cumulativeNow;
     const sheetPrior = sinceClosingPrior ? mergeForBalanceSheet(cumulativePrior, sinceClosingPrior) : cumulativePrior;
 
+    const [cashFlow, cashFlowPrior] = await Promise.all([
+      buildCashFlowStatement({ from: input.from, to: input.to }),
+      buildCashFlowStatement(prior),
+    ]);
+
     const income = buildIncomeStatement(periodNow, periodPrior);
     const cumulativeIncome = buildIncomeStatement(sheetNow, sheetPrior);
     const balanceSheet = buildBalanceSheet(sheetNow, sheetPrior, cumulativeIncome);
@@ -136,7 +129,19 @@ export async function buildFinancialStatements(input: { from: Date; to: Date }) 
       incomeStatement: renderIncome(income),
       balanceSheet: renderBalanceSheet(balanceSheet),
       equityStatement: renderEquity(equity),
-      warnings: statementWarnings(balanceSheet, sheetNow),
+      cashFlowStatement: cashFlow,
+      cashFlowComparative: cashFlowPrior,
+      warnings: statementWarnings(balanceSheet, sheetNow, {
+        reconciled: cashFlow.reconciled,
+        difference: cashFlow.difference,
+        unclassifiedEntryNumbers: cashFlow.unclassified.lines.flatMap((line) => line.entryNumbers),
+        // 2-1900 bertambah pada periode ini sementara tidak ada satu pun pelunasan yang dijurnal:
+        // beban dan aset tercatat, tetapi uangnya belum pernah keluar.
+        payableGrewUnpaid:
+          (periodNow.find((row) => row.accountCode === "2-1900")?.balance ?? 0n) > 0n
+          && cashFlow.operating.lines.every((line) => line.label !== "Pembayaran beban operasional")
+          && cashFlow.investing.lines.length === 0,
+      }),
       /** Akun yang punya saldo tetapi belum terpetakan ke form mana pun — seharusnya tidak pernah ada. */
       unmappedAccounts: unmapped(cumulativeNow),
     };

@@ -12,6 +12,7 @@ import {
   statementWarnings,
   type StatementAccount,
 } from "../shared/financialStatements";
+import { journalEntries } from "../drizzle/schema";
 import { formatAmount, parseAmount } from "../shared/ledger";
 import * as db from "./db";
 import { buildFinancialStatements } from "./financialStatements";
@@ -179,11 +180,20 @@ describe("neraca dan penutup laba tahunan", () => {
     const queue = [...options.closings];
     const chain = (rows: unknown[]): never => {
       const thenable = Promise.resolve(rows) as unknown as Record<string, unknown>;
-      for (const method of ["where", "orderBy", "limit"]) thenable[method] = () => chain(rows);
+      for (const method of ["where", "innerJoin", "orderBy", "limit"]) thenable[method] = () => chain(rows);
       return thenable as never;
     };
+    // Antrean `closings` hanya menjawab pembacaan `journal_entries`. Sejak paket F2,
+    // `buildFinancialStatements` ikut menyusun Arus Kas, yang membaca baris jurnal dan pelunasan —
+    // menjawab keduanya dari antrean yang sama akan menggeser urutannya dan membuat uji ini
+    // menguji hal lain tanpa terlihat.
     const getDb = vi.spyOn(db, "getDb").mockResolvedValue({
-      select: () => ({ from: () => chain((queue.length > 1 ? queue.shift() : queue[0]) ?? []) }),
+      select: () => ({
+        from: (table: unknown) =>
+          table === journalEntries
+            ? chain((queue.length > 1 ? queue.shift() : queue[0]) ?? [])
+            : chain([]),
+      }),
     } as never);
     const balances = vi.mocked(accountBalancesFor);
     balances.mockReset();
@@ -256,5 +266,61 @@ describe("neraca dan penutup laba tahunan", () => {
     expect(balances).toHaveBeenCalledWith({ to: "2026-05-31" });
     expect(balances).not.toHaveBeenCalledWith({ from: "2026-01-01", to: "2026-05-31" });
     getDb.mockRestore();
+  });
+
+  /**
+   * Arus Kas menyatu dengan ketiga laporan lain, bukan laporan terpisah dengan rentangnya sendiri.
+   * Rentang pembandingnya wajib sama persis: dua salinan aturan rentang yang dapat berbeda pendapat
+   * adalah kekeliruan yang tidak terlihat dari laporan mana pun.
+   */
+  it("membawa Arus Kas beserta pembandingnya pada rentang yang sama dengan ketiga laporan lain", async () => {
+    const { getDb } = setup({ closings: [[]], balances: {} });
+
+    const result = await buildFinancialStatements(range);
+
+    expect(result.cashFlowStatement.period).toEqual({ from: "2026-06-01", to: "2026-06-30" });
+    expect(result.cashFlowComparative.period).toEqual(result.comparativePeriod);
+    getDb.mockRestore();
+  });
+
+  it("memperingatkan bahwa beban dan aset tercatat tetapi belum ada yang dibayar", async () => {
+    // Persis keadaan basis data lokal sesudah paket E: 2-1900 berisi Rp 24.000.000 sementara kas
+    // Rupiah belum pernah bergerak sekali pun.
+    const { getDb } = setup({
+      closings: [[]],
+      balances: { "2026-06-01..2026-06-30": at({ "2-1900": "24000000.00" }) },
+    });
+
+    const result = await buildFinancialStatements(range);
+
+    expect(result.warnings.some((warning) => warning.includes("belum ada yang dibayar"))).toBe(true);
+    getDb.mockRestore();
+  });
+});
+
+describe("peringatan arus kas", () => {
+  const seimbang = buildBalanceSheet(kosong, kosong, buildIncomeStatement(kosong, kosong));
+
+  it("menyebutkan nomor jurnal yang belum terklasifikasi", () => {
+    const warnings = statementWarnings(seimbang, kosong, {
+      reconciled: true, difference: "0.00",
+      unclassifiedEntryNumbers: ["JU-202609-0006", "JU-202609-0007"],
+      payableGrewUnpaid: false,
+    });
+    expect(warnings.some((warning) => warning.includes("JU-202609-0006"))).toBe(true);
+  });
+
+  it("menyebutkan selisih rekonsiliasi sebagai peringatan, bukan menutupnya", () => {
+    const warnings = statementWarnings(seimbang, kosong, {
+      reconciled: false, difference: "4000000.00", unclassifiedEntryNumbers: [], payableGrewUnpaid: false,
+    });
+    expect(warnings.some((warning) => warning.includes("4000000.00") && warning.includes("penyeimbang"))).toBe(true);
+  });
+
+  it("diam ketika arus kasnya utuh", () => {
+    const warnings = statementWarnings(seimbang, kosong, {
+      reconciled: true, difference: "0.00", unclassifiedEntryNumbers: [], payableGrewUnpaid: false,
+    });
+    expect(warnings.filter((warning) => warning.includes("Arus Kas"))).toHaveLength(0);
   });
 });

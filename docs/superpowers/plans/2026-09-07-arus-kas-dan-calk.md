@@ -21,7 +21,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 4 — Prosedur tRPC dan panel Pelunasan pada tab Modal & Bank
 - [x] Tugas 5 — `classifyCashEntry` murni di `shared/cashFlow.ts`
 - [x] Tugas 6 — `buildCashFlowStatement` dan penanda `reconciled`
-- [ ] Tugas 7 — Arus Kas masuk `buildFinancialStatements` beserta peringatannya
+- [x] Tugas 7 — Arus Kas masuk `buildFinancialStatements` beserta peringatannya
 - [ ] Tugas 8 — Daftar catatan CALK dan panduannya di `shared/financialNotes.ts`
 - [ ] Tugas 9 — Catatan bangkitan dari buku besar
 - [ ] Tugas 10 — Penyimpanan teks naratif dan prosedurnya
@@ -417,14 +417,14 @@ it("menandai reconciled salah ketika ada jurnal kas yang tidak terklasifikasi", 
 - Modify: `server/financialStatements.ts`
 - Test: `server/financialStatements.test.ts`
 
-- [ ] **Step 1: Pindahkan `priorRange`** dari `server/financialStatements.ts:28` ke
+- [x] **Step 1: Pindahkan `priorRange`** dari `server/financialStatements.ts:28` ke
       `shared/financialStatements.ts` apa adanya, beserta komentarnya. Perilakunya tidak berubah;
       uji yang ada menjaganya.
-- [ ] **Step 2: Tambahkan `cashFlowStatement`** beserta pembandingnya ke keluaran
+- [x] **Step 2: Tambahkan `cashFlowStatement`** beserta pembandingnya ke keluaran
       `buildFinancialStatements`, memakai rentang yang sudah dihitung di sana.
-- [ ] **Step 3: Tiga peringatan baru** pada `statementWarnings` — spec bagian 5, termasuk peringatan
+- [x] **Step 3: Tiga peringatan baru** pada `statementWarnings` — spec bagian 5, termasuk peringatan
       2-1900 bertambah tanpa satu pun pelunasan.
-- [ ] **Step 4:** Perintah mutu, lalu commit `"Arus Kas menyatu dengan ketiga laporan lain"`.
+- [x] **Step 4:** Perintah mutu, lalu commit `"Arus Kas menyatu dengan ketiga laporan lain"`.
 
 ---
 
