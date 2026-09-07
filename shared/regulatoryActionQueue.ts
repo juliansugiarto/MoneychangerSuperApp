@@ -37,6 +37,81 @@ export function endOfOperationalDay(now: Date, timeZone: string = DEFAULT_OPERAT
   return new Date(endOfDayWallClock - offset);
 }
 
+/**
+ * Bagian tanggal-jam sebuah instan menurut zona operasional, beserta selisih zona terhadap UTC.
+ *
+ * Zona yang tidak dikenal runtime jatuh kembali ke zona bawaan, bukan ke zona proses — zona proses
+ * berbeda antara server produksi (UTC) dan mesin pengembangan (GMT+7), dan memakainya justru
+ * menghidupkan kembali kekeliruan yang helper ini ada untuk mencegahnya.
+ */
+function operationalParts(now: Date, timeZone: string): { year: number; month: number; day: number; offset: number } {
+  let parts: Record<string, string>;
+  try {
+    const formatter = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+    parts = Object.fromEntries(formatter.formatToParts(now).filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+  } catch {
+    if (timeZone === DEFAULT_OPERATIONAL_TIMEZONE) throw new Error(`Zona waktu tidak dikenal: ${timeZone}`);
+    return operationalParts(now, DEFAULT_OPERATIONAL_TIMEZONE);
+  }
+  const hour = parts.hour === "24" ? 0 : Number(parts.hour);
+  const wallClock = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), hour, Number(parts.minute), Number(parts.second));
+  return {
+    year: Number(parts.year),
+    month: Number(parts.month),
+    day: Number(parts.day),
+    offset: wallClock - Math.floor(now.getTime() / 1000) * 1000,
+  };
+}
+
+/**
+ * Instan saat sebuah tengah malam zona operasional terjadi.
+ *
+ * Selisih zona dihitung dua kali: sekali pada instan masukannya, lalu sekali lagi pada tebakan
+ * hasilnya. Zona Indonesia tidak mengenal DST sehingga sekali pun cukup, tetapi tebakan yang
+ * melintasi pergantian DST pada zona lain akan meleset satu jam tanpa langkah kedua ini.
+ */
+function operationalMidnight(now: Date, timeZone: string, year: number, month: number, day: number): Date {
+  const wallClock = Date.UTC(year, month - 1, day, 0, 0, 0, 0);
+  const guess = new Date(wallClock - operationalParts(now, timeZone).offset);
+  return new Date(wallClock - operationalParts(guess, timeZone).offset);
+}
+
+/**
+ * Awal hari kalender di zona waktu operasional, sebagai satu titik waktu absolut.
+ *
+ * Pasangan `endOfOperationalDay`, dan **bukan** pengganti `jakartaBusinessDate`: yang terakhir
+ * mengembalikan penanda tanggal untuk kolom `date`, sedangkan fungsi ini mengembalikan instan untuk
+ * membatasi kolom `datetime`. Memakai penanda tanggal sebagai batas instan menggeser jendelanya
+ * sebesar selisih zona — transaksi pukul 02:00 WIB jatuh di luar hari bisnisnya sendiri.
+ */
+export function startOfOperationalDay(now: Date, timeZone: string = DEFAULT_OPERATIONAL_TIMEZONE): Date {
+  const { year, month, day } = operationalParts(now, timeZone);
+  return operationalMidnight(now, timeZone, year, month, day);
+}
+
+/**
+ * Awal hari operasional berikutnya; batas atas eksklusif sebuah jendela harian.
+ *
+ * Dihitung dari tanggalnya, bukan dengan menambah 24 jam: pada zona ber-DST sebuah hari dapat
+ * sepanjang 23 atau 25 jam.
+ */
+export function startOfNextOperationalDay(now: Date, timeZone: string = DEFAULT_OPERATIONAL_TIMEZONE): Date {
+  const { year, month, day } = operationalParts(now, timeZone);
+  return operationalMidnight(now, timeZone, year, month, day + 1);
+}
+
+/** Awal bulan kalender di zona waktu operasional, sebagai satu titik waktu absolut. */
+export function startOfOperationalMonth(now: Date, timeZone: string = DEFAULT_OPERATIONAL_TIMEZONE): Date {
+  const { year, month } = operationalParts(now, timeZone);
+  return operationalMidnight(now, timeZone, year, month, 1);
+}
+
+/** Awal bulan berikutnya di zona waktu operasional; batas atas eksklusif sebuah jendela bulanan. */
+export function startOfNextOperationalMonth(now: Date, timeZone: string = DEFAULT_OPERATIONAL_TIMEZONE): Date {
+  const { year, month } = operationalParts(now, timeZone);
+  return operationalMidnight(now, timeZone, month === 12 ? year + 1 : year, month === 12 ? 1 : month + 1, 1);
+}
+
 export function getRegulatoryActionQueue(items: RegulatoryActionItem[], now = new Date(), timeZone: string = DEFAULT_OPERATIONAL_TIMEZONE) {
   const draft = items.filter((item) => item.status === "DRAFT");
   const prepared = items.filter((item) => item.status === "PREPARED");

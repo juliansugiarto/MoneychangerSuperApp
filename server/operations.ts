@@ -42,6 +42,7 @@ import {
 import { getDb } from "./db";
 import { knownDenominationsFor } from "../shared/currencyDenominations";
 import { PRIMARY_REVENUE_ROW_KEY } from "../shared/regulatoryForms";
+import { startOfOperationalDay, startOfNextOperationalDay, startOfOperationalMonth, startOfNextOperationalMonth } from "../shared/regulatoryActionQueue";
 import { isKnownSuspiciousIndicatorCode } from "../shared/suspiciousTransactionIndicators";
 import { buildSipesatCsv, buildSipesatInitialFileName, buildSipesatTriwulanFileName } from "../shared/sipesatExport";
 import { buildGoAmlLtktReportXml, buildGoAmlLtkmReportXml, type GoAmlCustomer, type GoAmlLtktLine, type GoAmlLtkmLine } from "../shared/goAmlExport";
@@ -1424,14 +1425,18 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     .where(and(eq(currencies.code, "USD"), eq(rateReferenceSnapshots.source, "BI_TRANSACTION_RATES"), eq(rateReferenceSnapshots.isDemo, false)))
     .orderBy(desc(rateReferenceSnapshots.referenceDate)).limit(1))[0]?.rate;
   const thresholds = await reviewThresholds();
-  const businessDate = jakartaBusinessDate(input.transactionAt);
-  const nextDate = nextBusinessDate(businessDate);
+  // Batas jendela akumulasi memakai **instan** awal hari operasional, bukan penanda tanggal.
+  // `jakartaBusinessDate` mengembalikan tengah malam UTC yang mewakili satu hari WIB — benar untuk
+  // kolom `date`, tetapi menggeser jendela `datetime` sebesar selisih zonanya, sehingga transaksi
+  // pukul 02:00 WIB jatuh di luar hari bisnisnya sendiri pada zona proses mana pun.
+  const dayStart = startOfOperationalDay(input.transactionAt);
+  const nextDayStart = startOfNextOperationalDay(input.transactionAt);
   const dailyCashTotal = input.paymentMethod === "CASH"
     ? (await db.select({ total: sql<string>`COALESCE(SUM(${exchangeTransactions.rupiahAmount}), 0)` }).from(exchangeTransactions).where(and(
       eq(exchangeTransactions.customerId, input.customerId),
       eq(exchangeTransactions.paymentMethod, "CASH"),
-      gte(exchangeTransactions.transactionAt, businessDate),
-      lt(exchangeTransactions.transactionAt, nextDate),
+      gte(exchangeTransactions.transactionAt, dayStart),
+      lt(exchangeTransactions.transactionAt, nextDayStart),
       inArray(exchangeTransactions.status, ["DRAFT", "PENDING_REVIEW", "APPROVED", "RETURNED", "COMPLETED"]),
       eq(exchangeTransactions.isDemo, false),
       eq(exchangeTransactions.isHistorical, false),
@@ -1441,8 +1446,8 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
 
   // Akumulasi sebulan berjalan untuk pelaku transaksi yang sama, seluruh metode pembayaran:
   // ketentuan underlying berlaku atas akumulasi per bulan, bukan per transaksi.
-  const monthStart = new Date(businessDate.getFullYear(), businessDate.getMonth(), 1);
-  const nextMonth = new Date(businessDate.getFullYear(), businessDate.getMonth() + 1, 1);
+  const monthStart = startOfOperationalMonth(input.transactionAt);
+  const nextMonth = startOfNextOperationalMonth(input.transactionAt);
   const monthlyRupiahBefore = (await db.select({ total: sql<string>`COALESCE(SUM(${exchangeTransactions.rupiahAmount}), 0)` }).from(exchangeTransactions).where(and(
     eq(exchangeTransactions.customerId, input.customerId),
     gte(exchangeTransactions.transactionAt, monthStart),
@@ -3106,11 +3111,13 @@ export async function reconcileStockOpname(input: { stockOpnameId: number; notes
 }
 
 export async function getOperationalDashboard() {
-  const start = jakartaBusinessDate();
+  // Instan awal hari operasional, bukan penanda tanggal: `transactionAt` kolom `datetime`, dan
+  // penanda tanggal menggeser jendelanya sehingga transaksi dini hari hilang dari dasbor harinya.
+  const start = startOfOperationalDay(new Date());
   try {
     const result = await retryTransientDatabaseRead(async () => {
       const db = await databaseOrThrow();
-    const end = nextBusinessDate(start);
+    const end = startOfNextOperationalDay(new Date());
     const [todayTransactions, cashBalancesResult, pendingReview, variances] = await Promise.all([
       db.select({ transaction: exchangeTransactions, customer: customers }).from(exchangeTransactions).innerJoin(customers, eq(exchangeTransactions.customerId, customers.id)).where(and(gte(exchangeTransactions.transactionAt, start), lt(exchangeTransactions.transactionAt, end), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false), eq(customers.isDemo, false), eq(customers.isHistorical, false))).orderBy(desc(exchangeTransactions.transactionAt)),
       listCashBalances(),
