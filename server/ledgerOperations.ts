@@ -555,7 +555,7 @@ export async function listJournalEntries(input?: { from?: Date; to?: Date; sourc
  * menormalkannya dua kali justru memundurkan batasnya satu hari, karena `dbDate` atas tanggal
  * tengah malam lokal membaca hari kalender UTC-nya yang sudah berbeda.
  */
-async function loadLines(from?: Date | string, to?: Date | string, accountCode?: string) {
+export async function loadLines(from?: Date | string, to?: Date | string, accountCode?: string) {
   const db = await databaseOrThrow();
   const conditions = [
     from ? gte(journalEntries.entryDate, dbDate(from)) : undefined,

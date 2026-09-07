@@ -20,7 +20,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 3 — `recordSettlement`: penulis pelunasan beserta pecahannya
 - [x] Tugas 4 — Prosedur tRPC dan panel Pelunasan pada tab Modal & Bank
 - [x] Tugas 5 — `classifyCashEntry` murni di `shared/cashFlow.ts`
-- [ ] Tugas 6 — `buildCashFlowStatement` dan penanda `reconciled`
+- [x] Tugas 6 — `buildCashFlowStatement` dan penanda `reconciled`
 - [ ] Tugas 7 — Arus Kas masuk `buildFinancialStatements` beserta peringatannya
 - [ ] Tugas 8 — Daftar catatan CALK dan panduannya di `shared/financialNotes.ts`
 - [ ] Tugas 9 — Catatan bangkitan dari buku besar
@@ -393,7 +393,7 @@ git commit -m "recordSettlement: pelunasan kewajiban dan penerimaan piutang bese
 - Consumes: `classifyCashEntry`, `accountBalancesFor`, baris jurnal beserta `sourceType`-nya, `ledger_settlements`.
 - Produces: `buildCashFlowStatement(input: { from: Date; to: Date })`. Dipakai tugas 7.
 
-- [ ] **Step 1: Tulis uji yang gagal** — termasuk yang ini, yang menjaga seluruh gunanya penanda:
+- [x] **Step 1: Tulis uji yang gagal** — termasuk yang ini, yang menjaga seluruh gunanya penanda:
 
 ```ts
 it("menandai reconciled salah ketika ada jurnal kas yang tidak terklasifikasi", async () => {
@@ -402,11 +402,11 @@ it("menandai reconciled salah ketika ada jurnal kas yang tidak terklasifikasi", 
 });
 ```
 
-- [ ] **Step 2: Baca baris jurnalnya**, jumlahkan delta kas per jurnal, ambil target pelunasan dari
+- [x] **Step 2: Baca baris jurnalnya**, jumlahkan delta kas per jurnal, ambil target pelunasan dari
       `ledger_settlements` lewat `KAS-{id}`/`BANK-{id}` pada `sourceReference`.
-- [ ] **Step 3: Susun bagiannya**, saldo kas awal dan akhir dari `accountBalancesFor({ to })` atas
+- [x] **Step 3: Susun bagiannya**, saldo kas awal dan akhir dari `accountBalancesFor({ to })` atas
       ketiga akun, lalu hitung `reconciled`.
-- [ ] **Step 4:** Perintah mutu, lalu commit `"buildCashFlowStatement beserta rekonsiliasinya"`.
+- [x] **Step 4:** Perintah mutu, lalu commit `"buildCashFlowStatement beserta rekonsiliasinya"`.
 
 ---
 
