@@ -3,7 +3,7 @@ import { buildBalanceSheet, buildEquityStatement, buildIncomeStatement, type Sta
 import { buildFormValues, cellValue, findFormValues, sideValue, type FormValueInput, type FormValues } from "./regulatoryFormValues";
 import { REGULATORY_FORMS, isValueCell } from "./regulatoryForms";
 
-/** Angka karangan, bukan pembukuan siapa pun. Satuan rupiah penuh. */
+/** Angka karangan, bukan pembukuan siapa pun. Satuan sen, seperti seluruh nominal buku besar. */
 const juta = (value: number) => BigInt(value) * 1_000_000n;
 
 function statements(balances: Record<string, bigint>): FormValueInput {

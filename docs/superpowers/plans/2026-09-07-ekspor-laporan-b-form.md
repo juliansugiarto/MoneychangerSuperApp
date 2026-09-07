@@ -16,7 +16,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 
 - [x] Tugas 1 — Verifikasi struktur form terhadap berkas asli, lalu `shared/regulatoryForms.ts`
 - [x] Tugas 2 — Nilai tiap baris form dari laporan, murni dan teruji
-- [ ] Tugas 3 — Penulis workbook tiga form
+- [x] Tugas 3 — Penulis workbook tiga form
 - [ ] Tugas 4 — Lembar penelusuran
 - [ ] Tugas 5 — Importir mengenali format resmi
 - [ ] Tugas 6 — Uji pulang-pergi ekspor → impor
@@ -170,13 +170,13 @@ git commit -m "Struktur form B0002/B0003/B0004 sebagai data"
 **Files:**
 - Create: `server/financialFormExport.ts`, `server/financialFormExport.test.ts`
 
-- [ ] **Step 1: Uji yang gagal** — header memuat sandi pelapor, tahun, nomor form, jumlah record,
+- [x] **Step 1: Uji yang gagal** — header memuat sandi pelapor, tahun, nomor form, jumlah record,
       dan `Jenis Periode: A`; B0002 menaruh aset di kolom kiri dan kewajiban/ekuitas di kanan;
       jumlah baris isian tiap sheet sama dengan `recordCount`.
-- [ ] **Step 2: `biReporterCode` kosong menjadi penghalang beralasan**, bukan header kosong.
-- [ ] **Step 3: Tulis penulisnya** dengan `XLSX.utils.aoa_to_sheet`, mengikuti pola
+- [x] **Step 2: `biReporterCode` kosong menjadi penghalang beralasan**, bukan header kosong.
+- [x] **Step 3: Tulis penulisnya** dengan `XLSX.utils.aoa_to_sheet`, mengikuti pola
       `createFinancialWorkbookTemplate`. Angkanya **hanya** dari keluaran `buildFinancialStatements`.
-- [ ] **Step 4:** Perintah mutu, lalu commit `"Penulis workbook form B0002/B0003/B0004"`.
+- [x] **Step 4:** Perintah mutu, lalu commit `"Penulis workbook form B0002/B0003/B0004"`.
 
 ---
 

@@ -110,7 +110,7 @@ Rencana: `plans/2026-09-07-ekspor-laporan-b-form.md`
 - [x] **Penghalang dicabut 7 September 2026:** pengguna menunjukkan ketiga form terisi; struktur diambil dari tangkapan layarnya, nominalnya tidak
 - [x] Tugas 1 — Verifikasi struktur form terhadap berkas asli, lalu `shared/regulatoryForms.ts`
 - [x] Tugas 2 — Nilai tiap baris form dari laporan, murni dan teruji
-- [ ] Tugas 3 — Penulis workbook tiga form
+- [x] Tugas 3 — Penulis workbook tiga form
 - [ ] Tugas 4 — Lembar penelusuran
 - [ ] Tugas 5 — Importir mengenali format resmi
 - [ ] Tugas 6 — Uji pulang-pergi ekspor → impor
