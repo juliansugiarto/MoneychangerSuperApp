@@ -67,15 +67,22 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ## Sesi berikutnya — keadaan per 7 September 2026
 
-Paket K1, B, D, C, E, F1, dan **F2 sudah selesai** dan diperagakan end-to-end. Sesi rancangan
-Paket G juga sudah selesai, tetapi **Paket G terhalang**: ia menunggu berkas form B0002/B0003/B0004
-asli masuk ke proyek.
+Paket K1, B, D, C, E, F1, F2, dan **G sudah selesai** dan diperagakan end-to-end.
 
-Karena H, I, dan J berdiri sendiri, **pekerjaan berikutnya yang dapat langsung dimulai adalah sesi
-rancangan Paket H.** Bloknya siap tempel di bawah.
+**Penghalang Paket G dicabut** pada sesi yang sama: pengguna menunjukkan ketiga form terisi sebagai
+tangkapan layar, dan memutuskan penomoran record pada form tidak perlu dikejar — yang harus benar
+adalah angkanya jatuh pada pos yang tepat. Struktur diambil dari tangkapan layarnya; nominalnya
+tidak. Enam koreksi terhadap sesi rancangan tercatat pada spec bagian "Hasil verifikasi terhadap
+form asli" dan pada dua commit terkait.
 
-Baseline uji yang benar-benar dijalankan 7 September 2026 sesudah Paket F2:
-`Test Files 115 passed (115)`, `Tests 870 passed | 2 skipped (872)`.
+**Pekerjaan berikutnya adalah sesi rancangan Paket H.** Bloknya siap tempel di bawah.
+
+Baseline uji yang benar-benar dijalankan 7 September 2026 sesudah Paket G:
+`Test Files 124 passed (124)`, `Tests 973 passed | 2 skipped (975)`.
+
+**Basis data lokal `moneychanger` kini juga memuat data peragaan Paket G:** satu baris
+`company_profile` (Sandi Pelapor placeholder `000000000`) dan satu `financial_statement_snapshots`
+bersumber `"Buku besar"` tahun buku 2026. Jangan membersihkannya.
 
 ---
 
@@ -109,8 +116,8 @@ yang belum pernah diisi siapa pun, penulisnya ikut masuk rencana — atau fiturn
 Paket F2 baru saja menemui persis kasus itu dan menyelesaikannya dengan membangun penulisnya;
 lihat spec F2 bagian "Masalah 2" sebagai preseden.
 
-Baseline uji yang benar-benar dijalankan 7 September 2026:
-Test Files 106 → 115 passed (115), Tests 870 passed | 2 skipped (872). Sebutkan angka yang
+Baseline uji yang benar-benar dijalankan 7 September 2026 sesudah Paket G:
+Test Files 124 passed (124), Tests 973 passed | 2 skipped (975). Sebutkan angka yang
 benar-benar dilihat.
 
 Satu uji diketahui flaky dan bukan bagian paket ini: server/tenantIsolation.live.test.ts >
@@ -119,9 +126,9 @@ basis data sungguhan dan memanggil getDb tanpa retryTransientDatabaseRead. Bila 
 bawah beban, jalankan ulang berkas itu saja; dugaan pembungkus retry adalah petunjuk, bukan
 diagnosis.
 
-Basis data lokal moneychanger berisi data uji paket E, F1, dan F2 yang SENGAJA DIBIARKAN untuk
+Basis data lokal moneychanger berisi data uji paket E, F1, F2, dan G yang SENGAJA DIBIARKAN untuk
 dipakai paket berikutnya — jangan membersihkannya dan jangan membuatnya ulang. Rinciannya ada pada
-ROADMAP di bawah bagian Paket F2.
+ROADMAP di bawah bagian Paket F2 dan G.
 
 Verifikasi visual menuntut login — saya akan login sendiri bila diminta.
 ```
@@ -250,35 +257,13 @@ Empat tugas pertamanya membangun penulis pelunasan kewajiban — sisi kas yang s
 komentar `shared/journalMapping.ts:104` tetapi tidak pernah ditulis. Tanpa itu bagian operasi dan
 investasi Arus Kas tidak punya sumber data.
 
-### Paket G — Ekspor B0002/B0003/B0004 (9 tugas) — **MENUNGGU BERKAS FORM ASLI**
+### Paket G — Ekspor B0002/B0003/B0004 (9 tugas) — **SELESAI 7 September 2026**
 
-Sesi rancangannya selesai 7 September 2026; spec `specs/2026-09-07-ekspor-laporan-b-form-design.md`
-dan rencana `plans/2026-09-07-ekspor-laporan-b-form.md` sudah ada.
-
-**Jangan mulai Tugas 1 sebelum berkas form B0002/B0003/B0004 asli ada di dalam proyek.** Struktur
-pada spec diturunkan dari tangkapan layar; label yang meleset satu kata membuat importir melewati
-barisnya, dan menebak label regulator dilarang aturan proyek (preseden Paket K3). Yang dibutuhkan
-satu berkas Excel form BI — terisi maupun kosong sama-sama cukup, karena yang diambil hanya
-strukturnya.
-
-Begitu berkasnya ada, pakai **Prompt B**:
-
-```
-Baca docs/superpowers/plans/2026-09-07-ekspor-laporan-b-form.md.
-Kerjakan HANYA Tugas <N>, ikuti langkahnya berurutan.
-Centang setiap langkah di berkas rencana setelah selesai,
-lalu centang barisnya di bagian Status Pengerjaan.
-Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
-```
-
-Tambahkan baris ini pada Tugas 1:
-
-```
-Berkas form aslinya ada di <path>. Baca strukturnya, jangan percaya spec: setiap perbedaan
-dimenangkan berkasnya, dan spec diperbarui sambil lewat. Nominal di dalamnya adalah pembukuan asli
-perusahaan — jangan menyalin satu pun angkanya ke kode, uji, fixture, atau dokumentasi, dan jangan
-mem-commit berkas sumbernya.
-```
+Spec `specs/2026-09-07-ekspor-laporan-b-form-design.md`, rencana
+`plans/2026-09-07-ekspor-laporan-b-form.md`. Seluruh sembilan tugasnya sudah dikerjakan dan
+diperagakan end-to-end pada basis data lokal: ekspor tahun buku penuh dari buku besar, lembar
+penelusuran pos ke akun, importir yang mengenali tata letak resmi, dan snapshot bersumber buku
+besar yang tidak menggandakan dirinya.
 
 ### Paket H — Profil transaksi dan pemantauan berkala (sesi rancangan dulu)
 
