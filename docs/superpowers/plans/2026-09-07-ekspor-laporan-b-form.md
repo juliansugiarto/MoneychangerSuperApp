@@ -235,11 +235,11 @@ git commit -m "Struktur form B0002/B0003/B0004 sebagai data"
 
 **Files:** Modify `server/_core/index.ts`, `client/src/pages/LaporanKeuangan.tsx`; Test `server/financialFormExport.authorization.test.ts`
 
-- [ ] **Step 1: Uji otorisasi** — STAFF dan ADMIN ditolak; `mustChangePassword` ditolak; Controller
+- [x] **Step 1: Uji otorisasi** — STAFF dan ADMIN ditolak; `mustChangePassword` ditolak; Controller
       dan Shareholder diterima. Pola dan pesannya mengikuti `/api/financial-snapshot-template`.
-- [ ] **Step 2: Rute `GET /api/financial-form-export?year=YYYY`** dengan `Content-Disposition`
+- [x] **Step 2: Rute `GET /api/financial-form-export?year=YYYY`** dengan `Content-Disposition`
       bernama tahunnya.
-- [ ] **Step 3: Tombol pada halaman Laporan Keuangan**, dengan keterangan bahwa berkasnya **tidak**
+- [x] **Step 3: Tombol pada halaman Laporan Keuangan**, dengan keterangan bahwa berkasnya **tidak**
       dikirim ke BI oleh aplikasi, dan tombolnya mati beralasan bila rentangnya bukan tahun penuh.
 - [ ] **Step 4: Verifikasi visual** rute dan tombolnya. Login dilakukan pengguna; minta pada
       giliran itu.

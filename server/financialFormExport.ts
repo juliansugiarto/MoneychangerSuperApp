@@ -396,3 +396,29 @@ async function findLedgerSnapshot(input: { from: Date; to: Date; rows: SnapshotR
   );
   return match?.id ?? null;
 }
+
+
+/* ── Otorisasi unduhan ──────────────────────────────────────────────────────────────────────── */
+
+export type FormExportRequester = { role: string; mustChangePassword: boolean };
+
+/**
+ * Alasan penolakan unduhan, atau `null` bila boleh.
+ *
+ * Ditegakkan di server dan diputuskan di sini, bukan di dalam `server/_core`: rute itu hanya boleh
+ * memanggil, dan keputusan yang dapat diuji tidak boleh tinggal di berkas yang menghidupkan server.
+ * Menyembunyikan tombolnya di UI bukan otorisasi — rutenya dapat dipanggil langsung, dan berkas ini
+ * memuat seluruh angka laporan keuangan perusahaan.
+ */
+export function financialFormExportDenial(user: FormExportRequester, year: unknown): { status: 403 | 400; message: string } | null {
+  if (user.mustChangePassword) {
+    return { status: 403, message: "Ganti kata sandi terlebih dahulu sebelum mengunduh ekspor form." };
+  }
+  if (user.role !== "CONTROLLER" && user.role !== "SHAREHOLDER") {
+    return { status: 403, message: "Hanya Controller atau Shareholder yang dapat mengunduh ekspor form." };
+  }
+  if (!Number.isInteger(year) || (year as number) < 2000 || (year as number) > 2100) {
+    return { status: 400, message: "Tahun buku tidak valid. Pakai satu tahun penuh, misalnya 2025." };
+  }
+  return null;
+}

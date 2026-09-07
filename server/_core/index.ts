@@ -5,6 +5,7 @@ import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { ensureDevelopmentTestAccounts, ensureInitialShareholder } from "../internalAuth";
 import { authenticateInternalRequest } from "../internalAuth";
+import { createFinancialFormExport, financialFormExportDenial } from "../financialFormExport";
 import { decodeOperationalDocumentData, getOperationalDocumentDownloadUrl, uploadOperationalDocument } from "../documentOperations";
 import { importFinancialSnapshotBundle, importFinancialSnapshotFile } from "../financialImport";
 import { importSanctionsWatchlist } from "../operations";
@@ -123,6 +124,27 @@ async function startServer() {
       return res.status(200).send(createFinancialWorkbookTemplate());
     } catch {
       return res.status(401).send("Autentikasi diperlukan untuk mengunduh template.");
+    }
+  });
+  app.get("/api/financial-form-export", async (req, res) => {
+    let user;
+    try {
+      user = await authenticateInternalRequest(req);
+    } catch {
+      return res.status(401).send("Autentikasi diperlukan untuk mengunduh ekspor form.");
+    }
+    const year = Number(req.query.year);
+    const denial = financialFormExportDenial(user, year);
+    if (denial) return res.status(denial.status).send(denial.message);
+
+    try {
+      // Ekspor menghasilkan berkas; pengirimannya ke Bank Indonesia tetap dilakukan manusia.
+      const exported = await createFinancialFormExport({ year, actorUserId: user.id });
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename=${exported.fileName}`);
+      return res.status(200).send(exported.workbook);
+    } catch (error) {
+      return res.status(400).send(error instanceof Error ? error.message : "Ekspor form tidak dapat dibuat.");
     }
   });
   app.get("/api/operational-documents/:documentId/download", async (req, res) => {

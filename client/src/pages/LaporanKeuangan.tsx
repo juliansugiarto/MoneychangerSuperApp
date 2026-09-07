@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../server/routers";
-import { CheckCircle2, ChevronDown, ChevronRight, RefreshCw, ShieldAlert } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, FileDown, RefreshCw, ShieldAlert } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -37,8 +37,21 @@ const currentMonthRange = () => {
   return { from: iso(new Date(today.getFullYear(), today.getMonth(), 1)), to: iso(new Date(today.getFullYear(), today.getMonth() + 1, 0)) };
 };
 
+/**
+ * Tahun buku penuh yang diwakili rentang ini, bila memang tahun penuh.
+ *
+ * Form B menyatakan *Periode: Tahun* dan *Jenis Periode: A*, jadi hanya tahun penuh yang dapat
+ * diekspor. Laporan bulanan tetap dapat dibaca di layar seperti sebelumnya.
+ */
+const fullFiscalYear = (range: { from: string; to: string }) => {
+  const year = Number(range.from.slice(0, 4));
+  if (!Number.isInteger(year)) return null;
+  return range.from === `${year}-01-01` && range.to === `${year}-12-31` ? year : null;
+};
+
 export default function LaporanKeuangan() {
   const [range, setRange] = useState(currentMonthRange);
+  const fiscalYear = fullFiscalYear(range);
 
   const statements = trpc.ledger.statements.useQuery({ from: range.from, to: range.to });
   const cashReconciliation = trpc.ledger.cashReconciliation.useQuery({ asOf: range.to });
@@ -67,6 +80,37 @@ export default function LaporanKeuangan() {
           <div>
             <Label className="text-xs" htmlFor="laporan-sampai">sampai</Label>
             <Input id="laporan-sampai" type="date" className="mt-1" value={range.to} onChange={(event) => setRange({ ...range, to: event.target.value })} />
+          </div>
+
+          <div className="min-w-[18rem] flex-1">
+            {fiscalYear === null ? (
+              <>
+                <span
+                  aria-disabled="true"
+                  title="Pilih 1 Januari sampai 31 Desember satu tahun untuk mengekspor."
+                  className="inline-flex h-9 cursor-not-allowed items-center justify-center rounded-md border border-[#e2e8f0] bg-[#f8fafc] px-3 text-sm font-semibold text-[#94a3b8]"
+                >
+                  <FileDown className="mr-1.5 size-4" />Ekspor form B0002–B0004
+                </span>
+                <p className="mt-1.5 text-xs text-[#64748b]">
+                  Ekspor menuntut satu tahun buku penuh — form menyatakan <em>Jenis Periode: A</em>. Pilih 1 Januari
+                  sampai 31 Desember tahun yang sama.
+                </p>
+              </>
+            ) : (
+              <>
+                <a
+                  href={`/api/financial-form-export?year=${fiscalYear}`}
+                  className="press-scale inline-flex h-9 items-center justify-center rounded-md border border-[#bcd1e5] bg-white px-3 text-sm font-semibold text-[#315879] hover:bg-[#f4f9ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#315879]"
+                >
+                  <FileDown className="mr-1.5 size-4" />Ekspor form B0002–B0004 tahun {fiscalYear}
+                </a>
+                <p className="mt-1.5 text-xs text-[#64748b]">
+                  Berisi ketiga form beserta lembar penelusuran pos ke akun. Aplikasi <strong>tidak</strong> mengirim
+                  berkas ini ke Bank Indonesia — pengirimannya tetap dilakukan manusia pada berkas resmi BI.
+                </p>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
