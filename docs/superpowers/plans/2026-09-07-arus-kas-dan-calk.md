@@ -19,7 +19,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 2 — Dua kategori pelunasan pada pemetaan kas dan bank
 - [x] Tugas 3 — `recordSettlement`: penulis pelunasan beserta pecahannya
 - [x] Tugas 4 — Prosedur tRPC dan panel Pelunasan pada tab Modal & Bank
-- [ ] Tugas 5 — `classifyCashEntry` murni di `shared/cashFlow.ts`
+- [x] Tugas 5 — `classifyCashEntry` murni di `shared/cashFlow.ts`
 - [ ] Tugas 6 — `buildCashFlowStatement` dan penanda `reconciled`
 - [ ] Tugas 7 — Arus Kas masuk `buildFinancialStatements` beserta peringatannya
 - [ ] Tugas 8 — Daftar catatan CALK dan panduannya di `shared/financialNotes.ts`
@@ -371,15 +371,15 @@ git commit -m "recordSettlement: pelunasan kewajiban dan penerimaan piutang bese
 - Consumes: `CASH_ACCOUNTS` dari `shared/currencyRevaluation.ts`.
 - Produces: `CashFlowSection`, `classifyCashEntry`. Dipakai tugas 6.
 
-- [ ] **Step 1: Tulis uji tabel penuh yang gagal** — satu kasus untuk setiap baris tabel pada spec
+- [x] **Step 1: Tulis uji tabel penuh yang gagal** — satu kasus untuk setiap baris tabel pada spec
       bagian 4, ditambah tiga yang paling mudah salah:
       - jurnal berdelta nol (setor kas ke bank) menjadi `INTERNAL`, bukan dua arus yang saling meniadakan;
       - jurnal berlawan dua bagian sekaligus masuk `BELUM_TERKLASIFIKASI` **utuh**, tidak dibagi;
       - `MANUAL` tidak pernah diklasifikasi meski akun lawannya kebetulan cocok.
-- [ ] **Step 2: Tulis fungsinya.** Urutan pemeriksaan: delta nol → `sourceType` `MANUAL`/`SALDO_AWAL`
+- [x] **Step 2: Tulis fungsinya.** Urutan pemeriksaan: delta nol → `sourceType` `MANUAL`/`SALDO_AWAL`
       → `REVALUASI_KURS` → pemetaan akun lawan → keranjang. Tiap keranjang membawa `reason` yang
       dapat dibaca manusia.
-- [ ] **Step 3:** Perintah mutu, lalu commit `"Klasifikasi arus kas murni per jurnal"`.
+- [x] **Step 3:** Perintah mutu, lalu commit `"Klasifikasi arus kas murni per jurnal"`.
 
 ---
 

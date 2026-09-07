@@ -89,7 +89,7 @@ Rencana: `plans/2026-09-07-arus-kas-dan-calk.md`
 - [x] Tugas 2 — Dua kategori pelunasan pada pemetaan kas dan bank *(satu commit dengan Tugas 1)*
 - [x] Tugas 3 — `recordSettlement`: penulis pelunasan beserta pecahannya
 - [x] Tugas 4 — Prosedur tRPC dan panel Pelunasan pada tab Modal & Bank
-- [ ] Tugas 5 — `classifyCashEntry` murni di `shared/cashFlow.ts`
+- [x] Tugas 5 — `classifyCashEntry` murni di `shared/cashFlow.ts`
 - [ ] Tugas 6 — `buildCashFlowStatement` dan penanda `reconciled`
 - [ ] Tugas 7 — Arus Kas masuk `buildFinancialStatements` beserta peringatannya
 - [ ] Tugas 8 — Daftar catatan CALK dan panduannya di `shared/financialNotes.ts`
