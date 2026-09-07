@@ -22,7 +22,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 5 — `classifyCashEntry` murni di `shared/cashFlow.ts`
 - [x] Tugas 6 — `buildCashFlowStatement` dan penanda `reconciled`
 - [x] Tugas 7 — Arus Kas masuk `buildFinancialStatements` beserta peringatannya
-- [ ] Tugas 8 — Daftar catatan CALK dan panduannya di `shared/financialNotes.ts`
+- [x] Tugas 8 — Daftar catatan CALK dan panduannya di `shared/financialNotes.ts`
 - [ ] Tugas 9 — Catatan bangkitan dari buku besar
 - [ ] Tugas 10 — Penyimpanan teks naratif dan prosedurnya
 - [ ] Tugas 11 — Halaman Laporan Keuangan dan navigasinya
@@ -434,12 +434,12 @@ it("menandai reconciled salah ketika ada jurnal kas yang tidak terklasifikasi", 
 - Create: `shared/financialNotes.ts`
 - Test: `shared/financialNotes.test.ts`
 
-- [ ] **Step 1: Tulis daftarnya** — 15 catatan, tiap satu membawa `key`, `title`, `kind`
+- [x] **Step 1: Tulis daftarnya** — 15 catatan, tiap satu membawa `key`, `title`, `kind`
       (`"BANGKITAN" | "NARATIF"`), `guidance` (apa yang SAK EP minta pada catatan itu), dan urutan
       penyajiannya. Isinya persis daftar pada spec bagian 6.
-- [ ] **Step 2: Uji keutuhannya** — kunci unik, urutan tidak berlubang, tiap catatan naratif punya
+- [x] **Step 2: Uji keutuhannya** — kunci unik, urutan tidak berlubang, tiap catatan naratif punya
       `guidance` yang tidak kosong, dan **tidak ada satu pun teks contoh** yang ikut terbawa.
-- [ ] **Step 3:** Perintah mutu, lalu commit `"Daftar catatan CALK beserta panduan isinya"`.
+- [x] **Step 3:** Perintah mutu, lalu commit `"Daftar catatan CALK beserta panduan isinya"`.
 
 ---
 
