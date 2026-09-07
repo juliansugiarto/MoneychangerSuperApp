@@ -26,7 +26,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 9 — Catatan bangkitan dari buku besar
 - [x] Tugas 10 — Penyimpanan teks naratif dan prosedurnya
 - [ ] Tugas 11 — Halaman Laporan Keuangan dan navigasinya
-- [ ] Tugas 12 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+- [~] Tugas 12 — Skenario menyeluruh dan dokumentasi selesai; **peragaan end-to-end menunggu izin pengguna**
 
 **Tugas 1 dan 2 digabung menjadi satu commit** (7 September 2026). Menambah nilai enum pada
 `drizzle/schema.ts` membuat kolomnya lebih lebar daripada `CashMovementCategory`, sehingga Tugas 1
@@ -501,15 +501,15 @@ it("menandai reconciled salah ketika ada jurnal kas yang tidak terklasifikasi", 
 - Create: `server/cashFlowScenario.test.ts`
 - Modify: `docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md`, `docs/SKEMA-DATABASE-PROJECT.md`, `docs/superpowers/ROADMAP-SISA-PEKERJAAN.md`
 
-- [ ] **Step 1: Skenario satu periode utuh** sebagai uji: modal masuk → beli dan jual UKA → beban
+- [x] **Step 1: Skenario satu periode utuh** sebagai uji: modal masuk → beli dan jual UKA → beban
       dicatat dan dibayar sebagian → aset dibeli dan dibayar → aset dilepas dan uangnya ditagih →
       revaluasi kurs → Arus Kas tersusun, `reconciled` benar, keranjang kosong.
-- [ ] **Step 2: Skenario yang gagal dengan benar** — jurnal manual menyentuh kas, dan pelunasan
+- [x] **Step 2: Skenario yang gagal dengan benar** — jurnal manual menyentuh kas, dan pelunasan
       tanpa baris sasaran: keduanya muncul di keranjang beserta nomor jurnalnya, dan tidak ada satu
       pun angka yang dipaksa seimbang.
-- [ ] **Step 3: Peragaan end-to-end** pada `moneychanger` sesuai spec bagian 10. **Minta izin
+- [ ] **Step 3: Peragaan end-to-end** *(menunggu izin pengguna untuk membuat data uji pada basis data lokal)* pada `moneychanger` sesuai spec bagian 10. **Minta izin
       pengguna pada giliran itu juga** sebelum menulis data uji apa pun.
-- [ ] **Step 4: Perbarui dokumentasi** — panduan A–Z (cara membayar tagihan, cara membaca Arus Kas,
+- [x] **Step 4: Perbarui dokumentasi** — panduan A–Z (cara membayar tagihan, cara membaca Arus Kas,
       cara mengisi CALK), skema database (tiga perubahan tabel), dan ROADMAP (centang tugasnya).
-- [ ] **Step 5:** Perintah mutu, sebutkan angka uji yang benar-benar dilihat, lalu commit
+- [x] **Step 5:** Perintah mutu, sebutkan angka uji yang benar-benar dilihat, lalu commit
       `"Skenario arus kas menyeluruh, peragaan, dan dokumentasi"`.

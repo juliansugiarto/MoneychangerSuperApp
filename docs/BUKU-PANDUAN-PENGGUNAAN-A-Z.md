@@ -293,6 +293,67 @@ Selisihnya masuk **Laba/(Rugi) Selisih Kurs (7-1500)**. Kalau kurs naik, laba; k
 **Revaluasi sebuah bulan tidak dapat diulang.** Bila angkanya perlu diperbaiki, catat jurnal baliknya lebih dulu seperti koreksi jurnal lainnya. Menekan tombolnya berkali-kali tidak pernah menghasilkan jurnal ganda.
 
 
+### 6.7 Membayar Tagihan dan Menagih Piutang — Controller ke atas
+
+**Beban dan pembelian aset tetap sengaja tidak langsung mengurangi kas.** Waktu Anda mencatat pengeluaran atau mendaftarkan aset tetap, yang tercatat adalah **kewajiban** (2-1900) — bukan uang keluar. Itu disengaja: modul-modul itu tidak menyentuh laci, sehingga kas di buku besar tidak pernah berbeda dari kas yang benar-benar dihitung petugas.
+
+**Uangnya baru keluar ketika Anda mencatat pelunasannya**, di **Kas & Persediaan → Modal & Bank → Pelunasan kewajiban & penagihan piutang**.
+
+Cara memakainya:
+
+1. Pilih tagihan dari daftar. Tiap baris menyebut asalnya (beban atau aset tetap), tanggalnya, nilai asalnya, yang sudah dibayar, dan sisanya.
+2. Isi jumlahnya — terisi otomatis sebesar sisa penuh. **Pembayaran sebagian boleh**; membayar lebih dari sisanya ditolak.
+3. Pilih dibayar lewat **kas fisik** atau **rekening perusahaan**.
+4. Kalau lewat kas, **isi rincian pecahannya** seperti setiap pergerakan uang fisik lain. Total pecahannya harus sama persis dengan jumlah di atas.
+5. Isi tanggal pelunasan dan catatannya, lalu **Catat pelunasan**.
+
+**Pelunasan belum masuk laporan sampai dijurnalkan.** Sama seperti setoran modal dan pemindahan kas ke bank: jalankan penjurnalan pada **Buku Besar → Jurnal** atas rentang tanggal yang memuat tanggal pelunasannya.
+
+**Kalau daftarnya kosong,** memang tidak ada yang terutang — bukan berarti panelnya rusak.
+
+**Penagihan piutang** hanya muncul untuk hasil pelepasan aset tetap yang belum diterima uangnya. Beban tidak pernah menjadi piutang.
+
+**Kenapa ini penting.** Selama pelunasannya tidak pernah dicatat, Laporan Arus Kas tidak akan memperlihatkan satu pun pembayaran beban maupun pembelian aset — dan halaman Laporan Keuangan akan menyalakan peringatan *"Beban dan perolehan aset tercatat tetapi belum ada yang dibayar."*
+
+### 6.8 Laporan Arus Kas dan CALK — Controller ke atas
+
+Kelima laporan keuangan sekarang berada di halamannya sendiri: **Laporan → Laporan Keuangan**. Buku Besar tetap memuat pekerjaan pembukuannya (jurnal, neraca saldo, buku besar akun, penutupan periode); halaman ini memuat hasilnya.
+
+**Rentangnya bebas**, sama seperti sebelumnya, dan kolom pembandingnya rentang sepanjang itu yang berakhir sehari sebelum rentang ini mulai.
+
+#### Membaca Laporan Arus Kas
+
+**Kas dan setara kas** di sini berarti tiga akun: Kas Rupiah (1-1110), Bank Rupiah (1-1120), dan Bank UKA (1-1220). **Uang kertas asing di laci tidak termasuk** — ia persediaan barang dagangan, bukan kas, dan dinilai lewat stock opname (§6.4).
+
+Bagiannya:
+
+- **Operasi** — penerimaan penjualan UKA, pembayaran pembelian UKA, pembayaran beban, dan selisih hitungan kas.
+- **Investasi** — pembayaran perolehan aset tetap dan hasil pelepasannya, disajikan **bruto**: keduanya muncul sebagai baris sendiri, tidak saling dikurangkan.
+- **Pendanaan** — setoran modal dan penarikan pemilik.
+- **Pengaruh perubahan kurs** — selisih revaluasi (§6.6). Ini bukan uang yang bergerak, karena itu ia berdiri sendiri di luar ketiga bagian.
+
+**Setor kas ke rekening tidak muncul di mana pun**, dan itu benar: uang yang sama berpindah tempat, jumlah kas dan setara kasnya tidak berubah.
+
+**Tiap baris menyebut nomor jurnalnya.** Itulah yang membuat pos laporan dapat ditunjukkan asalnya kepada pemeriksa.
+
+**Keranjang "Belum terklasifikasi"** memuat jurnal kas yang bagiannya tidak dapat dipastikan tanpa menebak — jurnal manual, jurnal saldo awal, atau pelunasan yang kehilangan catatan sasarannya. Nomor jurnalnya disebut beserta alasannya. **Keranjang yang terisi bukan kerusakan; ia daftar pekerjaan.**
+
+**Lencana rekonsiliasi** membandingkan arus kas hasil hitungan dengan pergerakan nyata ketiga akun kas. Kalau berbeda, selisihnya ditampilkan sebagai angka. **Selisihnya tidak pernah ditutup dengan pos penyeimbang** — laporan yang terlihat rapi padahal dasarnya belum lengkap justru lebih berbahaya di hadapan pemeriksa.
+
+#### Mengisi CALK
+
+CALK berisi lima belas catatan dan bekerja dua cara:
+
+- **Delapan catatan dibangkitkan dari buku besar** — kas dan setara kas, persediaan UKA, aset tetap per aset, rincian kewajiban lain-lain, ekuitas, rincian pendapatan dan beban, selisih kurs, dan transaksi nonkas. Angkanya **tidak dapat diketik**, sehingga tidak pernah dapat berselisih dengan laporannya.
+- **Tujuh catatan ditulis sendiri** — informasi umum, dasar penyusunan, kebijakan akuntansi, pertimbangan dan estimasi, pihak berelasi, peristiwa setelah periode pelaporan, serta perikatan dan kontinjensi.
+
+Tiap catatan naratif membawa **panduan** tentang apa yang harus ada di dalamnya. **Tidak ada teks contoh yang diisikan otomatis**, dan itu disengaja: yang tertulis di CALK adalah pernyataan manajemen, dan mengarangnya berarti menandatanganinya atas nama Anda.
+
+Saat menyimpan, ada pilihan **"Khusus periode ini"**. Kosongkan untuk teks yang berlaku terus — kebijakan akuntansi jarang berubah. Centang untuk teks yang memang khas periode itu, misalnya peristiwa setelah periode pelaporan. Laporan periode lama akan tetap menampilkan teks yang berlaku baginya.
+
+**Catatan yang belum diisi muncul sebagai peringatan**, bukan sebagai penghalang. Laporan tetap dapat disusun; tetapi CALK yang kosong berarti laporannya belum lengkap menurut SAK EP.
+
+
 ## 7. Pelaporan Regulator Internal
 
 Halaman **Pelaporan Regulator** adalah pusat persiapan internal. Halaman ini tidak terhubung untuk submit otomatis ke Bank Indonesia atau regulator lain.

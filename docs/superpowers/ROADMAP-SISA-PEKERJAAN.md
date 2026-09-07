@@ -96,7 +96,7 @@ Rencana: `plans/2026-09-07-arus-kas-dan-calk.md`
 - [x] Tugas 9 — Catatan bangkitan dari buku besar
 - [x] Tugas 10 — Penyimpanan teks naratif dan prosedurnya
 - [x] Tugas 11 — Halaman Laporan Keuangan dan navigasinya *(verifikasi visual menunggu login pengguna)*
-- [ ] Tugas 12 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+- [~] Tugas 12 — Skenario dan dokumentasi selesai; **peragaan end-to-end pada basis data lokal menunggu izin pengguna**
 
 ### Paket G — Ekspor B0002/B0003/B0004 dari buku besar
 - [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
