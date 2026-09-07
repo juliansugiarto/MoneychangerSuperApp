@@ -480,18 +480,18 @@ it("menandai reconciled salah ketika ada jurnal kas yang tidak terklasifikasi", 
 - Modify: `client/src/pages/BukuBesar.tsx`, `shared/backOfficeNavigation.ts`, `client/src/App.tsx`, `client/src/components/DashboardLayout.tsx`, `server/routers.ts`
 - Test: `server/backOfficeNavigation.test.ts`
 
-- [ ] **Step 1: Pindahkan tab Laporan Keuangan** (`BukuBesar.tsx` baris 622–776, termasuk kartu
+- [x] **Step 1: Pindahkan tab Laporan Keuangan** (`BukuBesar.tsx` baris 622–776, termasuk kartu
       Rekonsiliasi Kas Rupiah) ke halaman baru **apa adanya**. Jangan menulis ulang kartunya sambil
       memindahkan — perubahan tampilan dan perpindahan berkas dalam satu commit membuat keduanya
       tidak dapat ditinjau.
-- [ ] **Step 2: Dua kartu baru** — Arus Kas (empat bagian, keranjang "Belum terklasifikasi" beserta
+- [x] **Step 2: Dua kartu baru** — Arus Kas (empat bagian, keranjang "Belum terklasifikasi" beserta
       nomor jurnalnya, dan penanda `reconciled` bergaya sama dengan lencana neraca seimbang) dan
       CALK (bagian yang dapat dilipat; naratif punya tombol sunting dan panduannya, bangkitan tidak).
-- [ ] **Step 3: Rute, menu, ikon, dan `pageByPath`.** Uji navigasi akan gagal bila salah satunya
+- [x] **Step 3: Rute, menu, ikon, dan `pageByPath`.** Uji navigasi akan gagal bila salah satunya
       tertinggal — itu memang gunanya.
-- [ ] **Step 4: Verifikasi visual** kedua kartu baru dan halaman lama yang kehilangan tabnya.
+- [ ] **Step 4: Verifikasi visual** *(menunggu pengguna login; kode sudah terpasang)* kedua kartu baru dan halaman lama yang kehilangan tabnya.
       Login dilakukan pengguna sendiri; mintalah pada giliran itu.
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Halaman Laporan Keuangan: lima laporan dan CALK"`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Halaman Laporan Keuangan: lima laporan dan CALK"`.
 
 ---
 

@@ -5,7 +5,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { ArrowLeftRight, BadgeDollarSign, Banknote, BookOpenCheck, BookOpenText, Building2, ChartNoAxesCombined, ChevronRight, ClipboardCheck, ClipboardList, FileSearch, Gauge, Landmark, LayoutDashboard, LogOut, MessageSquareWarning, MessagesSquare, Receipt, Rocket, ShieldAlert, ShieldCheck, ShieldQuestion, UsersRound, Vault, Wallet } from "lucide-react";
+import { ArrowLeftRight, BadgeDollarSign, Banknote, BookOpenCheck, BookOpenText, Building2, ChartNoAxesCombined, ChevronRight, ClipboardCheck, ClipboardList, FileSearch, FileText, Gauge, Landmark, LayoutDashboard, LogOut, MessageSquareWarning, MessagesSquare, Receipt, Rocket, ShieldAlert, ShieldCheck, ShieldQuestion, UsersRound, Vault, Wallet } from "lucide-react";
 import { useState } from "react";
 import { backOfficeNavigationGroups, isRoleAllowed, visibleBackOfficeNavigation, type BackOfficeRole } from "@shared/backOfficeNavigation";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -33,6 +33,7 @@ const navigationIcons: Record<string, typeof LayoutDashboard> = {
   "/operasional/pengaduan": MessageSquareWarning,
   "/operasional/watchlist": ShieldAlert,
   "/operasional/buku-besar": BookOpenText,
+  "/operasional/laporan-keuangan": FileText,
   "/operasional/laporan": ChartNoAxesCombined,
   "/operasional/pelaporan-regulator": Landmark,
   "/operasional/audit": FileSearch,

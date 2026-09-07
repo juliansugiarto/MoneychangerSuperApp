@@ -38,6 +38,7 @@ const ExpenseEntry = lazy(() => import("./pages/ExpenseEntry"));
 const SanctionsWatchlist = lazy(() => import("./pages/SanctionsWatchlist"));
 const Kepegawaian = lazy(() => import("./pages/Kepegawaian"));
 const BukuBesar = lazy(() => import("./pages/BukuBesar"));
+const LaporanKeuangan = lazy(() => import("./pages/LaporanKeuangan"));
 const AsetTetap = lazy(() => import("./pages/AsetTetap"));
 
 function RouteLoading() {
@@ -86,6 +87,7 @@ function Router() {
       <Route path="/operasional/watchlist"><OperationsRoute page={<SanctionsWatchlist />} /></Route>
       <Route path="/operasional/kepegawaian"><OperationsRoute minimumRole="CONTROLLER" page={<Kepegawaian />} /></Route>
       <Route path="/operasional/buku-besar"><OperationsRoute minimumRole="CONTROLLER" page={<BukuBesar />} /></Route>
+      <Route path="/operasional/laporan-keuangan"><OperationsRoute minimumRole="CONTROLLER" page={<LaporanKeuangan />} /></Route>
       <Route path="/operasional/aset-tetap"><OperationsRoute minimumRole="CONTROLLER" page={<AsetTetap />} /></Route>
       <Route path="/operasional/pengawasan-direksi"><OperationsRoute minimumRole="CONTROLLER" page={<DirectorAcknowledgements />} /></Route>
       <Route path="/operasional/go-live"><OperationsRoute minimumRole="CONTROLLER" page={<GoLiveSetup />} /></Route>

@@ -26,6 +26,7 @@ const pageByPath: Record<string, string> = {
   "/operasional/watchlist": "SanctionsWatchlist",
   "/operasional/laporan": "Reports",
   "/operasional/buku-besar": "BukuBesar",
+  "/operasional/laporan-keuangan": "LaporanKeuangan",
   "/operasional/aset-tetap": "AsetTetap",
   "/operasional/pelaporan-regulator": "RegulatoryReporting",
   "/operasional/audit": "AuditLog",

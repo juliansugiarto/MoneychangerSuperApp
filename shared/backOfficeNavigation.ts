@@ -64,6 +64,7 @@ export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
   ] },
   { label: "Laporan", items: [
     { label: "Buku Besar", path: "/operasional/buku-besar", minimumRole: "CONTROLLER" },
+    { label: "Laporan Keuangan", path: "/operasional/laporan-keuangan", minimumRole: "CONTROLLER" },
     { label: "Aset Tetap", path: "/operasional/aset-tetap", minimumRole: "CONTROLLER" },
     { label: "Laporan Transaksi", path: "/operasional/laporan", minimumRole: "CONTROLLER" },
     { label: "Laporan ke Regulator", path: "/operasional/pelaporan-regulator", minimumRole: "CONTROLLER" },

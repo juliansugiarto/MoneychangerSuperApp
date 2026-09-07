@@ -95,7 +95,7 @@ Rencana: `plans/2026-09-07-arus-kas-dan-calk.md`
 - [x] Tugas 8 — Daftar catatan CALK dan panduannya di `shared/financialNotes.ts`
 - [x] Tugas 9 — Catatan bangkitan dari buku besar
 - [x] Tugas 10 — Penyimpanan teks naratif dan prosedurnya
-- [ ] Tugas 11 — Halaman Laporan Keuangan dan navigasinya
+- [x] Tugas 11 — Halaman Laporan Keuangan dan navigasinya *(verifikasi visual menunggu login pengguna)*
 - [ ] Tugas 12 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 ### Paket G — Ekspor B0002/B0003/B0004 dari buku besar
