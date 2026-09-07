@@ -133,7 +133,8 @@ Rencana: `plans/2026-09-07-profil-transaksi-pemantauan.md`
 
 **Keputusan pengguna 7 September 2026 yang mengikat:** deklarasi = nilai + frekuensi + mata uang;
 ambang penyimpangan **nilai bulanan ≥ deklarasi × 2**; mata uang tak terdeklarasi alasan
-tersendiri; frekuensi dideklarasikan tetapi **tidak** menyalakan bendera; irama **HIGH 1 bulan,
+tersendiri; **frekuensi bulanan ≥ deklarasi × 2** juga menyalakan bendera, dinilai terpisah dari
+nilai; irama **HIGH 1 bulan,
 MEDIUM 3 bulan, LOW 12 bulan**; tindak lanjut **worklist Controller yang hanya mencatat**.
 
 ### Paket I — Arsip dokumen perusahaan (temuan BI 3)

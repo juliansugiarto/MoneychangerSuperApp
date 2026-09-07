@@ -33,7 +33,8 @@ Ditetapkan 7 September 2026. **Jangan menurunkannya ulang dan jangan menawarnya.
 1. Deklarasi nasabah: **nilai** Rupiah sebulan, **frekuensi** sebulan, **mata uang** yang diharapkan.
 2. Ambang penyimpangan nilai: **total sebulan ≥ deklarasi × 2**.
 3. Mata uang tak terdeklarasi: **alasan penyimpangan tersendiri**.
-4. Frekuensi: **dideklarasikan dan ditampilkan, tidak menyalakan bendera**.
+4. Frekuensi: **juga menyalakan bendera**, memakai pengali yang sama — banyaknya transaksi sebulan
+   **≥ deklarasi × 2**. Jangan mengarang pengali kedua.
 5. Irama: **HIGH 1 bulan, MEDIUM 3 bulan, LOW 12 bulan**.
 6. Tindak lanjut: **worklist Controller, hanya mencatat** — tidak pernah mengubah data nasabah,
    tidak pernah memblokir transaksi, tidak pernah melapor sendiri.
@@ -107,14 +108,22 @@ describe("penyimpangan profil transaksi", () => {
   });
   it("tidak pernah menyimpang bila deklarasinya belum ada, melainkan PROFIL_BELUM_DIDEKLARASIKAN", () => {});
   it("menyebut mata uang tak terdeklarasi sebagai alasan tersendiri", () => {});
-  it("tidak menyalakan bendera karena frekuensi, hanya membawanya sebagai konteks", () => {});
-  it("memperlakukan deklarasi nol sebagai belum dideklarasikan, bukan ambang nol", () => {});
+  it("menyalakan bendera frekuensi pada dua kali lipat deklarasi transaksinya", () => {});
+  it("menyalakan frekuensi sendirian ketika nilainya masih wajar", () => {
+    // Banyak transaksi kecil: totalnya di bawah ambang, jumlahnya dua kali lipat.
+    // Inilah bentuk pemecahan transaksi yang paling perlu terlihat.
+  });
+  it("memperlakukan deklarasi nol sebagai belum dideklarasikan pada kedua ukuran", () => {});
 });
 ```
 
 **Deklarasi nol adalah jebakannya:** `0 × 2 = 0`, sehingga transaksi apa pun akan melewatinya dan
 setiap nasabah berdeklarasi nol menyala selamanya. Perlakukan nol dan `null` sama-sama sebagai
-**belum dideklarasikan**.
+**belum dideklarasikan**, pada **nilai maupun frekuensi**.
+
+**Nilai dan frekuensi dinilai terpisah**, masing-masing dengan `PROFILE_DEVIATION_MULTIPLE` yang
+sama. Keduanya dapat menyala sendiri-sendiri, dan menyalanya frekuensi sendirian adalah kasus yang
+paling berarti — itu bentuk pemecahan transaksi.
 
 - [ ] **Step 2: Tulis fungsinya.** Murni. Ambang sebagai konstanta bernama
       `PROFILE_DEVIATION_MULTIPLE = 2` beserta komentar yang menyebut tanggal keputusan penggunanya.
@@ -236,7 +245,8 @@ Aturan `CLAUDE.md` "Fitur Harus Punya Sumber Data": **kolomnya tidak boleh ada t
       tempo berikutnya.
 - [ ] **Step 2: Skenario sisi batas** — nasabah tanpa deklarasi muncul sebagai
       `PROFIL_BELUM_DIDEKLARASIKAN`; nasabah `LOW` yang baru ditinjau tidak muncul selama dua belas
-      bulan; mata uang tak terdeklarasi muncul sendirian tanpa penyimpangan nilai.
+      bulan; mata uang tak terdeklarasi muncul sendirian tanpa penyimpangan nilai; dan **frekuensi
+      menyimpang sendirian** — banyak transaksi kecil yang totalnya masih di bawah ambang nilai.
 - [ ] **Step 3: Peragaan end-to-end** pada `moneychanger` memakai data yang sudah ada.
       **Minta izin pengguna pada giliran itu** sebelum menulis data uji apa pun. Perlihatkan juga
       keadaan hari pertama apa adanya: seluruh nasabah lama jatuh tempo dan belum berdeklarasi.

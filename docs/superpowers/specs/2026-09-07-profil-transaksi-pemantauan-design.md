@@ -68,10 +68,11 @@ turunan analisis.**
 3. **Mata uang yang tidak dideklarasikan adalah alasan penyimpangan tersendiri**, berdiri sendiri
    dari nilai.
 
-4. **Frekuensi dideklarasikan dan ditampilkan, tetapi tidak menyalakan bendera.** Pengguna
-   ditawari aturan "persentase ATAU frekuensi" dan memilih "persentase" saja. Frekuensi karena itu
-   menjadi konteks bagi peninjau, bukan pemicu. **Bila ini keliru, ia satu baris untuk diubah** —
-   lihat "Risiko residual".
+4. **Frekuensi juga menyalakan bendera**, memakai pengali yang sama dengan nilai: menyimpang bila
+   banyaknya transaksi sebulan **≥ deklarasinya × 2**. Ditegaskan pengguna 7 September 2026 sesudah
+   rancangan awal sempat memperlakukannya sebagai konteks saja. Pengali yang sama sengaja dipakai
+   ulang alih-alih mengarang angka kedua: satu angka kepatuhan yang dapat ditunjuk lebih baik
+   daripada dua yang harus dijelaskan.
 
 5. **Irama pemantauan berbasis risiko:** `HIGH` sebulan sekali, `MEDIUM` tiga bulan sekali, `LOW`
    setahun sekali.
@@ -138,15 +139,20 @@ export const PROFILE_DEVIATION_MULTIPLE = 2;
 export type ProfileDeviationReason =
   | "PROFIL_BELUM_DIDEKLARASIKAN"
   | "NILAI_BULANAN_MELEBIHI_PROFIL"
+  | "FREKUENSI_BULANAN_MELEBIHI_PROFIL"
   | "MATA_UANG_TIDAK_DIDEKLARASIKAN";
 ```
+
+Nilai dan frekuensi dinilai **terpisah dan berdiri sendiri**: nasabah dapat menyimpang pada
+frekuensinya saja — banyak transaksi kecil yang totalnya masih wajar — dan itu justru bentuk
+pemecahan transaksi yang paling perlu terlihat.
 
 Fungsinya **murni**: masuk deklarasi dan aktivitas nyata, keluar daftar alasan. Tidak menyentuh
 basis data, tidak membaca jam. Ambangnya konstanta bernama, bukan angka telanjang di tengah kode —
 angka kepatuhan harus dapat ditunjuk dan diubah di satu tempat.
 
-Frekuensi ikut dikembalikan sebagai **konteks** (`declaredCount`, `actualCount`) tanpa menjadi
-alasan, sesuai keputusan 4.
+Deklarasi nol maupun `null` diperlakukan sama pada **kedua** ukuran: belum dideklarasikan, bukan
+ambang nol. `0 × 2 = 0` akan membuat transaksi apa pun melewatinya.
 
 ### 4. Irama berbasis risiko — murni dan teruji
 
@@ -208,7 +214,6 @@ kerja kasir. Bila kelak diinginkan, ia perubahan kecil di atas fungsi murni yang
 - **Tidak ada pemblokiran transaksi.** Alat bantu penyaringan, sama seperti pencocokan watchlist.
 - **Tidak ada pelaporan otomatis ke PPATK maupun BI.** Penyimpangan profil bukan LTKM; yang menilai
   kecurigaan adalah manusia.
-- **Frekuensi tidak menyalakan bendera** — keputusan pengguna 4.
 - **`assessReviewRequirement` tidak diubah** — bagian 7.
 - **Baris `operations.ts:1444` tidak diperbaiki** — bagian 5.
 
@@ -221,10 +226,11 @@ kerja kasir. Bila kelak diinginkan, ia perubahan kecil di atas fungsi murni yang
   bertransaksi Rp 3 juta akan muncul di worklist setiap bulan tanpa arti. Pengguna ditawari varian
   "persentase dengan lantai Rupiah" dan tidak memilihnya. Bila worklist ternyata berisik, lantai
   itulah penyetel pertamanya.
-- **Frekuensi dideklarasikan tetapi tidak dipakai menyalakan bendera.** Nasabah yang memecah
-  aktivitasnya menjadi banyak transaksi kecil — tanpa melewati dua kali lipat nilai — tidak akan
-  terlihat oleh paket ini. Datanya sudah terkumpul, jadi menghidupkannya kelak adalah satu
-  perbandingan tambahan pada fungsi murni yang sama.
+- **Satu pengali dipakai untuk dua ukuran yang berperilaku berbeda.** Nilai Rupiah bergerak halus;
+  banyaknya transaksi bergerak dalam bilangan bulat kecil. Nasabah yang mendeklarasikan satu
+  transaksi sebulan menyimpang begitu ia bertransaksi dua kali — sering kali tanpa arti apa pun.
+  Deklarasi frekuensi yang kecil karena itu akan menjadi sumber kebisingan pertama pada worklist,
+  dan lantai minimum pada frekuensi adalah penyetel pertamanya bila itu terjadi.
 - **Deklarasi diisi nasabah sendiri.** Ia pernyataan, bukan fakta terverifikasi. Nilainya terletak
   pada perbandingannya dari waktu ke waktu, bukan pada kebenarannya saat diucapkan.
 - **Seluruh nasabah lama akan jatuh tempo pada hari pertama** dan muncul dengan
