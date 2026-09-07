@@ -82,7 +82,21 @@ Rencana: `plans/2026-09-05-kas-valas-revaluasi-kurs.md`
 - [x] Tugas 10 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 ### Paket F2 — Arus Kas dan CALK
-- [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan; **F1 lebih dulu**)*
+Spec: `specs/2026-09-07-arus-kas-dan-calk-design.md`
+Rencana: `plans/2026-09-07-arus-kas-dan-calk.md`
+- [x] Sesi rancangan — spec dan rencana bertugas
+- [ ] Tugas 1 — Migrasi pelunasan dan catatan CALK (0050)
+- [ ] Tugas 2 — Dua kategori pelunasan pada pemetaan kas dan bank
+- [ ] Tugas 3 — `recordSettlement`: penulis pelunasan beserta pecahannya
+- [ ] Tugas 4 — Prosedur tRPC dan panel Pelunasan pada tab Modal & Bank
+- [ ] Tugas 5 — `classifyCashEntry` murni di `shared/cashFlow.ts`
+- [ ] Tugas 6 — `buildCashFlowStatement` dan penanda `reconciled`
+- [ ] Tugas 7 — Arus Kas masuk `buildFinancialStatements` beserta peringatannya
+- [ ] Tugas 8 — Daftar catatan CALK dan panduannya di `shared/financialNotes.ts`
+- [ ] Tugas 9 — Catatan bangkitan dari buku besar
+- [ ] Tugas 10 — Penyimpanan teks naratif dan prosedurnya
+- [ ] Tugas 11 — Halaman Laporan Keuangan dan navigasinya
+- [ ] Tugas 12 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 ### Paket G — Ekspor B0002/B0003/B0004 dari buku besar
 - [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
@@ -446,9 +460,35 @@ SAK EP menuntut **lima**. Arus Kas dan CALK belum ada sama sekali.
   `reconciled` yang membandingkan perubahan kas hasil hitungan dengan pergerakan nyata
   `1-1110`+`1-1120`+`1-1220`. Selisih muncul sebagai peringatan, tidak pernah sebagai pos penyeimbang.
 
-## Yang masih perlu diputuskan sesi rancangannya
+## Yang diputuskan pada sesi rancangan 7 September 2026
 
-Daftar catatan CALK yang wajib ada, tempat penyimpanan teksnya, dan bentuk panelnya.
+**Rencana rinci sudah ada:** `specs/2026-09-07-arus-kas-dan-calk-design.md` dan
+`plans/2026-09-07-arus-kas-dan-calk.md`. Ringkasnya:
+
+- **Metode langsung**, diklasifikasi per jurnal yang benar-benar menyentuh ketiga akun kas.
+- **Delapan catatan CALK bangkitan dan tujuh naratif**; teks naratif pada tabel
+  `financial_statement_notes` berkunci `(noteKey, periodKey)`, `periodKey` kosong berarti berlaku
+  terus. Tidak ada teks contoh yang diisikan otomatis.
+- **Halaman baru `/operasional/laporan-keuangan`** menampung kelima laporan; Buku Besar tetap
+  memuat pekerjaan pembukuannya.
+
+## Yang ditemukan penelusuran kode dan mengubah bentuk paketnya
+
+**Tidak ada satu pun jurnal yang membayar beban atau aset dengan kas.** `mapExpense` dan
+`mapFixedAssetAcquisition` sama-sama mengkredit 2-1900, `mapFixedAssetDisposal` mendebit 1-1320,
+dan pelunasan yang dijanjikan komentar `shared/journalMapping.ts:104` tidak pernah ditulis. Buku
+besar lokal memperlihatkannya: 2-1900 bersaldo Rp 24.000.000 sejak paket E, sementara 1-1110 dan
+1-1120 belum pernah bergerak.
+
+Karena itu bagian operasi tidak akan pernah memuat pembayaran beban dan bagian investasi kosong
+selamanya. Menurut aturan `CLAUDE.md` "Fitur Harus Punya Sumber Data", penulis pelunasan masuk ke
+dalam paket ini sebagai empat tugas pertamanya — bukan dikeluarkan menjadi paket tersendiri.
+
+Keputusan 4 karena itu dipertajam, bukan diubah: bagian investasi tetap bruto, tetap dari kejadian
+dan bukan selisih saldo, tetap menunjuk nomor jurnalnya — tetapi kejadian yang dibaca adalah
+**pelunasan yang menunjuk aset tetapnya**, saat uangnya benar-benar bergerak. Perolehan yang belum
+dibayar disajikan sebagai catatan CALK "transaksi nonkas", bukan sebagai arus kas yang tidak
+terjadi. Alasan lengkapnya pada spec bagian "Penajaman keputusan 4".
 
 ---
 
