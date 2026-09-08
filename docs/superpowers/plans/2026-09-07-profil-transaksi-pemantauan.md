@@ -72,6 +72,9 @@ Ditetapkan 7 September 2026. **Jangan menurunkannya ulang dan jangan menawarnya.
 - **Zona waktu:** hari dan bulan operasional adalah **WIB**. Pakai `jakartaBusinessDate` dan helper
   bulanan bersama dari Tugas 4; jangan memakai `getFullYear()`/`getMonth()` waktu lokal proses.
 - **Data uji lokal paket E, F1, F2, dan G sengaja dibiarkan.** Jangan membersihkannya.
+- **Membuat data uji pada basis data lokal (`moneychanger` dan `mc_t_abcvalas`) diizinkan pada
+  tahap mana pun tanpa bertanya lebih dulu** — ditetapkan pengguna 8 September 2026 dan dicatat
+  pada `CLAUDE.md`. Produksi tetap tidak boleh disentuh.
 - Nasabah nyata, transaksi nyata, dan `audit_logs` produksi tidak boleh dikarang atau disunting.
 
 ## Struktur Berkas
@@ -195,7 +198,8 @@ Aturan `CLAUDE.md` "Fitur Harus Punya Sumber Data": **kolomnya tidak boleh ada t
 - [ ] **Step 3: Tiga isian pada borang nasabah**, dengan label yang menyatakan bahwa ini
       **pernyataan nasabah**, bukan batas yang ditegakkan sistem. Loading/empty/error state dan
       fokus keyboard mengikuti isian yang sudah ada di halaman itu.
-- [ ] **Step 4: Verifikasi visual** borang nasabah. Login dilakukan pengguna; minta pada giliran itu.
+- [ ] **Step 4: Verifikasi visual** borang nasabah, memakai data uji lokal yang dibuat sendiri.
+      Login tetap dilakukan pengguna; minta pada giliran itu.
 - [ ] **Step 5:** Perintah mutu, lalu commit `"Deklarasi profil transaksi pada borang nasabah"`.
 
 ---
@@ -258,8 +262,8 @@ Aturan `CLAUDE.md` "Fitur Harus Punya Sumber Data": **kolomnya tidak boleh ada t
       menampilkan tabel kosong tanpa penjelasan.
 - [ ] **Step 3: Keterangan batas pada halamannya** — alat bantu penyaringan; tidak mengubah data
       nasabah, tidak memblokir transaksi, tidak melapor ke regulator.
-- [ ] **Step 4: Verifikasi visual** halaman dan rutenya, termasuk keadaan kosong. Login dilakukan
-      pengguna; minta pada giliran itu.
+- [ ] **Step 4: Verifikasi visual** halaman dan rutenya, termasuk keadaan kosong, memakai data uji
+      lokal yang dibuat sendiri. Login tetap dilakukan pengguna; minta pada giliran itu.
 - [ ] **Step 5:** Perintah mutu, lalu commit `"Halaman pemantauan profil nasabah"`.
 
 ---
@@ -304,9 +308,9 @@ mengubah data nasabah. Bila ini terasa mengubah alur kasir lebih jauh dari yang 
       `PROFIL_BELUM_DIDEKLARASIKAN`; nasabah `LOW` yang baru ditinjau tidak muncul selama dua belas
       bulan; mata uang tak terdeklarasi muncul sendirian tanpa penyimpangan nilai; dan **frekuensi
       menyimpang sendirian** — banyak transaksi kecil yang totalnya masih di bawah ambang nilai.
-- [ ] **Step 3: Peragaan end-to-end** pada `moneychanger` memakai data yang sudah ada.
-      **Minta izin pengguna pada giliran itu** sebelum menulis data uji apa pun. Perlihatkan juga
-      keadaan hari pertama apa adanya: seluruh nasabah lama jatuh tempo dan belum berdeklarasi.
+- [ ] **Step 3: Peragaan end-to-end** pada `moneychanger`, membuat data uji yang diperlukan
+      langsung (diizinkan pengguna 8 September 2026). Perlihatkan juga keadaan hari pertama apa
+      adanya: nasabah tanpa deklarasi jatuh tempo dan belum berdeklarasi.
 - [ ] **Step 4: Perbarui dokumentasi** — panduan A–Z (cara mendeklarasikan profil, cara kerja
       worklist, dan apa yang aplikasi **tidak** lakukan), skema database (tiga kolom dan tabel
       baru beserta migrasinya), dan ROADMAP.

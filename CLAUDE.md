@@ -42,6 +42,12 @@ Perubahan kode tidak selesai tanpa test Vitest yang relevan, pemeriksaan tipe, d
 ## Aturan Keras Operasional
 
 - Jangan membuat, menyuntikkan, atau mengubah data nasabah, transaksi, kas, snapshot, paket pelaporan, arsip, atau audit produksi untuk demo/test.
+- **Data uji pada basis data lokal (`moneychanger` dan `mc_t_abcvalas`) boleh dibuat pada tahap mana
+  pun tanpa meminta izin lebih dulu** — ditetapkan pengguna 8 September 2026. Ini justru yang
+  dituntut aturan "Fitur Harus Punya Sumber Data": peragaan end-to-end tidak mungkin dilakukan tanpa
+  membuat datanya. Izin ini **hanya** berlaku untuk kedua basis data lokal itu; pembukuan produksi,
+  data nasabah nyata, dan `audit_logs` produksi tetap tidak boleh dikarang atau disunting. Data uji
+  paket sebelumnya yang sengaja dibiarkan tetap jangan dibersihkan.
 - Simulasi tidak boleh menulis bon, kas, stock opname, laporan, arsip, ataupun audit produksi.
 - Kurs tetap diaktifkan manual dengan alasan yang dapat ditelusuri; jangan menambahkan aktivasi otomatis dari sumber referensi.
 - Jangan menambahkan submit otomatis ke BI/regulator tanpa format resmi, kanal, jadwal, kredensial, dan otorisasi tertulis yang telah diverifikasi.
