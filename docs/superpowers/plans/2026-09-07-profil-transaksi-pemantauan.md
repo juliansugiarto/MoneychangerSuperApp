@@ -22,7 +22,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 6 — Penulis peninjauan: `recordCustomerProfileReview` beserta auditnya
 - [x] Tugas 7 — Halaman Pemantauan Profil Nasabah
 - [x] Tugas 8 — `profileMismatch` menjadi perbandingan sungguhan pada jalur transaksi
-- [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+- [x] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 Urutannya mengikat: **1 dan 2 sebelum segalanya**; 3 sebelum 8 dan 9; 4 sebelum 5; 5 sebelum 6 dan
 7; 6 sebelum 7; 1 dan 3 sebelum 8. Tugas 9 terakhir.
@@ -368,19 +368,47 @@ antreannya akan terasa.
 
 **Files:** Create `server/customerProfileScenario.test.ts`; Modify panduan A–Z, skema database, ROADMAP
 
-- [ ] **Step 1: Skenario menyeluruh** dari data karangan: nasabah mendeklarasikan profil →
+- [x] **Step 1: Skenario menyeluruh** dari data karangan: nasabah mendeklarasikan profil →
       bertransaksi di bawah ambang → tidak muncul → bertransaksi mencapai dua kali lipat → muncul
       beserta alasannya → Controller menutup peninjauan → tidak muncul lagi sampai iramanya jatuh
       tempo berikutnya.
-- [ ] **Step 2: Skenario sisi batas** — nasabah tanpa deklarasi muncul sebagai
+- [x] **Step 2: Skenario sisi batas** — nasabah tanpa deklarasi muncul sebagai
       `PROFIL_BELUM_DIDEKLARASIKAN`; nasabah `LOW` yang baru ditinjau tidak muncul selama dua belas
       bulan; mata uang tak terdeklarasi muncul sendirian tanpa penyimpangan nilai; dan **frekuensi
       menyimpang sendirian** — banyak transaksi kecil yang totalnya masih di bawah ambang nilai.
-- [ ] **Step 3: Peragaan end-to-end** pada `moneychanger`, membuat data uji yang diperlukan
+- [x] **Step 3: Peragaan end-to-end** pada `moneychanger`, membuat data uji yang diperlukan
       langsung (diizinkan pengguna 8 September 2026). Perlihatkan juga keadaan hari pertama apa
       adanya: nasabah tanpa deklarasi jatuh tempo dan belum berdeklarasi.
-- [ ] **Step 4: Perbarui dokumentasi** — panduan A–Z (cara mendeklarasikan profil, cara kerja
+- [x] **Step 4: Perbarui dokumentasi** — panduan A–Z (cara mendeklarasikan profil, cara kerja
       worklist, dan apa yang aplikasi **tidak** lakukan), skema database (tiga kolom dan tabel
       baru beserta migrasinya), dan ROADMAP.
-- [ ] **Step 5:** Perintah mutu, sebutkan angka uji yang benar-benar dilihat, lalu commit
+- [x] **Step 5:** Perintah mutu, sebutkan angka uji yang benar-benar dilihat, lalu commit
       `"Skenario pemantauan profil menyeluruh, peragaan, dan dokumentasi"`.
+
+---
+
+## Penutup Paket H
+
+Selesai 8 September 2026. Perintah mutu terakhir yang benar-benar dijalankan:
+`Test Files 132 passed (132)`, `Tests 1049 passed | 2 skipped (1051)`, `tsc --noEmit` bersih,
+`vite build` sukses. Baseline sebelum paket ini `124`/`973`; sembilan tugas menambah 8 berkas uji
+dan 76 uji.
+
+**Risiko residual yang jujur, bukan daftar kosong:**
+
+1. **Mata uang tidak dinilai di jalur kasir.** Hanya nilai dan frekuensi. Mata uang tak
+   terdeklarasi terlihat di worklist pemantauan, bukan saat bon dibuat.
+2. **Ambang berlaku atas akumulasi sebulan.** Begitu seorang nasabah melewati dua kali lipat
+   deklarasinya, setiap transaksi berikutnya pada bulan itu ikut masuk review sampai bulan
+   berganti. Bentuknya sama dengan ambang setara USD yang sudah ada, tetapi bagi nasabah
+   berdeklarasi rendah antreannya akan terasa.
+3. **Keadaan error halaman pemantauan belum pernah dilihat di layar** — hanya ditinjau lewat kode.
+4. **Deklarasi yang tidak dikirim akan dikosongkan.** Itu disengaja (hanya begitu nasabah dapat
+   menarik pernyataannya), dan borang penyuntingan sudah mengirimkan ketiganya — tetapi pemanggil
+   baru mana pun wajib melakukan hal yang sama. Dikunci uji beserta alasannya.
+5. **`pnpm audit --prod --audit-level=high` tetap melaporkan 9 temuan** (6 sedang, 3 tinggi):
+   residual `xlsx`/SheetJS yang sudah diketahui, ditambah `mysql2 <3.22.0`. Paket ini tidak
+   mengubah dependensi apa pun; temuan itu sudah ada sebelumnya dan **belum** bersih.
+6. **Data uji lokal dibiarkan** pada `moneychanger`: dua nasabah (`CIF-000001` berdeklarasi,
+   `CIF-000002` tanpa deklarasi), bon `FX-UJI-T4-*` dan `UJI-T8-0001`, serta satu baris
+   `customer_profile_reviews`. Tidak ada yang menyentuh produksi.

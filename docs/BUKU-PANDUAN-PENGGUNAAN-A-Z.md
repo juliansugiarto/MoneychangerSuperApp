@@ -62,6 +62,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 | Layanan & Transaksi | Permintaan Layanan | Mencatat serta menindaklanjuti kebutuhan layanan. | Staff |
 | Layanan & Transaksi | Nasabah Baru | Menambahkan data nasabah baru sesuai dokumen, termasuk Beneficial Owner, status PEP, dan pencocokan DTTOT/PPSPM. | Staff |
 | Layanan & Transaksi | Daftar Nasabah | Mencari dan meninjau seluruh profil nasabah; ekspor data (tanpa dokumen KTP) ke CSV. | Staff |
+| Layanan & Transaksi | Pemantauan Profil | Worklist nasabah yang jatuh tempo ditinjau, deklarasi profil transaksi disandingkan dengan aktivitas nyatanya, dan pencatatan hasil peninjauan. | Controller |
 | Kontrol Outlet | Buka & Tutup Outlet | Checklist pembukaan, penutupan, catatan serah-terima, dan arsip PDF penutupan. | Staff |
 | Kontrol Outlet | Kurs Operasional | Memantau, menyiapkan, dan mengaktifkan kurs secara manual dengan alasan. | Admin |
 | Kontrol Outlet | Bandingkan Kurs | Membandingkan kurs outlet dengan referensi yang tersedia. | Admin |
@@ -213,7 +214,57 @@ Buka **Kesiapan Operasional** pada awal dan akhir hari. Gunakan halaman ini untu
 
 Controller membuka **Direksi Mengetahui** untuk melihat informasi yang perlu diakui Direksi. Direksi mengakui setelah membaca konteksnya. Pengakuan tidak menggantikan investigasi, persetujuan transaksi, atau koreksi kas.
 
-### 6.3 Laporan Internal dan Jejak Audit
+### 6.3 Pemantauan Profil Nasabah — Controller
+
+**Apa yang dideklarasikan nasabah.** Pada borang **Nasabah Baru** (dan pada Edit di **Daftar
+Nasabah**) terdapat bagian *Perkiraan aktivitas menurut nasabah*: perkiraan **nilai** transaksi
+sebulan dalam Rupiah, perkiraan **banyaknya** transaksi sebulan, dan **mata uang** yang diharapkan.
+Ketiganya adalah **pernyataan nasabah sendiri**, bukan batas yang ditegakkan sistem, dan boleh
+dikosongkan bila nasabah belum dapat memperkirakan. Tanyakan apa adanya; jangan mengisikan angka
+atas nama nasabah, sebab angka karangan akan membuat seluruh penilaian di bawah ini tidak berarti.
+
+> **Penting saat mengedit nasabah:** ketiga isian itu ikut terkirim setiap kali profil disimpan.
+> Bila Anda mengosongkannya, deklarasinya benar-benar terhapus. Biarkan terisi apa adanya kecuali
+> nasabah memang menyatakan angka baru.
+
+**Kapan nasabah muncul untuk ditinjau.** Buka **Pemantauan Profil**. Iramanya mengikuti peringkat
+risiko nasabah: risiko **tinggi sebulan sekali**, **menengah tiga bulan sekali**, **rendah setahun
+sekali**. Nasabah yang **belum pernah ditinjau selalu** jatuh tempo — pada hari pertama pemakaian,
+seluruh nasabah lama akan muncul, dan itu memang keadaan yang sebenarnya.
+
+**Apa yang ditunjukkan halaman itu.** Untuk tiap nasabah, deklarasinya disandingkan dengan aktivitas
+nyatanya pada bulan berjalan, beserta ambang yang berlaku, sehingga peninjau melihat angkanya dan
+bukan hanya benderanya. Alasan penyimpangan yang mungkin muncul:
+
+| Alasan | Artinya |
+|---|---|
+| Belum mendeklarasikan profil | Nasabah belum pernah ditanya perkiraan aktivitasnya. Ini pekerjaan yang belum dilakukan, bukan pelanggaran nasabah. |
+| Nilai sebulan mencapai dua kali lipat deklarasi | Total Rupiah sebulan berjalan mencapai **dua kali** angka yang dinyatakan nasabah. |
+| Frekuensi sebulan mencapai dua kali lipat deklarasi | Banyaknya transaksi sebulan mencapai **dua kali** perkiraan nasabah. Bendera ini dapat menyala sendirian ketika nilainya masih wajar — bentuk pemecahan transaksi yang paling perlu terlihat. |
+| Memakai mata uang di luar deklarasi | Ada mata uang yang ditransaksikan tetapi tidak disebut dalam deklarasi. Kode mata uangnya disebutkan. |
+
+**Menutup peninjauan.** Tekan **Catat peninjauan**, pilih hasilnya, dan isi keterangan. Keterangan
+**wajib** diisi bila hasilnya bukan "tidak ada perubahan" — peninjauan tanpa keterangan tidak dapat
+ditindaklanjuti siapa pun dan pada berkas pemeriksaan hanya terbaca sebagai peninjauan yang tidak
+selesai. Alasan penyimpangan yang terlihat saat itu ikut **dibekukan** pada catatannya, sehingga
+isinya tidak berubah bila aktivitas nasabah berubah kemudian.
+
+Sesudah ditutup, nasabahnya tidak muncul lagi sampai iramanya jatuh tempo berikutnya — meski
+aktivitasnya masih menyimpang. Peninjauannya memang baru saja dilakukan seseorang.
+
+**Yang halaman ini tidak lakukan.** Ia **tidak** mengubah data nasabah, **tidak** memblokir
+transaksi, dan **tidak** mengirim laporan apa pun ke PPATK maupun Bank Indonesia. Sama seperti
+pencocokan DTTOT/PPPSM, ini alat bantu penyaringan — pelaporan tetap dilakukan petugas secara manual
+sesuai prosedur resmi.
+
+**Hubungannya dengan kasir.** Transaksi yang membuat akumulasi sebulan nasabah menyimpang dari
+profilnya **dialirkan ke review**, sama seperti ambang setara USD 10.000 yang sudah ada; transaksinya
+tidak diblokir. Nasabah yang **belum** berdeklarasi tidak menyalakannya di kasir — kekosongan itu
+urusan worklist ini, bukan urusan kasir. Perlu diketahui: ambangnya berlaku atas akumulasi
+**sebulan**, sehingga begitu seorang nasabah melewatinya, transaksi berikutnya pada bulan itu ikut
+masuk review sampai bulan berganti.
+
+### 6.4 Laporan Internal dan Jejak Audit
 
 Gunakan **Laporan** untuk melihat ringkasan yang disediakan dan **Jejak Audit** untuk menelusuri tindakan penting. Bila terjadi perbedaan, jangan mengubah data untuk mengejar tampilan laporan. Cocokkan bon, kas, stock opname, dan audit log; lalu eskalasi sesuai struktur perusahaan.
 
@@ -221,12 +272,12 @@ Gunakan **Laporan** untuk melihat ringkasan yang disediakan dan **Jejak Audit** 
 - Jumlah transaksi **Selesai**, turnover total, total beli dan total jual (Rupiah) untuk periode tsb — hanya bon yang sudah terposting ke kas/stok yang dihitung (DRAFT/PENDING_REVIEW/APPROVED/RETURNED/CANCELLED tidak masuk hitungan).
 - **Estimasi margin kotor** per mata uang dan totalnya, dihitung dengan metode **rata-rata tertimbang**: kurs jual rata-rata dikurangi kurs beli rata-rata, dikalikan volume yang lebih kecil di antara total beli/jual mata uang tsb pada periode itu. Ini **bukan** perhitungan laba akuntansi penuh berbasis FIFO (sistem belum melacak lot valuta mana yang terjual dari pembelian mana) — perlakukan sebagai indikasi kasar, bukan angka final untuk laporan keuangan resmi.
 
-### 6.4 Penutupan Periode Pembukuan — Controller ke atas
+### 6.5 Penutupan Periode Pembukuan — Controller ke atas
 
 Buka **Buku Besar → Periode**. Setiap periode terbuka punya tombol **Penutupan periode**; menekannya membuka tiga panel berurutan — **Penyusutan aset tetap**, lalu **Revaluasi kurs**, lalu penilaian persediaan akhir UKA. Urutannya mengikat dan tidak dapat dilompati:
 
-1. **Jalankan penyusutan bulan itu lebih dulu** (§6.5). Selama penyusutan belum dijurnal, tombol tutup periode menolak dengan pesan “penyusutan aset tetap belum dijurnal”. Outlet yang belum punya satu pun aset tetap tetap harus menekan tombolnya — hasilnya nol beban, dan itu keadaan sah yang tetap perlu dicatat sudah diperiksa.
-2. **Jalankan revaluasi kurs** (§6.6). Saldo rekening bank valuta asing diukur ulang pada kurs tengah BI akhir periode. Outlet tanpa rekening valuta asing tetap harus menekan tombolnya — hasilnya nol selisih, dan itu keadaan sah yang tetap perlu dicatat sudah diperiksa.
+1. **Jalankan penyusutan bulan itu lebih dulu** (§6.6). Selama penyusutan belum dijurnal, tombol tutup periode menolak dengan pesan “penyusutan aset tetap belum dijurnal”. Outlet yang belum punya satu pun aset tetap tetap harus menekan tombolnya — hasilnya nol beban, dan itu keadaan sah yang tetap perlu dicatat sudah diperiksa.
+2. **Jalankan revaluasi kurs** (§6.7). Saldo rekening bank valuta asing diukur ulang pada kurs tengah BI akhir periode. Outlet tanpa rekening valuta asing tetap harus menekan tombolnya — hasilnya nol selisih, dan itu keadaan sah yang tetap perlu dicatat sudah diperiksa.
 3. **Stock opname akhir bulan sudah ditinjau** (§5.6 langkah 4–5). Penilaian hanya menerima opname berstatus **RECONCILED** atau **VARIANCE** — hitungan fisik yang belum ditinjau bukan bukti. Opname yang masih OPEN atau SUBMITTED akan muncul sebagai penghalang.
 4. **Jalankan penilaian.** Panel menampilkan, per mata uang: kuantitas hasil hitung fisik, tanggal opname yang dipakai, kurs tengah BI, tanggal kurs yang dipakai, dan nilai Rupiahnya. Di bawahnya tertera **Persediaan awal (5-1100)** dan **Persediaan akhir (5-1300)** — itulah angka yang akan dijurnal, terlihat **sebelum** tombolnya ditekan. Kurs tengah adalah (kurs beli + kurs jual) ÷ 2, dibagi satuan kuotasi BI (JPY dikutip per 100 unit).
 5. **Khusus periode yang berakhir 31 Desember:** tombol **Jurnal penutup laba tahunan** muncul setelah penilaian dijalankan. Ia memindahkan seluruh saldo laba rugi tahun itu ke 3-2100 Laba Ditahan. Wajib dijalankan sebelum periodenya dapat ditutup, dan ia sendiri menolak berjalan bila ada bulan sepanjang tahun itu yang penyusutan **atau** revaluasi kursnya belum dijurnal — pesannya menyebut bulan-bulannya satu per satu.
@@ -247,7 +298,7 @@ Mata uang yang stoknya memang nol — laci kosong dan brankas kosong — dilewat
 
 Penilaian yang sudah dijalankan **tidak dapat diulang**. Bila angkanya perlu diperbaiki, catat jurnal baliknya lebih dulu seperti koreksi jurnal lainnya.
 
-### 6.5 Aset Tetap dan Penyusutan — Controller ke atas
+### 6.6 Aset Tetap dan Penyusutan — Controller ke atas
 
 Buka **Aset Tetap**. Halaman ini memuat daftar aset outlet beserta harga perolehan, akumulasi penyusutan, dan nilai bukunya; tombol **Daftarkan aset**; tombol **Lepaskan** pada tiap aset yang masih aktif; dan kartu **Batas kapitalisasi**.
 
@@ -270,7 +321,7 @@ Penyusutan sebuah bulan **tidak dapat dijalankan dua kali**. Bila angkanya perlu
 **Perolehan dan hasil pelepasan tidak menyentuh kas.** Membeli brankas mendebit Aset Tetap — Harga Perolehan (1-1510) dan mengkredit **Kewajiban Lain-Lain (2-1900)**; melepasnya mendebit **Piutang Lain-Lain (1-1320)**. Uangnya sendiri dicatat terpisah saat benar-benar bergerak — lewat **Catat Pengeluaran** untuk pembayarannya, atau lewat penerimaan bank untuk hasil penjualannya. Alasannya: kas pada buku besar harus selalu sama dengan kas yang dihitung di laci dan brankas, dan modul di luar sistem kas yang menyentuh 1-1110 akan membuat keduanya berbeda tanpa ketahuan. Jangan mencatat pembelian aset sebagai pengeluaran biasa **dan** mendaftarkannya di sini — itu menghitungnya dua kali.
 
 
-### 6.6 Rekening Valuta Asing dan Revaluasi Kurs — Controller ke atas
+### 6.7 Rekening Valuta Asing dan Revaluasi Kurs — Controller ke atas
 
 **Rekening bank dalam mata uang asing kini masuk pembukuan.** Sebelumnya rekening USD boleh dibuat dan mutasinya boleh dicatat, tetapi tidak pernah masuk buku besar — uang yang benar-benar ada tidak muncul di laporan mana pun. Sekarang setiap mutasinya dinilai ke Rupiah dan dicatat pada **Bank UKA (1-1220)**.
 
@@ -284,7 +335,7 @@ Selisihnya masuk **Laba/(Rugi) Selisih Kurs (7-1500)**. Kalau kurs naik, laba; k
 
 **Selisih ini bukan uang yang masuk atau keluar.** Tidak ada Rupiah yang berpindah; yang berubah hanya nilai catatan atas uang yang sudah ada. Jangan mencarinya di kas atau di rekening.
 
-**Uang tunai UKA di laci dan brankas tidak ikut direvaluasi di sini.** Ia dinilai lewat stock opname pada langkah penilaian persediaan (§6.4). Merevaluasinya di dua tempat akan menghitung pergerakan kurs yang sama dua kali, dan neracanya akan tetap terlihat seimbang meski angkanya salah — kekeliruan yang tidak akan terlihat dari laporan mana pun.
+**Uang tunai UKA di laci dan brankas tidak ikut direvaluasi di sini.** Ia dinilai lewat stock opname pada langkah penilaian persediaan (§6.5). Merevaluasinya di dua tempat akan menghitung pergerakan kurs yang sama dua kali, dan neracanya akan tetap terlihat seimbang meski angkanya salah — kekeliruan yang tidak akan terlihat dari laporan mana pun.
 
 **Panel menunjukkan angkanya sebelum tombolnya ditekan:** per mata uang — saldo valutanya, kurs tengah BI, tanggal kurs yang dipakai, nilai yang tercatat sekarang, nilai sesudahnya, dan selisihnya. Tanggal kurs yang lebih awal daripada akhir periode diberi tanda **"Mundur dari akhir periode"**; itu keadaan sah, dan tanggal yang benar-benar dipakai tersimpan supaya pemeriksa dapat menunjuknya.
 
@@ -293,7 +344,7 @@ Selisihnya masuk **Laba/(Rugi) Selisih Kurs (7-1500)**. Kalau kurs naik, laba; k
 **Revaluasi sebuah bulan tidak dapat diulang.** Bila angkanya perlu diperbaiki, catat jurnal baliknya lebih dulu seperti koreksi jurnal lainnya. Menekan tombolnya berkali-kali tidak pernah menghasilkan jurnal ganda.
 
 
-### 6.7 Membayar Tagihan dan Menagih Piutang — Controller ke atas
+### 6.8 Membayar Tagihan dan Menagih Piutang — Controller ke atas
 
 **Beban dan pembelian aset tetap sengaja tidak langsung mengurangi kas.** Waktu Anda mencatat pengeluaran atau mendaftarkan aset tetap, yang tercatat adalah **kewajiban** (2-1900) — bukan uang keluar. Itu disengaja: modul-modul itu tidak menyentuh laci, sehingga kas di buku besar tidak pernah berbeda dari kas yang benar-benar dihitung petugas.
 
@@ -315,7 +366,7 @@ Cara memakainya:
 
 **Kenapa ini penting.** Selama pelunasannya tidak pernah dicatat, Laporan Arus Kas tidak akan memperlihatkan satu pun pembayaran beban maupun pembelian aset — dan halaman Laporan Keuangan akan menyalakan peringatan *"Beban dan perolehan aset tercatat tetapi belum ada yang dibayar."*
 
-### 6.8 Laporan Arus Kas dan CALK — Controller ke atas
+### 6.9 Laporan Arus Kas dan CALK — Controller ke atas
 
 Kelima laporan keuangan sekarang berada di halamannya sendiri: **Laporan → Laporan Keuangan**. Buku Besar tetap memuat pekerjaan pembukuannya (jurnal, neraca saldo, buku besar akun, penutupan periode); halaman ini memuat hasilnya.
 
@@ -323,14 +374,14 @@ Kelima laporan keuangan sekarang berada di halamannya sendiri: **Laporan → Lap
 
 #### Membaca Laporan Arus Kas
 
-**Kas dan setara kas** di sini berarti tiga akun: Kas Rupiah (1-1110), Bank Rupiah (1-1120), dan Bank UKA (1-1220). **Uang kertas asing di laci tidak termasuk** — ia persediaan barang dagangan, bukan kas, dan dinilai lewat stock opname (§6.4).
+**Kas dan setara kas** di sini berarti tiga akun: Kas Rupiah (1-1110), Bank Rupiah (1-1120), dan Bank UKA (1-1220). **Uang kertas asing di laci tidak termasuk** — ia persediaan barang dagangan, bukan kas, dan dinilai lewat stock opname (§6.5).
 
 Bagiannya:
 
 - **Operasi** — penerimaan penjualan UKA, pembayaran pembelian UKA, pembayaran beban, dan selisih hitungan kas.
 - **Investasi** — pembayaran perolehan aset tetap dan hasil pelepasannya, disajikan **bruto**: keduanya muncul sebagai baris sendiri, tidak saling dikurangkan.
 - **Pendanaan** — setoran modal dan penarikan pemilik.
-- **Pengaruh perubahan kurs** — selisih revaluasi (§6.6). Ini bukan uang yang bergerak, karena itu ia berdiri sendiri di luar ketiga bagian.
+- **Pengaruh perubahan kurs** — selisih revaluasi (§6.7). Ini bukan uang yang bergerak, karena itu ia berdiri sendiri di luar ketiga bagian.
 
 **Setor kas ke rekening tidak muncul di mana pun**, dan itu benar: uang yang sama berpindah tempat, jumlah kas dan setara kasnya tidak berubah.
 
@@ -353,7 +404,7 @@ Saat menyimpan, ada pilihan **"Khusus periode ini"**. Kosongkan untuk teks yang 
 
 **Catatan yang belum diisi muncul sebagai peringatan**, bukan sebagai penghalang. Laporan tetap dapat disusun; tetapi CALK yang kosong berarti laporannya belum lengkap menurut SAK EP.
 
-### 6.9 Ekspor form B0002/B0003/B0004 — Controller ke atas
+### 6.10 Ekspor form B0002/B0003/B0004 — Controller ke atas
 
 Selama ini angka laporan keuangan **diketik ulang** ke berkas Excel BI. Pengetikan ulang itulah risiko yang dituju temuan pemeriksaan 7.1: begitu angka berpindah lewat tangan, buku besar berhenti menjadi dasar laporan. Sekarang berkasnya dihasilkan aplikasi.
 
@@ -384,7 +435,7 @@ Halaman **Pelaporan Regulator** adalah pusat persiapan internal. Halaman ini tid
 | Tahap | Pembuat | Pemeriksa | Aturan penting |
 |---|---|---|---|
 | LKU dari transaksi hidup | Controller | Shareholder | Hanya transaksi produksi `COMPLETED` yang diperhitungkan. Data demo, historis, simulasi, draf, atau transaksi batal tidak masuk. |
-| Snapshot B0002/B0003/B0004 | Controller | Shareholder | Gunakan ekspor dari buku besar (§6.9), input manual, atau template; periksa pos sebelum simpan snapshot. |
+| Snapshot B0002/B0003/B0004 | Controller | Shareholder | Gunakan ekspor dari buku besar (§6.10), input manual, atau template; periksa pos sebelum simpan snapshot. |
 | Bundle tiga workbook | Controller | Shareholder | Pemetaan dilakukan di memori; tidak menyimpan file, snapshot, atau paket sebelum tombol simpan snapshot ditekan. |
 | Paket laporan | Controller | Shareholder | Status bergerak manual: `DRAFT → PREPARED → APPROVED → EXPORTED`. |
 | Pengembalian paket | Shareholder | Controller | Catatan wajib. Controller memperbaiki sumber dan membuat draf baru; jejak paket lama tidak dihapus. |

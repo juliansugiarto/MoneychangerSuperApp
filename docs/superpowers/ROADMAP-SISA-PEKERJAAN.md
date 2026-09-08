@@ -122,15 +122,15 @@ Rencana: `plans/2026-09-07-ekspor-laporan-b-form.md`
 Spec: `specs/2026-09-07-profil-transaksi-pemantauan-design.md`
 Rencana: `plans/2026-09-07-profil-transaksi-pemantauan.md`
 - [x] Sesi rancangan — spec dan rencana bertugas
-- [ ] Tugas 1 — Penilaian penyimpangan dan irama berbasis risiko, murni dan teruji
-- [ ] Tugas 2 — Migrasi: tiga kolom deklarasi dan tabel `customer_profile_reviews`
-- [ ] Tugas 3 — Penulis deklarasi: borang nasabah, `createCustomer`, `updateCustomer`
-- [ ] Tugas 4 — Jendela bulanan WIB bersama dan pembacaan aktivitas nyata
-- [ ] Tugas 5 — Worklist pemantauan: query, otorisasi, dan batas "hanya mencatat"
-- [ ] Tugas 6 — Penulis peninjauan: `recordCustomerProfileReview` beserta auditnya
-- [ ] Tugas 7 — Halaman Pemantauan Profil Nasabah
-- [ ] Tugas 8 — `profileMismatch` menjadi perbandingan sungguhan pada jalur transaksi
-- [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+- [x] Tugas 1 — Penilaian penyimpangan dan irama berbasis risiko, murni dan teruji
+- [x] Tugas 2 — Migrasi: tiga kolom deklarasi dan tabel `customer_profile_reviews`
+- [x] Tugas 3 — Penulis deklarasi: borang nasabah, `createCustomer`, `updateCustomer`
+- [x] Tugas 4 — Jendela bulanan WIB bersama dan pembacaan aktivitas nyata
+- [x] Tugas 5 — Worklist pemantauan: query, otorisasi, dan batas "hanya mencatat"
+- [x] Tugas 6 — Penulis peninjauan: `recordCustomerProfileReview` beserta auditnya
+- [x] Tugas 7 — Halaman Pemantauan Profil Nasabah
+- [x] Tugas 8 — `profileMismatch` menjadi perbandingan sungguhan pada jalur transaksi
+- [x] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 **Keputusan pengguna 7 September 2026 yang mengikat:** deklarasi = nilai + frekuensi + mata uang;
 ambang penyimpangan **nilai bulanan ≥ deklarasi × 2**; mata uang tak terdeklarasi alasan
