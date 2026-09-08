@@ -45,6 +45,7 @@ import { knownDenominationsFor } from "../shared/currencyDenominations";
 import { PRIMARY_REVENUE_ROW_KEY } from "../shared/regulatoryForms";
 import { startOfOperationalDay, startOfNextOperationalDay, startOfOperationalMonth, startOfNextOperationalMonth } from "../shared/regulatoryActionQueue";
 import { isKnownSuspiciousIndicatorCode } from "../shared/suspiciousTransactionIndicators";
+import { assessProfileDeviation } from "../shared/transactionProfile";
 import { buildSipesatCsv, buildSipesatInitialFileName, buildSipesatTriwulanFileName } from "../shared/sipesatExport";
 import { buildGoAmlLtktReportXml, buildGoAmlLtkmReportXml, type GoAmlCustomer, type GoAmlLtktLine, type GoAmlLtkmLine } from "../shared/goAmlExport";
 import { isKnownGoAmlReportIndicator } from "../shared/goAmlReportIndicators";
@@ -237,6 +238,15 @@ export function assessReviewRequirement(input: {
   isCashPayment?: boolean;
   profileStatus: "ACTIVE" | "INACTIVE" | "RESTRICTED";
   riskLevel: "LOW" | "MEDIUM" | "HIGH";
+  /**
+   * Profil yang dinyatakan nasabah sendiri, beserta aktivitas nyatanya sebulan berjalan. Kosong
+   * berarti nasabah belum pernah berdeklarasi — dan itu bukan penyimpangan di sini.
+   */
+  declaredMonthlyValueIdr?: string | null;
+  declaredMonthlyCount?: number | null;
+  declaredCurrencies?: string[] | null;
+  monthlyTransactionCount?: number | null;
+  monthlyCurrencyCodes?: string[] | null;
 }) {
   const toUsd = (rupiah: string) => input.usdSellRate && input.usdQuoteUnit
     ? new Decimal(rupiah).mul(input.usdQuoteUnit).div(input.usdSellRate)
@@ -267,14 +277,37 @@ export function assessReviewRequirement(input: {
     || (input.cashDailyRupiahTotal ? new Decimal(input.cashDailyRupiahTotal).gte(ltktThreshold) : false)
   );
   const profileMismatch = input.profileStatus === "RESTRICTED" || input.riskLevel === "HIGH";
+  /**
+   * Perbandingan sungguhan antara aktivitas dan profil yang dinyatakan nasabah, memakai fungsi
+   * murni `assessProfileDeviation` apa adanya — aturannya tidak disalin ke sini, supaya ambang yang
+   * dilihat kasir dan ambang yang dilihat worklist pemantauan tidak dapat berbeda pendapat.
+   *
+   * Nasabah **tanpa deklarasi tidak menyalakannya**: `hasDeviation` sengaja bernilai salah untuk
+   * `PROFIL_BELUM_DIDEKLARASIKAN`. Kekosongan itu urusan worklist pemantauan, bukan urusan kasir —
+   * menyalakannya di sini akan memaksa review pada setiap transaksi seluruh nasabah lama yang belum
+   * pernah ditanya, dan antrean review yang selalu penuh akan berhenti dibaca orang.
+   */
+  const profileDeviation = assessProfileDeviation(
+    {
+      declaredMonthlyValueIdr: input.declaredMonthlyValueIdr,
+      declaredMonthlyCount: input.declaredMonthlyCount,
+      declaredCurrencies: input.declaredCurrencies,
+    },
+    {
+      totalValueIdr: input.monthlyRupiahTotal ?? input.rupiahAmount,
+      transactionCount: input.monthlyTransactionCount ?? 0,
+      currencyCodes: input.monthlyCurrencyCodes ?? [],
+    },
+  );
   const reviewReason = [
     exceedsThreshold ? (exceedsOnAccumulation ? "AKUMULASI_BULANAN_SETARA_USD_MELEBIHI_AMBANG" : "NILAI_SETARA_USD_MELEBIHI_AMBANG") : null,
     exceedsCashDailyEdd ? "AKUMULASI_TRANSAKSI_TUNAI_HARIAN_MEMENUHI_AMBANG_EDD" : null,
     meetsLtktThreshold ? "MEMENUHI_AMBANG_LTKT_PPATK" : null,
     input.profileStatus === "RESTRICTED" ? "PROFIL_NASABAH_RESTRICTED" : null,
     input.riskLevel === "HIGH" ? "RISIKO_NASABAH_TINGGI" : null,
+    profileDeviation.hasDeviation ? "AKTIVITAS_MENYIMPANG_DARI_PROFIL" : null,
   ].filter(Boolean).join("; ") || null;
-  return { requiresReview: exceedsThreshold || exceedsCashDailyEdd || profileMismatch, reviewReason, usdEquivalent: usdEquivalent?.toFixed(6) ?? null, monthlyUsdEquivalent: monthlyUsdEquivalent?.toFixed(6) ?? null, meetsLtktThreshold, exceedsThreshold, exceedsOnAccumulation };
+  return { requiresReview: exceedsThreshold || exceedsCashDailyEdd || profileMismatch || profileDeviation.hasDeviation, reviewReason, usdEquivalent: usdEquivalent?.toFixed(6) ?? null, monthlyUsdEquivalent: monthlyUsdEquivalent?.toFixed(6) ?? null, meetsLtktThreshold, exceedsThreshold, exceedsOnAccumulation, profileDeviationReasons: profileDeviation.reasons };
 }
 
 export function submissionTransition(status: "DRAFT" | "RETURNED", requiresReview: boolean) {
@@ -1498,7 +1531,12 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   // ketentuan underlying berlaku atas akumulasi per bulan, bukan per transaksi.
   const monthStart = startOfOperationalMonth(input.transactionAt);
   const nextMonth = startOfNextOperationalMonth(input.transactionAt);
-  const monthlyRupiahBefore = (await db.select({ total: sql<string>`COALESCE(SUM(${exchangeTransactions.rupiahAmount}), 0)` }).from(exchangeTransactions).where(and(
+  const monthlyAccumulation = (await db.select({
+    total: sql<string>`COALESCE(SUM(${exchangeTransactions.rupiahAmount}), 0)`,
+    // Banyaknya transaksi dipakai bendera penyimpangan profil: pemecahan transaksi justru terlihat
+    // di sini, bukan pada totalnya.
+    count: sql<number>`COUNT(*)`,
+  }).from(exchangeTransactions).where(and(
     eq(exchangeTransactions.customerId, input.customerId),
     gte(exchangeTransactions.transactionAt, monthStart),
     lt(exchangeTransactions.transactionAt, nextMonth),
@@ -1507,9 +1545,22 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     inArray(exchangeTransactions.status, [...ACCUMULATED_TRANSACTION_STATUSES]),
     eq(exchangeTransactions.isDemo, false),
     eq(exchangeTransactions.isHistorical, false),
-  )))[0]?.total ?? "0";
-  const monthlyRupiahTotal = new Decimal(monthlyRupiahBefore).plus(rupiahAmount).toFixed(2);
-  const assessment = assessReviewRequirement({ rupiahAmount, thresholdUsd: thresholds.reviewThresholdUsd, usdSellRate: usdBiReferenceRate?.sellRate, usdQuoteUnit: usdBiReferenceRate?.quoteUnit, cashDailyRupiahTotal, monthlyRupiahTotal, eddCashDailyThresholdIdr: thresholds.eddCashDailyThresholdIdr, isCashPayment: input.paymentMethod === "CASH", profileStatus: customer.profileStatus, riskLevel: customer.riskLevel });
+  )))[0];
+  const monthlyRupiahTotal = new Decimal(monthlyAccumulation?.total ?? "0").plus(rupiahAmount).toFixed(2);
+  // Transaksi yang sedang dibuat ikut dihitung, sama seperti nilainya.
+  const monthlyTransactionCount = Number(monthlyAccumulation?.count ?? 0) + 1;
+  const assessment = assessReviewRequirement({
+    rupiahAmount, thresholdUsd: thresholds.reviewThresholdUsd, usdSellRate: usdBiReferenceRate?.sellRate, usdQuoteUnit: usdBiReferenceRate?.quoteUnit,
+    cashDailyRupiahTotal, monthlyRupiahTotal, eddCashDailyThresholdIdr: thresholds.eddCashDailyThresholdIdr,
+    isCashPayment: input.paymentMethod === "CASH", profileStatus: customer.profileStatus, riskLevel: customer.riskLevel,
+    declaredMonthlyValueIdr: customer.declaredMonthlyValueIdr,
+    declaredMonthlyCount: customer.declaredMonthlyCount,
+    // Mata uang sengaja tidak dinilai di jalur kasir: penilaiannya menuntut join ke baris bon yang
+    // tidak dilakukan query akumulasi ini, dan mata uang tak terdeklarasi sudah menjadi alasan
+    // tersendiri pada worklist pemantauan. Menilai setengah lalu menyebutnya lengkap lebih buruk
+    // daripada menyerahkannya ke tempat yang memang membacanya utuh.
+    monthlyTransactionCount,
+  });
 
   // Underlying stops being optional once the >=10,000 USD-equivalent threshold is met — PBI
   // 18/20/PBI/2016 requires it, so the teller's checkbox choice is overridden, not just defaulted.

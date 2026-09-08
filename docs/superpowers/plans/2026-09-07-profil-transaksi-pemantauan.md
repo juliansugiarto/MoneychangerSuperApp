@@ -21,7 +21,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 5 — Worklist pemantauan: query, otorisasi, dan batas "hanya mencatat"
 - [x] Tugas 6 — Penulis peninjauan: `recordCustomerProfileReview` beserta auditnya
 - [x] Tugas 7 — Halaman Pemantauan Profil Nasabah
-- [ ] Tugas 8 — `profileMismatch` menjadi perbandingan sungguhan pada jalur transaksi
+- [x] Tugas 8 — `profileMismatch` menjadi perbandingan sungguhan pada jalur transaksi
 - [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 Urutannya mengikat: **1 dan 2 sebelum segalanya**; 3 sebelum 8 dan 9; 4 sebelum 5; 5 sebelum 6 dan
@@ -335,17 +335,32 @@ review**, sama seperti ambang setara USD yang sudah ada. Ia **tidak memblokir** 
 mengubah data nasabah. Bila ini terasa mengubah alur kasir lebih jauh dari yang dikehendaki,
 **berhenti dan laporkan** sebelum melanjutkan.
 
-- [ ] **Step 1: Uji yang gagal** — nasabah `LOW` berprofil terdeklarasi yang akumulasi bulanannya
+- [x] **Step 1: Uji yang gagal** — nasabah `LOW` berprofil terdeklarasi yang akumulasi bulanannya
       mencapai dua kali lipat menyalakan review beserta alasannya; nasabah yang sama di bawah ambang
       tidak; nasabah **tanpa deklarasi** tidak menyalakannya (kekosongan bukan penyimpangan pada
       jalur transaksi — ia urusan worklist, bukan urusan kasir).
-- [ ] **Step 2: Uji bahwa bendera lama tidak berubah** — `RESTRICTED` dan `HIGH` tetap menyalakan
+- [x] **Step 2: Uji bahwa bendera lama tidak berubah** — `RESTRICTED` dan `HIGH` tetap menyalakan
       review persis seperti sebelumnya, dan ketiga ambang yang sudah ada
       (`underlyingMonthlyThreshold.test.ts`) tetap hijau tanpa disunting.
-- [ ] **Step 3: Alirkan `assessProfileDeviation`** dari Tugas 1 ke dalam `assessReviewRequirement`,
+- [x] **Step 3: Alirkan `assessProfileDeviation`** dari Tugas 1 ke dalam `assessReviewRequirement`,
       menambah alasan `AKTIVITAS_MENYIMPANG_DARI_PROFIL`. Fungsi murni Tugas 1 **dipakai apa
       adanya**; jangan menyalin aturannya ke dalam `operations.ts`.
-- [ ] **Step 4:** Perintah mutu, lalu commit `"Ketidaksesuaian profil menjadi perbandingan sungguhan"`.
+- [x] **Step 4:** Perintah mutu, lalu commit `"Ketidaksesuaian profil menjadi perbandingan sungguhan"`.
+
+**Catatan Tugas 8 — cakupan yang dinilai di jalur kasir, dan yang tidak.**
+
+Nilai dan **frekuensi** dinilai: keduanya berasal dari query akumulasi bulanan yang sudah ada,
+yang kini sekalian mengembalikan `COUNT(*)`. **Mata uang tidak** dinilai di jalur kasir — penilaian
+utuhnya menuntut join ke `exchange_transaction_lines` yang tidak dilakukan query akumulasi itu, dan
+mata uang tak terdeklarasi sudah menjadi alasan tersendiri pada worklist pemantauan. Menilai
+setengah lalu menyebutnya lengkap lebih buruk daripada menyerahkannya ke tempat yang membacanya
+utuh.
+
+**Akibat operasional yang perlu diketahui:** ambangnya berlaku atas akumulasi **sebulan**, sehingga
+begitu seorang nasabah melewati dua kali lipat deklarasinya, **setiap transaksi berikutnya pada bulan
+itu ikut masuk review** sampai bulan berganti. Bentuknya sama persis dengan ambang akumulasi setara
+USD yang sudah berlaku, jadi bukan perilaku baru — tetapi bagi nasabah berdeklarasi rendah,
+antreannya akan terasa.
 
 ---
 
