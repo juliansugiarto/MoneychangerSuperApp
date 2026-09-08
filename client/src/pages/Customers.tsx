@@ -38,6 +38,8 @@ const initialForm = {
   transactionPurpose: "",
   riskLevel: "LOW" as "LOW" | "MEDIUM" | "HIGH",
   riskNotes: "",
+  declaredMonthlyValueIdr: "",
+  declaredMonthlyCount: "",
 };
 
 const initialBeneficialOwner = {
@@ -67,6 +69,9 @@ export default function Customers() {
   const [pepDetails, setPepDetails] = useState("");
   const [dttotMatch, setDttotMatch] = useState(false);
   const [dttotNotes, setDttotNotes] = useState("");
+  const [declaredCurrencies, setDeclaredCurrencies] = useState<string[]>([]);
+  const currencyList = trpc.currencies.list.useQuery(undefined, { enabled: Boolean(user) });
+  const activeCurrencies = (currencyList.data ?? []).filter((currency) => currency.active && currency.code !== "IDR");
 
   // Isi otomatis nomor CIF berikutnya selama staf belum mengetik nilai sendiri.
   useEffect(() => {
@@ -83,6 +88,7 @@ export default function Customers() {
     setPepDetails("");
     setDttotMatch(false);
     setDttotNotes("");
+    setDeclaredCurrencies([]);
   };
 
   const createCustomer = trpc.customers.create.useMutation({
@@ -123,6 +129,10 @@ export default function Customers() {
       pepDetails: pepStatus !== "NONE" ? pepDetails : undefined,
       dttotPpsdmMatch: dttotMatch,
       dttotPpsdmNotes: dttotMatch ? dttotNotes : undefined,
+      // Deklarasi yang dikosongkan tetap dikirim kosong: nasabah berhak belum menyatakan apa pun.
+      declaredMonthlyValueIdr: form.declaredMonthlyValueIdr.trim() || undefined,
+      declaredMonthlyCount: form.declaredMonthlyCount.trim() ? Number(form.declaredMonthlyCount) : undefined,
+      declaredCurrencies: declaredCurrencies.length > 0 ? declaredCurrencies : undefined,
     });
   };
 
@@ -193,6 +203,45 @@ export default function Customers() {
             <Field label="Sumber dana" required><Textarea value={form.sourceOfFunds} onChange={(event) => setForm({ ...form, sourceOfFunds: event.target.value })} rows={2} /></Field>
             <Field label="Tujuan transaksi" required><Textarea value={form.transactionPurpose} onChange={(event) => setForm({ ...form, transactionPurpose: event.target.value })} rows={2} /></Field>
             <Field label="Catatan risiko"><Textarea value={form.riskNotes} onChange={(event) => setForm({ ...form, riskNotes: event.target.value })} rows={2} /></Field>
+
+            <div className="rounded-2xl border border-[#e2eaf2] bg-[#fbfdff] p-4">
+              <p className="text-sm font-semibold text-[#18395f]">Perkiraan aktivitas menurut nasabah</p>
+              <p className="mt-1 text-xs leading-5 text-[#475569]">
+                Ini <b>pernyataan nasabah sendiri</b>, bukan batas yang ditegakkan sistem. Melewatinya tidak memblokir
+                transaksi; yang terjadi hanyalah profilnya muncul untuk ditinjau petugas. Boleh dikosongkan bila nasabah
+                belum dapat memperkirakan.
+              </p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <Field label="Perkiraan nilai transaksi sebulan (Rupiah)">
+                  <Input inputMode="decimal" value={form.declaredMonthlyValueIdr} onChange={(event) => setForm({ ...form, declaredMonthlyValueIdr: event.target.value })} placeholder="Contoh: 25000000" />
+                </Field>
+                <Field label="Perkiraan banyaknya transaksi sebulan">
+                  <Input type="number" min={0} step={1} value={form.declaredMonthlyCount} onChange={(event) => setForm({ ...form, declaredMonthlyCount: event.target.value })} placeholder="Contoh: 4" />
+                </Field>
+              </div>
+              <div className="mt-4 space-y-1.5">
+                <Label className="text-xs font-semibold text-[#476278]">Mata uang yang diharapkan</Label>
+                {currencyList.isLoading ? (
+                  <p className="text-xs text-[#94a7bb]">Memuat daftar mata uang…</p>
+                ) : currencyList.isError ? (
+                  <p className="text-xs text-rose-700">Daftar mata uang gagal dimuat. Kolom ini boleh dilewati; deklarasinya dapat dilengkapi kemudian lewat pengkinian data nasabah.</p>
+                ) : activeCurrencies.length === 0 ? (
+                  <p className="text-xs text-[#94a7bb]">Belum ada mata uang aktif yang terdaftar. Daftarkan mata uangnya lebih dulu pada Kas &amp; Persediaan.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 pt-1">
+                    {activeCurrencies.map((currency) => (
+                      <label key={currency.code} className="flex items-center gap-2 text-xs text-[#476278]">
+                        <Checkbox
+                          checked={declaredCurrencies.includes(currency.code)}
+                          onCheckedChange={(checked) => setDeclaredCurrencies((current) => (checked === true ? [...current, currency.code] : current.filter((code) => code !== currency.code)))}
+                        />
+                        <span><b className="text-[#18395f]">{currency.code}</b> {currency.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
             <Field label="Dokumen KTP (unggah bila tersedia)"><Input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => setKtpFile(event.target.files?.[0] ?? null)} /><p className="mt-1 text-xs text-[#475569]"><Upload className="mr-1 inline size-3" />JPG, PNG, WEBP, atau PDF; maksimum 8 MB. File disimpan privat dan hanya dapat diakses petugas berwenang.</p></Field>
 
             <div className="rounded-2xl border border-[#e2eaf2] bg-[#fbfdff] p-4">

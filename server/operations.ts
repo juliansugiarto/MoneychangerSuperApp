@@ -598,6 +598,10 @@ export type CustomerInput = {
   transactionPurpose: string;
   riskLevel?: "LOW" | "MEDIUM" | "HIGH";
   riskNotes?: string;
+  /** Profil transaksi yang dinyatakan nasabah sendiri; kosong berarti belum pernah dideklarasikan. */
+  declaredMonthlyValueIdr?: string;
+  declaredMonthlyCount?: number;
+  declaredCurrencies?: string[];
   /** Nasabah ini hanya bertindak atas nama pihak lain; identitas pemilik manfaat sebenarnya wajib disertakan. */
   hasBeneficialOwner?: boolean;
   beneficialOwner?: BeneficialOwnerInput;
@@ -693,6 +697,40 @@ export async function getCustomerById(customerId: number) {
   });
 }
 
+/**
+ * Menyiapkan deklarasi profil transaksi untuk disimpan.
+ *
+ * Kode mata uangnya diperiksa terhadap tabel `currencies`: kode tak dikenal ditolak dengan
+ * pesannya, bukan disimpan diam-diam — deklarasi yang berisi kode karangan akan membuat setiap
+ * transaksi nasabah itu tampak memakai "mata uang tak terdeklarasi" selamanya.
+ *
+ * Kosong tetap kosong. Nasabah yang belum berdeklarasi disimpan sebagai `null`, bukan nol: nol akan
+ * mengarang deklarasi atas nama nasabah sekaligus membuat ambang penyimpangannya nol.
+ */
+async function resolveProfileDeclaration(
+  reader: { select: () => { from: (table: typeof currencies) => Promise<{ code: string }[]> } },
+  input: { declaredMonthlyValueIdr?: string | null; declaredMonthlyCount?: number | null; declaredCurrencies?: string[] | null },
+) {
+  const declaredValue = input.declaredMonthlyValueIdr?.trim() || null;
+  if (declaredValue !== null) nonNegativeOrZeroDecimal(declaredValue, "Perkiraan nilai transaksi sebulan");
+  if (input.declaredMonthlyCount != null && (!Number.isInteger(input.declaredMonthlyCount) || input.declaredMonthlyCount < 0)) {
+    throw new Error("Perkiraan banyaknya transaksi sebulan harus bilangan bulat non-negatif.");
+  }
+
+  const codes = Array.from(new Set((input.declaredCurrencies ?? []).map((code) => code.trim().toUpperCase()).filter((code) => code.length > 0)));
+  if (codes.length > 0) {
+    const known = new Set((await reader.select().from(currencies)).map((row) => row.code.toUpperCase()));
+    const unknown = codes.filter((code) => !known.has(code));
+    if (unknown.length > 0) throw new Error(`Kode mata uang tidak dikenal: ${unknown.join(", ")}. Daftarkan mata uangnya lebih dulu.`);
+  }
+
+  return {
+    declaredMonthlyValueIdr: declaredValue,
+    declaredMonthlyCount: input.declaredMonthlyCount ?? null,
+    declaredCurrencies: codes.length > 0 ? codes : null,
+  };
+}
+
 export async function createCustomer(input: CustomerInput, actorUserId: number) {
   if (input.hasBeneficialOwner && !input.beneficialOwner) throw new Error("Data pemilik manfaat (beneficial owner) wajib diisi.");
   if (input.pepStatus && input.pepStatus !== "NONE" && !input.pepDetails?.trim()) throw new Error("Keterangan PEP wajib diisi.");
@@ -705,6 +743,7 @@ export async function createCustomer(input: CustomerInput, actorUserId: number) 
   }
   const isHighRisk = Boolean(input.dttotPpsdmMatch);
   const db = await databaseOrThrow();
+  const declaration = await resolveProfileDeclaration(db as never, input);
   const created = await db.transaction(async (tx) => {
     await tx.insert(customers).values({
       cifNumber,
@@ -736,6 +775,7 @@ export async function createCustomer(input: CustomerInput, actorUserId: number) 
       riskLevel: isHighRisk ? "HIGH" : (input.riskLevel ?? "LOW"),
       profileStatus: isHighRisk ? "RESTRICTED" : "ACTIVE",
       riskNotes: input.riskNotes?.trim() || null,
+      ...declaration,
       createdByUserId: actorUserId,
     });
     const [row] = await tx.select().from(customers).where(eq(customers.cifNumber, cifNumber)).limit(1);
@@ -804,6 +844,10 @@ export type CustomerUpdateInput = {
   pepDetails?: string;
   dttotPpsdmMatch: boolean;
   dttotPpsdmNotes?: string;
+  /** Profil transaksi yang dinyatakan nasabah sendiri; kosong berarti belum pernah dideklarasikan. */
+  declaredMonthlyValueIdr?: string;
+  declaredMonthlyCount?: number;
+  declaredCurrencies?: string[];
 };
 
 /**
@@ -820,6 +864,8 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
   const db = await databaseOrThrow();
   const existing = (await db.select().from(customers).where(and(eq(customers.id, input.customerId), eq(customers.isDemo, false), eq(customers.isHistorical, false))).limit(1))[0];
   if (!existing) throw new Error("Nasabah tidak ditemukan.");
+
+  const declaration = await resolveProfileDeclaration(db as never, input);
 
   const nextValues = {
     fullName: input.fullName.trim(),
@@ -849,6 +895,7 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
     pepDetails: input.pepStatus !== "NONE" ? input.pepDetails?.trim() || null : null,
     dttotPpsdmMatch: input.dttotPpsdmMatch,
     dttotPpsdmNotes: input.dttotPpsdmMatch ? input.dttotPpsdmNotes?.trim() || null : null,
+    ...declaration,
   };
 
   await db.update(customers).set(nextValues).where(eq(customers.id, input.customerId));
@@ -862,6 +909,8 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
       occupation: existing.occupation, sourceOfFunds: existing.sourceOfFunds, transactionPurpose: existing.transactionPurpose, profileStatus: existing.profileStatus,
       riskLevel: existing.riskLevel, riskNotes: existing.riskNotes, pepStatus: existing.pepStatus, pepDetails: existing.pepDetails,
       dttotPpsdmMatch: existing.dttotPpsdmMatch, dttotPpsdmNotes: existing.dttotPpsdmNotes,
+      declaredMonthlyValueIdr: existing.declaredMonthlyValueIdr, declaredMonthlyCount: existing.declaredMonthlyCount,
+      declaredCurrencies: existing.declaredCurrencies,
     },
     afterState: nextValues,
     reason: changeReason,

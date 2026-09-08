@@ -16,7 +16,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 
 - [x] Tugas 1 — Penilaian penyimpangan dan irama berbasis risiko, murni dan teruji
 - [x] Tugas 2 — Migrasi: tiga kolom deklarasi dan tabel `customer_profile_reviews`
-- [ ] Tugas 3 — Penulis deklarasi: borang nasabah, `createCustomer`, `updateCustomer`
+- [x] Tugas 3 — Penulis deklarasi: borang nasabah, `createCustomer`, `updateCustomer`
 - [ ] Tugas 4 — Jendela bulanan WIB bersama dan pembacaan aktivitas nyata
 - [ ] Tugas 5 — Worklist pemantauan: query, otorisasi, dan batas "hanya mencatat"
 - [ ] Tugas 6 — Penulis peninjauan: `recordCustomerProfileReview` beserta auditnya
@@ -189,18 +189,24 @@ sudah ada aman. Ambil cadangan kedua basis data lokal lebih dulu bila sudah ada 
 
 Aturan `CLAUDE.md` "Fitur Harus Punya Sumber Data": **kolomnya tidak boleh ada tanpa penulisnya.**
 
-- [ ] **Step 1: Uji yang gagal** — `createCustomer` menyimpan ketiga nilainya; `updateCustomer`
+- [x] **Step 1: Uji yang gagal** — `createCustomer` menyimpan ketiga nilainya; `updateCustomer`
       mengubahnya dan **mencatat perubahannya pada audit** seperti kolom profil lain; deklarasi
       kosong tetap boleh disimpan (nasabah lama).
-- [ ] **Step 2: Skema Zod** — nilai Rupiah desimal non-negatif, frekuensi bilangan bulat
+- [x] **Step 2: Skema Zod** — nilai Rupiah desimal non-negatif, frekuensi bilangan bulat
       non-negatif, mata uang array kode yang **sudah ada pada tabel mata uang**; kode tak dikenal
       ditolak dengan pesannya, bukan disimpan diam-diam.
-- [ ] **Step 3: Tiga isian pada borang nasabah**, dengan label yang menyatakan bahwa ini
+- [x] **Step 3: Tiga isian pada borang nasabah**, dengan label yang menyatakan bahwa ini
       **pernyataan nasabah**, bukan batas yang ditegakkan sistem. Loading/empty/error state dan
       fokus keyboard mengikuti isian yang sudah ada di halaman itu.
-- [ ] **Step 4: Verifikasi visual** borang nasabah, memakai data uji lokal yang dibuat sendiri.
+- [x] **Step 4: Verifikasi visual** borang nasabah, memakai data uji lokal yang dibuat sendiri.
       Login tetap dilakukan pengguna; minta pada giliran itu.
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Deklarasi profil transaksi pada borang nasabah"`.
+
+**Temuan saat verifikasi visual:** borang penyuntingan `client/src/pages/CustomerList.tsx` mengirim
+`...editForm` yang belum memuat ketiga kolom deklarasi, sehingga menyunting kolom apa pun akan
+**menghapus deklarasi nasabah** tanpa terlihat. Diperbaiki dalam tugas ini: borang penyuntingan kini
+membawa dan mengirimkan ketiganya, dan tampilan rinciannya menampilkannya ("Belum dideklarasikan"
+bila kosong). Kontraknya dikunci pada `server/customerProfileDeclaration.test.ts`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Deklarasi profil transaksi pada borang nasabah"`.
 
 ---
 

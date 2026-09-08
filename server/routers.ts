@@ -166,6 +166,19 @@ export const beneficialOwnerInput = z.object({
   occupation: z.string().trim().max(160).optional(),
   relationshipToCustomer: z.string().trim().min(2).max(200),
 });
+/**
+ * Deklarasi profil transaksi yang dinyatakan nasabah sendiri.
+ *
+ * Ketiganya opsional: nasabah yang sudah ada belum pernah ditanya, dan memaksanya terisi akan
+ * mengarang deklarasi atas nama mereka. Kode mata uangnya diperiksa lebih lanjut terhadap tabel
+ * mata uang di lapisan operasi — kode tak dikenal ditolak dengan pesannya, tidak disimpan diam-diam.
+ */
+const profileDeclarationInput = {
+  declaredMonthlyValueIdr: decimalString.optional(),
+  declaredMonthlyCount: z.number().int().min(0).max(100000).optional(),
+  declaredCurrencies: z.array(z.string().trim().length(3).toUpperCase()).max(20).optional(),
+};
+
 export const customerInput = z.object({
   cifNumber: z.string().trim().min(3).max(40),
   fullName: z.string().trim().min(3).max(200),
@@ -196,6 +209,7 @@ export const customerInput = z.object({
   pepDetails: z.string().trim().max(1000).optional(),
   dttotPpsdmMatch: z.boolean().optional(),
   dttotPpsdmNotes: z.string().trim().max(1000).optional(),
+  ...profileDeclarationInput,
 }).superRefine((value, ctx) => {
   if (value.hasBeneficialOwner && !value.beneficialOwner) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Data pemilik manfaat (beneficial owner) wajib diisi.", path: ["beneficialOwner"] });
@@ -238,6 +252,7 @@ export const customerUpdateInput = z.object({
   dttotPpsdmMatch: z.boolean(),
   dttotPpsdmNotes: z.string().trim().max(1000).optional(),
   changeReason: z.string().trim().min(5).max(500),
+  ...profileDeclarationInput,
 }).superRefine((value, ctx) => {
   if (value.pepStatus !== "NONE" && !value.pepDetails?.trim()) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Keterangan PEP wajib diisi.", path: ["pepDetails"] });

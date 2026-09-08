@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
-type CustomerRow = { id: number; identityExpiryDate: string | Date | null; dateOfBirth: string | Date | null; fullName: string; phoneNumber: string | null; identityType: "KTP" | "PASSPORT" | "OTHER"; identityNumber: string; placeOfBirth: string | null; address: string; addressType: "RUMAH" | "KANTOR" | "DOMISILI" | "LAINNYA" | null; addressCountry: string | null; addressProvince: string | null; addressCity: string | null; addressDistrict: string | null; addressPostalCode: string | null; nationality: string | null; npwp: string | null; gender: "MALE" | "FEMALE" | null; occupation: string | null; sourceOfFunds: string | null; transactionPurpose: string | null; profileStatus: "ACTIVE" | "RESTRICTED" | "INACTIVE"; riskLevel: "LOW" | "MEDIUM" | "HIGH"; riskNotes: string | null; pepStatus: "NONE" | "SELF" | "RELATED"; pepDetails: string | null; dttotPpsdmMatch: boolean; dttotPpsdmNotes: string | null };
+type CustomerRow = { id: number; identityExpiryDate: string | Date | null; dateOfBirth: string | Date | null; fullName: string; phoneNumber: string | null; identityType: "KTP" | "PASSPORT" | "OTHER"; identityNumber: string; placeOfBirth: string | null; address: string; addressType: "RUMAH" | "KANTOR" | "DOMISILI" | "LAINNYA" | null; addressCountry: string | null; addressProvince: string | null; addressCity: string | null; addressDistrict: string | null; addressPostalCode: string | null; nationality: string | null; npwp: string | null; gender: "MALE" | "FEMALE" | null; occupation: string | null; sourceOfFunds: string | null; transactionPurpose: string | null; profileStatus: "ACTIVE" | "RESTRICTED" | "INACTIVE"; riskLevel: "LOW" | "MEDIUM" | "HIGH"; riskNotes: string | null; pepStatus: "NONE" | "SELF" | "RELATED"; pepDetails: string | null; dttotPpsdmMatch: boolean; dttotPpsdmNotes: string | null; declaredMonthlyValueIdr: string | null; declaredMonthlyCount: number | null; declaredCurrencies: string[] | null };
 const toDateInputValue = (value: string | Date | null | undefined) => (value ? new Date(value).toISOString().slice(0, 10) : "");
 const editFormFromCustomer = (customer: CustomerRow) => ({
   fullName: customer.fullName, phoneNumber: customer.phoneNumber ?? "", identityType: customer.identityType, identityNumber: customer.identityNumber,
@@ -26,6 +27,10 @@ const editFormFromCustomer = (customer: CustomerRow) => ({
   occupation: customer.occupation ?? "", sourceOfFunds: customer.sourceOfFunds ?? "", transactionPurpose: customer.transactionPurpose ?? "",
   profileStatus: customer.profileStatus, riskLevel: customer.riskLevel, riskNotes: customer.riskNotes ?? "",
   pepStatus: customer.pepStatus, pepDetails: customer.pepDetails ?? "", dttotPpsdmMatch: customer.dttotPpsdmMatch, dttotPpsdmNotes: customer.dttotPpsdmNotes ?? "",
+  // Deklarasi profil ikut dibawa: borang yang tidak mengirimkannya akan menghapus pernyataan nasabah.
+  declaredMonthlyValueIdr: customer.declaredMonthlyValueIdr ?? "",
+  declaredMonthlyCount: customer.declaredMonthlyCount === null || customer.declaredMonthlyCount === undefined ? "" : String(customer.declaredMonthlyCount),
+  declaredCurrencies: customer.declaredCurrencies ?? [],
   changeReason: "",
 });
 
@@ -58,6 +63,8 @@ export default function CustomerList() {
   const [identityPreview, setIdentityPreview] = useState<{ url: string; mimeType: string; fileName: string } | null>(null);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<ReturnType<typeof editFormFromCustomer> | null>(null);
+  const currencyList = trpc.currencies.list.useQuery(undefined, { enabled: Boolean(user) });
+  const activeCurrencies = (currencyList.data ?? []).filter((currency) => currency.active && currency.code !== "IDR");
   const utils = trpc.useUtils();
 
   const openCustomer = (customer: NonNullable<typeof customers>[number]) => { setSelectedCustomer(customer); setShowIdentityRequested(false); setEditing(false); };
@@ -100,6 +107,9 @@ export default function CustomerList() {
       ...editForm,
       identityExpiryDate: editForm.identityExpiryDate ? new Date(editForm.identityExpiryDate) : undefined,
       dateOfBirth: new Date(editForm.dateOfBirth),
+      declaredMonthlyValueIdr: editForm.declaredMonthlyValueIdr.trim() || undefined,
+      declaredMonthlyCount: editForm.declaredMonthlyCount.trim() ? Number(editForm.declaredMonthlyCount) : undefined,
+      declaredCurrencies: editForm.declaredCurrencies.length > 0 ? editForm.declaredCurrencies : undefined,
     });
   };
 
@@ -256,6 +266,26 @@ export default function CustomerList() {
                 <div><Label className="text-xs">Tingkat risiko</Label><Select value={editForm.riskLevel} onValueChange={(v) => setEditForm({ ...editForm, riskLevel: v as typeof editForm.riskLevel })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="LOW">Rendah</SelectItem><SelectItem value="MEDIUM">Sedang</SelectItem><SelectItem value="HIGH">Tinggi</SelectItem></SelectContent></Select></div>
               </div>
               <div><Label className="text-xs">Catatan risiko</Label><Input className="mt-1" value={editForm.riskNotes} onChange={(e) => setEditForm({ ...editForm, riskNotes: e.target.value })} /></div>
+              <div><Label className="text-xs">Perkiraan nilai transaksi sebulan menurut nasabah (Rupiah)</Label><Input className="mt-1" inputMode="decimal" value={editForm.declaredMonthlyValueIdr} onChange={(e) => setEditForm({ ...editForm, declaredMonthlyValueIdr: e.target.value })} placeholder="Kosongkan bila nasabah belum menyatakan" /></div>
+              <div><Label className="text-xs">Perkiraan banyaknya transaksi sebulan menurut nasabah</Label><Input className="mt-1" type="number" min={0} step={1} value={editForm.declaredMonthlyCount} onChange={(e) => setEditForm({ ...editForm, declaredMonthlyCount: e.target.value })} placeholder="Kosongkan bila nasabah belum menyatakan" /></div>
+              <div className="sm:col-span-2">
+                <Label className="text-xs">Mata uang yang diharapkan menurut nasabah</Label>
+                {currencyList.isLoading ? <p className="mt-1 text-xs text-[#94a7bb]">Memuat daftar mata uang…</p>
+                  : currencyList.isError ? <p className="mt-1 text-xs text-rose-700">Daftar mata uang gagal dimuat; deklarasi mata uang tidak dapat diubah sekarang.</p>
+                  : activeCurrencies.length === 0 ? <p className="mt-1 text-xs text-[#94a7bb]">Belum ada mata uang aktif yang terdaftar.</p>
+                  : <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+                      {activeCurrencies.map((currency) => (
+                        <label key={currency.code} className="flex items-center gap-2 text-xs text-[#476278]">
+                          <Checkbox
+                            checked={editForm.declaredCurrencies.includes(currency.code)}
+                            onCheckedChange={(checked) => setEditForm({ ...editForm, declaredCurrencies: checked === true ? [...editForm.declaredCurrencies, currency.code] : editForm.declaredCurrencies.filter((code) => code !== currency.code) })}
+                          />
+                          <span><b className="text-[#18395f]">{currency.code}</b> {currency.name}</span>
+                        </label>
+                      ))}
+                    </div>}
+                <p className="mt-1 text-xs text-[#94a7bb]">Pernyataan nasabah, bukan batas yang ditegakkan sistem.</p>
+              </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div><Label className="text-xs">Status PEP</Label><Select value={editForm.pepStatus} onValueChange={(v) => setEditForm({ ...editForm, pepStatus: v as typeof editForm.pepStatus })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="NONE">Bukan PEP</SelectItem><SelectItem value="SELF">Nasabah adalah PEP</SelectItem><SelectItem value="RELATED">Berhubungan dengan PEP</SelectItem></SelectContent></Select></div>
                 <div><Label className="text-xs">Cocok DTTOT/PPSPM</Label><Select value={editForm.dttotPpsdmMatch ? "yes" : "no"} onValueChange={(v) => setEditForm({ ...editForm, dttotPpsdmMatch: v === "yes" })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="no">Tidak</SelectItem><SelectItem value="yes">Ya</SelectItem></SelectContent></Select></div>
@@ -282,6 +312,9 @@ export default function CustomerList() {
               <DetailField label="Sumber dana" value={selectedCustomer.sourceOfFunds ?? "—"} />
               <DetailField label="Tujuan transaksi" value={selectedCustomer.transactionPurpose ?? "—"} />
               <DetailField label="Catatan risiko" value={selectedCustomer.riskNotes ?? "—"} full />
+              <DetailField label="Perkiraan nilai transaksi sebulan (nasabah)" value={selectedCustomer.declaredMonthlyValueIdr ? `Rp ${Number(selectedCustomer.declaredMonthlyValueIdr).toLocaleString("id-ID")}` : "Belum dideklarasikan"} />
+              <DetailField label="Perkiraan banyaknya transaksi sebulan (nasabah)" value={selectedCustomer.declaredMonthlyCount === null || selectedCustomer.declaredMonthlyCount === undefined ? "Belum dideklarasikan" : `${selectedCustomer.declaredMonthlyCount} transaksi`} />
+              <DetailField label="Mata uang yang diharapkan (nasabah)" value={selectedCustomer.declaredCurrencies?.length ? selectedCustomer.declaredCurrencies.join(", ") : "Belum dideklarasikan"} full />
               <DetailField label="Beneficial owner" value={selectedCustomer.hasBeneficialOwner ? (selectedCustomer.beneficialOwnerCustomerId ? (nameById.get(selectedCustomer.beneficialOwnerCustomerId) ?? `#${selectedCustomer.beneficialOwnerCustomerId}`) : "Ya") : "Tidak"} />
               <DetailField label="Status PEP" value={selectedCustomer.pepStatus === "SELF" ? "Nasabah adalah PEP" : selectedCustomer.pepStatus === "RELATED" ? "Berhubungan dengan PEP" : "Bukan PEP"} />
               {selectedCustomer.pepDetails ? <DetailField label="Keterangan PEP" value={selectedCustomer.pepDetails} full /> : null}
