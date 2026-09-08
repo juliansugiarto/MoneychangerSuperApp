@@ -102,8 +102,9 @@ import {
   updateServiceRequest,
 } from "./operations";
 import { listCustomerProfileMonitoring, listCustomerProfileReviews, recordCustomerProfileReview } from "./customerProfileMonitoring";
+import { addCompanyDocumentVersion, createCompanyDocument, deactivateCompanyDocument } from "./companyDocumentArchive";
 import { deleteCompanyDocument, getOperationalDocumentDownloadUrl, listCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
-import { expenseCategories } from "../drizzle/schema";
+import { companyDocumentCategories, expenseCategories } from "../drizzle/schema";
 import { candidateDecisions, competencyTracks, employmentStatuses, jobLevels, picRoles, screeningResults } from "../drizzle/schema";
 import { journalSourceTypes } from "../drizzle/schema";
 import { profileReviewOutcomes } from "../drizzle/schema";
@@ -180,6 +181,31 @@ const profileDeclarationInput = {
   declaredMonthlyCount: z.number().int().min(0).max(100000).optional(),
   declaredCurrencies: z.array(z.string().trim().length(3).toUpperCase()).max(20).optional(),
 };
+
+/**
+ * Dokumen arsip perusahaan. `validUntil` boleh kosong — itu berarti "berlaku sampai diganti",
+ * bukan kedaluwarsa. Kategori tertutup pada enum skema, sehingga jenis dokumen tidak dapat tumbuh
+ * lewat salah ketik.
+ */
+export const companyArchiveDocumentInput = z.object({
+  category: z.enum(companyDocumentCategories),
+  title: z.string().trim().min(3).max(250),
+  referenceNumber: z.string().trim().max(160).optional().nullable(),
+  responsibleEmployeeId: z.number().int().positive().optional().nullable(),
+  notes: z.string().trim().max(2000).optional().nullable(),
+  operationalDocumentId: z.number().int().positive(),
+  validFrom: z.coerce.date(),
+  validUntil: z.coerce.date().optional().nullable(),
+});
+
+/** Versi berikutnya. Alasan perubahan wajib di sini dan hanya di sini — versi pertama tidak memerlukannya. */
+export const companyArchiveVersionInput = z.object({
+  companyDocumentId: z.number().int().positive(),
+  operationalDocumentId: z.number().int().positive(),
+  validFrom: z.coerce.date(),
+  validUntil: z.coerce.date().optional().nullable(),
+  changeReason: z.string().trim().min(3).max(1000),
+});
 
 export const customerInput = z.object({
   cifNumber: z.string().trim().min(3).max(40),
@@ -386,6 +412,22 @@ export const appRouter = router({
    * Hanya mencatat: prosedurnya membaca, dan tidak ada satu pun di sini yang mengubah data nasabah,
    * status transaksi, maupun mengirim laporan ke regulator.
    */
+  /**
+   * Arsip dokumen perusahaan. Seluruhnya Controller ke atas, ditegakkan di sini dan bukan
+   * disembunyikan di UI. Tidak ada prosedur penghapusan: menghapus berarti menonaktifkan.
+   */
+  companyArchive: router({
+    create: controllerProcedure
+      .input(companyArchiveDocumentInput)
+      .mutation(({ input, ctx }) => createCompanyDocument(input, ctx.user)),
+    addVersion: controllerProcedure
+      .input(companyArchiveVersionInput)
+      .mutation(({ input, ctx }) => addCompanyDocumentVersion(input, ctx.user)),
+    deactivate: controllerProcedure
+      .input(z.object({ companyDocumentId: z.number().int().positive(), reason: z.string().trim().min(3).max(1000) }))
+      .mutation(({ input, ctx }) => deactivateCompanyDocument(input, ctx.user)),
+  }),
+
   customerProfileMonitoring: router({
     list: controllerProcedure
       .input(z.object({ asOf: z.coerce.date().optional() }).default({}))

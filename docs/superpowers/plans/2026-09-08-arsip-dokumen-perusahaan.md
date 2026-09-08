@@ -17,7 +17,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 1 — Penilaian masa berlaku dan worklist, murni dan teruji
 - [x] Tugas 2 — Migrasi: dua nilai enum dan dua tabel arsip
 - [x] Tugas 3 — Jalur unggah menerima berkas arsip, dengan gerbang Controller
-- [ ] Tugas 4 — Penulis arsip: buat dokumen, ganti versi, nonaktifkan, beserta auditnya
+- [x] Tugas 4 — Penulis arsip: buat dokumen, ganti versi, nonaktifkan, beserta auditnya
 - [ ] Tugas 5 — Pembaca arsip: daftar, riwayat versi, dan worklist
 - [ ] Tugas 6 — Halaman Arsip Dokumen
 - [ ] Tugas 7 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
@@ -277,7 +277,7 @@ tidak pernah diuji sama sekali — bahwa ketiga jenis dokumen profil perusahaan 
 - Consumes: `writeAudit` (`server/operations.ts:143`), tabel Tugas 2, berkas hasil Tugas 3.
 - Produces: `createCompanyDocument`, `addCompanyDocumentVersion`, `deactivateCompanyDocument`, prosedur `companyArchive.*`.
 
-- [ ] **Step 1: Uji yang gagal** — kontraknya:
+- [x] **Step 1: Uji yang gagal** — kontraknya:
 
 ```ts
 describe("penulis arsip dokumen", () => {
@@ -292,28 +292,35 @@ describe("penulis arsip dokumen", () => {
 });
 ```
 
-- [ ] **Step 2: `createCompanyDocument`** — dokumen dan versi 1 **dalam satu transaksi**. Bila
+- [x] **Step 2: `createCompanyDocument`** — dokumen dan versi 1 **dalam satu transaksi**. Bila
       versinya gagal ditulis, dokumennya tidak boleh tertinggal: dokumen tanpa versi adalah keadaan
       yang spec-nya nyatakan tidak dapat terjadi, dan pembaca worklist bergantung pada itu.
       Validasi: berkasnya ada, `ownerType`-nya `COMPANY_ARCHIVE`, belum dipakai versi lain, dan
       `responsibleEmployeeId` (bila diisi) menunjuk pegawai yang ada.
-- [ ] **Step 3: `addCompanyDocumentVersion`** — juga satu transaksi: isi `supersededAt` versi
+- [x] **Step 3: `addCompanyDocumentVersion`** — juga satu transaksi: isi `supersededAt` versi
       berjalan **dan** sisipkan versi baru bersama-sama. Nomor versinya diturunkan dari nomor
       tertinggi yang ada; indeks unik `(companyDocumentId, versionNumber)` adalah jaring
       pengamannya, bukan pengganti pemeriksaannya. Alasan perubahan **wajib** di sini
       (keputusan 7).
-- [ ] **Step 4: `deactivateCompanyDocument`** — mengisi `deactivatedAt`, `deactivatedByUserId`,
+- [x] **Step 4: `deactivateCompanyDocument`** — mengisi `deactivatedAt`, `deactivatedByUserId`,
       `deactivationReason`. **Tidak ada `DELETE` di seluruh berkas ini**; uji itu secara eksplisit
       dengan menghitung baris sebelum dan sesudah.
-- [ ] **Step 5: Audit** — `COMPANY_DOCUMENT_CREATED`, `COMPANY_DOCUMENT_VERSION_ADDED`,
+- [x] **Step 5: Audit** — `COMPANY_DOCUMENT_CREATED`, `COMPANY_DOCUMENT_VERSION_ADDED`,
       `COMPANY_DOCUMENT_DEACTIVATED` lewat `writeAudit`. Uji bahwa ketiganya benar-benar tertulis.
-- [ ] **Step 6: Prosedur tRPC** `companyArchive.create`, `.addVersion`, `.deactivate` sebagai
+- [x] **Step 6: Prosedur tRPC** `companyArchive.create`, `.addVersion`, `.deactivate` sebagai
       `controllerProcedure`, dengan skema Zod: kategori dari enum, judul wajib tidak kosong,
       `validFrom` wajib, `validUntil` opsional dan **tidak boleh mendahului** `validFrom`.
-- [ ] **Step 7: Uji otorisasi dan batas "hanya mencatat"** pada berkas terpisah — `STAFF` dan
+- [x] **Step 7: Uji otorisasi dan batas "hanya mencatat"** pada berkas terpisah — `STAFF` dan
       `ADMIN` ditolak; dan tidak ada tulisan ke `company_profile`, `employees`, `customers`,
       `exchange_transactions`, kas, maupun buku besar.
-- [ ] **Step 8:** Perintah mutu, lalu commit `"Penulis arsip dokumen perusahaan"`.
+- [x] **Step 8:** Perintah mutu, lalu commit `"Penulis arsip dokumen perusahaan"`.
+
+**Catatan Tugas 4.** Basis data palsu pada `server/companyDocumentArchive.test.ts` **ikut menyaring
+`where`**, tidak seperti palsu-palsu sebelumnya di repositori ini yang mengembalikan baris yang sama
+untuk setiap query atas satu tabel. Tanpa itu, pemeriksaan "berkas sudah dipakai versi lain"
+membaca baris versi yang di produksi tidak akan pernah terbaca, dan ujinya gagal atas kekeliruan
+palsunya sendiri. Jebakannya: `StringChunk` pemisah pada klausa Drizzle juga punya `value` (berupa
+array), sehingga ia harus disisihkan agar tidak merebut giliran `Param` yang sesungguhnya.
 
 ---
 
