@@ -65,33 +65,54 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 7 September 2026
+## Sesi berikutnya — keadaan per 8 September 2026
 
-Paket K1, B, D, C, E, F1, F2, dan **G sudah selesai** dan diperagakan end-to-end.
+Paket K1, B, D, C, E, F1, F2, **G**, dan **H sudah selesai** dan diperagakan end-to-end.
+**Pekerjaan berikutnya adalah sesi rancangan Paket I** — bloknya di bawah.
 
-**Penghalang Paket G dicabut** pada sesi yang sama: pengguna menunjukkan ketiga form terisi sebagai
-tangkapan layar, dan memutuskan penomoran record pada form tidak perlu dikejar — yang harus benar
-adalah angkanya jatuh pada pos yang tepat. Struktur diambil dari tangkapan layarnya; nominalnya
-tidak. Enam koreksi terhadap sesi rancangan tercatat pada spec bagian "Hasil verifikasi terhadap
-form asli" dan pada dua commit terkait.
+Baseline uji yang benar-benar dijalankan 8 September 2026 sesudah Paket H:
+`Test Files 132 passed (132)`, `Tests 1049 passed | 2 skipped (1051)`. `tsc --noEmit` bersih,
+`vite build` sukses.
 
-**Sesi rancangan Paket H juga sudah selesai** pada sesi yang sama, beserta enam keputusan kebijakan
-penggunanya dan sembilan tugasnya. **Pekerjaan berikutnya adalah Tugas 1 Paket H** — bloknya di
-bawah, bagian Paket H.
+**Satu uji diketahui flaky dan bukan bagian paket mana pun:** `server/tenantIsolation.live.test.ts`
+> *"setiap ikatan hanya melihat database miliknya sendiri"*. Bila gagal sendirian di bawah beban,
+jalankan ulang berkas itu saja.
 
-**Diperbaiki di luar paket mana pun, 7 September 2026:** batas jendela harian dan bulanan pada
-`server/operations.ts` memakai penanda tanggal sebagai batas instan, sehingga transaksi antara
-00:00 dan 07:00 WIB jatuh di luar hari bisnisnya sendiri — pada ketiga zona waktu proses yang
-diuji. Kini memakai `startOfOperationalDay`/`startOfOperationalMonth` pada
-`shared/regulatoryActionQueue.ts`. **Jangan menulis helper jendela waktu yang keempat.**
+### Yang tidak perlu ditemukan ulang
 
-Baseline uji yang benar-benar dijalankan 7 September 2026 sesudah Paket G dan perbaikan jendela
-waktu: `Test Files 125 passed (125)`, `Tests 985 passed | 2 skipped (987)`. Hijau pada `TZ=UTC`
-maupun `TZ=Asia/Jakarta`.
+- **Jangan menulis helper jendela waktu yang keempat.** Batas hari dan bulan operasional memakai
+  `startOfOperationalDay`/`startOfOperationalMonth` pada `shared/regulatoryActionQueue.ts`.
+- **Kolom `datetime` menyimpan jam UTC, kolom `date` tidak.** Drizzle menserialisasi `datetime`
+  sebagai string UTC sendiri, sementara kolom `date` diformat mysql2 memakai zona proses.
+  Dibuktikan round-trip 8 September 2026. Membandingkan `transactionAt` terhadap instan absolut
+  sudah benar apa adanya — jangan "memperbaikinya" seperti batas kolom `date`. Saat menulis fixture
+  SQL untuk kolom `datetime`, tulis UTC, bukan WIB.
+- **Status bon yang dihitung sebagai aktivitas nasabah ada satu daftar:**
+  `ACCUMULATED_TRANSACTION_STATUSES` pada `drizzle/schema.ts`. Jangan menyalinnya. Daftar
+  pengecualian LKU pada `operations.ts` berbeda isi dan berbeda arti — jangan digabung.
+- **Borang penyuntingan nasabah wajib mengirimkan ketiga kolom deklarasi profil**
+  (`declaredMonthlyValueIdr`, `declaredMonthlyCount`, `declaredCurrencies`). Yang tidak dikirim akan
+  **dikosongkan**; itu disengaja, dan sudah pernah menjadi bug yang tertangkap hanya karena borangnya
+  dibuka sungguhan di browser.
 
-**Basis data lokal `moneychanger` kini juga memuat data peragaan Paket G:** satu baris
-`company_profile` (Sandi Pelapor placeholder `000000000`) dan satu `financial_statement_snapshots`
-bersumber `"Buku besar"` tahun buku 2026. Jangan membersihkannya.
+### Risiko residual Paket H yang masih terbuka
+
+1. Mata uang tak terdeklarasi **tidak** dinilai di jalur kasir — hanya nilai dan frekuensi. Ia
+   terlihat di worklist pemantauan.
+2. Ambang penyimpangan berlaku atas akumulasi **sebulan**, sehingga sesudah seorang nasabah
+   melewatinya, transaksi berikutnya pada bulan itu ikut masuk review sampai bulan berganti.
+3. Keadaan **error** halaman Pemantauan Profil belum pernah dilihat di layar.
+4. `pnpm audit --prod --audit-level=high` masih melaporkan **9 temuan** (6 sedang, 3 tinggi):
+   residual `xlsx`/SheetJS ditambah `mysql2 <3.22.0`. **Jangan menyebut audit bersih.**
+
+### Keadaan basis data lokal
+
+`moneychanger` memuat data peragaan paket E, F1, F2, G, dan H. **Jangan membersihkannya.**
+Data Paket H: dua nasabah (`CIF-000001` berdeklarasi Rp 25.000.000 / 4 / USD+SGD, `CIF-000002`
+tanpa deklarasi), bon `FX-UJI-T4-*` dan `UJI-T8-0001`, serta satu baris `customer_profile_reviews`.
+**Membuat data uji pada basis data lokal diizinkan pada tahap mana pun tanpa bertanya lebih dulu**
+(ditetapkan pengguna 8 September 2026, tercatat di `CLAUDE.md`). Produksi tetap tidak boleh
+disentuh — **migrasi `0051` belum diterapkan ke produksi.**
 
 ---
 
@@ -225,7 +246,7 @@ diperagakan end-to-end pada basis data lokal: ekspor tahun buku penuh dari buku 
 penelusuran pos ke akun, importir yang mengenali tata letak resmi, dan snapshot bersumber buku
 besar yang tidak menggandakan dirinya.
 
-### Paket H — Profil transaksi dan pemantauan berkala (9 tugas)
+### Paket H — Profil transaksi dan pemantauan berkala (9 tugas) — **SELESAI 8 September 2026**
 
 Sesi rancangannya selesai 7 September 2026; spec `specs/2026-09-07-profil-transaksi-pemantauan-design.md`
 dan rencana `plans/2026-09-07-profil-transaksi-pemantauan.md` sudah ada, beserta enam keputusan
@@ -242,9 +263,68 @@ lalu centang barisnya di bagian Status Pengerjaan.
 Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 ```
 
-### Paket I — Arsip dokumen perusahaan (sesi rancangan dulu)
+### Paket I — Arsip dokumen perusahaan (sesi rancangan dulu) — **PEKERJAAN BERIKUTNYA**
 
-Pakai **Prompt A** dengan `<PAKET>` = `I` dan `<NAMA-BERKAS>` = `arsip-dokumen-perusahaan`.
+Blok lengkap di bawah, sudah termasuk isian Prompt A. Salin apa adanya.
+
+```
+Baca docs/superpowers/ROADMAP-SISA-PEKERJAAN.md bagian "Paket I", lalu baca juga bagian
+"Aturan kerja yang berlaku untuk seluruh paket" pada dokumen yang sama.
+
+Rancang paket ini. Telusuri kodenya sungguhan lebih dulu — sketsa di ROADMAP sengaja tidak cukup
+untuk langsung menulis kode, dan rujukan berkas:baris di sana ditulis 4 September 2026 dan mungkin
+sudah bergeser. Yang wajib dibaca sungguhan sebelum merancang: tabel operational_documents di
+drizzle/schema.ts, seluruh penulis dan pembacanya (rute unggah REST, halaman Profil Perusahaan,
+lampiran pengeluaran), serta batas keamanan impor yang sudah berlaku — ukuran 5 MB, validasi
+MIME/base64/signature.
+
+Jawab dulu setiap pertanyaan pada bagian "Pertanyaan yang harus dijawab spec-nya" bila ada.
+Pertanyaan yang merupakan keputusan kebijakan (akuntansi, operasional, kepatuhan) TANYAKAN kepada
+saya — jangan ditebak. Untuk paket ini, yang hampir pasti keputusan saya dan bukan turunan analisis:
+
+- Jenis dokumen apa saja yang harus punya tempat (SOP, kebijakan internal, surat-menyurat BI,
+  notulen rapat, korespondensi regulator, lainnya) — dan apakah daftarnya enum tertutup atau bebas.
+- Apakah arsip menyimpan RIWAYAT VERSI (berkas lama tetap dapat dibuka) atau hanya versi berlaku.
+  Ini menentukan bentuk tabelnya, jadi tanyakan sebelum menulis rencana.
+- Siapa yang boleh mengunggah, mengganti versi, dan menghapus; dan apakah menghapus benar-benar
+  menghapus atau hanya menonaktifkan.
+- Apakah dokumen kedaluwarsa (tanggal berlaku terlampaui) perlu muncul sebagai tindakan yang
+  menunggu, seperti worklist pemantauan profil pada Paket H.
+
+Hormati batas yang sudah ada dan jangan menawarnya: batas 5 MB serta validasi
+MIME/base64/signature impor tetap berlaku apa adanya; hanya berkas internal tepercaya yang boleh
+diunggah; dan jangan menyimpan dokumen KYC nyata, workbook aktual, atau secret di source, fixture,
+maupun commit.
+
+Aturan CLAUDE.md "Fitur Harus Punya Sumber Data" berlaku penuh: bila rancanganmu menuntut kolom
+atau status baru, penulisnya harus ikut dirancang dalam paket yang sama. Halaman arsip yang selalu
+kosong bukan penyelesaian.
+
+Hasilkan dua berkas:
+
+1. docs/superpowers/specs/2026-09-08-arsip-dokumen-perusahaan-design.md
+   Masalah, yang sudah diputuskan pengguna, rancangan, yang sengaja tidak dikerjakan, risiko
+   residual. Ikuti bentuk docs/superpowers/specs/2026-09-07-profil-transaksi-pemantauan-design.md.
+
+2. docs/superpowers/plans/2026-09-08-arsip-dokumen-perusahaan.md
+   Rencana bertugas dengan bagian "Status Pengerjaan" di atas, bagian "Keputusan pengguna yang
+   mengikat", tabel berkas, lalu tiap tugas berisi langkah bernomor dengan checkbox, potongan kode
+   konkret, perintah verifikasi, dan perintah commit. Satu tugas = satu commit yang berdiri sendiri
+   beserta ujinya sendiri. Ikuti bentuk
+   docs/superpowers/plans/2026-09-07-profil-transaksi-pemantauan.md — termasuk bagian
+   "Global Constraints" yang menyebut baseline uji, uji flaky yang diketahui, dan aturan migrasi.
+
+Bila paket ini butuh migrasi, rencanakan tepat SATU tugas migrasi, dan tugas itu wajib memuat:
+baca SQL hasil drizzle-kit generate sebelum menerapkan, tulis rencana rollback di berkas rencana
+sebelum menerapkan, dan terapkan hanya lewat `node scripts/tenant.mjs migrate-all`. Jangan pernah
+menjalankan .sql langsung, dan jangan menerapkan migrasi ke produksi.
+
+Baseline uji yang benar-benar dijalankan 8 September 2026 sesudah Paket H:
+Test Files 132 passed (132), Tests 1049 passed | 2 skipped (1051). Pakai angka ini pada
+"Global Constraints" rencanamu; jangan mengarang angka lain.
+
+JANGAN menulis kode aplikasi pada sesi ini. Commit dokumentasinya saja, lalu berhenti dan laporkan.
+```
 
 ### Paket J — Individual Risk Assessment (sesi rancangan dulu)
 
