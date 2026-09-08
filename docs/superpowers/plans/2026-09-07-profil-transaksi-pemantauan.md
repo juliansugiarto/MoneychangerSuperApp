@@ -17,7 +17,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 1 — Penilaian penyimpangan dan irama berbasis risiko, murni dan teruji
 - [x] Tugas 2 — Migrasi: tiga kolom deklarasi dan tabel `customer_profile_reviews`
 - [x] Tugas 3 — Penulis deklarasi: borang nasabah, `createCustomer`, `updateCustomer`
-- [ ] Tugas 4 — Jendela bulanan WIB bersama dan pembacaan aktivitas nyata
+- [x] Tugas 4 — Jendela bulanan WIB bersama dan pembacaan aktivitas nyata
 - [ ] Tugas 5 — Worklist pemantauan: query, otorisasi, dan batas "hanya mencatat"
 - [ ] Tugas 6 — Penulis peninjauan: `recordCustomerProfileReview` beserta auditnya
 - [ ] Tugas 7 — Halaman Pemantauan Profil Nasabah
@@ -214,18 +214,35 @@ bila kosong). Kontraknya dikunci pada `server/customerProfileDeclaration.test.ts
 
 **Files:** Create `server/customerProfileMonitoring.ts`, `server/customerProfileMonitoring.test.ts`
 
-- [ ] **Step 1: Uji yang gagal** — jendela bulan WIB benar pada tiga zona waktu proses: UTC, WIB
+- [x] **Step 1: Uji yang gagal** — jendela bulan WIB benar pada tiga zona waktu proses: UTC, WIB
       (GMT+7), dan **satu zona negatif** (mis. `America/New_York`). Zona negatiflah yang
       menjatuhkan pola `new Date(y, m, 1)` yang dipakai `operations.ts:1444`.
-- [ ] **Step 2: Tulis satu helper bersama** untuk jendela bulanan, diturunkan dari
+- [x] **Step 2: Tulis satu helper bersama** untuk jendela bulanan, diturunkan dari
       `jakartaBusinessDate`, dan pakai **hanya** helper itu di paket ini. Jangan menyalin pola
       lamanya. Jangan menyentuh baris 1444.
-- [ ] **Step 3: Baca aktivitas nyata** per nasabah untuk satu bulan WIB: total Rupiah, banyaknya
+- [x] **Step 3: Baca aktivitas nyata** per nasabah untuk satu bulan WIB: total Rupiah, banyaknya
       transaksi, dan himpunan kode mata uang. Ikuti **persis** penyaringan yang sudah dipakai
       akumulasi bulanan (`operations.ts:1446-1454`): status `DRAFT`/`PENDING_REVIEW`/`APPROVED`/
       `RETURNED`/`COMPLETED`, `isDemo: false`, `isHistorical: false`. Dua definisi "aktivitas
       sebulan" yang berbeda pendapat adalah kekeliruan yang tidak terlihat dari layar mana pun.
-- [ ] **Step 4:** Perintah mutu, lalu commit `"Jendela bulanan WIB dan aktivitas nyata nasabah"`.
+- [x] **Step 4:** Perintah mutu, lalu commit `"Jendela bulanan WIB dan aktivitas nyata nasabah"`.
+
+**Catatan Tugas 4.** Dua hal yang ditemukan saat memverifikasi query-nya terhadap basis data lokal:
+
+1. **Bon berbaris banyak.** `rupiahAmount` pada bon berbaris banyak adalah nilai **bonnya**, bukan
+   nilai barisnya, dan mata uangnya ada di `exchange_transaction_lines` (kolom `currencyId` pada
+   bonnya kosong). Menjumlahkan hasil join apa adanya menghitung bon yang sama berkali-kali;
+   membaca kolom lamanya saja membuat mata uang tak terdeklarasi pada bon berbaris banyak tidak
+   pernah terlihat. `foldMonthlyActivity` menghitung nilai per **transaksi** dan mengumpulkan mata
+   uang dari seluruh baris.
+2. **`transactionAt` tersimpan sebagai jam UTC**, bukan WIB — Drizzle menserialisasi kolom
+   `datetime` sebagai string UTC, berbeda dari kolom `date` yang diformat mysql2 memakai zona
+   proses. Dibuktikan round-trip lewat penulis aplikasinya sendiri. Batas instan dari
+   `startOfOperationalMonth` karena itu sudah benar apa adanya.
+
+**Data uji lokal Tugas 4 (`FX-UJI-T4-*` pada `moneychanger`) sengaja dibiarkan** untuk Tugas 5, 7,
+dan 9: tujuh bon pada nasabah `CIF-000001`, termasuk kedua sisi batas bulan dan satu bon
+berbaris banyak. Aktivitas September 2026-nya: Rp 17.000.000, 4 transaksi, USD+SGD+JPY.
 
 ---
 
