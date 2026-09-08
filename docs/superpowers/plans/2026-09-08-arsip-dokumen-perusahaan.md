@@ -15,7 +15,7 @@
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu.**
 
 - [x] Tugas 1 — Penilaian masa berlaku dan worklist, murni dan teruji
-- [ ] Tugas 2 — Migrasi: dua nilai enum dan dua tabel arsip
+- [x] Tugas 2 — Migrasi: dua nilai enum dan dua tabel arsip
 - [ ] Tugas 3 — Jalur unggah menerima berkas arsip, dengan gerbang Controller
 - [ ] Tugas 4 — Penulis arsip: buat dokumen, ganti versi, nonaktifkan, beserta auditnya
 - [ ] Tugas 5 — Pembaca arsip: daftar, riwayat versi, dan worklist
@@ -169,7 +169,7 @@ tanggal satu hari di WIB. Uji ketiga zona proses itu yang menangkapnya.
 
 **Ini satu-satunya tugas migrasi di paket ini.**
 
-- [ ] **Step 1: Tulis skemanya di `drizzle/schema.ts` lebih dulu**, jangan menulis SQL sendiri.
+- [x] **Step 1: Tulis skemanya di `drizzle/schema.ts` lebih dulu**, jangan menulis SQL sendiri.
       Tambahkan `"COMPANY_ARCHIVE"` pada `ownerType` dan `"COMPANY_ARCHIVE_FILE"` pada
       `documentType` (`drizzle/schema.ts:329-331`) — **menambah nilai di ujung**, tidak menyusun
       ulang dan tidak menghapus satu pun nilai lama, termasuk `UNDERLYING` yang usang. Lalu kedua
@@ -179,33 +179,60 @@ tanggal satu hari di WIB. Uji ketiga zona proses itu yang menangkapnya.
 export const companyDocumentCategories = ["SOP", "KEBIJAKAN_INTERNAL", "SURAT_BI", "NOTULEN_RAPAT", "KORESPONDENSI_REGULATOR", "LAINNYA"] as const;
 ```
 
-- [ ] **Step 2: `./node_modules/.bin/drizzle-kit generate`**, lalu **baca SQL-nya sebelum
+- [x] **Step 2: `./node_modules/.bin/drizzle-kit generate`**, lalu **baca SQL-nya sebelum
       menerapkan**. Yang harus dipastikan:
       - dua `CREATE TABLE` beserta indeksnya;
       - `MODIFY COLUMN` pada `operational_documents` yang hanya **menambah** nilai enum — bila SQL
         yang dihasilkan menghapus atau menyusun ulang nilai lama, **berhenti dan laporkan**;
       - tidak ada `DROP`, tidak ada `NOT NULL` tanpa nilai bawaan pada tabel yang sudah berisi baris.
-- [ ] **Step 3: Tulis rencana rollback di berkas ini, sebelum menerapkan.** Kerangkanya:
+- [x] **Step 3: Tulis rencana rollback di berkas ini, sebelum menerapkan.**
+
+**Migrasi yang dihasilkan:** `drizzle/0052_spicy_skreet.sql`. SQL-nya dibaca sebelum diterapkan dan
+seluruhnya aditif: dua `CREATE TABLE` (`company_documents`, `company_document_versions`), tiga
+`CREATE INDEX` pada tabel baru itu, dan dua `MODIFY COLUMN` pada `operational_documents` yang
+**hanya menambahkan satu nilai di ujung** — kesembilan nilai `documentType` lama dan keempat nilai
+`ownerType` lama tetap ada pada urutan yang sama. Tidak ada `DROP`, tidak ada `NOT NULL` baru pada
+tabel yang sudah berisi baris, dan tidak ada kolom lama yang disentuh.
+
+**Rencana rollback** (dicatat 8 September 2026, **sebelum** migrasi diterapkan). Dijalankan pada
+tiap basis data yang menerima migrasi ini — lokal `moneychanger` dan `mc_t_abcvalas`:
 
 ```sql
 DROP TABLE IF EXISTS `company_document_versions`;
 DROP TABLE IF EXISTS `company_documents`;
--- Kembalikan enum operational_documents ke sembilan nilai lama; aman hanya bila tidak ada baris
--- ber-ownerType COMPANY_ARCHIVE yang tersisa. Periksa dulu:
+
+-- Kembalikan kedua enum ke nilai lamanya. Periksa dulu tidak ada baris yang memakainya; MySQL
+-- mengubah nilai enum yang tidak lagi sah menjadi string kosong tanpa mengeluh, dan berkas yang
+-- kehilangan ownerType-nya menjadi baris yatim yang tidak dapat dipulihkan.
 --   SELECT COUNT(*) FROM operational_documents WHERE ownerType = 'COMPANY_ARCHIVE';
+-- Bila hasilnya 0:
+ALTER TABLE `operational_documents`
+  MODIFY COLUMN `ownerType` enum('CUSTOMER','TRANSACTION','COMPANY','EXPENSE') NOT NULL;
+ALTER TABLE `operational_documents`
+  MODIFY COLUMN `documentType` enum('KTP_PHOTO','UNDERLYING','UNDERLYING_FORM','UNDERLYING_STATEMENT','UNDERLYING_INVOICE','COMPANY_LOGO','LICENSE_CERTIFICATE','LICENSE_ATTACHMENT','EXPENSE_RECEIPT') NOT NULL;
 ```
+
+Bila hasil hitungannya **bukan** 0, hapus dulu baris arsipnya (atau batalkan rollback-nya) —
+membiarkan `MODIFY COLUMN` berjalan atas baris yang memakai nilai baru akan mengosongkan kolomnya
+diam-diam.
 
 Sesudah itu hapus baris `0052` dari `drizzle/meta/_journal.json`, berkas `drizzle/0052_*.sql`, dan
 `drizzle/meta/0052_snapshot.json`, lalu kembalikan `drizzle/schema.ts`.
 
-**Yang hilang bila rollback dijalankan:** seluruh dokumen arsip beserta riwayat versinya. Berkasnya
+**Yang hilang bila rollback dijalankan:** seluruh dokumen arsip beserta riwayat versinya, dan baris
+`operational_documents` ber-`ownerType` `COMPANY_ARCHIVE` yang harus dihapus lebih dulu. Berkasnya
 sendiri tetap ada di object storage tetapi menjadi tak tertunjuk. Tabel dan kolom lama tidak
 tersentuh. Ambil cadangan kedua basis data lokal lebih dulu bila arsipnya sudah terisi.
 
-- [ ] **Step 4: Terapkan** dengan `node scripts/tenant.mjs migrate-all`. **Jangan** menjalankan
+- [x] **Step 4: Terapkan** dengan `node scripts/tenant.mjs migrate-all`. **Jangan** menjalankan
       `.sql` langsung. Periksa kedua basis data lokal menerima migrasinya. **Jangan menerapkan ke
       produksi** — migrasi `0051` Paket H pun belum diterapkan di sana.
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Tabel arsip dokumen perusahaan"`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Tabel arsip dokumen perusahaan"`.
+
+**Diterapkan 8 September 2026** lewat `node scripts/tenant.mjs migrate-all`: kedua tenant lokal
+(`ibukota` → `moneychanger`, `abcvalas` → `mc_t_abcvalas`) selesai dan berada pada versi skema yang
+sama. Diperiksa langsung ke basis datanya: kedua tabel ada dan `ownerType` kini memuat
+`COMPANY_ARCHIVE`. **Produksi tidak disentuh.**
 
 ---
 

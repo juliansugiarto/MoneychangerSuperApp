@@ -365,6 +365,13 @@
       "when": 1788880195985,
       "tag": "0051_chilly_nicolaos",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "5",
+      "when": 1788885376981,
+      "tag": "0052_spicy_skreet",
+      "breakpoints": true
     }
   ]
 }

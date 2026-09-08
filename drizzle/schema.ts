@@ -326,9 +326,10 @@ export const exchangeTransactionPaymentDenominations = mysqlTable("exchange_tran
  */
 export const operationalDocuments = mysqlTable("operational_documents", {
   id: int("id").autoincrement().primaryKey(),
-  ownerType: mysqlEnum("ownerType", ["CUSTOMER", "TRANSACTION", "COMPANY", "EXPENSE"]).notNull(),
+  /** COMPANY_ARCHIVE berdiri sendiri dan bukan bagian COMPANY: `listCompanyDocuments` menyaring dengan ownerType saja dan mengirim seluruh hasilnya ke halaman Profil Perusahaan, sehingga menumpang COMPANY berarti mengirimkan seluruh arsip perusahaan ke layar yang tidak memintanya. */
+  ownerType: mysqlEnum("ownerType", ["CUSTOMER", "TRANSACTION", "COMPANY", "EXPENSE", "COMPANY_ARCHIVE"]).notNull(),
   /** UNDERLYING is kept only for bons predating the three-document split — new transactions requiring underlying use the three specific types instead (Formulir Underlying, Surat Pernyataan, Invoice), all required together. */
-  documentType: mysqlEnum("documentType", ["KTP_PHOTO", "UNDERLYING", "UNDERLYING_FORM", "UNDERLYING_STATEMENT", "UNDERLYING_INVOICE", "COMPANY_LOGO", "LICENSE_CERTIFICATE", "LICENSE_ATTACHMENT", "EXPENSE_RECEIPT"]).notNull(),
+  documentType: mysqlEnum("documentType", ["KTP_PHOTO", "UNDERLYING", "UNDERLYING_FORM", "UNDERLYING_STATEMENT", "UNDERLYING_INVOICE", "COMPANY_LOGO", "LICENSE_CERTIFICATE", "LICENSE_ATTACHMENT", "EXPENSE_RECEIPT", "COMPANY_ARCHIVE_FILE"]).notNull(),
   customerId: int("customerId"),
   transactionId: int("transactionId"),
   expenseId: int("expenseId"),
@@ -346,6 +347,61 @@ export const operationalDocuments = mysqlTable("operational_documents", {
   index("operational_documents_transaction_idx").on(table.transactionId, table.createdAt),
   index("operational_documents_expense_idx").on(table.expenseId, table.createdAt),
   index("operational_documents_owner_type_idx").on(table.ownerType, table.documentType),
+]);
+
+/** Keputusan pengguna 8 September 2026: enum tertutup agar arsip dapat dikelompokkan dan dihitung untuk pemeriksa, dengan LAINNYA sebagai jalan keluarnya agar tidak ada dokumen yang tidak dapat diarsipkan. */
+export const companyDocumentCategories = ["SOP", "KEBIJAKAN_INTERNAL", "SURAT_BI", "NOTULEN_RAPAT", "KORESPONDENSI_REGULATOR", "LAINNYA"] as const;
+
+/**
+ * Satu dokumen perusahaan sebagai benda yang berumur panjang — SOP "Prosedur Penerimaan Nasabah"
+ * tetap dokumen yang sama walau berkasnya sudah diganti empat kali. Berkasnya sendiri ada di
+ * `companyDocumentVersions`; tabel ini hanya memegang identitas dan kepemilikannya.
+ */
+export const companyDocuments = mysqlTable("company_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  category: mysqlEnum("category", companyDocumentCategories).notNull(),
+  title: varchar("title", { length: 250 }).notNull(),
+  /** Nomor surat/SK/notulen bila ada; bukan pengganti judul. */
+  referenceNumber: varchar("referenceNumber", { length: 160 }),
+  /** Pegawai yang bertanggung jawab memelihara dokumen ini. Kosong bila belum ditunjuk. */
+  responsibleEmployeeId: int("responsibleEmployeeId"),
+  notes: text("notes"),
+  /** Dinonaktifkan, bukan dihapus — keputusan pengguna 8 September 2026. Berkasnya tetap dapat diambil, karena arsip yang isinya dapat lenyap tanpa jejak bernilai lebih kecil bagi pemeriksa daripada arsip yang tidak dapat. */
+  deactivatedAt: datetime("deactivatedAt"),
+  deactivatedByUserId: int("deactivatedByUserId"),
+  deactivationReason: text("deactivationReason"),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("company_documents_category_idx").on(table.category, table.deactivatedAt),
+  index("company_documents_responsible_idx").on(table.responsibleEmployeeId),
+]);
+
+/**
+ * Satu baris per berkas yang pernah diunggah. Versi lama tidak pernah dihapus: pertanyaan pemeriksa
+ * adalah "SOP mana yang berlaku pada periode yang sedang diperiksa", dan hanya baris yang bertahan
+ * yang dapat menjawabnya.
+ */
+export const companyDocumentVersions = mysqlTable("company_document_versions", {
+  id: int("id").autoincrement().primaryKey(),
+  companyDocumentId: int("companyDocumentId").notNull(),
+  /** Mulai 1, naik satu setiap penggantian. Disimpan, bukan diturunkan saat dibaca. */
+  versionNumber: int("versionNumber").notNull(),
+  /** Baris `operationalDocuments` yang memegang berkasnya. Satu berkas hanya boleh dipakai satu versi. */
+  operationalDocumentId: int("operationalDocumentId").notNull(),
+  validFrom: date("validFrom").notNull(),
+  /** Kosong berarti berlaku sampai diganti — bukan berarti kedaluwarsa. */
+  validUntil: date("validUntil"),
+  /** Wajib mulai versi kedua: riwayat versi tanpa alasan menjawab "apa yang berubah" tetapi tidak pernah menjawab "mengapa". */
+  changeReason: text("changeReason"),
+  /** Diisi saat versi berikutnya diunggah. Versi berjalan adalah satu-satunya yang nilainya kosong. Disimpan dan bukan diturunkan dari nomor tertinggi, karena aturan turunan itu menjadi salah pada versi susulan bertanggal mundur tanpa terlihat dari layar mana pun. */
+  supersededAt: datetime("supersededAt"),
+  uploadedByUserId: int("uploadedByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("company_document_versions_number_uq").on(table.companyDocumentId, table.versionNumber),
+  uniqueIndex("company_document_versions_file_uq").on(table.operationalDocumentId),
+  index("company_document_versions_current_idx").on(table.companyDocumentId, table.supersededAt),
 ]);
 
 export const expenseCategories = ["SEWA", "GAJI", "UTILITAS", "PERLENGKAPAN_OPERASIONAL", "PEMASARAN", "PEMELIHARAAN", "IZIN_DAN_PAJAK", "LAINNYA"] as const;
@@ -1634,3 +1690,7 @@ export type EmployeeCandidate = typeof employeeCandidates.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type StaffRole = User["role"];
+
+export type CompanyDocument = typeof companyDocuments.$inferSelect;
+export type CompanyDocumentVersion = typeof companyDocumentVersions.$inferSelect;
+export type CompanyDocumentCategory = CompanyDocument["category"];
