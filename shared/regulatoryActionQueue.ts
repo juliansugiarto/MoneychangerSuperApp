@@ -100,6 +100,21 @@ export function startOfNextOperationalDay(now: Date, timeZone: string = DEFAULT_
   return operationalMidnight(now, timeZone, year, month, day + 1);
 }
 
+/**
+ * Tanggal kalender sebuah instan di zona operasional, sebagai kunci `YYYY-MM-DD`.
+ *
+ * Dipakai untuk menurunkan "hari ini" ketika yang dibandingkan adalah tanggal dan bukan instan —
+ * masa berlaku dokumen, misalnya. Ia memakai `operationalParts` yang sama dengan seluruh helper di
+ * berkas ini, sehingga tidak ada aturan zona waktu kedua yang harus ikut benar.
+ *
+ * **Bukan** untuk membaca nilai kolom `date`: driver membangun nilai itu sebagai tengah malam waktu
+ * lokal proses, sehingga zona operasional justru menggesernya.
+ */
+export function operationalDateKey(now: Date, timeZone: string = DEFAULT_OPERATIONAL_TIMEZONE): string {
+  const { year, month, day } = operationalParts(now, timeZone);
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 /** Awal bulan kalender di zona waktu operasional, sebagai satu titik waktu absolut. */
 export function startOfOperationalMonth(now: Date, timeZone: string = DEFAULT_OPERATIONAL_TIMEZONE): Date {
   const { year, month } = operationalParts(now, timeZone);

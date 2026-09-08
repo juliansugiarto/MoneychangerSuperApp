@@ -14,7 +14,7 @@
 
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu.**
 
-- [ ] Tugas 1 — Penilaian masa berlaku dan worklist, murni dan teruji
+- [x] Tugas 1 — Penilaian masa berlaku dan worklist, murni dan teruji
 - [ ] Tugas 2 — Migrasi: dua nilai enum dan dua tabel arsip
 - [ ] Tugas 3 — Jalur unggah menerima berkas arsip, dengan gerbang Controller
 - [ ] Tugas 4 — Penulis arsip: buat dokumen, ganti versi, nonaktifkan, beserta auditnya
@@ -119,7 +119,7 @@ Ditetapkan 8 September 2026. **Jangan menurunkannya ulang dan jangan menawarnya.
 - Consumes: `startOfOperationalDay` dari `shared/regulatoryActionQueue.ts`. Tidak menyentuh basis data.
 - Produces: `ARCHIVE_EXPIRY_WARNING_DAYS`, `companyDocumentCategoryLabels`, `archiveDateKey`, `assessArchiveValidity`, `archiveWorklistReason`.
 
-- [ ] **Step 1: Tulis uji yang gagal** — sisi batasnya yang paling mudah salah:
+- [x] **Step 1: Tulis uji yang gagal** — sisi batasnya yang paling mudah salah:
 
 ```ts
 describe("masa berlaku dokumen arsip", () => {
@@ -141,13 +141,25 @@ Sebaliknya "hari ini" diturunkan lewat `startOfOperationalDay` beserta zona oper
 keduanya — misalnya memakai `toISOString().slice(0, 10)` pada nilai kolom `date` — memundurkan
 tanggal satu hari di WIB. Uji ketiga zona proses itu yang menangkapnya.
 
-- [ ] **Step 2: Tulis fungsinya.** Murni. `ARCHIVE_EXPIRY_WARNING_DAYS = 30` sebagai konstanta
+- [x] **Step 2: Tulis fungsinya.** Murni. `ARCHIVE_EXPIRY_WARNING_DAYS = 30` sebagai konstanta
       bernama beserta komentar yang menyebut tanggal keputusan penggunanya. Selisih hari dihitung
       atas kunci tanggal, bukan atas selisih milidetik — 24 jam bukan satu hari pada zona ber-DST.
-- [ ] **Step 3: `archiveWorklistReason`** mengembalikan `KEDALUWARSA`, `AKAN_KEDALUWARSA`,
+- [x] **Step 3: `archiveWorklistReason`** mengembalikan `KEDALUWARSA`, `AKAN_KEDALUWARSA`,
       `TIDAK_ADA_VERSI_BERLAKU`, atau `null`. Dokumen **nonaktif tidak pernah** menghasilkan alasan;
       uji hal itu di sini, jangan menyerahkannya ke pemanggil.
-- [ ] **Step 4:** Perintah mutu, lalu commit `"Penilaian masa berlaku dokumen arsip"`.
+- [x] **Step 4:** Perintah mutu, lalu commit `"Penilaian masa berlaku dokumen arsip"`.
+
+**Catatan Tugas 1.** Dua hal yang bergeser dari rencana:
+
+1. **"Hari ini" memakai `operationalDateKey` yang ditambahkan ke `shared/regulatoryActionQueue.ts`**,
+   bukan helper baru di berkas arsip. Ia dibangun di atas `operationalParts` yang sudah dipakai
+   seluruh helper hari operasional di sana, sehingga tidak ada aturan zona waktu kedua yang harus
+   ikut benar — itu maksud larangan "jangan menulis helper keempat", dan menaruhnya di berkas arsip
+   justru akan melanggarnya.
+2. **Dokumen yang berakhir hari ini berstatus `AKAN_KEDALUWARSA`, bukan `BERLAKU`.** Uji yang
+   ditulis lebih dulu memasang harapan yang keliru: sisa nol hari tetap berada di dalam jendela
+   peringatan 30 hari. Yang benar-benar diuji tetap sisi batasnya — ia **belum** kedaluwarsa pada
+   hari terakhirnya sendiri.
 
 ---
 
