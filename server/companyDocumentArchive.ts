@@ -6,7 +6,14 @@ import {
   operationalDocuments,
   type CompanyDocumentCategory,
 } from "../drizzle/schema";
-import { archiveDateKey } from "../shared/companyDocumentArchive";
+import {
+  archiveDateKey,
+  archiveWorklistReason,
+  assessArchiveValidity,
+  type ArchiveValidityStatus,
+  type ArchiveWorklistReason,
+} from "../shared/companyDocumentArchive";
+import { operationalDateKey } from "../shared/regulatoryActionQueue";
 import { databaseOrThrow, writeAudit } from "./operations";
 
 /**
@@ -238,4 +245,172 @@ export async function deactivateCompanyDocument(input: { companyDocumentId: numb
     beforeState: { title: document.title, deactivatedAt: null },
     afterState: { title: document.title, deactivatedAt, deactivatedByUserId: actor.id },
   });
+}
+
+/**
+ * Satu baris dokumen beserta versi berjalannya.
+ *
+ * Versi berjalan adalah versi yang `supersededAt`-nya kosong — disimpan, bukan diturunkan dari
+ * nomor tertinggi.
+ */
+async function readArchiveRows(db: Awaited<ReturnType<typeof databaseOrThrow>>) {
+  return db
+    .select({
+      id: companyDocuments.id,
+      category: companyDocuments.category,
+      title: companyDocuments.title,
+      referenceNumber: companyDocuments.referenceNumber,
+      responsibleEmployeeId: companyDocuments.responsibleEmployeeId,
+      notes: companyDocuments.notes,
+      deactivatedAt: companyDocuments.deactivatedAt,
+      deactivationReason: companyDocuments.deactivationReason,
+      createdAt: companyDocuments.createdAt,
+      versionId: companyDocumentVersions.id,
+      versionNumber: companyDocumentVersions.versionNumber,
+      operationalDocumentId: companyDocumentVersions.operationalDocumentId,
+      validFrom: companyDocumentVersions.validFrom,
+      validUntil: companyDocumentVersions.validUntil,
+      changeReason: companyDocumentVersions.changeReason,
+      responsibleName: employees.fullName,
+      originalFileName: operationalDocuments.originalFileName,
+    })
+    .from(companyDocuments)
+    .leftJoin(companyDocumentVersions, and(
+      eq(companyDocumentVersions.companyDocumentId, companyDocuments.id),
+      isNull(companyDocumentVersions.supersededAt),
+    ))
+    .leftJoin(employees, eq(employees.id, companyDocuments.responsibleEmployeeId))
+    .leftJoin(operationalDocuments, eq(operationalDocuments.id, companyDocumentVersions.operationalDocumentId))
+    .orderBy(asc(companyDocuments.category), asc(companyDocuments.title));
+}
+
+type ArchiveRow = Awaited<ReturnType<typeof readArchiveRows>>[number];
+
+export type CompanyArchiveDocument = {
+  id: number;
+  category: ArchiveRow["category"];
+  title: string;
+  referenceNumber: string | null;
+  responsibleEmployeeId: number | null;
+  responsibleName: string | null;
+  notes: string | null;
+  deactivatedAt: Date | null;
+  deactivationReason: string | null;
+  validityStatus: ArchiveValidityStatus | null;
+  worklistReason: ArchiveWorklistReason | null;
+  currentVersion: {
+    id: number;
+    versionNumber: number;
+    operationalDocumentId: number;
+    originalFileName: string | null;
+    validFrom: Date;
+    validUntil: Date | null;
+    changeReason: string | null;
+  } | null;
+};
+
+function toArchiveDocument(row: ArchiveRow, asOfKey: string): CompanyArchiveDocument {
+  const hasVersion = row.versionId !== null && row.validFrom !== null;
+  const validity = hasVersion
+    ? { validFrom: row.validFrom as Date, validUntil: row.validUntil as Date | null }
+    : null;
+
+  return {
+    id: row.id,
+    category: row.category,
+    title: row.title,
+    referenceNumber: row.referenceNumber,
+    responsibleEmployeeId: row.responsibleEmployeeId,
+    responsibleName: row.responsibleName ?? null,
+    notes: row.notes,
+    deactivatedAt: row.deactivatedAt,
+    deactivationReason: row.deactivationReason,
+    validityStatus: validity ? assessArchiveValidity(validity, asOfKey) : null,
+    worklistReason: validity ? archiveWorklistReason({ ...validity, deactivatedAt: row.deactivatedAt }, asOfKey) : null,
+    currentVersion: hasVersion
+      ? {
+          id: row.versionId as number,
+          versionNumber: row.versionNumber as number,
+          operationalDocumentId: row.operationalDocumentId as number,
+          originalFileName: row.originalFileName ?? null,
+          validFrom: row.validFrom as Date,
+          validUntil: row.validUntil as Date | null,
+          changeReason: row.changeReason,
+        }
+      : null,
+  };
+}
+
+/**
+ * Seluruh arsip, dinilai pada satu tanggal acuan.
+ *
+ * Masa berlakunya **tidak disaring lewat SQL**: `validFrom`/`validUntil` adalah kolom `date`, dan
+ * menyaringnya dengan `Date` tengah malam UTC menjatuhkan baris pada batasnya di mesin WIB. Arsip
+ * berukuran puluhan baris, sehingga membacanya utuh lalu menilainya di JavaScript lebih murah
+ * daripada satu kekeliruan batas yang tidak terlihat dari layar mana pun.
+ */
+export async function listCompanyArchiveDocuments(input: { asOf?: Date } = {}) {
+  const db = await databaseOrThrow();
+  const asOfKey = operationalDateKey(input.asOf ?? new Date());
+  const rows = await readArchiveRows(db);
+  const all = rows.map((row) => toArchiveDocument(row, asOfKey));
+
+  const documents = all.filter((doc) => !doc.deactivatedAt);
+  return {
+    asOfKey,
+    documents,
+    deactivated: all.filter((doc) => doc.deactivatedAt),
+    /** Dokumen aktif yang tidak punya tanggal berakhir. Ditampilkan apa adanya: worklist yang sunyi karena tanggalnya tidak pernah diisi bukan bukti bahwa seluruh dokumen masih berlaku. */
+    withoutExpiryCount: documents.filter((doc) => doc.currentVersion && !doc.currentVersion.validUntil).length,
+  };
+}
+
+const WORKLIST_ORDER: Record<ArchiveWorklistReason, number> = {
+  KEDALUWARSA: 0,
+  TIDAK_ADA_VERSI_BERLAKU: 1,
+  AKAN_KEDALUWARSA: 2,
+};
+
+/** Dokumen yang menjadi pekerjaan menunggu, paling mendesak lebih dulu. Hanya mencatat: tidak mengubah dokumennya, tidak memblokir apa pun, dan tidak melapor ke siapa pun. */
+export async function companyArchiveWorklist(input: { asOf?: Date } = {}) {
+  const { documents } = await listCompanyArchiveDocuments(input);
+  return documents
+    .filter((doc): doc is CompanyArchiveDocument & { worklistReason: ArchiveWorklistReason } => doc.worklistReason !== null)
+    .map((doc) => ({
+      id: doc.id,
+      category: doc.category,
+      title: doc.title,
+      responsibleName: doc.responsibleName,
+      reason: doc.worklistReason,
+      validUntil: doc.currentVersion?.validUntil ?? null,
+      validFrom: doc.currentVersion?.validFrom ?? null,
+    }))
+    .sort((left, right) => WORKLIST_ORDER[left.reason] - WORKLIST_ORDER[right.reason]
+      || archiveSortKey(left.validUntil).localeCompare(archiveSortKey(right.validUntil)));
+}
+
+function archiveSortKey(value: Date | null) {
+  return value ? archiveDateKey(value) : "9999-12-31";
+}
+
+/** Riwayat versi satu dokumen, terbaru lebih dulu. Versi lama tetap dapat dibuka lewat `operationalDocumentId`-nya. */
+export async function listCompanyArchiveVersions(companyDocumentId: number) {
+  const db = await databaseOrThrow();
+  return db
+    .select({
+      id: companyDocumentVersions.id,
+      versionNumber: companyDocumentVersions.versionNumber,
+      operationalDocumentId: companyDocumentVersions.operationalDocumentId,
+      originalFileName: operationalDocuments.originalFileName,
+      validFrom: companyDocumentVersions.validFrom,
+      validUntil: companyDocumentVersions.validUntil,
+      changeReason: companyDocumentVersions.changeReason,
+      supersededAt: companyDocumentVersions.supersededAt,
+      uploadedByUserId: companyDocumentVersions.uploadedByUserId,
+      createdAt: companyDocumentVersions.createdAt,
+    })
+    .from(companyDocumentVersions)
+    .leftJoin(operationalDocuments, eq(operationalDocuments.id, companyDocumentVersions.operationalDocumentId))
+    .where(eq(companyDocumentVersions.companyDocumentId, companyDocumentId))
+    .orderBy(desc(companyDocumentVersions.versionNumber));
 }

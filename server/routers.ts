@@ -102,7 +102,7 @@ import {
   updateServiceRequest,
 } from "./operations";
 import { listCustomerProfileMonitoring, listCustomerProfileReviews, recordCustomerProfileReview } from "./customerProfileMonitoring";
-import { addCompanyDocumentVersion, createCompanyDocument, deactivateCompanyDocument } from "./companyDocumentArchive";
+import { addCompanyDocumentVersion, companyArchiveWorklist, createCompanyDocument, deactivateCompanyDocument, listCompanyArchiveDocuments, listCompanyArchiveVersions } from "./companyDocumentArchive";
 import { deleteCompanyDocument, getOperationalDocumentDownloadUrl, listCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
 import { companyDocumentCategories, expenseCategories } from "../drizzle/schema";
 import { candidateDecisions, competencyTracks, employmentStatuses, jobLevels, picRoles, screeningResults } from "../drizzle/schema";
@@ -417,6 +417,15 @@ export const appRouter = router({
    * disembunyikan di UI. Tidak ada prosedur penghapusan: menghapus berarti menonaktifkan.
    */
   companyArchive: router({
+    list: controllerProcedure
+      .input(z.object({ asOf: z.coerce.date().optional() }).default({}))
+      .query(({ input }) => listCompanyArchiveDocuments(input)),
+    versions: controllerProcedure
+      .input(z.object({ companyDocumentId: z.number().int().positive() }))
+      .query(({ input }) => listCompanyArchiveVersions(input.companyDocumentId)),
+    worklist: controllerProcedure
+      .input(z.object({ asOf: z.coerce.date().optional() }).default({}))
+      .query(({ input }) => companyArchiveWorklist(input)),
     create: controllerProcedure
       .input(companyArchiveDocumentInput)
       .mutation(({ input, ctx }) => createCompanyDocument(input, ctx.user)),

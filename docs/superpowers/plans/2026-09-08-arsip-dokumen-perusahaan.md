@@ -18,7 +18,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 2 — Migrasi: dua nilai enum dan dua tabel arsip
 - [x] Tugas 3 — Jalur unggah menerima berkas arsip, dengan gerbang Controller
 - [x] Tugas 4 — Penulis arsip: buat dokumen, ganti versi, nonaktifkan, beserta auditnya
-- [ ] Tugas 5 — Pembaca arsip: daftar, riwayat versi, dan worklist
+- [x] Tugas 5 — Pembaca arsip: daftar, riwayat versi, dan worklist
 - [ ] Tugas 6 — Halaman Arsip Dokumen
 - [ ] Tugas 7 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
@@ -328,27 +328,36 @@ array), sehingga ia harus disisihkan agar tidak merebut giliran `Param` yang ses
 
 **Files:** Modify `server/companyDocumentArchive.ts`, `server/routers.ts`; Create `server/companyDocumentArchive.worklist.test.ts`
 
-- [ ] **Step 1: Uji yang gagal** — dokumen kedaluwarsa muncul di worklist; yang berakhir 30 hari
+- [x] **Step 1: Uji yang gagal** — dokumen kedaluwarsa muncul di worklist; yang berakhir 30 hari
       lagi muncul; yang berakhir 31 hari lagi tidak; yang `validUntil`-nya kosong tidak; dokumen
       **nonaktif tidak pernah muncul**; dokumen yang versi berjalannya `validFrom` di masa depan
       muncul sebagai `TIDAK_ADA_VERSI_BERLAKU`.
-- [ ] **Step 2: `listCompanyDocuments` arsip** — nama fungsinya **jangan** bentrok dengan
+- [x] **Step 2: `listCompanyDocuments` arsip** — nama fungsinya **jangan** bentrok dengan
       `listCompanyDocuments` yang sudah ada di `documentOperations.ts`; pakai
       `listCompanyArchiveDocuments`. Kembalikan dokumen beserta versi berjalannya, banyaknya versi,
       nama penanggung jawab, dan status masa berlakunya dari Tugas 1.
-- [ ] **Step 3: Jangan menyaring `validUntil` di SQL.** Baca barisnya, nilai statusnya di
+- [x] **Step 3: Jangan menyaring `validUntil` di SQL.** Baca barisnya, nilai statusnya di
       JavaScript. Alasannya ada di Global Constraints, dan ia sudah pernah menggigit proyek ini.
       "Hari ini" dari `startOfOperationalDay` beserta `company_profile.timezone`, bukan dari zona
       proses.
-- [ ] **Step 4: `listCompanyArchiveVersions(companyDocumentId)`** — seluruh versi, terbaru dahulu,
+- [x] **Step 4: `listCompanyArchiveVersions(companyDocumentId)`** — seluruh versi, terbaru dahulu,
       masing-masing dengan `operationalDocumentId`-nya agar halaman dapat memakai jalur unduhan yang
       sudah ada. **Versi lama tetap dapat diunduh**; itu keputusan 2, dan ujilah bahwa ia benar.
-- [ ] **Step 5: Hitung dokumen tanpa `validUntil`** dan kembalikan angkanya. Worklist yang sunyi
+- [x] **Step 5: Hitung dokumen tanpa `validUntil`** dan kembalikan angkanya. Worklist yang sunyi
       tidak boleh terbaca sebagai "semua dokumen berlaku" ketika sebabnya adalah tanggal yang tidak
       pernah diisi — spec menyebutnya sebagai risiko residual dan halaman harus menampilkannya.
-- [ ] **Step 6: Prosedur tRPC** `companyArchive.list`, `.versions`, `.worklist` sebagai
+- [x] **Step 6: Prosedur tRPC** `companyArchive.list`, `.versions`, `.worklist` sebagai
       `controllerProcedure`.
-- [ ] **Step 7:** Perintah mutu, lalu commit `"Pembaca dan worklist arsip dokumen"`.
+- [x] **Step 7:** Perintah mutu, lalu commit `"Pembaca dan worklist arsip dokumen"`.
+
+**Catatan Tugas 5 — zona waktu.** Rencana menyebut "hari ini" diturunkan dari `startOfOperationalDay`
+**beserta `company_profile.timezone`**. Yang dikerjakan memakai zona bawaan `Asia/Jakarta`, karena
+**tidak ada satu pun pemanggil di server yang membaca kolom itu**: `server/operations.ts:1515,1532,3217`
+seluruhnya memakai zona bawaan. Membuat arsip menjadi satu-satunya modul yang membaca
+`company_profile.timezone` akan membuat batas harinya berbeda dari setiap batas hari lain di
+aplikasi ini pada tenant yang menyetel WITA atau WIT — satu modul yang benar sendirian lebih buruk
+daripada seluruh modul yang keliru bersama-sama dan dapat diperbaiki sekaligus. Dicatat sebagai
+risiko residual, bukan diperbaiki diam-diam hanya di sini.
 
 ---
 

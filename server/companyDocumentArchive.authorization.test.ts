@@ -11,7 +11,7 @@ vi.mock("./companyDocumentArchive", () => ({
 
 vi.mock("./db", () => ({ getDb: vi.fn() }));
 
-import { addCompanyDocumentVersion, createCompanyDocument, deactivateCompanyDocument } from "./companyDocumentArchive";
+import { addCompanyDocumentVersion, companyArchiveWorklist, createCompanyDocument, deactivateCompanyDocument, listCompanyArchiveDocuments } from "./companyDocumentArchive";
 import { appRouter } from "./routers";
 
 /**
@@ -112,5 +112,27 @@ describe("arsip tidak menyediakan penghapusan", () => {
     expect(procedures).not.toContain("companyArchive.delete");
     expect(procedures).not.toContain("companyArchive.remove");
     expect(procedures.length).toBeGreaterThan(0);
+  });
+});
+
+describe("otorisasi pembaca arsip", () => {
+  beforeEach(() => {
+    vi.mocked(listCompanyArchiveDocuments).mockReset().mockResolvedValue({ asOfKey: "2026-09-08", documents: [], deactivated: [], withoutExpiryCount: 0 } as never);
+    vi.mocked(companyArchiveWorklist).mockReset().mockResolvedValue([] as never);
+  });
+
+  it("menolak STAFF dan ADMIN membaca daftar dan worklist", async () => {
+    // Arsip memuat surat-menyurat regulator dan notulen rapat — bacaan pengawasan, bukan bacaan kasir.
+    for (const role of ["STAFF", "ADMIN"] as const) {
+      await expect(createCaller(role).companyArchive.list({})).rejects.toMatchObject({ code: "FORBIDDEN" });
+      await expect(createCaller(role).companyArchive.worklist({})).rejects.toMatchObject({ code: "FORBIDDEN" });
+    }
+    expect(listCompanyArchiveDocuments).not.toHaveBeenCalled();
+    expect(companyArchiveWorklist).not.toHaveBeenCalled();
+  });
+
+  it("menerima Controller dan Shareholder", async () => {
+    await expect(createCaller("CONTROLLER").companyArchive.worklist({})).resolves.toEqual([]);
+    await expect(createCaller("SHAREHOLDER").companyArchive.list({})).resolves.toMatchObject({ documents: [] });
   });
 });
