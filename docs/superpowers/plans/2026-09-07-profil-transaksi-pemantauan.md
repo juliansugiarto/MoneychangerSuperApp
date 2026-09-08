@@ -15,7 +15,7 @@
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu.**
 
 - [x] Tugas 1 — Penilaian penyimpangan dan irama berbasis risiko, murni dan teruji
-- [ ] Tugas 2 — Migrasi: tiga kolom deklarasi dan tabel `customer_profile_reviews`
+- [x] Tugas 2 — Migrasi: tiga kolom deklarasi dan tabel `customer_profile_reviews`
 - [ ] Tugas 3 — Penulis deklarasi: borang nasabah, `createCustomer`, `updateCustomer`
 - [ ] Tugas 4 — Jendela bulanan WIB bersama dan pembacaan aktivitas nyata
 - [ ] Tugas 5 — Worklist pemantauan: query, otorisasi, dan batas "hanya mencatat"
@@ -143,17 +143,40 @@ paling berarti — itu bentuk pemecahan transaksi.
 
 **Files:** Modify `drizzle/schema.ts`; Create migrasi
 
-- [ ] **Step 1: Tulis skemanya di `drizzle/schema.ts` lebih dulu**, jangan menulis SQL sendiri.
+- [x] **Step 1: Tulis skemanya di `drizzle/schema.ts` lebih dulu**, jangan menulis SQL sendiri.
       Tiga kolom **nullable** pada `customers` (spec bagian 1) dan tabel `customer_profile_reviews`
       (spec bagian 2) yang **memakai ulang** `profileReviewOutcomes`.
-- [ ] **Step 2: `./node_modules/.bin/drizzle-kit generate`**, lalu **baca SQL-nya**. Pastikan
+- [x] **Step 2: `./node_modules/.bin/drizzle-kit generate`**, lalu **baca SQL-nya**. Pastikan
       seluruhnya aditif: tidak ada `DROP`, tidak ada `NOT NULL` tanpa nilai bawaan pada tabel berisi.
-- [ ] **Step 3: Catat rencana rollback** pada berkas rencana ini sebelum menerapkan — tiga
+- [x] **Step 3: Catat rencana rollback** pada berkas rencana ini sebelum menerapkan — tiga
       `ALTER TABLE customers DROP COLUMN` dan satu `DROP TABLE`. Aditif, jadi rollbacknya aman;
       tetap tuliskan.
-- [ ] **Step 4: Terapkan** dengan `node scripts/tenant.mjs migrate-all`. **Jangan** menjalankan
+
+**Migrasi yang dihasilkan:** `drizzle/0051_chilly_nicolaos.sql`. SQL-nya dibaca sebelum diterapkan
+dan seluruhnya aditif: satu `CREATE TABLE customer_profile_reviews`, tiga `ADD COLUMN` yang semuanya
+**nullable tanpa nilai bawaan**, dan satu `CREATE INDEX` pada tabel baru itu. Tidak ada `DROP`,
+tidak ada `NOT NULL` pada `customers` yang sudah berisi baris nyata, dan tidak ada kolom lama yang
+disentuh.
+
+**Rencana rollback** (dicatat 8 September 2026, sebelum migrasi diterapkan). Dijalankan pada tiap
+basis data yang menerima migrasi ini — lokal `moneychanger` dan `mc_t_abcvalas`:
+
+```sql
+DROP TABLE IF EXISTS `customer_profile_reviews`;
+ALTER TABLE `customers` DROP COLUMN `declaredCurrencies`;
+ALTER TABLE `customers` DROP COLUMN `declaredMonthlyCount`;
+ALTER TABLE `customers` DROP COLUMN `declaredMonthlyValueIdr`;
+```
+
+Sesudah itu hapus baris `0051` dari `drizzle/meta/_journal.json`, berkas `drizzle/0051_*.sql`, dan
+`drizzle/meta/0051_snapshot.json`, lalu kembalikan `drizzle/schema.ts`.
+
+**Yang hilang bila rollback dijalankan:** deklarasi profil yang sudah diisi nasabah dan seluruh
+jejak `customer_profile_reviews`. Kolom lama `customers` tidak tersentuh, jadi data nasabah yang
+sudah ada aman. Ambil cadangan kedua basis data lokal lebih dulu bila sudah ada deklarasi terisi.
+- [x] **Step 4: Terapkan** dengan `node scripts/tenant.mjs migrate-all`. **Jangan** menjalankan
       `.sql` langsung. Periksa kedua basis data lokal menerima migrasinya.
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Kolom profil transaksi dan jejak peninjauan nasabah"`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Kolom profil transaksi dan jejak peninjauan nasabah"`.
 
 ---
 

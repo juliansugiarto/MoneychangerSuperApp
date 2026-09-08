@@ -130,6 +130,22 @@ export const customers = mysqlTable("customers", {
   profileStatus: mysqlEnum("profileStatus", ["ACTIVE", "RESTRICTED", "INACTIVE"]).default("ACTIVE").notNull(),
   riskLevel: mysqlEnum("riskLevel", ["LOW", "MEDIUM", "HIGH"]).default("LOW").notNull(),
   riskNotes: text("riskNotes"),
+  /**
+   * Profil transaksi yang dinyatakan nasabah sendiri pada borang — perkiraan nilai Rupiah sebulan,
+   * perkiraan banyaknya transaksi sebulan, dan mata uang yang diharapkan.
+   *
+   * Ketiganya nullable dan itu disengaja: seluruh nasabah yang sudah ada belum pernah
+   * mendeklarasikan apa pun. Nasabah tanpa deklarasi tidak dapat menyimpang — ia muncul di worklist
+   * pemantauan dengan alasan PROFIL_BELUM_DIDEKLARASIKAN. Kekosongan itu temuannya sendiri, dan
+   * nilai bawaan nol akan mengarang deklarasi atas nama nasabah sekaligus membuat ambangnya nol.
+   *
+   * Ini pernyataan nasabah, bukan batas yang ditegakkan sistem: melewatinya menyalakan peninjauan,
+   * tidak pernah memblokir transaksi.
+   */
+  declaredMonthlyValueIdr: decimal("declaredMonthlyValueIdr", { precision: 24, scale: 2 }),
+  declaredMonthlyCount: int("declaredMonthlyCount"),
+  /** Kode mata uang yang diharapkan, misalnya ["USD","SGD"]. */
+  declaredCurrencies: json("declaredCurrencies").$type<string[]>(),
   /** Training-only customer profiles are unavailable to the live transaction flow. */
   isDemo: boolean("isDemo").default(false).notNull(),
   /** Limited historical ledger counterparty; never selectable for a new live transaction. */
@@ -1560,6 +1576,38 @@ export const employeeProfileReviews = mysqlTable("employee_profile_reviews", {
 }, (table) => [
   index("employee_profile_reviews_employee_idx").on(table.employeeId, table.reviewedAt),
 ]);
+
+/**
+ * Peninjauan berkala profil nasabah.
+ *
+ * Meniru `employee_profile_reviews` dan memakai ulang `profileReviewOutcomes` apa adanya — dua
+ * kosakata hasil peninjauan yang berbeda untuk persoalan yang sama hanya akan membingungkan
+ * pemeriksanya. Satu baris per peninjauan, bukan satu kolom "terakhir ditinjau" pada `customers`,
+ * karena yang diminta pemeriksa adalah jejak peninjauannya beserta hasilnya.
+ *
+ * Iramanya mengikuti risiko nasabah (HIGH sebulan, MEDIUM tiga bulan, LOW setahun); lihat
+ * `shared/transactionProfile.ts`.
+ */
+export const customerProfileReviews = mysqlTable("customer_profile_reviews", {
+  id: int("id").autoincrement().primaryKey(),
+  customerId: int("customerId").notNull(),
+  reviewedAt: datetime("reviewedAt").notNull(),
+  outcome: mysqlEnum("outcome", profileReviewOutcomes).notNull(),
+  /** Ringkasan yang ditemukan; wajib diisi bila hasilnya bukan "tidak ada perubahan". */
+  notes: text("notes"),
+  /**
+   * Alasan penyimpangan yang terlihat saat peninjauan, dibekukan apa adanya dan tidak dihitung
+   * ulang saat dibaca: peninjauan adalah pernyataan tentang apa yang terlihat saat itu, dan
+   * menghitungnya ulang enam bulan kemudian akan mengubah isi catatan yang sudah ditandatangani.
+   */
+  deviationReasons: json("deviationReasons").$type<string[]>(),
+  reviewedByUserId: int("reviewedByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("customer_profile_reviews_customer_idx").on(table.customerId, table.reviewedAt),
+]);
+
+export type CustomerProfileReview = typeof customerProfileReviews.$inferSelect;
 
 export type Employee = typeof employees.$inferSelect;
 export type EmployeeCertification = typeof employeeCertifications.$inferSelect;
