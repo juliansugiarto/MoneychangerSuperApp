@@ -101,11 +101,12 @@ import {
   updatePublicAnnouncement,
   updateServiceRequest,
 } from "./operations";
-import { listCustomerProfileMonitoring } from "./customerProfileMonitoring";
+import { listCustomerProfileMonitoring, listCustomerProfileReviews, recordCustomerProfileReview } from "./customerProfileMonitoring";
 import { deleteCompanyDocument, getOperationalDocumentDownloadUrl, listCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
 import { expenseCategories } from "../drizzle/schema";
 import { candidateDecisions, competencyTracks, employmentStatuses, jobLevels, picRoles, screeningResults } from "../drizzle/schema";
 import { journalSourceTypes } from "../drizzle/schema";
+import { profileReviewOutcomes } from "../drizzle/schema";
 import {
   buildAccountLedger, buildTrialBalanceReport, closeAccountingPeriod, ensureChartOfAccounts,
   getCashReconciliation, listAccountingPeriods, listAccounts, listJournalEntries, postJournalEntry, reopenAccountingPeriod,
@@ -389,6 +390,23 @@ export const appRouter = router({
     list: controllerProcedure
       .input(z.object({ asOf: z.coerce.date().optional() }).default({}))
       .query(({ input }) => listCustomerProfileMonitoring(input)),
+    reviews: controllerProcedure
+      .input(z.object({ customerId: z.number().int().positive() }))
+      .query(({ input }) => listCustomerProfileReviews(input.customerId)),
+    /**
+     * Menutup satu peninjauan. Yang tertulis hanya baris peninjauannya sendiri beserta auditnya —
+     * data nasabah tidak berubah, transaksi tidak terpengaruh, dan tidak ada laporan yang terkirim.
+     *
+     * `deviationReasons` dan `reviewedAt` sengaja tidak diterima dari klien; keduanya ditetapkan
+     * server saat peninjauannya dicatat.
+     */
+    record: controllerProcedure
+      .input(z.object({
+        customerId: z.number().int().positive(),
+        outcome: z.enum(profileReviewOutcomes),
+        notes: z.string().trim().max(2000).optional(),
+      }))
+      .mutation(({ input, ctx }) => recordCustomerProfileReview(input, ctx.user)),
   }),
 
   customers: router({

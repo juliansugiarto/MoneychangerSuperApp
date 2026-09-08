@@ -19,7 +19,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 3 — Penulis deklarasi: borang nasabah, `createCustomer`, `updateCustomer`
 - [x] Tugas 4 — Jendela bulanan WIB bersama dan pembacaan aktivitas nyata
 - [x] Tugas 5 — Worklist pemantauan: query, otorisasi, dan batas "hanya mencatat"
-- [ ] Tugas 6 — Penulis peninjauan: `recordCustomerProfileReview` beserta auditnya
+- [x] Tugas 6 — Penulis peninjauan: `recordCustomerProfileReview` beserta auditnya
 - [ ] Tugas 7 — Halaman Pemantauan Profil Nasabah
 - [ ] Tugas 8 — `profileMismatch` menjadi perbandingan sungguhan pada jalur transaksi
 - [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
@@ -277,11 +277,20 @@ dibaca identik.
 
 **Files:** Modify `server/customerProfileMonitoring.ts`, `server/routers.ts`
 
-- [ ] **Step 1: Uji yang gagal** — peninjauan tersimpan beserta `deviationReasons` yang **dibekukan
+- [x] **Step 1: Uji yang gagal** — peninjauan tersimpan beserta `deviationReasons` yang **dibekukan
       apa adanya**; `notes` **wajib** bila `outcome` bukan `TIDAK_ADA_PERUBAHAN`; audit tertulis;
       dan `customers` **tidak** tersentuh (bandingkan barisnya sebelum dan sesudah).
-- [ ] **Step 2: Tulis `recordCustomerProfileReview`.** Ikuti bentuk `sdmOperations.ts:529`.
-- [ ] **Step 3:** Perintah mutu, lalu commit `"Pencatatan peninjauan profil nasabah"`.
+- [x] **Step 2: Tulis `recordCustomerProfileReview`.** Ikuti bentuk `sdmOperations.ts:529`.
+- [x] **Step 3:** Perintah mutu, lalu commit `"Pencatatan peninjauan profil nasabah"`.
+
+**Catatan Tugas 6 — dua penyimpangan sadar dari bentuk `employee_profile_reviews`:**
+
+1. **`deviationReasons` dinilai server**, tidak diterima dari klien. Membekukan angka kiriman layar
+   berarti mempercayai layar; menghitungnya ulang saat dibaca berarti mengubah catatan yang sudah
+   ditandatangani. Yang benar adalah menilai sekali, di server, saat peninjauannya dicatat.
+2. **`reviewedAt` ditetapkan server**, tidak diketik pemanggil seperti pada peninjauan pegawai.
+   Tanggal mundur akan menggeser jatuh tempo berikutnya tanpa siapa pun melihatnya. Bila peninjauan
+   bertanggal mundur memang dibutuhkan, itu keputusan tersendiri beserta jejaknya.
 
 ---
 

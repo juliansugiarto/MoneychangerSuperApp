@@ -2,11 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./customerProfileMonitoring", () => ({
   listCustomerProfileMonitoring: vi.fn(),
+  recordCustomerProfileReview: vi.fn(),
 }));
 
 vi.mock("./db", () => ({ getDb: vi.fn() }));
 
-import { listCustomerProfileMonitoring } from "./customerProfileMonitoring";
+import { listCustomerProfileMonitoring, recordCustomerProfileReview } from "./customerProfileMonitoring";
 import { appRouter } from "./routers";
 
 /**
@@ -40,5 +41,34 @@ describe("otorisasi worklist pemantauan profil", () => {
   it("menolak pengguna yang wajib mengganti kata sandi awal", async () => {
     await expect(createCaller("CONTROLLER", true).customerProfileMonitoring.list({})).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(listCustomerProfileMonitoring).not.toHaveBeenCalled();
+  });
+});
+
+describe("otorisasi pencatatan peninjauan profil", () => {
+  const review = { customerId: 5, outcome: "TIDAK_ADA_PERUBAHAN" as const };
+
+  beforeEach(() => {
+    vi.mocked(recordCustomerProfileReview).mockReset();
+    vi.mocked(recordCustomerProfileReview).mockResolvedValue({ id: 77 } as never);
+  });
+
+  it("menolak STAFF dan ADMIN mencatat peninjauan", async () => {
+    await expect(createCaller("STAFF").customerProfileMonitoring.record(review)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(createCaller("ADMIN").customerProfileMonitoring.record(review)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(recordCustomerProfileReview).not.toHaveBeenCalled();
+  });
+
+  it("menerima Controller dan Shareholder", async () => {
+    await expect(createCaller("CONTROLLER").customerProfileMonitoring.record(review)).resolves.toBeTruthy();
+    await expect(createCaller("SHAREHOLDER").customerProfileMonitoring.record(review)).resolves.toBeTruthy();
+  });
+
+  it("meneruskan aktor yang mencatatnya, bukan mempercayai pemanggil", async () => {
+    await createCaller("CONTROLLER").customerProfileMonitoring.record(review);
+    expect(recordCustomerProfileReview).toHaveBeenCalledWith(expect.objectContaining({ customerId: 5 }), expect.objectContaining({ id: 9 }));
+  });
+
+  it("menolak hasil peninjauan di luar kosakata yang ada", async () => {
+    await expect(createCaller("CONTROLLER").customerProfileMonitoring.record({ customerId: 5, outcome: "ENTAH" } as never)).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 });

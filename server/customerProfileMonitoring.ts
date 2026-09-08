@@ -1,6 +1,6 @@
 import Decimal from "decimal.js";
-import { and, eq, gte, inArray, lt } from "drizzle-orm";
-import { ACCUMULATED_TRANSACTION_STATUSES, currencies, customerProfileReviews, customers, exchangeTransactionLines, exchangeTransactions } from "../drizzle/schema";
+import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
+import { ACCUMULATED_TRANSACTION_STATUSES, auditLogs, currencies, customerProfileReviews, customers, exchangeTransactionLines, exchangeTransactions, profileReviewOutcomes } from "../drizzle/schema";
 import { startOfNextOperationalMonth, startOfOperationalMonth } from "../shared/regulatoryActionQueue";
 import {
   assessProfileDeviation,
@@ -9,7 +9,7 @@ import {
   type CustomerRiskLevel,
   type ProfileDeviationReason,
 } from "../shared/transactionProfile";
-import { databaseOrThrow } from "./operations";
+import { databaseOrThrow, writeAudit } from "./operations";
 
 /**
  * Pemantauan berkala profil transaksi nasabah — jendela bulanan dan pembacaan aktivitas nyata.
@@ -296,4 +296,94 @@ export async function listCustomerProfileMonitoring(input: { asOf?: Date } = {})
     activity: await readMonthlyCustomerActivity(asOf),
     asOf,
   });
+}
+
+export type ProfileReviewOutcome = (typeof profileReviewOutcomes)[number];
+
+/**
+ * Mencatat satu peninjauan profil nasabah. **Satu-satunya tulisan paket ini.**
+ *
+ * Yang ditulisnya hanya satu baris `customer_profile_reviews` beserta jejak auditnya. `customers`
+ * tidak tersentuh: peninjauan adalah catatan tentang nasabah, bukan perubahan atas nasabah, dan
+ * keputusan pengguna 7 September 2026 menegaskan pemantauan ini hanya mencatat.
+ *
+ * Dua hal sengaja **tidak** diambil dari pemanggil:
+ *
+ * - `deviationReasons` dinilai ulang di sini dari deklarasi dan aktivitas nyata, lalu dibekukan apa
+ *   adanya pada barisnya. Membekukan angka yang dikirim klien berarti mempercayai layar; menghitung
+ *   ulang saat dibaca berarti mengubah isi catatan yang sudah ditandatangani seseorang. Yang benar
+ *   adalah menilai sekali, di server, pada saat peninjauannya dicatat.
+ * - `reviewedAt` adalah waktu pencatatannya, bukan tanggal yang boleh diketik. Tanggal mundur akan
+ *   menggeser jatuh tempo berikutnya tanpa siapa pun melihatnya.
+ */
+export async function recordCustomerProfileReview(
+  input: { customerId: number; outcome: ProfileReviewOutcome; notes?: string },
+  actor: { id: number },
+) {
+  const notes = input.notes?.trim() || null;
+  // Hasil selain "tidak ada perubahan" tanpa keterangan tidak dapat ditindaklanjuti siapa pun,
+  // dan pada berkas pemeriksaan hanya akan terbaca sebagai peninjauan yang tidak selesai.
+  if (input.outcome !== "TIDAK_ADA_PERUBAHAN" && !notes) {
+    throw new Error("Jelaskan perubahan atau tindak lanjut yang ditemukan pada peninjauan ini.");
+  }
+
+  const db = await databaseOrThrow();
+  const [customer] = await db
+    .select({
+      id: customers.id,
+      cifNumber: customers.cifNumber,
+      declaredMonthlyValueIdr: customers.declaredMonthlyValueIdr,
+      declaredMonthlyCount: customers.declaredMonthlyCount,
+      declaredCurrencies: customers.declaredCurrencies,
+    })
+    .from(customers)
+    .where(and(eq(customers.id, input.customerId), eq(customers.isDemo, false), eq(customers.isHistorical, false)))
+    .limit(1);
+  if (!customer) throw new Error("Nasabah tidak ditemukan.");
+
+  const reviewedAt = new Date();
+  const activity = (await readMonthlyCustomerActivity(reviewedAt)).get(input.customerId)
+    ?? { customerId: input.customerId, totalValueIdr: "0.00", transactionCount: 0, currencyCodes: [] };
+  const assessment = assessProfileDeviation(
+    {
+      declaredMonthlyValueIdr: customer.declaredMonthlyValueIdr,
+      declaredMonthlyCount: customer.declaredMonthlyCount,
+      declaredCurrencies: customer.declaredCurrencies as string[] | null,
+    },
+    activity,
+  );
+
+  const [review] = await db.insert(customerProfileReviews).values({
+    customerId: input.customerId,
+    reviewedAt,
+    outcome: input.outcome,
+    notes,
+    deviationReasons: assessment.reasons,
+    reviewedByUserId: actor.id,
+  }).$returningId();
+
+  await writeAudit({
+    actorUserId: actor.id,
+    action: "CUSTOMER_PROFILE_REVIEWED",
+    entityType: "customer_profile_reviews",
+    entityId: String(review.id),
+    afterState: {
+      customerId: input.customerId,
+      reviewedAt,
+      outcome: input.outcome,
+      deviationReasons: assessment.reasons,
+    },
+  });
+
+  return review;
+}
+
+/** Riwayat peninjauan seorang nasabah, terbaru lebih dulu. */
+export async function listCustomerProfileReviews(customerId: number) {
+  const db = await databaseOrThrow();
+  return db
+    .select()
+    .from(customerProfileReviews)
+    .where(eq(customerProfileReviews.customerId, customerId))
+    .orderBy(desc(customerProfileReviews.reviewedAt));
 }
