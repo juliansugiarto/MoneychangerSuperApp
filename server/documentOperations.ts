@@ -1,5 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { customers, exchangeTransactions, operationalDocuments, operationalExpenses } from "../drizzle/schema";
+import { isRoleAllowed, type BackOfficeRole } from "../shared/backOfficeNavigation";
 import { getDb } from "./db";
 import { storageGetSignedUrl, storagePut } from "./storage";
 
@@ -11,8 +12,28 @@ const ACCEPTED_DOCUMENT_MIME_TYPES = new Set([
   "application/pdf",
 ]);
 
-export type OperationalDocumentType = "KTP_PHOTO" | "UNDERLYING" | "UNDERLYING_FORM" | "UNDERLYING_STATEMENT" | "UNDERLYING_INVOICE" | "COMPANY_LOGO" | "LICENSE_CERTIFICATE" | "LICENSE_ATTACHMENT" | "EXPENSE_RECEIPT";
+export type OperationalDocumentType = "KTP_PHOTO" | "UNDERLYING" | "UNDERLYING_FORM" | "UNDERLYING_STATEMENT" | "UNDERLYING_INVOICE" | "COMPANY_LOGO" | "LICENSE_CERTIFICATE" | "LICENSE_ATTACHMENT" | "EXPENSE_RECEIPT" | "COMPANY_ARCHIVE_FILE";
+/** Jenis yang menghasilkan `ownerType: "COMPANY"`. Berkas arsip TIDAK termasuk di sini: ia memakai ownerType-nya sendiri justru agar `listCompanyDocuments` tetap mengembalikan logo dan izin saja. */
 const COMPANY_DOCUMENT_TYPES = new Set<OperationalDocumentType>(["COMPANY_LOGO", "LICENSE_CERTIFICATE", "LICENSE_ATTACHMENT"]);
+
+/**
+ * Jenis dokumen yang hanya boleh diunggah Controller ke atas: profil perusahaan dan arsip
+ * perusahaan. Dipisahkan dari rutenya agar gerbangnya dapat diuji — otorisasi yang hanya hidup di
+ * dalam handler Express adalah otorisasi yang tidak pernah dibuktikan oleh uji mana pun.
+ */
+const CONTROLLER_ONLY_DOCUMENT_TYPES = new Set<string>(["COMPANY_LOGO", "LICENSE_CERTIFICATE", "LICENSE_ATTACHMENT", "COMPANY_ARCHIVE_FILE"]);
+
+export function operationalDocumentUploadDenial(
+  user: { role: string; mustChangePassword: boolean },
+  documentType: unknown,
+): { status: 403; message: string } | null {
+  if (user.mustChangePassword) return { status: 403, message: "Ganti kata sandi terlebih dahulu sebelum mengunggah dokumen." };
+  if (!CONTROLLER_ONLY_DOCUMENT_TYPES.has(String(documentType))) return null;
+  if (!isRoleAllowed(user.role as BackOfficeRole, "CONTROLLER")) {
+    return { status: 403, message: "Hanya Controller ke atas yang dapat mengunggah dokumen profil dan arsip perusahaan." };
+  }
+  return null;
+}
 
 type UploadDocumentInput = {
   documentType: OperationalDocumentType;
@@ -57,7 +78,10 @@ export async function uploadOperationalDocument(input: UploadDocumentInput, acto
   const isCompanyDoc = COMPANY_DOCUMENT_TYPES.has(input.documentType);
   const isKtp = input.documentType === "KTP_PHOTO";
   const isExpenseReceipt = input.documentType === "EXPENSE_RECEIPT";
-  if (isExpenseReceipt) {
+  const isCompanyArchive = input.documentType === "COMPANY_ARCHIVE_FILE";
+  if (isCompanyArchive) {
+    if (input.customerId || input.transactionId || input.expenseId) throw new Error("Berkas arsip perusahaan tidak boleh terhubung ke nasabah, transaksi, atau pengeluaran.");
+  } else if (isExpenseReceipt) {
     if (!input.expenseId || input.customerId || input.transactionId) throw new Error("Bukti pengeluaran harus terhubung ke satu catatan pengeluaran.");
   } else if (!isCompanyDoc && (isKtp ? !input.customerId || input.transactionId : !input.transactionId || input.customerId)) {
     throw new Error(isKtp ? "Foto KTP harus terhubung ke satu nasabah." : "Underlying harus terhubung ke satu draft transaksi.");
@@ -87,10 +111,10 @@ export async function uploadOperationalDocument(input: UploadDocumentInput, acto
   }
 
   const fileName = cleanFileName(input.originalFileName);
-  const ownerPath = isCompanyDoc ? "perusahaan" : isExpenseReceipt ? `pengeluaran-${input.expenseId}` : input.customerId ? `nasabah-${input.customerId}` : `transaksi-${input.transactionId}`;
+  const ownerPath = isCompanyArchive ? "arsip-perusahaan" : isCompanyDoc ? "perusahaan" : isExpenseReceipt ? `pengeluaran-${input.expenseId}` : input.customerId ? `nasabah-${input.customerId}` : `transaksi-${input.transactionId}`;
   const { key } = await storagePut(`operasional/${ownerPath}/${Date.now()}-${fileName}`, input.data, input.mimeType);
   await db.insert(operationalDocuments).values({
-    ownerType: isCompanyDoc ? "COMPANY" : isExpenseReceipt ? "EXPENSE" : isKtp ? "CUSTOMER" : "TRANSACTION",
+    ownerType: isCompanyArchive ? "COMPANY_ARCHIVE" : isCompanyDoc ? "COMPANY" : isExpenseReceipt ? "EXPENSE" : isKtp ? "CUSTOMER" : "TRANSACTION",
     documentType: input.documentType,
     customerId: input.customerId ?? null,
     transactionId: input.transactionId ?? null,

@@ -16,7 +16,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 
 - [x] Tugas 1 — Penilaian masa berlaku dan worklist, murni dan teruji
 - [x] Tugas 2 — Migrasi: dua nilai enum dan dua tabel arsip
-- [ ] Tugas 3 — Jalur unggah menerima berkas arsip, dengan gerbang Controller
+- [x] Tugas 3 — Jalur unggah menerima berkas arsip, dengan gerbang Controller
 - [ ] Tugas 4 — Penulis arsip: buat dokumen, ganti versi, nonaktifkan, beserta auditnya
 - [ ] Tugas 5 — Pembaca arsip: daftar, riwayat versi, dan worklist
 - [ ] Tugas 6 — Halaman Arsip Dokumen
@@ -240,11 +240,11 @@ sama. Diperiksa langsung ke basis datanya: kedua tabel ada dan `ownerType` kini 
 
 **Files:** Modify `server/documentOperations.ts`, `server/_core/index.ts`; Create `server/documentOperations.archive.test.ts`
 
-- [ ] **Step 1: Uji yang gagal** — `COMPANY_ARCHIVE_FILE` menghasilkan baris ber-`ownerType`
+- [x] **Step 1: Uji yang gagal** — `COMPANY_ARCHIVE_FILE` menghasilkan baris ber-`ownerType`
       `COMPANY_ARCHIVE`; ia **ditolak** bila dikirim bersama `customerId`, `transactionId`, atau
       `expenseId`; MIME di luar JPG/PNG/WEBP/PDF ditolak; berkas di atas 8 MB ditolak. Berkas ujinya
       **dibuat sendiri di dalam uji** (buffer kecil), bukan disalin dari dokumen nyata.
-- [ ] **Step 2: Tambahkan jenisnya** pada `OperationalDocumentType` dan pada cabang validasi
+- [x] **Step 2: Tambahkan jenisnya** pada `OperationalDocumentType` dan pada cabang validasi
       `uploadOperationalDocument` (`server/documentOperations.ts:14,57-65`). Jalur penyimpanannya
       `operasional/arsip-perusahaan/...`, sejajar dengan `perusahaan` yang sudah ada.
 
@@ -253,12 +253,19 @@ sama. Diperiksa langsung ke basis datanya: kedua tabel ada dan `ownerType` kini 
 `COMPANY_ARCHIVE` — kalau tidak, seluruh arsip akan ikut terkirim ke halaman Profil Perusahaan lewat
 `listCompanyDocuments`. Tambahkan cabangnya sendiri, jangan menumpang himpunan itu.
 
-- [ ] **Step 3: Gerbang peran di REST.** `server/_core/index.ts:63` sudah menahan dokumen perusahaan
+- [x] **Step 3: Gerbang peran di REST.** `server/_core/index.ts:63` sudah menahan dokumen perusahaan
       pada `CONTROLLER`. Tambahkan `COMPANY_ARCHIVE_FILE` ke daftar yang sama. Uji bahwa `STAFF` dan
       `ADMIN` ditolak `403` — otorisasi ditegakkan di server, bukan di UI.
-- [ ] **Step 4: Uji bahwa `listCompanyDocuments` tidak berubah** — berkas arsip yang sudah diunggah
+- [x] **Step 4: Uji bahwa `listCompanyDocuments` tidak berubah** — berkas arsip yang sudah diunggah
       **tidak** muncul di hasilnya. Itu satu-satunya bukti bahwa halaman Profil Perusahaan aman.
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Jalur unggah berkas arsip perusahaan"`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Jalur unggah berkas arsip perusahaan"`.
+
+**Catatan Tugas 3.** Gerbang perannya **dipindahkan keluar dari handler Express** menjadi
+`operationalDocumentUploadDenial` pada `server/documentOperations.ts`, mengikuti preseden
+`financialFormExportDenial` (`server/financialFormExport.ts:413`). Alasannya sederhana: rencana
+meminta gerbangnya diuji, dan otorisasi yang hanya hidup di dalam handler tidak dapat diuji tanpa
+menjalankan seluruh aplikasinya. Pemindahan itu sekaligus menutup satu perilaku yang sebelumnya
+tidak pernah diuji sama sekali — bahwa ketiga jenis dokumen profil perusahaan menolak `STAFF`.
 
 ---
 
