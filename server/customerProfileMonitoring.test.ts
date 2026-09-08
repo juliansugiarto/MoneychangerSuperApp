@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MONITORED_ACTIVITY_STATUSES, foldMonthlyActivity, operationalMonthWindow } from "./customerProfileMonitoring";
+import { MONITORED_ACTIVITY_STATUSES, buildMonitoringWorklist, foldMonthlyActivity, operationalMonthWindow } from "./customerProfileMonitoring";
 
 /**
  * Jendela bulanan WIB dan pembacaan aktivitas nyata nasabah.
@@ -102,5 +102,98 @@ describe("melipat baris aktivitas menjadi aktivitas sebulan", () => {
 
   it("mengembalikan peta kosong untuk bulan tanpa aktivitas", () => {
     expect(foldMonthlyActivity([]).size).toBe(0);
+  });
+});
+
+describe("menyusun worklist pemantauan", () => {
+  const asOf = new Date("2026-09-08T05:00:00Z");
+
+  const nasabah = (over: Partial<Parameters<typeof buildMonitoringWorklist>[0]["customers"][number]> = {}) => ({
+    id: 1, cifNumber: "CIF-000001", fullName: "Nasabah Satu", riskLevel: "LOW" as const,
+    declaredMonthlyValueIdr: "10000000.00", declaredMonthlyCount: 5, declaredCurrencies: ["USD"],
+    ...over,
+  });
+
+  const aktivitas = (over: Partial<{ customerId: number; totalValueIdr: string; transactionCount: number; currencyCodes: string[] }> = {}) => ({
+    customerId: 1, totalValueIdr: "0.00", transactionCount: 0, currencyCodes: [] as string[], ...over,
+  });
+
+  it("memunculkan nasabah yang belum pernah ditinjau beserta penilaiannya", () => {
+    const rows = buildMonitoringWorklist({
+      customers: [nasabah()],
+      lastReviews: new Map(),
+      activity: new Map([[1, aktivitas({ totalValueIdr: "20000000.00", transactionCount: 2, currencyCodes: ["USD"] })]]),
+      asOf,
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      customerId: 1, cifNumber: "CIF-000001", riskLevel: "LOW",
+      lastReviewedAt: null, neverReviewed: true, intervalMonths: 12,
+      reasons: ["NILAI_BULANAN_MELEBIHI_PROFIL"], hasDeviation: true,
+    });
+    expect(rows[0].activity).toMatchObject({ totalValueIdr: "20000000.00", transactionCount: 2 });
+  });
+
+  it("menyembunyikan nasabah LOW yang baru ditinjau sampai dua belas bulan berikutnya", () => {
+    const rows = buildMonitoringWorklist({
+      customers: [nasabah()],
+      lastReviews: new Map([[1, { customerId: 1, reviewedAt: new Date("2026-06-01T00:00:00Z"), outcome: "TIDAK_ADA_PERUBAHAN" }]]),
+      activity: new Map([[1, aktivitas({ totalValueIdr: "99000000.00", transactionCount: 50 })]]),
+      asOf,
+    });
+
+    expect(rows).toHaveLength(0);
+  });
+
+  it("memunculkan nasabah HIGH sebulan sesudah peninjauan terakhirnya", () => {
+    const rows = buildMonitoringWorklist({
+      customers: [nasabah({ riskLevel: "HIGH" })],
+      lastReviews: new Map([[1, { customerId: 1, reviewedAt: new Date("2026-08-08T00:00:00Z"), outcome: "TIDAK_ADA_PERUBAHAN" }]]),
+      activity: new Map(),
+      asOf,
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ intervalMonths: 1, neverReviewed: false, hasDeviation: false });
+    expect(rows[0].lastReviewedAt?.toISOString()).toBe("2026-08-08T00:00:00.000Z");
+  });
+
+  it("menyebut nasabah tanpa deklarasi sebagai PROFIL_BELUM_DIDEKLARASIKAN, bukan menyimpang", () => {
+    const rows = buildMonitoringWorklist({
+      customers: [nasabah({ declaredMonthlyValueIdr: null, declaredMonthlyCount: null, declaredCurrencies: null })],
+      lastReviews: new Map(),
+      activity: new Map([[1, aktivitas({ totalValueIdr: "500000000.00", transactionCount: 99, currencyCodes: ["USD"] })]]),
+      asOf,
+    });
+
+    expect(rows[0].reasons).toEqual(["PROFIL_BELUM_DIDEKLARASIKAN"]);
+    expect(rows[0].hasDeviation).toBe(false);
+  });
+
+  it("memberi aktivitas kosong pada nasabah yang tidak bertransaksi bulan ini", () => {
+    const rows = buildMonitoringWorklist({ customers: [nasabah()], lastReviews: new Map(), activity: new Map(), asOf });
+
+    expect(rows[0].activity).toEqual({ customerId: 1, totalValueIdr: "0.00", transactionCount: 0, currencyCodes: [] });
+    expect(rows[0].hasDeviation).toBe(false);
+  });
+
+  it("mendahulukan nasabah yang menyimpang, lalu yang paling lama tidak ditinjau", () => {
+    const rows = buildMonitoringWorklist({
+      customers: [
+        nasabah({ id: 1, cifNumber: "CIF-000001" }),
+        nasabah({ id: 2, cifNumber: "CIF-000002" }),
+        nasabah({ id: 3, cifNumber: "CIF-000003" }),
+      ],
+      lastReviews: new Map([
+        [1, { customerId: 1, reviewedAt: new Date("2024-01-01T00:00:00Z"), outcome: "TIDAK_ADA_PERUBAHAN" }],
+        [2, { customerId: 2, reviewedAt: new Date("2023-01-01T00:00:00Z"), outcome: "TIDAK_ADA_PERUBAHAN" }],
+      ]),
+      activity: new Map([[1, aktivitas({ customerId: 1, totalValueIdr: "20000000.00", transactionCount: 1, currencyCodes: ["USD"] })]]),
+      asOf,
+    });
+
+    // Nasabah 1 menyimpang; sisanya menyusul menurut peninjauan terlama (3 belum pernah ditinjau).
+    expect(rows.map((row) => row.customerId)).toEqual([1, 3, 2]);
   });
 });

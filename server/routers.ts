@@ -101,6 +101,7 @@ import {
   updatePublicAnnouncement,
   updateServiceRequest,
 } from "./operations";
+import { listCustomerProfileMonitoring } from "./customerProfileMonitoring";
 import { deleteCompanyDocument, getOperationalDocumentDownloadUrl, listCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
 import { expenseCategories } from "../drizzle/schema";
 import { candidateDecisions, competencyTracks, employmentStatuses, jobLevels, picRoles, screeningResults } from "../drizzle/schema";
@@ -376,6 +377,18 @@ export const appRouter = router({
     setActive: adminProcedure.input(z.object({ currencyId: z.number().int().positive(), active: z.boolean() })).mutation(({ input, ctx }) => setCurrencyActive({ ...input, actorUserId: ctx.user.id })),
     /** Staff-level, idempotent: registers a world currency on first use (e.g. picked from a search box) without needing an Admin to pre-create it. Never touches rates. */
     ensure: staffProcedure.input(z.object({ code: z.string().trim().regex(/^[A-Za-z]{3}$/), name: z.string().trim().min(1).max(100) })).mutation(({ input }) => ensureCurrency(input)),
+  }),
+
+  /**
+   * Pemantauan berkala profil transaksi nasabah — Controller ke atas.
+   *
+   * Hanya mencatat: prosedurnya membaca, dan tidak ada satu pun di sini yang mengubah data nasabah,
+   * status transaksi, maupun mengirim laporan ke regulator.
+   */
+  customerProfileMonitoring: router({
+    list: controllerProcedure
+      .input(z.object({ asOf: z.coerce.date().optional() }).default({}))
+      .query(({ input }) => listCustomerProfileMonitoring(input)),
   }),
 
   customers: router({

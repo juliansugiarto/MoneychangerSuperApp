@@ -18,7 +18,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 2 — Migrasi: tiga kolom deklarasi dan tabel `customer_profile_reviews`
 - [x] Tugas 3 — Penulis deklarasi: borang nasabah, `createCustomer`, `updateCustomer`
 - [x] Tugas 4 — Jendela bulanan WIB bersama dan pembacaan aktivitas nyata
-- [ ] Tugas 5 — Worklist pemantauan: query, otorisasi, dan batas "hanya mencatat"
+- [x] Tugas 5 — Worklist pemantauan: query, otorisasi, dan batas "hanya mencatat"
 - [ ] Tugas 6 — Penulis peninjauan: `recordCustomerProfileReview` beserta auditnya
 - [ ] Tugas 7 — Halaman Pemantauan Profil Nasabah
 - [ ] Tugas 8 — `profileMismatch` menjadi perbandingan sungguhan pada jalur transaksi
@@ -254,15 +254,22 @@ berbaris banyak. Aktivitas September 2026-nya: Rp 17.000.000, 4 transaksi, USD+S
 
 **Files:** Modify `server/customerProfileMonitoring.ts`, `server/routers.ts`; Test `server/customerProfileMonitoring.authorization.test.ts`
 
-- [ ] **Step 1: Uji otorisasi** — STAFF dan ADMIN ditolak `FORBIDDEN`; `mustChangePassword` ditolak;
+- [x] **Step 1: Uji otorisasi** — STAFF dan ADMIN ditolak `FORBIDDEN`; `mustChangePassword` ditolak;
       Controller dan Shareholder diterima. Polanya mengikuti
       `server/currencyRevaluation.authorization.test.ts`.
-- [ ] **Step 2: Uji batas** — memanggil worklist **tidak menyisipkan maupun memperbarui apa pun**.
+- [x] **Step 2: Uji batas** — memanggil worklist **tidak menyisipkan maupun memperbarui apa pun**.
       Pola `server/financialReporting.isolation.test.ts`: rekam `insert`/`update` yang dipanggil dan
       harapkan keduanya kosong.
-- [ ] **Step 3: `listCustomerProfileMonitoring({ asOf })`** — nasabah jatuh tempo beserta alasan
+- [x] **Step 3: `listCustomerProfileMonitoring({ asOf })`** — nasabah jatuh tempo beserta alasan
       penyimpangan dan konteks frekuensinya. Nasabah `isDemo`/`isHistorical` **tidak** ikut.
-- [ ] **Step 4:** Perintah mutu, lalu commit `"Worklist pemantauan profil nasabah"`.
+- [x] **Step 4:** Perintah mutu, lalu commit `"Worklist pemantauan profil nasabah"`.
+
+**Catatan Tugas 5.** Uji batasnya ditaruh pada berkas tersendiri
+(`server/customerProfileMonitoring.isolation.test.ts`) mengikuti pola `financialReporting.isolation`,
+karena berkas otorisasinya memalsukan modul pemantauan itu sendiri sehingga tidak dapat sekaligus
+menguji tulisannya. Batasnya juga diperiksa terhadap basis data lokal: snapshot `customers`,
+`audit_logs`, `customer_profile_reviews`, dan `exchange_transactions` sebelum dan sesudah worklist
+dibaca identik.
 
 ---
 

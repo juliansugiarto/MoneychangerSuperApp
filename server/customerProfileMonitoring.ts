@@ -1,7 +1,14 @@
 import Decimal from "decimal.js";
 import { and, eq, gte, inArray, lt } from "drizzle-orm";
-import { ACCUMULATED_TRANSACTION_STATUSES, currencies, customers, exchangeTransactionLines, exchangeTransactions } from "../drizzle/schema";
+import { ACCUMULATED_TRANSACTION_STATUSES, currencies, customerProfileReviews, customers, exchangeTransactionLines, exchangeTransactions } from "../drizzle/schema";
 import { startOfNextOperationalMonth, startOfOperationalMonth } from "../shared/regulatoryActionQueue";
+import {
+  assessProfileDeviation,
+  isProfileReviewDue,
+  profileReviewIntervalMonths,
+  type CustomerRiskLevel,
+  type ProfileDeviationReason,
+} from "../shared/transactionProfile";
 import { databaseOrThrow } from "./operations";
 
 /**
@@ -147,4 +154,146 @@ export async function readMonthlyCustomerActivity(asOf: Date): Promise<Map<numbe
 
   const [legacyRows, lineRows] = await Promise.all([legacyCurrencies, lineCurrencies]);
   return foldMonthlyActivity([...legacyRows, ...lineRows]);
+}
+
+/** Nasabah sebagaimana dibutuhkan worklist; sengaja sesempit itu agar mudah diuji tanpa basis data. */
+export type MonitoringCustomer = {
+  id: number;
+  cifNumber: string;
+  fullName: string;
+  riskLevel: CustomerRiskLevel;
+  declaredMonthlyValueIdr: string | null;
+  declaredMonthlyCount: number | null;
+  declaredCurrencies: string[] | null;
+};
+
+export type LastProfileReview = { customerId: number; reviewedAt: Date; outcome: string };
+
+export type MonitoringWorklistRow = {
+  customerId: number;
+  cifNumber: string;
+  fullName: string;
+  riskLevel: CustomerRiskLevel;
+  intervalMonths: number;
+  lastReviewedAt: Date | null;
+  lastOutcome: string | null;
+  neverReviewed: boolean;
+  declaration: { declaredMonthlyValueIdr: string | null; declaredMonthlyCount: number | null; declaredCurrencies: string[] | null };
+  activity: CustomerMonthlyActivity;
+  reasons: ProfileDeviationReason[];
+  hasDeviation: boolean;
+  undeclaredCurrencies: string[];
+  valueThresholdIdr: number | null;
+  countThreshold: number | null;
+};
+
+/** Nasabah yang tidak bertransaksi bulan ini tetap dinilai — aktivitasnya nol, bukan tidak ada. */
+const emptyActivity = (customerId: number): CustomerMonthlyActivity => ({ customerId, totalValueIdr: "0.00", transactionCount: 0, currencyCodes: [] });
+
+/**
+ * Menyusun worklist dari bahan yang sudah dibaca. Murni.
+ *
+ * Hanya nasabah yang **jatuh tempo ditinjau** yang muncul; iramanya mengikuti risiko, dan nasabah
+ * yang belum pernah ditinjau selalu jatuh tempo. Penyimpangan tidak memajukan jadwal: nasabah yang
+ * baru saja ditinjau tidak muncul lagi sampai iramanya jatuh tempo berikutnya, sebab peninjauannya
+ * memang baru saja dilakukan seseorang.
+ *
+ * Urutannya: yang menyimpang lebih dulu, lalu yang paling lama tidak ditinjau — nasabah yang belum
+ * pernah ditinjau dianggap paling lama.
+ */
+export function buildMonitoringWorklist(input: {
+  customers: MonitoringCustomer[];
+  lastReviews: Map<number, LastProfileReview>;
+  activity: Map<number, CustomerMonthlyActivity>;
+  asOf: Date;
+}): MonitoringWorklistRow[] {
+  const rows: MonitoringWorklistRow[] = [];
+
+  for (const customer of input.customers) {
+    const lastReview = input.lastReviews.get(customer.id) ?? null;
+    if (!isProfileReviewDue(lastReview?.reviewedAt ?? null, customer.riskLevel, input.asOf)) continue;
+
+    const activity = input.activity.get(customer.id) ?? emptyActivity(customer.id);
+    const declaration = {
+      declaredMonthlyValueIdr: customer.declaredMonthlyValueIdr,
+      declaredMonthlyCount: customer.declaredMonthlyCount,
+      declaredCurrencies: customer.declaredCurrencies,
+    };
+    const assessment = assessProfileDeviation(declaration, activity);
+
+    rows.push({
+      customerId: customer.id,
+      cifNumber: customer.cifNumber,
+      fullName: customer.fullName,
+      riskLevel: customer.riskLevel,
+      intervalMonths: profileReviewIntervalMonths(customer.riskLevel),
+      lastReviewedAt: lastReview?.reviewedAt ?? null,
+      lastOutcome: lastReview?.outcome ?? null,
+      neverReviewed: !lastReview,
+      declaration,
+      activity,
+      reasons: assessment.reasons,
+      hasDeviation: assessment.hasDeviation,
+      undeclaredCurrencies: assessment.undeclaredCurrencies,
+      valueThresholdIdr: assessment.valueThresholdIdr,
+      countThreshold: assessment.countThreshold,
+    });
+  }
+
+  return rows.sort((a, b) => {
+    if (a.hasDeviation !== b.hasDeviation) return a.hasDeviation ? -1 : 1;
+    const aReviewed = a.lastReviewedAt?.getTime() ?? Number.NEGATIVE_INFINITY;
+    const bReviewed = b.lastReviewedAt?.getTime() ?? Number.NEGATIVE_INFINITY;
+    if (aReviewed !== bReviewed) return aReviewed - bReviewed;
+    return a.customerId - b.customerId;
+  });
+}
+
+/**
+ * Worklist pemantauan pada `asOf`: nasabah yang jatuh tempo ditinjau beserta penilaiannya.
+ *
+ * **Hanya membaca.** Tidak menyentuh `customers`, tidak menyentuh transaksi, tidak membuat paket
+ * regulator — dan itu diuji, bukan sekadar dijanjikan komentar ini.
+ */
+export async function listCustomerProfileMonitoring(input: { asOf?: Date } = {}): Promise<MonitoringWorklistRow[]> {
+  const asOf = input.asOf ?? new Date();
+  const db = await databaseOrThrow();
+
+  const customerRows = await db
+    .select({
+      id: customers.id,
+      cifNumber: customers.cifNumber,
+      fullName: customers.fullName,
+      riskLevel: customers.riskLevel,
+      declaredMonthlyValueIdr: customers.declaredMonthlyValueIdr,
+      declaredMonthlyCount: customers.declaredMonthlyCount,
+      declaredCurrencies: customers.declaredCurrencies,
+    })
+    .from(customers)
+    .where(and(eq(customers.isDemo, false), eq(customers.isHistorical, false)));
+
+  // Peninjauan terakhir per nasabah: baris terbaru menurut reviewedAt, dipakai untuk irama jatuh tempo.
+  const reviewRows = await db
+    .select({
+      customerId: customerProfileReviews.customerId,
+      reviewedAt: customerProfileReviews.reviewedAt,
+      outcome: customerProfileReviews.outcome,
+    })
+    .from(customerProfileReviews)
+    .orderBy(customerProfileReviews.customerId, customerProfileReviews.reviewedAt);
+
+  const lastReviews = new Map<number, LastProfileReview>();
+  for (const row of reviewRows) {
+    const previous = lastReviews.get(row.customerId);
+    if (!previous || row.reviewedAt.getTime() >= previous.reviewedAt.getTime()) {
+      lastReviews.set(row.customerId, { customerId: row.customerId, reviewedAt: row.reviewedAt, outcome: row.outcome });
+    }
+  }
+
+  return buildMonitoringWorklist({
+    customers: customerRows as MonitoringCustomer[],
+    lastReviews,
+    activity: await readMonthlyCustomerActivity(asOf),
+    asOf,
+  });
 }
