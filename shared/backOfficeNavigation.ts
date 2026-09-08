@@ -40,6 +40,7 @@ export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
       { label: "Nasabah Baru", path: "/operasional/nasabah", minimumRole: "STAFF" },
       { label: "Daftar Nasabah", path: "/operasional/nasabah/daftar", minimumRole: "STAFF" },
       { label: "Tambah dari Excel", path: "/operasional/impor-nasabah", minimumRole: "CONTROLLER" },
+      { label: "Pemantauan Profil", path: "/operasional/nasabah/pemantauan", minimumRole: "CONTROLLER" },
     ] },
     { label: "Latihan (Tanpa Data Asli)", path: "/operasional/simulasi", minimumRole: "STAFF" },
   ] },

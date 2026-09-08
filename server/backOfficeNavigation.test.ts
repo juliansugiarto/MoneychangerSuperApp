@@ -12,6 +12,7 @@ const pageByPath: Record<string, string> = {
   "/operasional/nasabah": "Customers",
   "/operasional/nasabah/daftar": "CustomerList",
   "/operasional/impor-nasabah": "CustomerImport",
+  "/operasional/nasabah/pemantauan": "PemantauanProfil",
   "/operasional/simulasi": "SafeSimulation",
   "/operasional/stock/kas-awal": "StockControl",
   "/operasional/stock/saat-ini": "StockControl",
@@ -70,6 +71,9 @@ describe("back-office navigation routes", () => {
     expect(visibleToStaff).not.toContain("/operasional/monitoring");
     expect(visibleToStaff).not.toContain("/operasional/kesiapan");
     expect(visibleToStaff).not.toContain("/operasional/impor-nasabah");
+    expect(visibleToStaff).not.toContain("/operasional/nasabah/pemantauan");
+    expect(visibleToAdmin).not.toContain("/operasional/nasabah/pemantauan");
+    expect(visibleToController).toContain("/operasional/nasabah/pemantauan");
     expect(visibleToStaff).not.toContain("/operasional/stock/penyesuaian");
     expect(visibleToStaff).toContain("/operasional/stock/kas-awal");
     expect(visibleToAdmin).toContain("/operasional/kurs");

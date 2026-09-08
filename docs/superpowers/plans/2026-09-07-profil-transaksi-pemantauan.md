@@ -20,7 +20,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 4 — Jendela bulanan WIB bersama dan pembacaan aktivitas nyata
 - [x] Tugas 5 — Worklist pemantauan: query, otorisasi, dan batas "hanya mencatat"
 - [x] Tugas 6 — Penulis peninjauan: `recordCustomerProfileReview` beserta auditnya
-- [ ] Tugas 7 — Halaman Pemantauan Profil Nasabah
+- [x] Tugas 7 — Halaman Pemantauan Profil Nasabah
 - [ ] Tugas 8 — `profileMismatch` menjadi perbandingan sungguhan pada jalur transaksi
 - [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
@@ -298,16 +298,26 @@ dibaca identik.
 
 **Files:** Create `client/src/pages/PemantauanProfil.tsx`; Modify `client/src/App.tsx`, `shared/backOfficeNavigation.ts`
 
-- [ ] **Step 1: Halaman worklist** — nasabah jatuh tempo, alasan penyimpangannya, deklarasi
+- [x] **Step 1: Halaman worklist** — nasabah jatuh tempo, alasan penyimpangannya, deklarasi
       berdampingan dengan aktual, dan riwayat peninjauan terakhirnya. Loading/empty/error state,
       fokus keyboard, teks tindakan yang jelas.
-- [ ] **Step 2: Kosong berarti kosong** — bila tidak ada yang jatuh tempo, katakan itu; jangan
+- [x] **Step 2: Kosong berarti kosong** — bila tidak ada yang jatuh tempo, katakan itu; jangan
       menampilkan tabel kosong tanpa penjelasan.
-- [ ] **Step 3: Keterangan batas pada halamannya** — alat bantu penyaringan; tidak mengubah data
+- [x] **Step 3: Keterangan batas pada halamannya** — alat bantu penyaringan; tidak mengubah data
       nasabah, tidak memblokir transaksi, tidak melapor ke regulator.
-- [ ] **Step 4: Verifikasi visual** halaman dan rutenya, termasuk keadaan kosong, memakai data uji
+- [x] **Step 4: Verifikasi visual** halaman dan rutenya, termasuk keadaan kosong, memakai data uji
       lokal yang dibuat sendiri. Login tetap dilakukan pengguna; minta pada giliran itu.
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Halaman pemantauan profil nasabah"`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Halaman pemantauan profil nasabah"`.
+
+**Catatan Tugas 7.** Rutenya dikunci `server/backOfficeNavigation.test.ts`, yang memetakan tiap
+tujuan sidebar ke halamannya di `App.tsx` beserta peran minimumnya — menambah menu tanpa rutenya
+membuat uji itu merah, dan itu dipakai sebagai uji gagal pertama tugas ini.
+
+Keadaan yang benar-benar dilihat di layar: **kosong** (sesudah peninjauan Tugas 6), **berisi**
+(sesudah baris peninjauannya dihapus), **dialog peninjauan**, **penolakan keterangan kosong** saat
+hasilnya bukan "tidak ada perubahan", dan **kembali kosong** sesudah peninjauan disimpan lewat UI.
+Keadaan **error** hanya ditinjau lewat kode, bukan dilihat di layar — memutus basis data di tengah
+sesi tidak dilakukan.
 
 ---
 

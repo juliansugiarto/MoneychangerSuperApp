@@ -28,6 +28,7 @@ const Monitoring = lazy(() => import("./pages/Monitoring"));
 const DailyChecklist = lazy(() => import("./pages/DailyChecklist"));
 const DirectorAcknowledgements = lazy(() => import("./pages/DirectorAcknowledgements"));
 const CustomerImport = lazy(() => import("./pages/CustomerImport"));
+const PemantauanProfil = lazy(() => import("./pages/PemantauanProfil"));
 const GoLiveSetup = lazy(() => import("./pages/GoLiveSetup"));
 const RateComparison = lazy(() => import("./pages/RateComparison"));
 const SafeSimulation = lazy(() => import("./pages/SafeSimulation"));
@@ -92,6 +93,7 @@ function Router() {
       <Route path="/operasional/pengawasan-direksi"><OperationsRoute minimumRole="CONTROLLER" page={<DirectorAcknowledgements />} /></Route>
       <Route path="/operasional/go-live"><OperationsRoute minimumRole="CONTROLLER" page={<GoLiveSetup />} /></Route>
       <Route path="/operasional/impor-nasabah"><OperationsRoute minimumRole="CONTROLLER" page={<CustomerImport />} /></Route>
+      <Route path="/operasional/nasabah/pemantauan"><OperationsRoute minimumRole="CONTROLLER" page={<PemantauanProfil />} /></Route>
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
