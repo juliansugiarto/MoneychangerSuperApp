@@ -14,7 +14,7 @@
 
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu.**
 
-- [ ] Tugas 1 — Penilaian penyimpangan dan irama berbasis risiko, murni dan teruji
+- [x] Tugas 1 — Penilaian penyimpangan dan irama berbasis risiko, murni dan teruji
 - [ ] Tugas 2 — Migrasi: tiga kolom deklarasi dan tabel `customer_profile_reviews`
 - [ ] Tugas 3 — Penulis deklarasi: borang nasabah, `createCustomer`, `updateCustomer`
 - [ ] Tugas 4 — Jendela bulanan WIB bersama dan pembacaan aktivitas nyata
@@ -105,7 +105,7 @@ Ditetapkan 7 September 2026. **Jangan menurunkannya ulang dan jangan menawarnya.
 - Consumes: tidak ada. Fungsi murni; tidak menyentuh basis data dan tidak membaca jam.
 - Produces: `PROFILE_DEVIATION_MULTIPLE`, `assessProfileDeviation`, `profileReviewIntervalMonths`, `isProfileReviewDue`.
 
-- [ ] **Step 1: Tulis uji yang gagal** — sisi batasnya yang paling mudah salah:
+- [x] **Step 1: Tulis uji yang gagal** — sisi batasnya yang paling mudah salah:
 
 ```ts
 describe("penyimpangan profil transaksi", () => {
@@ -131,11 +131,11 @@ setiap nasabah berdeklarasi nol menyala selamanya. Perlakukan nol dan `null` sam
 sama. Keduanya dapat menyala sendiri-sendiri, dan menyalanya frekuensi sendirian adalah kasus yang
 paling berarti — itu bentuk pemecahan transaksi.
 
-- [ ] **Step 2: Tulis fungsinya.** Murni. Ambang sebagai konstanta bernama
+- [x] **Step 2: Tulis fungsinya.** Murni. Ambang sebagai konstanta bernama
       `PROFILE_DEVIATION_MULTIPLE = 2` beserta komentar yang menyebut tanggal keputusan penggunanya.
-- [ ] **Step 3: Irama** — `HIGH` 1, `MEDIUM` 3, `LOW` 12 bulan. Nasabah yang belum pernah ditinjau
+- [x] **Step 3: Irama** — `HIGH` 1, `MEDIUM` 3, `LOW` 12 bulan. Nasabah yang belum pernah ditinjau
       **selalu** jatuh tempo. Uji ketiga peran risiko dan kasus "belum pernah ditinjau".
-- [ ] **Step 4:** Perintah mutu, lalu commit `"Penilaian penyimpangan profil transaksi"`.
+- [x] **Step 4:** Perintah mutu, lalu commit `"Penilaian penyimpangan profil transaksi"`.
 
 ---
 
