@@ -139,7 +139,9 @@ nilai; irama **HIGH 1 bulan,
 MEDIUM 3 bulan, LOW 12 bulan**; tindak lanjut **worklist Controller yang hanya mencatat**.
 
 ### Paket I — Arsip dokumen perusahaan (temuan BI 3)
-- [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
+- [x] Sesi rancangan — spec `docs/superpowers/specs/2026-09-08-arsip-dokumen-perusahaan-design.md`,
+      rencana `docs/superpowers/plans/2026-09-08-arsip-dokumen-perusahaan.md` *(8 September 2026)*
+- [ ] Tugas 1–7 menurut rencana itu
 
 ### Paket J — Individual Risk Assessment (temuan BI 11)
 - [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
