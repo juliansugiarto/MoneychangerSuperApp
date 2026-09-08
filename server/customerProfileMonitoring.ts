@@ -1,6 +1,6 @@
 import Decimal from "decimal.js";
 import { and, eq, gte, inArray, lt } from "drizzle-orm";
-import { currencies, customers, exchangeTransactionLines, exchangeTransactions } from "../drizzle/schema";
+import { ACCUMULATED_TRANSACTION_STATUSES, currencies, customers, exchangeTransactionLines, exchangeTransactions } from "../drizzle/schema";
 import { startOfNextOperationalMonth, startOfOperationalMonth } from "../shared/regulatoryActionQueue";
 import { databaseOrThrow } from "./operations";
 
@@ -27,12 +27,11 @@ export function operationalMonthWindow(asOf: Date): { start: Date; end: Date } {
 /**
  * Status transaksi yang ikut dihitung sebagai aktivitas.
  *
- * Sama persis dengan akumulasi bulanan pada jalur transaksi (`server/operations.ts`): transaksi
- * batal tidak menambah akumulasi, sisanya dihitung meski belum selesai. Dua definisi "aktivitas
- * sebulan" yang berbeda pendapat adalah kekeliruan yang tidak terlihat dari layar mana pun, jadi
- * daftar ini dikunci oleh uji — bila jalur transaksi berubah, ubah keduanya bersamaan.
+ * Bukan salinan: ini daftar yang **sama** dengan yang dipakai akumulasi harian dan bulanan pada
+ * jalur transaksi, diambil dari `drizzle/schema.ts`. Dua definisi "aktivitas sebulan" yang berbeda
+ * pendapat adalah kekeliruan yang tidak terlihat dari layar mana pun.
  */
-export const MONITORED_ACTIVITY_STATUSES = ["DRAFT", "PENDING_REVIEW", "APPROVED", "RETURNED", "COMPLETED"] as const;
+export const MONITORED_ACTIVITY_STATUSES = ACCUMULATED_TRANSACTION_STATUSES;
 
 /** Satu baris hasil query: satu transaksi, satu mata uang. Bon berbaris banyak menghasilkan beberapa baris. */
 export type MonthlyActivityRow = {

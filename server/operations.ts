@@ -3,6 +3,7 @@ import { and, desc, eq, gt, gte, inArray, isNull, like, lt, lte, or, sql } from 
 import { createHash } from "node:crypto";
 import { nanoid } from "nanoid";
 import {
+  ACCUMULATED_TRANSACTION_STATUSES,
   auditLogs,
   bankAccountMovements,
   bankAccounts,
@@ -1486,7 +1487,7 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
       eq(exchangeTransactions.paymentMethod, "CASH"),
       gte(exchangeTransactions.transactionAt, dayStart),
       lt(exchangeTransactions.transactionAt, nextDayStart),
-      inArray(exchangeTransactions.status, ["DRAFT", "PENDING_REVIEW", "APPROVED", "RETURNED", "COMPLETED"]),
+      inArray(exchangeTransactions.status, [...ACCUMULATED_TRANSACTION_STATUSES]),
       eq(exchangeTransactions.isDemo, false),
       eq(exchangeTransactions.isHistorical, false),
     )))[0]?.total ?? "0"
@@ -1503,7 +1504,7 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     lt(exchangeTransactions.transactionAt, nextMonth),
     // Transaksi batal tidak menambah akumulasi; sisanya dihitung meski belum selesai, karena
     // kewajiban underlying muncul saat transaksi dibuat, bukan saat disetujui.
-    inArray(exchangeTransactions.status, ["DRAFT", "PENDING_REVIEW", "APPROVED", "RETURNED", "COMPLETED"]),
+    inArray(exchangeTransactions.status, [...ACCUMULATED_TRANSACTION_STATUSES]),
     eq(exchangeTransactions.isDemo, false),
     eq(exchangeTransactions.isHistorical, false),
   )))[0]?.total ?? "0";

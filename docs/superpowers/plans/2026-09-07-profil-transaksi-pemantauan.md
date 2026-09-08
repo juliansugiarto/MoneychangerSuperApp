@@ -235,7 +235,11 @@ bila kosong). Kontraknya dikunci pada `server/customerProfileDeclaration.test.ts
    membaca kolom lamanya saja membuat mata uang tak terdeklarasi pada bon berbaris banyak tidak
    pernah terlihat. `foldMonthlyActivity` menghitung nilai per **transaksi** dan mengumpulkan mata
    uang dari seluruh baris.
-2. **`transactionAt` tersimpan sebagai jam UTC**, bukan WIB — Drizzle menserialisasi kolom
+2. **Daftar statusnya kini satu**, bukan dua yang disalin: `ACCUMULATED_TRANSACTION_STATUSES` pada
+   `drizzle/schema.ts` dipakai akumulasi harian dan bulanan pada jalur transaksi maupun pemantauan
+   profil. Ditaruh di skema, bukan di salah satu modul, agar tidak ada impor melingkar —
+   `customerProfileMonitoring.ts` mengimpor `databaseOrThrow` dari `operations.ts`.
+3. **`transactionAt` tersimpan sebagai jam UTC**, bukan WIB — Drizzle menserialisasi kolom
    `datetime` sebagai string UTC, berbeda dari kolom `date` yang diformat mysql2 memakai zona
    proses. Dibuktikan round-trip lewat penulis aplikasinya sendiri. Batas instan dari
    `startOfOperationalMonth` karena itu sudah benar apa adanya.

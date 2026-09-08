@@ -162,6 +162,21 @@ export const customers = mysqlTable("customers", {
   index("customers_beneficial_owner_idx").on(table.beneficialOwnerCustomerId),
 ]);
 
+/**
+ * Status bon yang ikut dihitung sebagai aktivitas nasabah.
+ *
+ * Transaksi batal tidak menambah akumulasi; sisanya dihitung meski belum selesai, karena kewajiban
+ * underlying muncul saat transaksi dibuat, bukan saat disetujui.
+ *
+ * Satu daftar untuk seluruh pembacanya — akumulasi harian dan bulanan pada jalur transaksi
+ * (`server/operations.ts`) maupun pemantauan profil (`server/customerProfileMonitoring.ts`). Dua
+ * definisi "aktivitas" yang berbeda pendapat adalah kekeliruan yang tidak terlihat dari layar mana
+ * pun, jadi daftarnya tidak boleh disalin: ubah di sini, berlaku di semuanya.
+ *
+ * Bukan daftar yang sama dengan penyaringan pelaporan LKU, yang hanya menghitung bon COMPLETED.
+ */
+export const ACCUMULATED_TRANSACTION_STATUSES = ["DRAFT", "PENDING_REVIEW", "APPROVED", "RETURNED", "COMPLETED"] as const;
+
 export const exchangeTransactions = mysqlTable("exchange_transactions", {
   id: int("id").autoincrement().primaryKey(),
   /** System-generated audit id (FX-YYYYMMDDHHMMSS-XXXXXX), always set, never edited by staff. */
