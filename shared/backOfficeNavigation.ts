@@ -61,7 +61,7 @@ export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
     { label: "Buka & Tutup Outlet", path: "/operasional/checklist", minimumRole: "STAFF" },
     { label: "Meja Konfirmasi", path: "/operasional/layanan", minimumRole: "STAFF" },
     { label: "Keluhan Nasabah", path: "/operasional/pengaduan", minimumRole: "STAFF" },
-    { label: "Cek Daftar Terduga (DTTOT)", path: "/operasional/watchlist", minimumRole: "STAFF" },
+    { label: "Cek Daftar DTTOT/DPPSPM", path: "/operasional/watchlist", minimumRole: "STAFF" },
   ] },
   { label: "Laporan", items: [
     { label: "Buku Besar", path: "/operasional/buku-besar", minimumRole: "CONTROLLER" },
