@@ -184,7 +184,8 @@ MEDIUM 3 bulan, LOW 12 bulan**; tindak lanjut **worklist Controller yang hanya m
 - [x] Tugas 8 — Kuesioner KPMR dan halaman hasil — **SELESAI 9 September 2026.**
       `/kepatuhan/ira/:id/kpmr`, matriks bergambar dengan sel terpilih ditandai, rata-rata pilar
       beserta pembaginya, dan jatuh tempo tahunan pada Status Kesiapan.
-- [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+- [x] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi — **SELESAI 9 September 2026.**
+      **Paket J selesai seluruhnya (J1 tujuh tugas, J2 sembilan tugas).**
 
 ### Paket K2 — Ganti nama PPPSM menjadi PPPSPM
 - [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*

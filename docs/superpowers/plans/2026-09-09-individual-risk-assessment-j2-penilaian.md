@@ -30,7 +30,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 6 — Penulis penilaian: buat, simpan, ajukan, setujui, gantikan
 - [x] Tugas 7 — Halaman penilaian: Form C1, Form A1, pernyataan struktural
 - [x] Tugas 8 — Kuesioner KPMR dan halaman hasil
-- [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+- [x] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 Urutannya mengikat: **1, 2, dan 3 sebelum 5**; 4 sebelum 6; 5 dan 6 sebelum 7; 7 sebelum 8;
 9 terakhir.
@@ -530,12 +530,12 @@ Modify `client/src/App.tsx`, `shared/backOfficeNavigation.ts`, `server/backOffic
 
 **Files:** Create `server/iraScenario.test.ts`; Modify dokumentasi
 
-- [ ] **Step 1: Satu uji skenario** yang menempuh seluruh jalurnya: klasifikasi diisi → nasabah
+- [x] **Step 1: Satu uji skenario** yang menempuh seluruh jalurnya: klasifikasi diisi → nasabah
       berkategori dibuat → bon dibuat pada beberapa mata uang → agregat dibaca → sisi inheren
       dihitung → KPMR dijawab termasuk satu N/A → diajukan → disetujui → nilainya beku → klasifikasi
       diubah → **nilai bekunya tidak berubah** → penilaian pengganti dibuat.
 
-- [ ] **Step 2: Peragakan end-to-end di basis data lokal `moneychanger`.** Buat datanya, jalankan
+- [x] **Step 2: Peragakan end-to-end di basis data lokal `moneychanger`.** Buat datanya, jalankan
       alurnya, **tunjukkan hasilnya di layar**: halaman penilaian berisi angka, matriks dengan sel
       tertandai, dan nilai akhir. Verifikasi visual yang berhenti pada halaman kosong belum
       membuktikan apa pun.
@@ -543,16 +543,55 @@ Modify `client/src/App.tsx`, `shared/backOfficeNavigation.ts`, `server/backOffic
       Data uji paket sebelumnya sengaja dibiarkan; nasabah `CIF-000001` dan `CIF-000002` serta bon
       `FX-UJI-T4-*` sudah ada dan boleh dipakai sebagai bahan agregat, tetapi **jangan diubah**.
 
-- [ ] **Step 3: Perbarui dokumentasi** — `docs/SKEMA-DATABASE-PROJECT.md` (empat tabel baru),
+- [x] **Step 3: Perbarui dokumentasi** — `docs/SKEMA-DATABASE-PROJECT.md` (empat tabel baru),
       `docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md` (alur penilaian, siapa mengisi, siapa menyetujui, arti
       skala terbalik), dan ROADMAP (centang Paket J).
 
-- [ ] **Step 4: Laporkan risiko residual dengan jujur**, termasuk yang sudah diketahui: bobot pilar
+- [x] **Step 4: Laporkan risiko residual dengan jujur**, termasuk yang sudah diketahui: bobot pilar
       KPMR tidak dipakai, Aspek Kelembagaan tidak ada, klasifikasi bergantung manusia, nasabah lama
       belum berkategori, `pnpm audit` masih 9 temuan, dan migrasi `0051`–`0054` belum diterapkan ke
       produksi.
 
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Skenario penilaian risiko menyeluruh dan dokumentasi"`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Skenario penilaian risiko menyeluruh dan dokumentasi"`.
+
+> **Basis data palsu yang berbohong, tertangkap oleh uji skenarionya sendiri.** Versi pertama
+> menyimpan **rujukan objek** yang sama seperti barisnya, sehingga mengubah klasifikasi sesudah
+> persetujuan ikut mengubah snapshot yang sudah dibekukan — palsu yang berbohong tentang justru
+> sifat yang paling ingin dibuktikan uji ini. MySQL menserialisasi kolom `json` saat menulis, jadi
+> palsunya kini menyalin setiap nilai yang ditulis (`structuredClone`). Uji ini gagal lebih dulu
+> pada palsunya, bukan pada kodenya — dan itu tetap kegagalan yang berharga.
+
+## Risiko residual Paket J2 — dilaporkan apa adanya
+
+1. **Bobot pilar KPMR 30/25/25/10/10 tidak dipakai rumusnya.** Nilai KPMR adalah rata-rata
+   **sederhana** kelima pilar, mengikuti `B!K46` pada template BI. Bobotnya ditampilkan di layar
+   sebagai keterangan saja. Bila BI kelak menuntut rata-rata berbobot, uji *"nilai KPMR adalah
+   rata-rata SEDERHANA"* pada `shared/individualRiskAssessment.test.ts` yang harus diubah lebih
+   dulu, dengan sadar.
+2. **Aspek Kelembagaan tidak dibangun.** Lembar `Rekap` menyebut tiga komponen Risiko Struktural
+   (Kelembagaan 0,3 · Kepemilikan 0,5 · Lini Bisnis 0,2), sedangkan lembar `A1` hanya memuat dua
+   (0,8 dan 0,2) dan rumus `E61` hanya menjumlahkan keduanya. Yang diikuti adalah `A1`.
+3. **Seluruh klasifikasi risiko bergantung pada manusia.** Tabelnya kosong saat dipasang, dan kode
+   tanpa baris dibaca **RENDAH**. Pemasangan baru karena itu menghasilkan penilaian yang terlalu
+   optimistis sampai Controller mengisinya. Dimensi `COUNTRY` tetap tanpa daftar tertutup: tidak ada
+   daftar FATF maupun sanksi PBB yang tertanam, dan aplikasi tidak menariknya dari mana pun.
+4. **Nasabah lama belum berkategori tetap mengecilkan penyebut.** Persentase pengguna jasa dihitung
+   atas nasabah yang sudah berkategori; jumlah yang belum ditanyai ditampilkan di atas Form C1,
+   tetapi tidak ada yang memaksa pengisiannya.
+5. **`PPSPM_3C` tidak dapat membedakan UMKM.** Skala usaha tidak tersimpan di mana pun, sehingga
+   seluruh nasabah berbentuk PT ikut terhitung. Keterangannya dibawa pada `basis` dan tampil di
+   layar.
+6. **Kedua parameter Wilayah Geografis memakai provinsi yang sama.** Hanya ada satu provinsi gerai
+   pada `company_profile`; `TPPU_4A` dan `TPPU_4B` karena itu selalu bernilai sama sampai ada
+   pencatatan cabang. Provinsi yang belum diisi membuat keempat parameter itu **kosong beserta
+   alasannya**, bukan RENDAH.
+7. **`pnpm audit --prod --audit-level=high` masih melaporkan 9 temuan** (6 sedang, 3 tinggi):
+   residual `xlsx`/SheetJS ditambah `mysql2 <3.22.0`. **Jangan menyebut audit bersih.**
+8. **Migrasi `0051`–`0055` belum diterapkan ke produksi.** Seluruh peragaan paket ini berjalan pada
+   basis data lokal.
+9. **Zona waktu server masih memakai bawaan `Asia/Jakarta`**, bukan `company_profile.timezone` —
+   keadaan yang sudah berlaku sebelum paket ini dan menyentuh seluruh aplikasi, termasuk batas tahun
+   pada `getIraAssessmentDue`.
 
 ## Penutup J2
 

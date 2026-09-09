@@ -436,8 +436,8 @@ Selama ini angka laporan keuangan **diketik ulang** ke berkas Excel BI. Pengetik
 Buka **Pengawasan › Klasifikasi Risiko**. Halaman ini **tidak menilai apa pun** — ia menyimpan
 keputusan manusia beserta rujukannya, yang kemudian dipakai penilaian risiko individual (IRA).
 
-**Klasifikasi risiko inheren.** Lima dimensi dalam bentuk tab: mata uang, kategori pekerjaan,
-bentuk badan hukum, negara, dan provinsi. Klik satu baris untuk menetapkan tingkatnya pada
+**Klasifikasi risiko inheren.** Enam dimensi dalam bentuk tab: mata uang, kategori pekerjaan,
+bentuk badan hukum, negara, provinsi, dan **jalur distribusi**. Klik satu baris untuk menetapkan tingkatnya pada
 **TPPU**, **TPPT**, dan **PPSPM** sekaligus. Ketiganya boleh berbeda — USD dapat berisiko Tinggi
 untuk TPPU dan Menengah untuk TPPT, dan itu memang yang dinilai SRA. **Alasan atau rujukan SRA
 wajib diisi**; klasifikasi tanpa rujukan adalah angka tanpa asal, dan pemeriksa menanyakan
@@ -452,13 +452,76 @@ hitungan itu: kode tanpa klasifikasi **dibaca penilaian sebagai Rendah**, dan ba
 bila seseorang benar-benar memutuskannya — bukan karena barisnya belum sempat diisi.
 
 **Ambang pita parameter.** 33 parameter Form A1, masing-masing lima pita. **Skalanya terbalik**:
-pita terendah (0–20%) bernilai **5 = Rendah**, pita teratas (81–100%) bernilai **1 = Tinggi**. Pita
-teratas selalu tanpa batas atas. Ubah angkanya lalu klik di luar kotak untuk menyimpan; tombol
+pita terendah bernilai **5 = Rendah**, pita teratas bernilai **1 = Tinggi**. Pita teratas selalu
+tanpa batas atas.
+
+Bentuk pitanya **tidak sama untuk semua parameter**, dan yang ditampilkan adalah bentuk yang
+benar-benar dipakai menghitung: pita lebar `0-20% / 21-40% / …` untuk parameter omzet dan jalur
+distribusi, pita sempit `Tidak ada / >0-1% / …` untuk parameter pengguna jasa berisiko tinggi, pita
+menengah `0-2% / >2-4% / …` untuk yang berisiko menengah. Dua belas parameter **tidak berpita
+persentase sama sekali** — kehadiran (*Ada / Tidak ada*), tingkat risiko wilayah (*Rendah /
+Menengah / Tinggi*), dan gradasi kepemilikan (*Tidak ada / 1-99% / 100%*); barisnya menampilkan
+kriteria templatnya, bukan kotak angka, karena tidak ada ambang yang dibaca penghitung mana pun. Ubah angkanya lalu klik di luar kotak untuk menyimpan; tombol
 **Template** mengembalikan satu parameter ke nilai bawaan template BI. Kolom *Terakhir* menunjukkan
 "bawaan template" bila parameter itu belum pernah disunting, atau waktu penyuntingan terakhir bila
 sudah. Ambang boleh disunting karena BI mengubah pitanya tanpa memberi tahu siapa pun; setiap
 perubahan tercatat pada jejak audit, sebab ambang yang bergeser mengubah nilai setiap parameter
 sesudahnya.
+
+
+### 6.5 Penilaian Risiko Lembaga (IRA) — Admin mengisi, Pemegang Saham menyetujui
+
+Buka **Pengawasan › Penilaian Risiko (IRA)**. Satu penilaian untuk satu periode, umumnya satu tahun
+buku. Akhir periode bersifat **eksklusif**: untuk menilai tahun 2026 penuh, isi 1 Januari 2026
+sampai 1 Januari 2027.
+
+**Skalanya terbalik, dan ini yang paling sering salah dibaca: 5 berarti risiko RENDAH, 1 berarti
+risiko TINGGI.** Berlaku pada seluruh parameter maupun pada kuesioner KPMR
+(`1 unsatisfactory … 5 strong`). Angka besar adalah kabar baik.
+
+**Siapa mengerjakan apa.** Admin ke atas membuat dan mengisi penilaian; **hanya Pemegang Saham yang
+dapat menyetujui** — Controller sekalipun tidak. Penilaian yang sudah disetujui **terkunci
+seluruhnya**: bila ada yang perlu diperbaiki, tekan **Buat penilaian pengganti** beserta alasannya.
+Penilaian lama tetap tersimpan dan ditandai *digantikan*, tidak pernah dihapus.
+
+**Halaman penilaian bertiga bagian.**
+
+1. **Form C1 — angka yang terhitung.** Komposisi lembaga selama periode itu, dibaca langsung dari
+   basis data: jumlah bon, omzet per mata uang beserta porsinya, dan komposisi nasabah. Tiga kotak
+   di atasnya menampilkan berapa nasabah yang **belum** berjenis, belum berkategori pekerjaan, dan
+   belum berkewarganegaraan. Perhatikan ketiganya: persentase pada Form A1 dihitung atas nasabah
+   yang **sudah** berkategori, sehingga angka yang tampak kecil bisa jadi kecil hanya karena
+   penyebutnya belum lengkap.
+2. **Form A1 — nilai parameter risiko inheren.** 24 parameter dihitung sendiri oleh aplikasi dari
+   Form C1 dan klasifikasi SRA; angka mesinnya ditampilkan beserta **asalnya** (mis. *"216.800.000
+   dari 219.800.000 = 98,64%"*). Penilai boleh menyimpang dari angka mesin, tetapi **alasannya
+   wajib diisi** — ketidaksetujuan yang tidak tertulis tidak dapat dibedakan dari salah ketik.
+   Parameter yang belum bernilai dihitung dan ditampilkan; penilaian tidak dapat disetujui sebelum
+   ke-33 parameter terisi.
+3. **Pernyataan struktural.** Sembilan parameter yang tidak dapat dihitung dari basis data —
+   kepemilikan, PEP, nominee, pemilik warga negara asing, struktur grup, mitra kerja sama, dan lini
+   bisnis lain. Pilih pernyataannya dan **isi dasarnya**; nilai parameternya mengikuti pilihan itu.
+
+**Kuesioner KPMR dan hasil.** Tombol **Kuesioner KPMR & hasil** membuka 31 pertanyaan pada lima
+pilar. Jawabannya 1–5, atau **N/A** untuk pertanyaan yang tidak berlaku bagi KUPVA BB — satu
+pertanyaan tentang kegiatan transfer dana memang begitu, dan menjawab N/A **tidak** menurunkan
+nilai pilarnya. Di samping tiap pilar tertulis rata-ratanya **beserta berapa jawaban yang ikut
+dihitung**; perhatikan angka itu, karena N/A mengubah pembagi tanpa mengubah tampilan rata-ratanya.
+Pertanyaan yang pernah menjadi temuan pemeriksaan diberi penanda temuannya.
+
+Bagian hasil menggambar **matriks Bank Indonesia** — baris predikat risiko inheren, kolom predikat
+KPMR — dengan sel yang terpilih ditandai. Selama masih ada parameter atau pertanyaan yang belum
+terisi, yang ditampilkan adalah apa yang masih kurang, bukan angka sementara.
+
+**Alur persetujuan.** Isi Form A1 → isi pernyataan struktural → jawab kuesioner KPMR → **Ajukan** →
+Pemegang Saham menekan **Setujui**. Saat disetujui, aplikasi membekukan nilai tiap parameter,
+**ambang yang berlaku saat itu**, dan **klasifikasi yang dipakai saat itu**. Klasifikasi yang diubah
+sesudahnya tidak mengubah penilaian yang sudah ditandatangani.
+
+**Siklus tahunan.** Halaman **Status Kesiapan** menampilkan kartu *Penilaian risiko (IRA)*: sebuah
+tahun terhitung terlambat begitu tahun itu berakhir tanpa penilaian yang disetujui. Aplikasi
+**tidak pernah membuat penilaian sendiri** saat tahun berganti — yang dilakukannya hanya
+memberitahu.
 
 
 ## 7. Pelaporan Regulator Internal
