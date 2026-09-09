@@ -24,7 +24,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 
 - [x] Tugas 1 — Aritmetika penilaian, murni dan teruji
 - [x] Tugas 2 — Katalog 33 parameter risiko inheren
-- [ ] Tugas 3 — Katalog 31 pertanyaan KPMR
+- [x] Tugas 3 — Katalog 31 pertanyaan KPMR
 - [ ] Tugas 4 — Migrasi: empat tabel penilaian
 - [ ] Tugas 5 — Penghitung sisi inheren dari agregat dan klasifikasi
 - [ ] Tugas 6 — Penulis penilaian: buat, simpan, ajukan, setujui, gantikan
@@ -211,25 +211,41 @@ describe("aritmetika IRA", () => {
 
 **Files:** Create `shared/iraKpmrCatalogue.ts`, `shared/iraKpmrCatalogue.test.ts`
 
-- [ ] **Step 1:** Lima pilar beserta pertanyaannya, teks lengkap apa adanya dari template:
+- [x] **Step 1:** Lima pilar beserta pertanyaannya, teks lengkap apa adanya dari template:
       Direksi/Komisaris **7**, Kebijakan & Prosedur Tertulis **8**, Proses Manajemen Risiko **10**,
       Manajemen SDM **3**, Pengendalian Internal **3**.
 
-- [ ] **Step 2: Tandai keberlakuannya.** Template memberi kolom keberlakuan per jenis penyelenggara;
+- [x] **Step 2: Tandai keberlakuannya.** Template memberi kolom keberlakuan per jenis penyelenggara;
       pertanyaan yang **tidak** berlaku bagi KUPVA BB (mis. yang menyangkut transfer dana) ditandai
       `applicableToKupvaBb: false` dan tampil sebagai **N/A yang sudah terisi**, bukan pertanyaan
       kosong yang menunggu jawaban.
 
-- [ ] **Step 3: Kaitkan temuan pemeriksaan pada pertanyaannya.** Temuan 8 adalah pertanyaan KPT
+- [x] **Step 3: Kaitkan temuan pemeriksaan pada pertanyaannya.** Temuan 8 adalah pertanyaan KPT
       bertanda tangan dan pelaporan LTKM/LTKT pada pilar 1; temuan 9 adalah *"pengkinian profil
       nasabah dan profil transaksi"*; temuan 10 dan 11 ada di pilar 3; temuan 12 adalah pertanyaan
       pre-employee screening pada pilar 4. Simpan kaitannya sebagai `relatedFinding` agar layar
       dapat menunjukkan **pertanyaan mana yang pernah menjadi temuan** — itu yang paling berguna
       bagi penggunanya.
 
-- [ ] **Step 4:** Uji jumlah pertanyaan per pilar dan keunikan kodenya.
+- [x] **Step 4:** Uji jumlah pertanyaan per pilar dan keunikan kodenya.
 
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Katalog pertanyaan KPMR"`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Katalog pertanyaan KPMR"`.
+
+> **Dibaca dari lembar `B. KPMR 2025` 9 September 2026:**
+>
+> - Keberlakuan datang dari kolom `KUPVA BB` (kolom G) yang kosong, dan hasilnya **tepat satu**
+>   pertanyaan tidak berlaku: `KPMR_P2_6`, KPT kegiatan **transfer dana**. Kolom itu terisi pada 30
+>   pertanyaan lainnya.
+> - Ruasnya `relatedFindings` (**jamak**), bukan `relatedFinding`. `KPMR_P3_6` — pengkinian profil
+>   nasabah/transaksi beserta pemantauan kesesuaiannya — memang satu pertanyaan yang menjawab dua
+>   temuan sekaligus (9 dan 10); memaksanya menjadi satu berarti menyembunyikan salah satunya.
+> - Temuan 11 dikaitkan pada tiga pertanyaan pilar 3 yang benar-benar menuntut penilaian risiko
+>   sendiri (RBA, kelengkapan faktor risiko, dan rujukan ke NRA/SRA), bukan pada seluruh pilar 3.
+> - Kosakata pilarnya **dibaca dari** `IRA_KPMR_PILLAR_WEIGHTS_DISPLAY_ONLY` supaya tidak ada daftar
+>   pilar kedua. Ujinya menegakkan urutan dan kesamaannya.
+> - **Jangan menjalankan `prettier` pada berkas paket ini.** Repo ini tidak berformat prettier (44
+>   berkas `shared/` gagal `--check`, dan tidak ada konfigurasi), sehingga `--write` justru membuat
+>   berkas baru berbeda gaya dari tetangganya. Dicoba dan dibatalkan 9 September 2026.
 
 ---
 

@@ -166,7 +166,9 @@ MEDIUM 3 bulan, LOW 12 bulan**; tindak lanjut **worklist Controller yang hanya m
       kriterianya di atas `shared/iraParameters.ts`, tanpa menyalin ke-33 barisnya. Jenis pitanya
       ternyata **enam**, bukan empat: ada `TINGKAT_RISIKO` (Rendah/Menengah/Tinggi, empat parameter
       Wilayah Geografis) dan `PERSENTASE_KEPEMILIKAN` (Tidak ada/1-99%/100%).
-- [ ] Tugas 3 — Katalog 31 pertanyaan KPMR
+- [x] Tugas 3 — Katalog 31 pertanyaan KPMR — **SELESAI 9 September 2026.** `shared/iraKpmrCatalogue.ts`,
+      teks penuh apa adanya dari lembar B, keberlakuan KUPVA BB (satu pertanyaan transfer dana N/A),
+      dan kaitan ke temuan pemeriksaan 8-12.
 - [ ] Tugas 4 — Migrasi: empat tabel penilaian
 - [ ] Tugas 5 — Penghitung sisi inheren dari agregat dan klasifikasi
 - [ ] Tugas 6 — Penulis penilaian: buat, simpan, ajukan, setujui, gantikan
