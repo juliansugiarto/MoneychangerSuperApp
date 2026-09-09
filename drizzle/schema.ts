@@ -14,6 +14,10 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 import {
+  IRA_INHERENT_PREDICATES,
+  IRA_KPMR_PREDICATES,
+} from "../shared/individualRiskAssessment";
+import {
   IRA_CUSTOMER_TYPE_VALUES,
   IRA_DISTRIBUTION_CHANNEL_VALUES,
   IRA_LEGAL_FORM_VALUES,
@@ -1796,8 +1800,161 @@ export const iraParameterThresholds = mysqlTable("ira_parameter_thresholds", {
   uniqueIndex("ira_parameter_thresholds_band_uq").on(table.parameterCode, table.bandIndex),
 ]);
 
+/**
+ * Pemicu penilaian: siklus tahunan, atau permintaan manual beserta alasannya.
+ *
+ * Keputusan pengguna 9 September 2026 (rencana J2, keputusan 1). Pemicu manual tanpa alasan tertulis
+ * adalah penilaian yang tidak dapat dipertanggungjawabkan kepada pemeriksa; `triggerReason` karena
+ * itu wajib diisi untuk `MANUAL`, ditegakkan di Zod pada penulisnya.
+ */
+export const iraAssessmentTriggers = ["TAHUNAN", "MANUAL"] as const;
+
+/**
+ * Daur hidup penilaian. **ADMIN mengisi, SHAREHOLDER menyetujui**, dan yang sudah `DISETUJUI`
+ * terkunci — perbaikan berarti penilaian baru yang menggantikannya lewat `supersededByAssessmentId`,
+ * bukan suntingan di tempat (keputusan 2).
+ */
+export const iraAssessmentStatuses = ["DRAFT", "MENUNGGU_PERSETUJUAN", "DISETUJUI"] as const;
+
+/**
+ * Satu penilaian risiko lembaga untuk satu periode.
+ *
+ * `periodStart` inklusif dan `periodEnd` **eksklusif**, keduanya instan absolut — kontrak yang sama
+ * dengan `readIraDataForm` (`server/iraDataForm.ts`), yang menyaring `transactionAt` dengan
+ * `gte`/`lt`. Kolom `datetime` menyimpan jam UTC; jangan memperlakukannya seperti kolom `date`.
+ *
+ * **Nilai bekunya sengaja disimpan, bukan dihitung ulang saat dibaca** (keputusan 4). Penilaian yang
+ * sudah disetujui harus menghasilkan angka yang sama persis bertahun-tahun kemudian, sementara
+ * ambang, klasifikasi SRA, dan isi basis data akan terus berubah. `frozenThresholds` dan
+ * `frozenClassifications` menyimpan ambang serta klasifikasi yang **berlaku saat itu**, sehingga
+ * angkanya bukan sekadar disalin melainkan dapat ditelusuri ulang.
+ *
+ * Seluruh kolom nilai boleh kosong selama masih `DRAFT`: penilaian yang belum lengkap memang belum
+ * punya nilai, dan nol akan terbaca sebagai risiko tertinggi pada skala terbalik.
+ */
+export const iraAssessments = mysqlTable("ira_assessments", {
+  id: int("id").autoincrement().primaryKey(),
+  periodStart: datetime("periodStart").notNull(),
+  /** Eksklusif — batas atas periode, bukan hari terakhirnya. */
+  periodEnd: datetime("periodEnd").notNull(),
+  trigger: mysqlEnum("trigger", iraAssessmentTriggers).notNull(),
+  /** Wajib untuk pemicu `MANUAL`; kosong untuk siklus tahunan. */
+  triggerReason: text("triggerReason"),
+  status: mysqlEnum("status", iraAssessmentStatuses).default("DRAFT").notNull(),
+  /** Penilaian yang menggantikan penilaian ini. Terisi pada penilaian **lama** saat penggantinya disetujui. */
+  supersededByAssessmentId: int("supersededByAssessmentId"),
+  /** Nilai risiko inheren beku, `A1!F62`. Skala terbalik: 5 rendah, 1 tinggi. */
+  inherentScore: decimal("inherentScore", { precision: 6, scale: 4 }),
+  inherentPredicate: mysqlEnum("inherentPredicate", IRA_INHERENT_PREDICATES),
+  /** Nilai KPMR beku, `B!K46` — rata-rata sederhana kelima pilar. */
+  kpmrScore: decimal("kpmrScore", { precision: 6, scale: 4 }),
+  kpmrPredicate: mysqlEnum("kpmrPredicate", IRA_KPMR_PREDICATES),
+  /** Nilai akhir 1-5 dari matriks, beserta predikatnya. */
+  finalValue: int("finalValue"),
+  finalPredicate: mysqlEnum("finalPredicate", IRA_INHERENT_PREDICATES),
+  /** Ambang pita yang berlaku saat disetujui, disalin dari `ira_parameter_thresholds`. */
+  frozenThresholds: json("frozenThresholds"),
+  /** Klasifikasi SRA yang dipakai saat disetujui, disalin dari `ira_risk_classifications`. */
+  frozenClassifications: json("frozenClassifications"),
+  createdByUserId: int("createdByUserId").notNull(),
+  submittedByUserId: int("submittedByUserId"),
+  submittedAt: datetime("submittedAt"),
+  approvedByUserId: int("approvedByUserId"),
+  approvedAt: datetime("approvedAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("ira_assessments_period_idx").on(table.periodStart, table.periodEnd, table.status),
+  index("ira_assessments_status_idx").on(table.status, table.createdAt),
+]);
+
+/**
+ * Nilai satu parameter risiko inheren pada satu penilaian — 33 baris per penilaian.
+ *
+ * `machineScore` kosong pada kesembilan parameter `NYATAKAN`: tidak ada angka mesin yang dapat
+ * dihitung untuknya, dan nol akan berbohong. `appliedScore` selalu terisi, dan bila keduanya
+ * berbeda maka `overrideReason` wajib — penilai boleh menyimpang dari angka mesin, tetapi tidak
+ * diam-diam (spec Rancangan 9).
+ *
+ * `basis` menyimpan angka mentah pembentuknya (pembilang, penyebut, persentase, pita terpilih) agar
+ * pemeriksa dapat menelusuri dari nilai kembali ke datanya tanpa menjalankan ulang aplikasinya.
+ */
+export const iraInherentValues = mysqlTable("ira_inherent_values", {
+  id: int("id").autoincrement().primaryKey(),
+  assessmentId: int("assessmentId").notNull(),
+  parameterCode: varchar("parameterCode", { length: 40 }).notNull(),
+  /** Nilai 1-5 hasil hitungan mesin; kosong bila parameternya dinyatakan penilai. */
+  machineScore: int("machineScore"),
+  /** Nilai 1-5 yang benar-benar dipakai penilaian ini. */
+  appliedScore: int("appliedScore").notNull(),
+  /** Pita 1-5 yang terpilih; kosong bila parameternya berupa pilihan, bukan persentase. */
+  bandIndex: int("bandIndex"),
+  /** Wajib bila `appliedScore` berbeda dari `machineScore`. */
+  overrideReason: text("overrideReason"),
+  basis: json("basis"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("ira_inherent_values_parameter_uq").on(table.assessmentId, table.parameterCode),
+]);
+
+/**
+ * Jawaban satu pertanyaan KPMR pada satu penilaian — 31 baris per penilaian.
+ *
+ * **`score` nullable, dan itu disengaja.** N/A adalah jawaban yang sah dan berbeda dari "belum
+ * dijawab"; keduanya dibedakan oleh kolom `answered`, **bukan** oleh nol. Nol pada skala terbalik
+ * bahkan bukan nilai yang sah — skalanya 1 sampai 5 — sehingga memakainya sebagai penanda kosong
+ * akan menyelinap ke dalam rata-rata pilar sebagai jawaban yang lebih buruk daripada
+ * `unsatisfactory`.
+ */
+export const iraKpmrAnswers = mysqlTable("ira_kpmr_answers", {
+  id: int("id").autoincrement().primaryKey(),
+  assessmentId: int("assessmentId").notNull(),
+  questionCode: varchar("questionCode", { length: 40 }).notNull(),
+  /** `false` berarti belum dijawab. `true` dengan `score` kosong berarti N/A. */
+  answered: boolean("answered").default(false).notNull(),
+  /** 1-5, atau kosong untuk N/A. */
+  score: int("score"),
+  note: text("note"),
+  /** Rujukan dokumen pendukung, misalnya nomor arsip atau tautan internal. */
+  documentReference: varchar("documentReference", { length: 500 }),
+  answeredByUserId: int("answeredByUserId"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("ira_kpmr_answers_question_uq").on(table.assessmentId, table.questionCode),
+]);
+
+/**
+ * Pernyataan penilai atas kesembilan parameter `NYATAKAN` — mitra kerja sama, struktur kepemilikan,
+ * PEP, nominee, WNA, struktur grup, dan lini bisnis lain.
+ *
+ * Parameter ini bukan lubang: penulisnya adalah borang penilaian itu sendiri. `choiceCode` adalah
+ * kode pilihan pada jenis pitanya (`IRA_BAND_DEFINITIONS`, `shared/iraParameterCatalogue.ts`), dan
+ * `reason` **wajib** — pernyataan tanpa dasar sama saja dengan angka tanpa asal, persis alasan
+ * `sourceNote` diwajibkan pada klasifikasi risiko.
+ */
+export const iraStructuralDeclarations = mysqlTable("ira_structural_declarations", {
+  id: int("id").autoincrement().primaryKey(),
+  assessmentId: int("assessmentId").notNull(),
+  parameterCode: varchar("parameterCode", { length: 40 }).notNull(),
+  /** Kode pilihan, mis. "ADA", "TIDAK_ADA", "SEBAGIAN", "SELURUHNYA". */
+  choiceCode: varchar("choiceCode", { length: 30 }).notNull(),
+  reason: text("reason").notNull(),
+  declaredByUserId: int("declaredByUserId").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("ira_structural_declarations_parameter_uq").on(table.assessmentId, table.parameterCode),
+]);
+
 export type IraRiskClassification = typeof iraRiskClassifications.$inferSelect;
 export type IraRiskDimension = IraRiskClassification["dimension"];
 export type IraRiskType = IraRiskClassification["riskType"];
 export type IraRiskLevel = IraRiskClassification["level"];
 export type IraParameterThreshold = typeof iraParameterThresholds.$inferSelect;
+export type IraAssessment = typeof iraAssessments.$inferSelect;
+export type IraAssessmentStatus = IraAssessment["status"];
+export type IraAssessmentTrigger = IraAssessment["trigger"];
+export type IraInherentValue = typeof iraInherentValues.$inferSelect;
+export type IraKpmrAnswer = typeof iraKpmrAnswers.$inferSelect;
+export type IraStructuralDeclaration = typeof iraStructuralDeclarations.$inferSelect;

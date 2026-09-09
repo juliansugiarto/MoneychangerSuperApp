@@ -25,7 +25,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 1 — Aritmetika penilaian, murni dan teruji
 - [x] Tugas 2 — Katalog 33 parameter risiko inheren
 - [x] Tugas 3 — Katalog 31 pertanyaan KPMR
-- [ ] Tugas 4 — Migrasi: empat tabel penilaian
+- [x] Tugas 4 — Migrasi: empat tabel penilaian
 - [ ] Tugas 5 — Penghitung sisi inheren dari agregat dan klasifikasi
 - [ ] Tugas 6 — Penulis penilaian: buat, simpan, ajukan, setujui, gantikan
 - [ ] Tugas 7 — Halaman penilaian: Form C1, Form A1, pernyataan struktural
@@ -255,13 +255,33 @@ describe("aritmetika IRA", () => {
 
 **Ini satu-satunya tugas migrasi di rencana ini.**
 
-- [ ] **Step 1: Tulis rencana rollback di berkas ini lebih dulu:**
+- [x] **Step 1: Tulis rencana rollback di berkas ini lebih dulu:**
 
       > **Rollback Tugas 4.** Keempat tabel baru di-`DROP TABLE` dalam urutan terbalik dari
       > pembuatannya; tidak ada tabel lama yang disentuh, sehingga tidak ada data lama yang hilang.
       > Baris `__drizzle_migrations` untuk `0054` dihapus pada kedua basis data lokal.
 
-- [ ] **Step 2: Empat tabel di `drizzle/schema.ts`:**
+      **Rollback sebagaimana benar-benar dijalankan bila diperlukan** (ditulis 9 September 2026,
+      sebelum migrasinya dibuat). Migrasi `0054` **hanya menambah** empat tabel: `ira_assessments`,
+      `ira_inherent_values`, `ira_kpmr_answers`, `ira_structural_declarations`. Tidak ada
+      `ALTER`, tidak ada `DROP`, dan tidak ada kolom tabel lama yang disentuh — karena itu
+      pengembaliannya tidak dapat menghilangkan data mana pun yang sudah ada.
+
+      ```sql
+      -- urutan terbalik dari pembuatannya; tidak ada foreign key sehingga urutannya sebenarnya bebas
+      DROP TABLE IF EXISTS `ira_structural_declarations`;
+      DROP TABLE IF EXISTS `ira_kpmr_answers`;
+      DROP TABLE IF EXISTS `ira_inherent_values`;
+      DROP TABLE IF EXISTS `ira_assessments`;
+      DELETE FROM `__drizzle_migrations` WHERE `hash` LIKE '%0054%';
+      ```
+
+      Dijalankan pada **kedua basis data lokal** (`moneychanger` dan `mc_t_abcvalas`) dan **tidak
+      pernah** pada produksi — migrasi `0051`, `0052`, dan `0053` pun belum diterapkan di sana.
+      Yang hilang bila dikembalikan hanyalah penilaian IRA yang dibuat sesudah migrasi ini; tidak
+      ada bon, kas, nasabah, maupun jurnal yang ikut.
+
+- [x] **Step 2: Empat tabel di `drizzle/schema.ts`:**
       `ira_assessments` (periode, status `DRAFT|MENUNGGU_PERSETUJUAN|DISETUJUI`, alasan pembukaan,
       pengaju, penyetuju, waktu persetujuan, `supersededByAssessmentId`, dan **nilai beku**: nilai
       inheren, nilai KPMR, nilai akhir beserta ketiga predikatnya);
@@ -274,12 +294,27 @@ describe("aritmetika IRA", () => {
       **`ira_kpmr_answers.score` wajib nullable.** N/A adalah jawaban yang sah dan berbeda dari
       "belum dijawab"; bedakan keduanya dengan kolom `answered` tersendiri, jangan dengan nol.
 
-- [ ] **Step 3:** `drizzle-kit generate`, **baca SQL-nya**, pastikan tidak ada `DROP` maupun
+- [x] **Step 3:** `drizzle-kit generate`, **baca SQL-nya**, pastikan tidak ada `DROP` maupun
       `MODIFY` atas tabel lama.
 
-- [ ] **Step 4:** Terapkan lewat `node scripts/tenant.mjs migrate-all`. **Hanya lokal.**
+- [x] **Step 4:** Terapkan lewat `node scripts/tenant.mjs migrate-all`. **Hanya lokal.**
 
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Migrasi 0054: tabel penilaian risiko IRA"`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Migrasi 0054: tabel penilaian risiko IRA"`.
+
+> **Sebagaimana benar-benar dijalankan 9 September 2026.** Migrasi terbitnya
+> `drizzle/0054_silent_jackal.sql`: empat `CREATE TABLE` dan dua `CREATE INDEX`, **nol** `DROP`,
+> `ALTER`, maupun `MODIFY` — diperiksa dengan membaca SQL-nya, bukan mengandaikannya.
+> `node scripts/tenant.mjs migrate-all` melaporkan `ibukota selesai` dan `abcvalas selesai`, dan
+> keenam tabel `ira_*` terbukti ada pada kedua basis data lokal. Data J1 utuh sesudahnya:
+> 7 klasifikasi, 5 baris ambang, 3 nasabah, 9 bon. **Produksi tidak disentuh.**
+>
+> Dua hal yang ditetapkan di sini dan berlaku bagi tugas berikutnya:
+>
+> - **`periodEnd` eksklusif**, sama seperti `readIraDataForm` yang menyaring `transactionAt` dengan
+>   `gte`/`lt`. Kolomnya `datetime`, jadi isinya jam UTC — jangan diperlakukan seperti kolom `date`.
+> - **Nilai beku ditambah `frozenThresholds` dan `frozenClassifications`.** Keputusan 4 menuntut
+>   ambang yang berlaku dan klasifikasi yang dipakai ikut dibekukan, bukan hanya nilai parameternya;
+>   tanpa keduanya angka lama dapat disalin tetapi tidak dapat ditelusuri ulang.
 
 ---
 

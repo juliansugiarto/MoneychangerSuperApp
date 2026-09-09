@@ -379,6 +379,13 @@
       "when": 1788938972235,
       "tag": "0053_spooky_thunderball",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "5",
+      "when": 1788945384141,
+      "tag": "0054_silent_jackal",
+      "breakpoints": true
     }
   ]
 }

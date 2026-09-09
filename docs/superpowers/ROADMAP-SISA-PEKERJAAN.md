@@ -169,7 +169,8 @@ MEDIUM 3 bulan, LOW 12 bulan**; tindak lanjut **worklist Controller yang hanya m
 - [x] Tugas 3 — Katalog 31 pertanyaan KPMR — **SELESAI 9 September 2026.** `shared/iraKpmrCatalogue.ts`,
       teks penuh apa adanya dari lembar B, keberlakuan KUPVA BB (satu pertanyaan transfer dana N/A),
       dan kaitan ke temuan pemeriksaan 8-12.
-- [ ] Tugas 4 — Migrasi: empat tabel penilaian
+- [x] Tugas 4 — Migrasi: empat tabel penilaian — **SELESAI 9 September 2026.** `0054_silent_jackal`,
+      murni penambahan, diterapkan ke dua basis data lokal saja.
 - [ ] Tugas 5 — Penghitung sisi inheren dari agregat dan klasifikasi
 - [ ] Tugas 6 — Penulis penilaian: buat, simpan, ajukan, setujui, gantikan
 - [ ] Tugas 7 — Halaman penilaian: Form C1, Form A1, pernyataan struktural
