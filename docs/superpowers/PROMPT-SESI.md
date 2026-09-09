@@ -70,18 +70,23 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 9 September 2026 (sesudah Paket K3)
+## Sesi berikutnya — keadaan per 9 September 2026 (sesudah Paket L Tugas 1)
 
 **Seluruh paket peta jalan asli sudah selesai:** K1, B, D, C, E, F1, F2, G, H, I, J (J1+J2), K2,
 dan K3. Dua belas temuan pemeriksaan BI 2026 sudah tertutup.
 
-**Pekerjaan berikutnya adalah Paket L**, yang lahir dari pembacaan **PBI No. 10 Tahun 2024** —
-peraturan APU/PPT/PPPSPM yang berlaku dan yang belum pernah dibaca proyek ini sampai 9 September
-2026. Rancangannya sudah ada; **belum ada kode yang ditulis.**
+**Paket L sedang berjalan. Tugas 1 selesai; pekerjaan berikutnya adalah Tugas 2.** Paket ini lahir
+dari pembacaan **PBI No. 10 Tahun 2024** — peraturan APU/PPT/PPPSPM yang berlaku dan yang belum
+pernah dibaca proyek ini sampai 9 September 2026.
 
-Baseline uji yang benar-benar dijalankan 9 September 2026 sesudah Paket K3:
+Baseline uji yang benar-benar dijalankan 9 September 2026 sesudah Paket L Tugas 1:
 `Test Files 153 passed (153)`, `Tests 1313 passed | 2 skipped (1315)`. `tsc --noEmit` bersih,
-`vite build` sukses. Migrasi terakhir adalah **`0056`**; Paket L akan menambah `0057`.
+`vite build` sukses. **Angkanya sama dengan sesudah K3, dan itu benar** — Tugas 1 hanya menambah
+skema, ujinya baru datang bersama penulis pada Tugas 2.
+
+Migrasi terakhir adalah **`0057`** (`0057_dashing_morph.sql`), sudah diterapkan ke dua basis data
+lokal; jurnal keduanya **58**. Paket L tidak menambah migrasi lagi — Tugas 1 adalah satu-satunya
+tugas migrasi pada paket ini.
 
 **Satu uji diketahui flaky dan bukan bagian paket mana pun:** `server/tenantIsolation.live.test.ts`
 > *"setiap ikatan hanya melihat database miliknya sendiri"*. Bila gagal sendirian di bawah beban,
@@ -133,6 +138,13 @@ jalankan ulang berkas itu saja.
   `shared/iraParameters.ts`, `shared/iraParameterCatalogue.ts` (bobot, enam jenis pita, teks
   kriteria), `shared/iraKpmrCatalogue.ts` (31 pertanyaan, keberlakuan KUPVA BB, kaitan temuan),
   `shared/individualRiskAssessment.ts` dan `shared/iraAssessmentTotals.ts` (seluruh aritmetikanya).
+- **Checkbox `Status Pengerjaan` pernah tertinggal di belakang pekerjaannya.** Diperiksa
+  9 September 2026: Paket F2 Tugas 11 dan Paket K2 Tugas 4 tercatat belum tercentang padahal
+  keduanya sudah selesai — langkah-langkahnya sendiri sudah tercentang, kodenya ada, dan
+  commit-nya (`f747077`, `4a4e299`) ada. **Bila dokumen dan kode berbeda, percayai kode dan
+  riwayat commit**, lalu perbaiki dokumennya. Sebuah hook `SessionStart`
+  (`~/.claude/hooks/next-task.sh`, lihat `SETUP-PERKAKAS.md`) kini menyapu seluruh rencana pada
+  awal tiap sesi, jadi ketertinggalan seperti ini muncul sendiri tanpa dicari.
 - **Berkas dokumen dan berkas impor punya dua batas yang BERBEDA.** Dokumen
   (`server/documentOperations.ts`): **8 MB**, MIME saja. Impor XLS/XLSX: **5 MB** plus
   `assertSpreadsheetSignature`. Jangan mencampurnya.
@@ -145,11 +157,10 @@ dipakai rumusnya; Aspek Kelembagaan tidak dibangun; seluruh klasifikasi risiko b
 dan kode tanpa baris dibaca RENDAH; dimensi `COUNTRY` tanpa daftar FATF/PBB; `PPSPM_3C` tidak dapat
 membedakan UMKM; `TPPU_4A` dan `TPPU_4B` selalu sama karena hanya ada satu provinsi gerai;
 `pnpm audit --prod --audit-level=high` masih **9 temuan** (6 sedang, 3 tinggi) — **jangan menyebut
-audit bersih**; migrasi **`0034`–`0055` belum diterapkan ke produksi** — jurnal produksi berisi 34
-baris (`0000`–`0033`) sementara `drizzle/` berisi 56 berkas, jadi yang tertunda **dua puluh dua** —
-**dua puluh tiga** sesudah Paket K2 menambahkan `0056` — bukan lima seperti tercatat di sini
-sampai 9 September 2026; dan zona waktu server masih
-memakai bawaan `Asia/Jakarta`, bukan `company_profile.timezone`.
+audit bersih**; migrasi **`0034`–`0057` belum diterapkan ke produksi** — jurnal produksi berisi 34
+baris (`0000`–`0033`) sementara `drizzle/` kini berisi **58** berkas (`0000`–`0057`), jadi yang
+tertunda **dua puluh empat**, bukan lima seperti tercatat di sini sampai 9 September 2026; dan
+zona waktu server masih memakai bawaan `Asia/Jakarta`, bukan `company_profile.timezone`.
 
 ### Risiko residual paket sebelumnya yang masih terbuka
 
@@ -433,13 +444,26 @@ padahal tanggal adalah field wajib huruf b dan proyek ini sudah punya zona opera
 
 ---
 
-### Paket L — Jejak penyaringan nasabah dan persetujuan risiko tinggi (6 tugas) — **PEKERJAAN BERIKUTNYA**
+### Paket L — Jejak penyaringan nasabah dan persetujuan risiko tinggi (6 tugas) — **SEDANG BERJALAN**
 
-**Rancangan selesai 9 September 2026, kode belum ditulis sama sekali.**
+**Tugas 1 selesai 9 September 2026. Berikutnya Tugas 2.**
 Spec `specs/2026-09-09-penyaringan-nasabah-dan-persetujuan-risiko-tinggi-design.md`,
 rencana `plans/2026-09-09-penyaringan-nasabah-dan-persetujuan-risiko-tinggi.md`.
 
 Menutup Temuan 1 dan 2 pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`.
+
+**Yang sudah berdiri sesudah Tugas 1** (commit `4c44b22`, migrasi `0057`):
+
+- Tabel `customer_watchlist_screenings` — satu baris per penyaringan, tidak pernah disunting,
+  berindeks `(customerId, screenedAt)`. **Belum ada satu baris pun**; penulisnya Tugas 2.
+- Empat kolom keputusan pada `customers`: `highRiskDecision` (bawaan `BELUM`),
+  `highRiskDecidedByUserId`, `highRiskDecidedAt`, `highRiskDecisionNotes`. **Belum ada kode yang
+  membacanya**; gerbang penolakannya Tugas 4. Ketiga nasabah lokal berstatus `BELUM`.
+- SQL-nya murni penambahan dan sudah dibaca: satu `CREATE TABLE`, empat `ADD COLUMN`, satu
+  `CREATE INDEX`. Tidak ada `MODIFY`/`DROP`.
+- **`docs/SKEMA-DATABASE-PROJECT.md` BELUM memuat tabel dan keempat kolom baru ini.** Rencananya
+  menaruh pekerjaan dokumentasi pada Tugas 6, jadi ketertinggalan ini disengaja dan berumur
+  pendek — tetapi selama Tugas 6 belum dikerjakan, skema di dokumen itu tidak lengkap.
 
 **Yang harus diketahui sebelum menyentuhnya:**
 
@@ -462,10 +486,11 @@ Baca docs/superpowers/plans/2026-09-09-penyaringan-nasabah-dan-persetujuan-risik
 beserta spec yang dirujuknya, lalu bagian "Aturan kerja yang berlaku untuk seluruh paket" pada
 docs/superpowers/ROADMAP-SISA-PEKERJAAN.md.
 
-Kerjakan Tugas <N> saja, satu commit yang berdiri sendiri beserta ujinya. Patuhi "Global
-Constraints" pada rencana itu — terutama: migrasi hanya ke dua basis data lokal dan tidak pernah
-ke produksi; otorisasi ditegakkan di penulis, bukan hanya router; dttotPpsdmMatch tidak pernah
-diisi otomatis; dan baris penyaringan ditulis meski nihil.
+Kerjakan Tugas <N> saja (Tugas 1 sudah selesai — berikutnya <N> = 2), satu commit yang berdiri
+sendiri beserta ujinya. Patuhi "Global Constraints" pada rencana itu — terutama: migrasi hanya
+ke dua basis data lokal dan tidak pernah ke produksi; otorisasi ditegakkan di penulis, bukan
+hanya router; dttotPpsdmMatch tidak pernah diisi otomatis; dan baris penyaringan ditulis meski
+nihil.
 
 Jangan menurunkan ulang tiga keputusan pengguna yang tertulis di rencana itu. Bila menemukan
 keadaan yang berbeda dari yang tertulis, percayai kodenya, katakan apa yang berbeda, lalu
@@ -490,7 +515,7 @@ Urut sesuai usul pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`:
    Penjelasan sering menyempitkan bunyi pasalnya; **baca sebelum temuan mana pun menjadi rencana.**
 6. **BAB VI dan BAB IX–XI PBI 10/2024 belum dibaca terhadap kode.**
 
-**Antrean migrasi produksi kini 23** (`0034`–`0056`). Menerapkannya pekerjaan tersendiri yang belum
+**Antrean migrasi produksi kini 24** (`0034`–`0057`). Menerapkannya pekerjaan tersendiri yang belum
 direncanakan, dan tidak boleh dimulai tanpa permintaan eksplisit.
 
 ---
