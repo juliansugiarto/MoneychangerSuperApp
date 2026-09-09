@@ -196,7 +196,7 @@ spec `specs/2026-09-09-ganti-nama-dppspm-design.md` (dirancang 9 September 2026)
 *"DTTOT dan DPPSPM"* (`shared/iraKpmrCatalogue.ts:183`), dan nilai saudaranya di kolom yang sama
 sudah `DTTOT`, sama-sama sebuah *Daftar*. Lihat spec bagian Masalah 2.
 
-- [ ] Tugas 1 — Peragaan dasar: isi kedua basis data lokal dan catat jumlah baris sebelum migrasi
+- [x] Tugas 1 — Peragaan dasar: isi kedua basis data lokal dan catat jumlah baris sebelum migrasi — **SELESAI 9 September 2026**
 - [ ] Tugas 2 — Migrasi `0056` dan seluruh tipe enum, satu commit atomik
 - [ ] Tugas 3 — Sapuan prosa, pesan validasi, dan uji penjaga
 - [ ] Tugas 4 — Dokumentasi, rollback tertulis, dan antrean migrasi produksi

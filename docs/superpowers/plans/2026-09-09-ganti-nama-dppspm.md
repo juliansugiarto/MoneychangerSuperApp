@@ -20,7 +20,7 @@ dua entri.
 
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu.**
 
-- [ ] Tugas 1 — Peragaan dasar: isi kedua basis data lokal dan catat jumlah baris sebelum migrasi
+- [x] Tugas 1 — Peragaan dasar: isi kedua basis data lokal dan catat jumlah baris sebelum migrasi — **SELESAI 9 September 2026**
 - [ ] Tugas 2 — Migrasi `0056` dan seluruh tipe enum, satu commit atomik
 - [ ] Tugas 3 — Sapuan prosa, pesan validasi, dan uji penjaga
 - [ ] Tugas 4 — Dokumentasi, rollback tertulis, dan catatan antrean migrasi produksi
@@ -124,7 +124,7 @@ tabel kosong belum membuktikan apa pun.
 - Produces: baris pada `sanctions_watchlist_entries` di kedua basis data lokal, dan ringkasan
   jumlah baris per lingkup ke stdout.
 
-- [ ] **Step 1: Tulis skripnya.** Meniru gaya `scripts/tenant.mjs` (ESM, `mysql2/promise`, tanpa
+- [x] **Step 1: Tulis skripnya.** Meniru gaya `scripts/tenant.mjs` (ESM, `mysql2/promise`, tanpa
       kerangka kerja). Bentuk datanya meniru produksi — tiga lingkup, kedua `entityType`:
 
 ```js
@@ -141,19 +141,19 @@ const SCOPES = [
       **`listType` sengaja masih ditulis `PPPSM`** — skrip ini menyiapkan keadaan *sebelum*
       migrasi. Tugas 2 memperbaruinya menjadi `DPPSPM` sesudah migrasinya ada.
 
-- [ ] **Step 2: Buat idempoten.** Hapus lebih dulu baris yang `sourceFileName` diawali
+- [x] **Step 2: Buat idempoten.** Hapus lebih dulu baris yang `sourceFileName` diawali
       `peragaan-k2-`, lalu sisipkan ulang. Jangan `TRUNCATE` — tabel ini nanti akan berisi data
       impor nyata di lingkungan lain, dan kebiasaan `TRUNCATE` di skrip peragaan adalah kebiasaan
       yang salah.
 
-- [ ] **Step 3: Cetak ringkasan lingkup** dalam bentuk yang dapat disalin ke pesan commit:
+- [x] **Step 3: Cetak ringkasan lingkup** dalam bentuk yang dapat disalin ke pesan commit:
 
 ```
 moneychanger    DTTOT/(null) INDIVIDUAL=4 ENTITY=2 | PPPSM/DPRK INDIVIDUAL=3 ENTITY=3 | PPPSM/IR INDIVIDUAL=2 ENTITY=3
 mc_t_abcvalas   (sama)
 ```
 
-- [ ] **Step 4: Jalankan pada kedua basis data lokal** dan **salin keluarannya ke pesan commit.**
+- [x] **Step 4: Jalankan pada kedua basis data lokal** dan **salin keluarannya ke pesan commit.**
       Angka inilah yang akan dibandingkan sesudah migrasi pada Tugas 2 — tanpa mencatatnya sekarang,
       perbandingannya nanti tidak punya pembanding.
 
@@ -163,7 +163,7 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 node scripts/seedWatchlistDemo.mjs
 ```
 
-- [ ] **Step 5: Verifikasi.**
+- [x] **Step 5: Verifikasi.**
 
 ```bash
 ./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build
@@ -171,12 +171,34 @@ mysql -h 127.0.0.1 -u root -N -e "SELECT 'moneychanger', listType, IFNULL(source
 mysql -h 127.0.0.1 -u root -N -e "SELECT 'abcvalas', listType, IFNULL(sourceLabel,'(null)'), entityType, COUNT(*) FROM mc_t_abcvalas.sanctions_watchlist_entries GROUP BY 2,3,4 ORDER BY 2,3,4;"
 ```
 
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
 
 ```bash
 git add scripts/seedWatchlistDemo.mjs
 git commit -m "Skrip peragaan daftar sanksi untuk basis data lokal"
 ```
+
+**Hasil nyata, 9 September 2026** — inilah pembanding untuk Tugas 2 Step 6:
+
+```
+moneychanger    DTTOT/(null) INDIVIDUAL=4 ENTITY=2 | PPPSM/DPRK INDIVIDUAL=3 ENTITY=3 | PPPSM/IR INDIVIDUAL=2 ENTITY=3
+mc_t_abcvalas   (sama persis; 17 baris per basis data)
+```
+
+**Dua hal ditambahkan di luar rencana semula, keduanya penjaga:**
+
+1. **`assertLocal`** menolak host maupun nama basis data yang bukan `moneychanger`/`mc_t_abcvalas`
+   di `127.0.0.1`. Skrip ini membaca `DATABASE_URL`; tanpa penjaga, satu variabel lingkungan yang
+   salah menulis data peragaan ke produksi. Diuji negatif: host `10.0.0.9` ditolak, keluar dengan
+   status 1.
+2. **Skripnya memeriksa jumlah barisnya sendiri** dan gagal bila tidak sesuai `SCOPES`. Skrip yang
+   hanya mencetak apa yang kebetulan ada di tabel tidak dapat menjadi pembanding bagi migrasi.
+   Diuji negatif: satu baris pengganggu disisipkan, skrip gagal dengan status 1 dan menyebut
+   selisihnya; baris itu lalu dihapus.
+
+`importedByUserId` memakai pengguna CONTROLLER/SHAREHOLDER pertama (id 2 pada `moneychanger`);
+`mc_t_abcvalas` belum punya pengguna sama sekali sehingga memakai 1 — disebutkan di keluarannya,
+tidak didiamkan. Tabel ini tidak punya foreign key ke `users`.
 
 ---
 
