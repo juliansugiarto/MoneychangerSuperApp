@@ -218,6 +218,27 @@ Urutannya mengikat seluruhnya. **Tepat satu tugas migrasi: Tugas 2** (`0056`).
 6. `pnpm audit --prod --audit-level=high` masih **9 temuan** (6 sedang, 3 tinggi). Paket ini tidak
    menambah dependensi dan tidak memperbaikinya. **Jangan menyebut audit bersih.**
 
+### Paket L — Jejak penyaringan nasabah dan persetujuan nasabah berisiko tinggi
+
+**Rencana rinci sudah ada:** `plans/2026-09-09-penyaringan-nasabah-dan-persetujuan-risiko-tinggi.md` ·
+spec `specs/2026-09-09-penyaringan-nasabah-dan-persetujuan-risiko-tinggi-design.md`.
+Menutup Temuan 1 dan 2 pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md` (PBI No. 10 Tahun 2024).
+
+**Paket ini menambahkan tindakan memblokir untuk pertama kalinya** — nasabah `HIGH` yang belum
+disetujui SHAREHOLDER tidak dapat dipakai pada bon baru. Keputusan sadar pengguna 9 September 2026.
+
+- [ ] Tugas 1 — Migrasi `0057`: tabel riwayat penyaringan dan empat kolom keputusan
+- [ ] Tugas 2 — Penulis penyaringan beserta pemanggil saat nasabah dibuat dan diubah
+- [ ] Tugas 3 — Penyaringan ulang massal saat daftar diimpor
+- [ ] Tugas 4 — Gerbang persetujuan: fungsi penolakan murni dan penegakannya pada bon
+- [ ] Tugas 5 — Halaman: riwayat penyaringan, peringatan daftar usang, kendali setujui/tolak
+- [ ] Tugas 6 — Peragaan end-to-end dan dokumentasi
+
+**Tenggat pelaporan Pasal 60 dikeluarkan dari lingkup** atas keputusan pengguna — negosiasi dengan
+BI sudah selesai.
+
+---
+
 ### Paket K3 — Pembandingan nota terhadap SE BI **18/42**/DKSP — **SELESAI 9 September 2026**
 - [x] Naskah 18/41 dibaca, **premisnya salah** — mengatur pemrosesan transaksi pembayaran, nol
       kemunculan `KUPVA`.
