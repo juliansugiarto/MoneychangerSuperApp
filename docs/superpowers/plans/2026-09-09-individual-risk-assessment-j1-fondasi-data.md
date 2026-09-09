@@ -25,7 +25,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 1 — Kosakata tertutup BI sebagai konstanta murni
 - [x] Tugas 2 — Migrasi: tiga kolom nasabah/bon/profil dan dua tabel klasifikasi
 - [x] Tugas 3 — Penulis klasifikasi risiko beserta gerbang peran dan auditnya
-- [ ] Tugas 4 — Borang nasabah: jenis nasabah, bentuk badan hukum, kategori pekerjaan
+- [x] Tugas 4 — Borang nasabah: jenis nasabah, bentuk badan hukum, kategori pekerjaan
 - [ ] Tugas 5 — Jalur distribusi pada bon
 - [ ] Tugas 6 — Pembaca agregat Form C1
 - [ ] Tugas 7 — Halaman Klasifikasi Risiko dan Ambang
@@ -288,7 +288,7 @@ describe("klasifikasi risiko", () => {
 **Files:** Modify `server/operations.ts`, `server/routers.ts`, `client/src/pages/Customers.tsx`,
 `client/src/pages/CustomerList.tsx`; Create `server/customerCategory.test.ts`
 
-- [ ] **Step 1: Tulis uji yang gagal lebih dulu**, dengan jebakan Paket H di depan mata:
+- [x] **Step 1: Tulis uji yang gagal lebih dulu**, dengan jebakan Paket H di depan mata:
 
 ```ts
 describe("kategori nasabah pada borang", () => {
@@ -307,22 +307,22 @@ describe("kategori nasabah pada borang", () => {
       kedua kolom berperilaku berbeda pada satu borang, **berhenti dan laporkan** — perbedaan
       perilaku pada borang yang sama adalah bug yang menunggu.
 
-- [ ] **Step 2:** Skema Zod pada `server/routers.ts` (`customerCreateInput` sekitar baris 229 dan
+- [x] **Step 2:** Skema Zod pada `server/routers.ts` (`customerCreateInput` sekitar baris 229 dan
       `customerUpdateInput` sekitar 272), dengan `superRefine` untuk kaitan
       `customerType` ↔ `entityLegalForm`.
 
-- [ ] **Step 3:** Ruas borangnya di `Customers.tsx` — pilihan jenis nasabah lebih dulu, bentuk badan
+- [x] **Step 3:** Ruas borangnya di `Customers.tsx` — pilihan jenis nasabah lebih dulu, bentuk badan
       hukum muncul hanya bila `BADAN_USAHA`, kategori pekerjaan hanya bila `INDIVIDU`. Dialognya
       wajib `max-h-[85vh] overflow-y-auto`.
 
-- [ ] **Step 4:** `CustomerList.tsx` menampilkan penanda "kategori belum diisi" pada nasabah yang
+- [x] **Step 4:** `CustomerList.tsx` menampilkan penanda "kategori belum diisi" pada nasabah yang
       `occupationCategory`-nya kosong. Kekosongan yang terlihat, bukan yang diam.
 
-- [ ] **Step 5: Buka borangnya sungguhan di browser** dan simpan seorang nasabah badan usaha serta
+- [x] **Step 5: Buka borangnya sungguhan di browser** dan simpan seorang nasabah badan usaha serta
       seorang perorangan. Bug pengosongan kolom deklarasi Paket H hanya tertangkap karena borangnya
       benar-benar dibuka; `tsc` dan Vitest sama-sama meloloskannya.
 
-- [ ] **Step 6:** Perintah mutu, lalu commit `"Jenis nasabah dan kategori pekerjaan pada borang"`.
+- [x] **Step 6:** Perintah mutu, lalu commit `"Jenis nasabah dan kategori pekerjaan pada borang"`.
 
 ---
 

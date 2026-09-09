@@ -9,13 +9,27 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WatchlistCheckButton } from "@/components/WatchlistCheck";
 import { trpc } from "@/lib/trpc";
+import { IRA_LEGAL_FORM_LABELS, IRA_OCCUPATION_CATEGORY_LABELS } from "@shared/iraVocabulary";
 import { Download, IdCard, Pencil, Search, UserPlus, UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
-type CustomerRow = { id: number; identityExpiryDate: string | Date | null; dateOfBirth: string | Date | null; fullName: string; phoneNumber: string | null; identityType: "KTP" | "PASSPORT" | "OTHER"; identityNumber: string; placeOfBirth: string | null; address: string; addressType: "RUMAH" | "KANTOR" | "DOMISILI" | "LAINNYA" | null; addressCountry: string | null; addressProvince: string | null; addressCity: string | null; addressDistrict: string | null; addressPostalCode: string | null; nationality: string | null; npwp: string | null; gender: "MALE" | "FEMALE" | null; occupation: string | null; sourceOfFunds: string | null; transactionPurpose: string | null; profileStatus: "ACTIVE" | "RESTRICTED" | "INACTIVE"; riskLevel: "LOW" | "MEDIUM" | "HIGH"; riskNotes: string | null; pepStatus: "NONE" | "SELF" | "RELATED"; pepDetails: string | null; dttotPpsdmMatch: boolean; dttotPpsdmNotes: string | null; declaredMonthlyValueIdr: string | null; declaredMonthlyCount: number | null; declaredCurrencies: string[] | null };
+type CustomerRow = { id: number; identityExpiryDate: string | Date | null; dateOfBirth: string | Date | null; fullName: string; phoneNumber: string | null; identityType: "KTP" | "PASSPORT" | "OTHER"; identityNumber: string; placeOfBirth: string | null; address: string; addressType: "RUMAH" | "KANTOR" | "DOMISILI" | "LAINNYA" | null; addressCountry: string | null; addressProvince: string | null; addressCity: string | null; addressDistrict: string | null; addressPostalCode: string | null; nationality: string | null; npwp: string | null; gender: "MALE" | "FEMALE" | null; occupation: string | null; sourceOfFunds: string | null; transactionPurpose: string | null; profileStatus: "ACTIVE" | "RESTRICTED" | "INACTIVE"; riskLevel: "LOW" | "MEDIUM" | "HIGH"; riskNotes: string | null; pepStatus: "NONE" | "SELF" | "RELATED"; pepDetails: string | null; dttotPpsdmMatch: boolean; dttotPpsdmNotes: string | null; declaredMonthlyValueIdr: string | null; declaredMonthlyCount: number | null; declaredCurrencies: string[] | null; customerType: "INDIVIDU" | "BADAN_USAHA" | null; entityLegalForm: string | null; occupationCategory: string | null };
 const toDateInputValue = (value: string | Date | null | undefined) => (value ? new Date(value).toISOString().slice(0, 10) : "");
+/**
+ * Nasabah yang kategori Form C1-nya belum lengkap: belum dinyatakan jenisnya, badan usaha tanpa
+ * bentuk badan hukum, atau perorangan tanpa kategori pekerjaan.
+ *
+ * Kekosongan yang terlihat, bukan yang diam. Tidak ada backfill: menebak kategori dari teks bebas
+ * berarti mengarang data nasabah, sehingga yang tersisa adalah menampilkannya sebagai pekerjaan
+ * yang menunggu.
+ */
+function kategoriBelumDiisi(customer: { customerType: string | null; entityLegalForm: string | null; occupationCategory: string | null }) {
+  if (!customer.customerType) return true;
+  return customer.customerType === "BADAN_USAHA" ? !customer.entityLegalForm : !customer.occupationCategory;
+}
+
 const editFormFromCustomer = (customer: CustomerRow) => ({
   fullName: customer.fullName, phoneNumber: customer.phoneNumber ?? "", identityType: customer.identityType, identityNumber: customer.identityNumber,
   identityExpiryDate: toDateInputValue(customer.identityExpiryDate), placeOfBirth: customer.placeOfBirth ?? "", dateOfBirth: toDateInputValue(customer.dateOfBirth),
@@ -31,6 +45,11 @@ const editFormFromCustomer = (customer: CustomerRow) => ({
   declaredMonthlyValueIdr: customer.declaredMonthlyValueIdr ?? "",
   declaredMonthlyCount: customer.declaredMonthlyCount === null || customer.declaredMonthlyCount === undefined ? "" : String(customer.declaredMonthlyCount),
   declaredCurrencies: customer.declaredCurrencies ?? [],
+  // Kategori BI ikut dibawa dan selalu dikirim kembali secara eksplisit, sehingga borang ini tidak
+  // pernah mengosongkan kategori yang tidak sedang disunting.
+  customerType: customer.customerType ?? "",
+  entityLegalForm: customer.entityLegalForm ?? "",
+  occupationCategory: customer.occupationCategory ?? "",
   changeReason: "",
 });
 
@@ -110,6 +129,9 @@ export default function CustomerList() {
       declaredMonthlyValueIdr: editForm.declaredMonthlyValueIdr.trim() || undefined,
       declaredMonthlyCount: editForm.declaredMonthlyCount.trim() ? Number(editForm.declaredMonthlyCount) : undefined,
       declaredCurrencies: editForm.declaredCurrencies.length > 0 ? editForm.declaredCurrencies : undefined,
+      customerType: (editForm.customerType || null) as never,
+      entityLegalForm: (editForm.customerType === "BADAN_USAHA" ? editForm.entityLegalForm || null : null) as never,
+      occupationCategory: (editForm.customerType === "BADAN_USAHA" ? null : editForm.occupationCategory || null) as never,
     });
   };
 
@@ -201,7 +223,8 @@ export default function CustomerList() {
                           {customer.hasBeneficialOwner ? <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700">BO{customer.beneficialOwnerCustomerId ? `: ${nameById.get(customer.beneficialOwnerCustomerId) ?? `#${customer.beneficialOwnerCustomerId}`}` : ""}</Badge> : null}
                           {customer.pepStatus !== "NONE" ? <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">{customer.pepStatus === "SELF" ? "PEP" : "Hub. PEP"}</Badge> : null}
                           {customer.dttotPpsdmMatch ? <Badge className="bg-rose-600 text-white hover:bg-rose-600">DTTOT/PPSPM</Badge> : null}
-                          {!customer.hasBeneficialOwner && customer.pepStatus === "NONE" && !customer.dttotPpsdmMatch ? <span className="text-xs text-[#94a7bb]">—</span> : null}
+                          {kategoriBelumDiisi(customer) ? <Badge variant="outline" className="border-slate-300 bg-slate-50 text-slate-600">Kategori BI belum diisi</Badge> : null}
+                          {!customer.hasBeneficialOwner && customer.pepStatus === "NONE" && !customer.dttotPpsdmMatch && !kategoriBelumDiisi(customer) ? <span className="text-xs text-[#94a7bb]">—</span> : null}
                         </div>
                       </td>
                       <td className="px-3 py-3 text-xs whitespace-nowrap text-[#475569]">{formatDate(customer.createdAt)}</td>
@@ -266,6 +289,14 @@ export default function CustomerList() {
                 <div><Label className="text-xs">Tingkat risiko</Label><Select value={editForm.riskLevel} onValueChange={(v) => setEditForm({ ...editForm, riskLevel: v as typeof editForm.riskLevel })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="LOW">Rendah</SelectItem><SelectItem value="MEDIUM">Sedang</SelectItem><SelectItem value="HIGH">Tinggi</SelectItem></SelectContent></Select></div>
               </div>
               <div><Label className="text-xs">Catatan risiko</Label><Input className="mt-1" value={editForm.riskNotes} onChange={(e) => setEditForm({ ...editForm, riskNotes: e.target.value })} /></div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div><Label className="text-xs">Jenis nasabah (Form C1)</Label><Select value={editForm.customerType || "BELUM"} onValueChange={(v) => setEditForm({ ...editForm, customerType: v === "BELUM" ? "" : v, entityLegalForm: "", occupationCategory: "" })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="BELUM">Belum dinyatakan</SelectItem><SelectItem value="INDIVIDU">Perorangan</SelectItem><SelectItem value="BADAN_USAHA">Badan usaha</SelectItem></SelectContent></Select></div>
+                {editForm.customerType === "BADAN_USAHA" ? (
+                  <div><Label className="text-xs">Bentuk badan hukum</Label><Select value={editForm.entityLegalForm || "BELUM"} onValueChange={(v) => setEditForm({ ...editForm, entityLegalForm: v === "BELUM" ? "" : v })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="BELUM">Belum dipilih</SelectItem>{Object.entries(IRA_LEGAL_FORM_LABELS).map(([code, label]) => <SelectItem key={code} value={code}>{label}</SelectItem>)}</SelectContent></Select></div>
+                ) : (
+                  <div><Label className="text-xs">Kategori pekerjaan (Form C1)</Label><Select value={editForm.occupationCategory || "BELUM"} onValueChange={(v) => setEditForm({ ...editForm, occupationCategory: v === "BELUM" ? "" : v })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="BELUM">Belum dipilih</SelectItem>{Object.entries(IRA_OCCUPATION_CATEGORY_LABELS).map(([code, label]) => <SelectItem key={code} value={code}>{label}</SelectItem>)}</SelectContent></Select></div>
+                )}
+              </div>
               <div><Label className="text-xs">Perkiraan nilai transaksi sebulan menurut nasabah (Rupiah)</Label><Input className="mt-1" inputMode="decimal" value={editForm.declaredMonthlyValueIdr} onChange={(e) => setEditForm({ ...editForm, declaredMonthlyValueIdr: e.target.value })} placeholder="Kosongkan bila nasabah belum menyatakan" /></div>
               <div><Label className="text-xs">Perkiraan banyaknya transaksi sebulan menurut nasabah</Label><Input className="mt-1" type="number" min={0} step={1} value={editForm.declaredMonthlyCount} onChange={(e) => setEditForm({ ...editForm, declaredMonthlyCount: e.target.value })} placeholder="Kosongkan bila nasabah belum menyatakan" /></div>
               <div className="sm:col-span-2">

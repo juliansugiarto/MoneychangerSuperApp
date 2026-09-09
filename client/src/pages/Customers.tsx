@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { WatchlistCheckButton } from "@/components/WatchlistCheck";
 import { trpc } from "@/lib/trpc";
+import { IRA_LEGAL_FORM_LABELS, IRA_OCCUPATION_CATEGORY_LABELS } from "@shared/iraVocabulary";
 import { AlertTriangle, ShieldAlert, ShieldCheck, Upload, UserPlus, Users } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -40,6 +41,11 @@ const initialForm = {
   riskNotes: "",
   declaredMonthlyValueIdr: "",
   declaredMonthlyCount: "",
+  // Terpilih lebih dulu karena hampir seluruh nasabah perorangan; petugas menggantinya untuk badan
+  // usaha. Kategori pekerjaan sengaja dibiarkan kosong — menebaknya berarti mengarang data nasabah.
+  customerType: "INDIVIDU" as "INDIVIDU" | "BADAN_USAHA",
+  entityLegalForm: "",
+  occupationCategory: "",
 };
 
 const initialBeneficialOwner = {
@@ -133,6 +139,10 @@ export default function Customers() {
       declaredMonthlyValueIdr: form.declaredMonthlyValueIdr.trim() || undefined,
       declaredMonthlyCount: form.declaredMonthlyCount.trim() ? Number(form.declaredMonthlyCount) : undefined,
       declaredCurrencies: declaredCurrencies.length > 0 ? declaredCurrencies : undefined,
+      customerType: form.customerType,
+      // Kosong dikirim sebagai null, bukan dihilangkan: borang ini selalu menyatakan ketiganya.
+      entityLegalForm: form.customerType === "BADAN_USAHA" ? (form.entityLegalForm || null) as never : null,
+      occupationCategory: form.customerType === "INDIVIDU" ? (form.occupationCategory || null) as never : null,
     });
   };
 
@@ -200,6 +210,38 @@ export default function Customers() {
                 <Select value={form.riskLevel} onValueChange={(value) => setForm({ ...form, riskLevel: value as typeof form.riskLevel })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="LOW">Rendah</SelectItem><SelectItem value="MEDIUM">Menengah</SelectItem><SelectItem value="HIGH">Tinggi</SelectItem></SelectContent></Select>
               </Field>
             </div>
+            <div className="rounded-2xl border border-[#e2eaf2] bg-[#fbfdff] p-4">
+              <p className="text-sm font-semibold text-[#18395f]">Kategori menurut Bank Indonesia</p>
+              <p className="mt-1 text-xs leading-5 text-[#475569]">
+                Kosakata tertutup Form C1. Berdampingan dengan ruas <b>Pekerjaan</b> di atas, tidak menggantikannya —
+                kwitansi dan pelaporan goAML tetap mencetak kata-kata sebagaimana tertulis pada identitas.
+              </p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <Field label="Jenis nasabah" required>
+                  <Select value={form.customerType} onValueChange={(value) => setForm({ ...form, customerType: value as typeof form.customerType, entityLegalForm: "", occupationCategory: "" })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="INDIVIDU">Perorangan</SelectItem><SelectItem value="BADAN_USAHA">Badan usaha</SelectItem></SelectContent>
+                  </Select>
+                </Field>
+                {form.customerType === "BADAN_USAHA" ? (
+                  <Field label="Bentuk badan hukum" required>
+                    <Select value={form.entityLegalForm} onValueChange={(value) => setForm({ ...form, entityLegalForm: value })}>
+                      <SelectTrigger><SelectValue placeholder="Pilih bentuk badan hukum" /></SelectTrigger>
+                      <SelectContent>{Object.entries(IRA_LEGAL_FORM_LABELS).map(([code, label]) => <SelectItem key={code} value={code}>{label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </Field>
+                ) : (
+                  <Field label="Kategori pekerjaan">
+                    <Select value={form.occupationCategory} onValueChange={(value) => setForm({ ...form, occupationCategory: value })}>
+                      <SelectTrigger><SelectValue placeholder="Belum dipilih — dapat dilengkapi kemudian" /></SelectTrigger>
+                      <SelectContent>{Object.entries(IRA_OCCUPATION_CATEGORY_LABELS).map(([code, label]) => <SelectItem key={code} value={code}>{label}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <p className="mt-1 text-xs text-[#94a7bb]">Boleh dikosongkan bila belum jelas; yang kosong muncul sebagai pekerjaan yang menunggu pada daftar nasabah.</p>
+                  </Field>
+                )}
+              </div>
+            </div>
+
             <Field label="Sumber dana" required><Textarea value={form.sourceOfFunds} onChange={(event) => setForm({ ...form, sourceOfFunds: event.target.value })} rows={2} /></Field>
             <Field label="Tujuan transaksi" required><Textarea value={form.transactionPurpose} onChange={(event) => setForm({ ...form, transactionPurpose: event.target.value })} rows={2} /></Field>
             <Field label="Catatan risiko"><Textarea value={form.riskNotes} onChange={(event) => setForm({ ...form, riskNotes: event.target.value })} rows={2} /></Field>

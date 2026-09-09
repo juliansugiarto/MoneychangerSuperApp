@@ -138,6 +138,7 @@ import { OPERATIONAL_TIMEZONE_VALUES } from "../shared/regulatoryActionQueue";
 import { simulateArchiveReadiness, simulateClosing, simulateExchange, simulateRateShock } from "./simulation";
 import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedure, router, staffProcedure } from "./_core/trpc";
 import { classifyRisk, iraClassificationDenial, listClassifications } from "./iraRiskClassification";
+import { IRA_CUSTOMER_TYPE_VALUES, IRA_LEGAL_FORM_VALUES, IRA_OCCUPATION_CATEGORY_VALUES } from "../shared/iraVocabulary";
 import { iraRiskDimensions, iraRiskLevels, iraRiskTypes } from "../drizzle/schema";
 import { createInternalSession, hashPassword, internalSessionMaxAge, validateUsername, verifyInternalCredentials, verifyPassword } from "./internalAuth";
 import { createInternalUser, getInternalUserById, listInternalUsers, updateInternalUserPassword, updateInternalUserRole, updateInternalUserStatus } from "./db";
@@ -178,6 +179,35 @@ export const beneficialOwnerInput = z.object({
  * mengarang deklarasi atas nama mereka. Kode mata uangnya diperiksa lebih lanjut terhadap tabel
  * mata uang di lapisan operasi — kode tak dikenal ditolak dengan pesannya, tidak disimpan diam-diam.
  */
+/**
+ * Kategori nasabah menurut kosakata tertutup BI (Form C1).
+ *
+ * `.optional().nullable()` dan perbedaannya bermakna: **tidak dikirim** berarti biarkan apa adanya,
+ * **null** berarti kosongkan. Ketiga kolom deklarasi profil di bawah berperilaku sebaliknya — yang
+ * tidak dikirim dikosongkan — sehingga nasabah lama yang disunting karena berganti nomor telepon
+ * akan kehilangan kategorinya kalau pola itu diikuti di sini. Borangnya sendiri selalu mengirim
+ * ketiganya secara eksplisit, jadi dari layar keduanya berperilaku sama; yang dibedakan hanyalah
+ * kontrak bagi pemanggil yang bukan borang.
+ */
+const customerCategoryInput = {
+  customerType: z.enum(IRA_CUSTOMER_TYPE_VALUES).optional().nullable(),
+  entityLegalForm: z.enum(IRA_LEGAL_FORM_VALUES).optional().nullable(),
+  occupationCategory: z.enum(IRA_OCCUPATION_CATEGORY_VALUES).optional().nullable(),
+};
+
+/** Kaitan jenis nasabah dengan bentuk badan hukum, dipakai borang buat maupun sunting. */
+function refineCustomerCategories(
+  value: { customerType?: string | null; entityLegalForm?: string | null },
+  ctx: z.RefinementCtx,
+) {
+  if (value.customerType === "BADAN_USAHA" && !value.entityLegalForm) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Bentuk badan hukum wajib diisi untuk nasabah badan usaha.", path: ["entityLegalForm"] });
+  }
+  if (value.customerType === "INDIVIDU" && value.entityLegalForm) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Bentuk badan hukum tidak berlaku untuk nasabah perorangan.", path: ["entityLegalForm"] });
+  }
+}
+
 const profileDeclarationInput = {
   declaredMonthlyValueIdr: decimalString.optional(),
   declaredMonthlyCount: z.number().int().min(0).max(100000).optional(),
@@ -240,7 +270,9 @@ export const customerInput = z.object({
   dttotPpsdmMatch: z.boolean().optional(),
   dttotPpsdmNotes: z.string().trim().max(1000).optional(),
   ...profileDeclarationInput,
+  ...customerCategoryInput,
 }).superRefine((value, ctx) => {
+  refineCustomerCategories(value, ctx);
   if (value.hasBeneficialOwner && !value.beneficialOwner) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Data pemilik manfaat (beneficial owner) wajib diisi.", path: ["beneficialOwner"] });
   }
@@ -283,7 +315,9 @@ export const customerUpdateInput = z.object({
   dttotPpsdmNotes: z.string().trim().max(1000).optional(),
   changeReason: z.string().trim().min(5).max(500),
   ...profileDeclarationInput,
+  ...customerCategoryInput,
 }).superRefine((value, ctx) => {
+  refineCustomerCategories(value, ctx);
   if (value.pepStatus !== "NONE" && !value.pepDetails?.trim()) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Keterangan PEP wajib diisi.", path: ["pepDetails"] });
   }

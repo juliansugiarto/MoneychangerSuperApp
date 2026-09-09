@@ -40,6 +40,7 @@ import {
   transactionReviewActions,
   type StaffRole,
 } from "../drizzle/schema";
+import type { IraCustomerType, IraLegalForm, IraOccupationCategory } from "../shared/iraVocabulary";
 import { getDb } from "./db";
 import { knownDenominationsFor } from "../shared/currencyDenominations";
 import { PRIMARY_REVENUE_ROW_KEY } from "../shared/regulatoryForms";
@@ -644,6 +645,10 @@ export type CustomerInput = {
   /** Kecocokan dengan DTTOT/PPSPM; bila true, wajib dilaporkan LTKM ke PPATK secara manual sesuai prosedur resmi. */
   dttotPpsdmMatch?: boolean;
   dttotPpsdmNotes?: string;
+  /** Kategori tertutup BI (Form C1). Tidak dikirim berarti biarkan; null berarti kosongkan. */
+  customerType?: IraCustomerType | null;
+  entityLegalForm?: IraLegalForm | null;
+  occupationCategory?: IraOccupationCategory | null;
 };
 
 export async function listCustomers() {
@@ -741,6 +746,39 @@ export async function getCustomerById(customerId: number) {
  * Kosong tetap kosong. Nasabah yang belum berdeklarasi disimpan sebagai `null`, bukan nol: nol akan
  * mengarang deklarasi atas nama nasabah sekaligus membuat ambang penyimpangannya nol.
  */
+type CustomerCategoryFields = {
+  customerType?: IraCustomerType | null;
+  entityLegalForm?: IraLegalForm | null;
+  occupationCategory?: IraOccupationCategory | null;
+};
+
+/**
+ * Menyiapkan kategori nasabah untuk disimpan, **mempertahankan yang tidak dikirim**.
+ *
+ * Berbeda dengan `resolveProfileDeclaration` di bawah, yang memetakan tidak-dikirim menjadi null.
+ * Perbedaan itu disengaja: borang deklarasi selalu mengirim ketiga ruasnya, sedangkan kategori
+ * boleh diisi menyusul lewat worklist pelengkapan, dan penyuntingan atas alasan lain tidak boleh
+ * menghapus kategori yang sudah susah payah ditanyakan kepada nasabah. Yang mengosongkan adalah
+ * `null` yang dikirim dengan sengaja.
+ *
+ * Ketidaksesuaian yang tidak mungkin dinyatakan dibetulkan di sini, bukan hanya di Zod: badan usaha
+ * tidak punya kategori pekerjaan perorangan, dan perorangan tidak punya bentuk badan hukum. Satu
+ * baris yang keduanya terisi akan membuat komposisi profesi Form C1 menghitung korporasi sebagai
+ * orang.
+ */
+function resolveCustomerCategories(input: CustomerCategoryFields, existing?: CustomerCategoryFields | null) {
+  const keep = <T>(sent: T | null | undefined, current: T | null | undefined): T | null =>
+    sent === undefined ? current ?? null : sent ?? null;
+  const customerType = keep(input.customerType, existing?.customerType);
+  const entityLegalForm = keep(input.entityLegalForm, existing?.entityLegalForm);
+  const occupationCategory = keep(input.occupationCategory, existing?.occupationCategory);
+  return {
+    customerType,
+    entityLegalForm: customerType === "INDIVIDU" ? null : entityLegalForm,
+    occupationCategory: customerType === "BADAN_USAHA" ? null : occupationCategory,
+  };
+}
+
 async function resolveProfileDeclaration(
   reader: { select: () => { from: (table: typeof currencies) => Promise<{ code: string }[]> } },
   input: { declaredMonthlyValueIdr?: string | null; declaredMonthlyCount?: number | null; declaredCurrencies?: string[] | null },
@@ -778,6 +816,7 @@ export async function createCustomer(input: CustomerInput, actorUserId: number) 
   const isHighRisk = Boolean(input.dttotPpsdmMatch);
   const db = await databaseOrThrow();
   const declaration = await resolveProfileDeclaration(db as never, input);
+  const categories = resolveCustomerCategories(input);
   const created = await db.transaction(async (tx) => {
     await tx.insert(customers).values({
       cifNumber,
@@ -810,6 +849,7 @@ export async function createCustomer(input: CustomerInput, actorUserId: number) 
       profileStatus: isHighRisk ? "RESTRICTED" : "ACTIVE",
       riskNotes: input.riskNotes?.trim() || null,
       ...declaration,
+      ...categories,
       createdByUserId: actorUserId,
     });
     const [row] = await tx.select().from(customers).where(eq(customers.cifNumber, cifNumber)).limit(1);
@@ -882,6 +922,10 @@ export type CustomerUpdateInput = {
   declaredMonthlyValueIdr?: string;
   declaredMonthlyCount?: number;
   declaredCurrencies?: string[];
+  /** Kategori tertutup BI (Form C1). Tidak dikirim berarti biarkan; null berarti kosongkan. */
+  customerType?: IraCustomerType | null;
+  entityLegalForm?: IraLegalForm | null;
+  occupationCategory?: IraOccupationCategory | null;
 };
 
 /**
@@ -900,6 +944,7 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
   if (!existing) throw new Error("Nasabah tidak ditemukan.");
 
   const declaration = await resolveProfileDeclaration(db as never, input);
+  const categories = resolveCustomerCategories(input, existing);
 
   const nextValues = {
     fullName: input.fullName.trim(),
@@ -930,6 +975,7 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
     dttotPpsdmMatch: input.dttotPpsdmMatch,
     dttotPpsdmNotes: input.dttotPpsdmMatch ? input.dttotPpsdmNotes?.trim() || null : null,
     ...declaration,
+    ...categories,
   };
 
   await db.update(customers).set(nextValues).where(eq(customers.id, input.customerId));
@@ -945,6 +991,7 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
       dttotPpsdmMatch: existing.dttotPpsdmMatch, dttotPpsdmNotes: existing.dttotPpsdmNotes,
       declaredMonthlyValueIdr: existing.declaredMonthlyValueIdr, declaredMonthlyCount: existing.declaredMonthlyCount,
       declaredCurrencies: existing.declaredCurrencies,
+      customerType: existing.customerType, entityLegalForm: existing.entityLegalForm, occupationCategory: existing.occupationCategory,
     },
     afterState: nextValues,
     reason: changeReason,
