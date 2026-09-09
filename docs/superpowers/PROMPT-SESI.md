@@ -65,15 +65,18 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 9 September 2026 (sesudah Paket J selesai)
+## Sesi berikutnya — keadaan per 9 September 2026 (sesudah Paket K3)
 
-Paket K1, B, D, C, E, F1, F2, **G**, **H**, **I**, **J (J1 + J2)**, dan **K2 sudah selesai**.
-**Yang tersisa hanyalah Paket K3**, dan ia tetap **menunggu naskah SE BI 18/41/DKSP** dari pengguna
-— tidak boleh dimulai tanpa naskah atau daftar field wajibnya.
+**Seluruh paket peta jalan asli sudah selesai:** K1, B, D, C, E, F1, F2, G, H, I, J (J1+J2), K2,
+dan K3. Dua belas temuan pemeriksaan BI 2026 sudah tertutup.
 
-Baseline uji yang benar-benar dijalankan 9 September 2026 sesudah Paket K2:
-`Test Files 152 passed (152)`, `Tests 1305 passed | 2 skipped (1307)`. `tsc --noEmit` bersih,
-`vite build` sukses. Migrasi terakhir adalah **`0056`**.
+**Pekerjaan berikutnya adalah Paket L**, yang lahir dari pembacaan **PBI No. 10 Tahun 2024** —
+peraturan APU/PPT/PPPSPM yang berlaku dan yang belum pernah dibaca proyek ini sampai 9 September
+2026. Rancangannya sudah ada; **belum ada kode yang ditulis.**
+
+Baseline uji yang benar-benar dijalankan 9 September 2026 sesudah Paket K3:
+`Test Files 153 passed (153)`, `Tests 1313 passed | 2 skipped (1315)`. `tsc --noEmit` bersih,
+`vite build` sukses. Migrasi terakhir adalah **`0056`**; Paket L akan menambah `0057`.
 
 **Satu uji diketahui flaky dan bukan bagian paket mana pun:** `server/tenantIsolation.live.test.ts`
 > *"setiap ikatan hanya melihat database miliknya sendiri"*. Bila gagal sendirian di bawah beban,
@@ -407,24 +410,83 @@ Yang perlu diketahui sesi berikutnya, **jangan diturunkan ulang**:
   `scripts/seedWatchlistDemo.mjs` (idempoten, menolak host/basis data non-lokal). **Jangan
   dibersihkan.**
 
-### Paket K3 — Nota terhadap SE BI 18/41/DKSP — **PREMISNYA SALAH, menunggu keputusan**
+### Paket K3 — Nota terhadap SE BI **18/42**/DKSP — **SELESAI 9 September 2026**
 
-Naskahnya sudah diberikan dan dibaca **9 September 2026** (`SE_184116.pdf`, 40 halaman).
-**Bukan tentang KUPVA BB maupun nota:** perihalnya *Penyelenggaraan Pemrosesan Transaksi
-Pembayaran*, dasarnya **PBI 18/40/PBI/2016**, dan isinya perizinan Switching, Payment Gateway,
-Dompet Elektronik, Transfer Dana. Kemunculan `KUPVA`, `valuta asing`, `penukaran`, `nota`,
-`bukti transaksi`, `kuitansi` di seluruh naskahnya: **nol**.
+Spec `specs/2026-09-09-nota-terhadap-se-bi-1842-design.md`.
 
-**Jangan menurunkan field nota dari dokumen itu.** Hasilnya akan kosong, dan melaporkannya sebagai
-"nota sudah sesuai" adalah penyelesaian palsu.
+**Dasar hukumnya bukan 18/41.** Naskah 18/41 dibaca dan ternyata mengatur *Penyelenggaraan
+Pemrosesan Transaksi Pembayaran* — nol kemunculan `KUPVA`. Yang mengatur nota adalah **SE BI
+18/42/DKSP huruf G angka 1**, tujuh field wajib, di bawah bagian **perlindungan konsumen**. Surat
+temuan BI sendiri menulis 18/41; itu kemungkinan salah ketik di surat temuannya, dan **jangan
+diperbaiki tanpa bertanya.**
 
-Yang dibutuhkan adalah naskah **PBI 18/20/PBI/2016** (KUPVA BB, sudah dikutip nota sebagai
-disclaimer) atau **SE BI 18/42/DKSP** (pelaksananya). Angka `18/41` kemungkinan salah ketik atas
-`18/42` sejak awal — **dugaan, jangan dijadikan dasar.**
+Lima dari tujuh sudah terpenuhi sebelumnya. Yang kurang huruf d dan e — arah pembayaran hanya
+tersirat dari kode `BNB`/`BNS`. Kini dicetak harfiah. Penjaga `server/notaSeBi1842.test.ts`.
 
-Inventaris ±25 field yang dicetak `printBon()` hari ini sudah siap di
-`specs/2026-09-09-nota-inventaris-field-k3.md`; begitu naskah yang benar ada, kerjanya tinggal satu
-kali pembandingan berdampingan.
+**Risiko residual:** tanggal nota masih diformat `toLocaleDateString` dengan zona waktu **peramban**,
+padahal tanggal adalah field wajib huruf b dan proyek ini sudah punya zona operasionalnya sendiri.
+
+---
+
+### Paket L — Jejak penyaringan nasabah dan persetujuan risiko tinggi (6 tugas) — **PEKERJAAN BERIKUTNYA**
+
+**Rancangan selesai 9 September 2026, kode belum ditulis sama sekali.**
+Spec `specs/2026-09-09-penyaringan-nasabah-dan-persetujuan-risiko-tinggi-design.md`,
+rencana `plans/2026-09-09-penyaringan-nasabah-dan-persetujuan-risiko-tinggi.md`.
+
+Menutup Temuan 1 dan 2 pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`.
+
+**Yang harus diketahui sebelum menyentuhnya:**
+
+- **Paket ini menambahkan tindakan MEMBLOKIR untuk pertama kalinya.** Nasabah `riskLevel = HIGH`
+  yang belum disetujui SHAREHOLDER tidak dapat dipakai pada bon baru. Seluruh aplikasi lain sengaja
+  hanya mencatat dan memperingatkan; `director_acknowledgements` bahkan menyatakan dirinya *tidak
+  boleh* memblokir. **Ini keputusan sadar pengguna, bukan kekeliruan — jangan "diperbaiki".**
+- **Aman diterapkan:** produksi memuat satu nasabah berstatus `LOW` (diperiksa baca-saja
+  9 September 2026), jadi tidak ada yang terblokir pada hari penerapannya.
+- **`dttotPpsdmMatch` tidak pernah diisi otomatis**, meski penyaringannya kini otomatis. Mesin
+  mencatat kemungkinan; manusia memutuskan. Ada ujinya sendiri.
+- **Baris penyaringan ditulis MESKI nihil.** Baris nihil itulah buktinya. "Simpan hanya bila ada
+  temuan" adalah optimasi yang justru menghapus yang dicari pemeriksa.
+- **Tenggat pelaporan Pasal 60 DI LUAR LINGKUP** atas keputusan pengguna 9 September 2026 —
+  negosiasi dengan BI sudah selesai. Jangan membangun antrean tenggat, dan jangan membangun kalender
+  hari kerja untuk itu.
+
+```
+Baca docs/superpowers/plans/2026-09-09-penyaringan-nasabah-dan-persetujuan-risiko-tinggi.md
+beserta spec yang dirujuknya, lalu bagian "Aturan kerja yang berlaku untuk seluruh paket" pada
+docs/superpowers/ROADMAP-SISA-PEKERJAAN.md.
+
+Kerjakan Tugas <N> saja, satu commit yang berdiri sendiri beserta ujinya. Patuhi "Global
+Constraints" pada rencana itu — terutama: migrasi hanya ke dua basis data lokal dan tidak pernah
+ke produksi; otorisasi ditegakkan di penulis, bukan hanya router; dttotPpsdmMatch tidak pernah
+diisi otomatis; dan baris penyaringan ditulis meski nihil.
+
+Jangan menurunkan ulang tiga keputusan pengguna yang tertulis di rencana itu. Bila menemukan
+keadaan yang berbeda dari yang tertulis, percayai kodenya, katakan apa yang berbeda, lalu
+perbarui dokumennya sambil lewat.
+```
+
+---
+
+### Pekerjaan yang sudah teridentifikasi tetapi belum dirancang
+
+Urut sesuai usul pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`:
+
+1. **Temuan 4 — `deleteCompanyDocument` masih `DELETE` sungguhan tanpa audit**, sementara Pasal 48
+   PBI 10/2024 menuntut penatausahaan paling singkat **5 tahun**. Sudah tercatat sebagai risiko
+   residual Paket I; derajatnya naik dari kerapian menjadi kewajiban.
+2. **Temuan 3 — pemblokiran serta merta dan pencatatan percobaan transaksi** (Pasal 47 ayat 1
+   huruf d). **Menunggu keputusan pengguna**, dan menuntut penulis data yang belum ada sama sekali.
+3. **Temuan 7 — penginian berkala klasifikasi risiko** (Pasal 9 ayat 6) — menaikkan risiko residual
+   Paket J2 nomor 3 menjadi kewajiban.
+4. **Tanggal nota memakai zona waktu peramban** (risiko residual Paket K3).
+5. **Penjelasan pasal demi pasal PBI 10/2024 belum dibaca** untuk Pasal 9, 32, 47, dan 48.
+   Penjelasan sering menyempitkan bunyi pasalnya; **baca sebelum temuan mana pun menjadi rencana.**
+6. **BAB VI dan BAB IX–XI PBI 10/2024 belum dibaca terhadap kode.**
+
+**Antrean migrasi produksi kini 23** (`0034`–`0056`). Menerapkannya pekerjaan tersendiri yang belum
+direncanakan, dan tidak boleh dimulai tanpa permintaan eksplisit.
 
 ---
 
