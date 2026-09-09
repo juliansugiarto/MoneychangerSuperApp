@@ -17,7 +17,7 @@ tiga pemanggil; satu fungsi penolakan murni yang ditegakkan di penulis transaksi
 
 ## Status Pengerjaan
 
-- [ ] Tugas 1 — Migrasi `0057`: tabel riwayat penyaringan dan empat kolom keputusan
+- [x] Tugas 1 — Migrasi `0057`: tabel riwayat penyaringan dan empat kolom keputusan — **SELESAI 9 September 2026**
 - [ ] Tugas 2 — Penulis penyaringan beserta pemanggil saat nasabah dibuat dan diubah
 - [ ] Tugas 3 — Penyaringan ulang massal saat daftar diimpor
 - [ ] Tugas 4 — Gerbang persetujuan: fungsi penolakan murni dan penegakannya pada bon
@@ -85,7 +85,7 @@ Ditetapkan 9 September 2026. **Jangan menurunkannya ulang dan jangan menawarnya.
 
 **Files:** Modify `drizzle/schema.ts`. Create `drizzle/0057_*.sql`.
 
-- [ ] **Step 1:** Tambahkan tabel dan kolomnya pada `drizzle/schema.ts`:
+- [x] **Step 1:** Tambahkan tabel dan kolomnya pada `drizzle/schema.ts`:
 
 ```ts
 /**
@@ -127,18 +127,18 @@ export const customerWatchlistScreenings = mysqlTable("customer_watchlist_screen
   highRiskDecisionNotes: text("highRiskDecisionNotes"),
 ```
 
-- [ ] **Step 2:** `./node_modules/.bin/drizzle-kit generate`, lalu **BACA SQL-nya**. Paket ini
+- [x] **Step 2:** `./node_modules/.bin/drizzle-kit generate`, lalu **BACA SQL-nya**. Paket ini
       murni penambahan — `CREATE TABLE` dan empat `ADD COLUMN`. **Bila ada `MODIFY` atau `DROP`,
       berhenti dan laporkan.**
 
-- [ ] **Step 3:** Cadangkan, lalu terapkan ke dua basis data lokal saja.
+- [x] **Step 3:** Cadangkan, lalu terapkan ke dua basis data lokal saja.
 
 ```bash
 mysqldump -h 127.0.0.1 -u root --single-transaction --set-gtid-purged=OFF moneychanger customers > /tmp/l-customers-before.sql
 node scripts/tenant.mjs migrate-all
 ```
 
-- [ ] **Step 4:** Buktikan bawaan kolomnya benar dan tidak ada nasabah yang berubah statusnya:
+- [x] **Step 4:** Buktikan bawaan kolomnya benar dan tidak ada nasabah yang berubah statusnya:
 
 ```bash
 mysql -h 127.0.0.1 -u root -N -e "SELECT highRiskDecision, COUNT(*) FROM moneychanger.customers GROUP BY 1;
@@ -147,7 +147,7 @@ SELECT COUNT(*) FROM moneychanger.customer_watchlist_screenings;"
 
       Harus: seluruh nasabah `BELUM`, tabel penyaringan kosong.
 
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Migrasi riwayat penyaringan nasabah dan keputusan risiko tinggi"`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Migrasi riwayat penyaringan nasabah dan keputusan risiko tinggi"`.
 
 ---
 

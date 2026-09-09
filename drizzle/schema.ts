@@ -163,6 +163,15 @@ export const customers = mysqlTable("customers", {
    */
   dttotPpsdmMatch: boolean("dttotPpsdmMatch").default(false).notNull(),
   dttotPpsdmNotes: text("dttotPpsdmNotes"),
+  /**
+   * Keputusan Manajemen Senior atas nasabah berisiko tinggi — Pasal 32 ayat (5) dan (6) PBI
+   * 10/2024. Disetel ulang ke BELUM setiap kali riskLevel BERPINDAH menjadi HIGH, supaya
+   * persetujuan lama tidak diam-diam menaungi risiko tinggi yang timbul karena alasan baru.
+   */
+  highRiskDecision: mysqlEnum("highRiskDecision", ["BELUM", "DISETUJUI", "DITOLAK"]).default("BELUM").notNull(),
+  highRiskDecidedByUserId: int("highRiskDecidedByUserId"),
+  highRiskDecidedAt: datetime("highRiskDecidedAt"),
+  highRiskDecisionNotes: text("highRiskDecisionNotes"),
   profileStatus: mysqlEnum("profileStatus", ["ACTIVE", "RESTRICTED", "INACTIVE"]).default("ACTIVE").notNull(),
   riskLevel: mysqlEnum("riskLevel", ["LOW", "MEDIUM", "HIGH"]).default("LOW").notNull(),
   riskNotes: text("riskNotes"),
@@ -506,6 +515,30 @@ export const sanctionsWatchlistEntries = mysqlTable("sanctions_watchlist_entries
 }, (table) => [
   index("sanctions_watchlist_entries_scope_idx").on(table.listType, table.sourceLabel),
   index("sanctions_watchlist_entries_name_idx").on(table.fullName),
+]);
+
+/**
+ * Satu baris per penyaringan, tidak pernah disunting. Baris "nihil" (matchCount 0) justru bukti
+ * yang dicari pemeriksa — Pasal 47 ayat (1) huruf c PBI 10/2024 menuntut pengecekannya, bukan
+ * hanya temuannya.
+ */
+export const customerWatchlistScreenings = mysqlTable("customer_watchlist_screenings", {
+  id: int("id").autoincrement().primaryKey(),
+  customerId: int("customerId").notNull(),
+  screenedAt: timestamp("screenedAt").defaultNow().notNull(),
+  /** null berarti dijalankan sistem, bukan orang. */
+  screenedByUserId: int("screenedByUserId"),
+  trigger: mysqlEnum("trigger", ["NASABAH_DIBUAT", "NASABAH_DIUBAH", "DAFTAR_DIIMPOR", "MANUAL"]).notNull(),
+  matchCount: int("matchCount").notNull(),
+  summary: text("summary"),
+  /**
+   * `importedAt` terbaru pada saat penyaringan. Inilah yang menjawab pertanyaan sebenarnya:
+   * disaring terhadap daftar yang dipegang hari ini, atau terhadap daftar yang sudah usang?
+   * `null` bila belum ada daftar sama sekali saat itu.
+   */
+  listSnapshotAt: datetime("listSnapshotAt"),
+}, (table) => [
+  index("customer_watchlist_screening_customer_idx").on(table.customerId, table.screenedAt),
 ]);
 
 /** Every review/approval/return decision becomes a standalone immutable record. */
