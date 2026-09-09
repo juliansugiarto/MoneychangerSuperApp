@@ -144,7 +144,29 @@ MEDIUM 3 bulan, LOW 12 bulan**; tindak lanjut **worklist Controller yang hanya m
 - [x] Tugas 1–7 menurut rencana itu — **SELESAI 9 September 2026**
 
 ### Paket J — Individual Risk Assessment (temuan BI 11)
-- [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
+- [x] Sesi rancangan — spec `docs/superpowers/specs/2026-09-09-individual-risk-assessment-design.md`,
+      dua rencana: `plans/2026-09-09-individual-risk-assessment-j1-fondasi-data.md` dan
+      `plans/2026-09-09-individual-risk-assessment-j2-penilaian.md` *(9 September 2026)*
+
+**J1 — Fondasi data risiko inheren** (migrasi `0053`)
+- [ ] Tugas 1 — Kosakata tertutup BI sebagai konstanta murni
+- [ ] Tugas 2 — Migrasi: tiga kolom nasabah/bon/profil dan dua tabel klasifikasi
+- [ ] Tugas 3 — Penulis klasifikasi risiko beserta gerbang peran dan auditnya
+- [ ] Tugas 4 — Borang nasabah: jenis nasabah, bentuk badan hukum, kategori pekerjaan
+- [ ] Tugas 5 — Jalur distribusi pada bon
+- [ ] Tugas 6 — Pembaca agregat Form C1
+- [ ] Tugas 7 — Halaman Klasifikasi Risiko dan Ambang
+
+**J2 — Penilaian, kuesioner, dan persetujuan** (migrasi `0054`, sesudah J1 selesai)
+- [ ] Tugas 1 — Aritmetika penilaian, murni dan teruji
+- [ ] Tugas 2 — Katalog 33 parameter risiko inheren
+- [ ] Tugas 3 — Katalog 31 pertanyaan KPMR
+- [ ] Tugas 4 — Migrasi: empat tabel penilaian
+- [ ] Tugas 5 — Penghitung sisi inheren dari agregat dan klasifikasi
+- [ ] Tugas 6 — Penulis penilaian: buat, simpan, ajukan, setujui, gantikan
+- [ ] Tugas 7 — Halaman penilaian: Form C1, Form A1, pernyataan struktural
+- [ ] Tugas 8 — Kuesioner KPMR dan halaman hasil
+- [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 ### Paket K2 — Ganti nama PPPSM menjadi PPPSPM
 - [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
@@ -640,10 +662,29 @@ Dari memori sesi `ira-and-sdm-reporting`, dibaca 3 September 2026 dari template 
   kuesioner KPMR yang menuntut jawaban manusia. **Menghitung sisi inheren secara otomatis adalah
   pembeda yang kuat.**
 
-## Sketsa ruang lingkup
+## Sketsa ruang lingkup — **digantikan spec 9 September 2026**
+
+Sketsa di bawah ditulis 4 September 2026 sebelum template BI-nya dibaca. Yang mengikat sekarang
+adalah `specs/2026-09-09-individual-risk-assessment-design.md`; sketsa ini disimpan sebagai jejak.
 
 Tabel penilaian beserta faktor, skor, dan siklusnya; perhitungan sisi inheren dari data; kuesioner
 KPMR; matriks nilai akhir; halaman dan alur persetujuannya.
+
+## Yang ditemukan sesi rancangan dan mengubah bentuk paketnya
+
+Template BI aslinya dibaca 9 September 2026 dan mengubah empat hal:
+
+1. **Skalanya terbalik: `5 = risiko Rendah`, `1 = risiko Tinggi`**, pada sisi inheren maupun KPMR.
+2. **Nilai KPMR adalah rata-rata SEDERHANA kelima pilar** (`AVERAGE`), bukan berbobot. Bobot pilar
+   30/25/25/10/10 tercantum di lembar `Rekap` tetapi tidak dipakai rumus mana pun. Diikuti apa
+   adanya, dan dicatat sebagai risiko residual.
+3. **Lembar `C1` adalah formulir data yang justru dapat diisi aplikasi ini sepenuhnya** — omzet per
+   mata uang, jalur distribusi, komposisi pekerjaan dan badan usaha, PEP, nominal negara FATF/PBB.
+   Skor pada lembar `A1` seluruhnya turunan dari C1 lewat pita. Di situlah pembedanya.
+4. **Empat penulis data ternyata belum ada sama sekali**: kategori pekerjaan menurut kosakata
+   tertutup BI, jenis nasabah beserta bentuk badan hukumnya, jalur distribusi pada bon, dan provinsi
+   pada profil perusahaan. Karena itu paketnya dipecah dua — J1 membangun penulisnya, J2 membangun
+   penilaiannya. 24 dari 33 parameter terhitung, 9 dinyatakan penilai.
 
 ---
 

@@ -68,7 +68,7 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 ## Sesi berikutnya — keadaan per 9 September 2026
 
 Paket K1, B, D, C, E, F1, F2, **G**, **H**, dan **I sudah selesai** dan diperagakan end-to-end.
-**Pekerjaan berikutnya adalah sesi rancangan Paket J** — bloknya di bawah.
+**Pekerjaan berikutnya adalah Tugas 1 Paket J1** — rancangan Paket J selesai 9 September 2026, bloknya di bawah.
 
 Baseline uji yang benar-benar dijalankan 9 September 2026 sesudah Paket I:
 `Test Files 138 passed (138)`, `Tests 1119 passed | 2 skipped (1121)`. `tsc --noEmit` bersih,
@@ -324,91 +324,46 @@ tujuh tugasnya sudah dikerjakan dan diperagakan end-to-end: enam jenis dokumen p
 riwayat versi penuh dengan versi lama tetap dapat dibuka, penghapusan yang sesungguhnya
 penonaktifan beserta alasannya, dan worklist masa berlaku dengan peringatan 30 hari. Migrasi `0052`.
 
-### Paket J — Individual Risk Assessment (sesi rancangan dulu) — **PEKERJAAN BERIKUTNYA**
+### Paket J — Individual Risk Assessment (16 tugas, dua rencana)
 
-Paket terbesar yang tersisa. Blok lengkap di bawah, sudah termasuk isian Prompt A. Salin apa adanya.
+Sesi rancangannya selesai 9 September 2026 sesudah membaca template BI aslinya. Spec
+`specs/2026-09-09-individual-risk-assessment-design.md`; dua rencana, **dikerjakan berurutan** —
+J2 tidak punya sumber data tanpa J1.
+
+**Empat hal yang mengikat dan tidak boleh diturunkan ulang:**
+
+- **Skalanya terbalik: `5 = risiko Rendah`, `1 = risiko Tinggi`.**
+- **Nilai KPMR adalah rata-rata sederhana kelima pilar**, bukan berbobot — begitulah rumus di
+  berkasnya, dan itu disengaja diikuti.
+- 24 dari 33 parameter **terhitung** dari basis data; 9 **dinyatakan** penilai. Tidak ada parameter
+  yang skornya selalu nol karena sumbernya tidak ada.
+- **IRA tidak pernah menulis ke `customers`**, sejalan dengan Paket H.
+
+**J1 — Fondasi data risiko inheren** (7 tugas, migrasi `0053`). Ganti `<N>`:
 
 ```
-Baca docs/superpowers/ROADMAP-SISA-PEKERJAAN.md bagian "Paket J", lalu baca juga bagian
-"Aturan kerja yang berlaku untuk seluruh paket" pada dokumen yang sama.
+Baca docs/superpowers/plans/2026-09-09-individual-risk-assessment-j1-fondasi-data.md.
+Baca juga bagian "Keputusan pengguna yang mengikat" pada berkas itu — enam keputusan di sana
+tidak boleh diturunkan ulang maupun ditawar.
+Kerjakan HANYA Tugas <N>, ikuti langkahnya berurutan.
+Centang setiap langkah di berkas rencana setelah selesai,
+lalu centang barisnya di bagian Status Pengerjaan.
+Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
+```
 
-Rancang paket ini. Telusuri kodenya sungguhan lebih dulu — sketsa di ROADMAP sengaja tidak cukup
-untuk langsung menulis kode, dan rujukan berkas:baris di sana ditulis 4 September 2026 dan mungkin
-sudah bergeser. Yang wajib dibaca sungguhan sebelum merancang, karena inilah data yang menentukan
-apakah sisi risiko inheren dapat dihitung otomatis atau tidak:
+**J2 — Penilaian, kuesioner, dan persetujuan** (9 tugas, migrasi `0054`). **Jangan dimulai sebelum
+seluruh tugas J1 tercentang.** Ganti `<N>`:
 
-- tabel customers di drizzle/schema.ts — khususnya occupation, nationality, riskLevel, pepStatus,
-  dan ketiga kolom deklarasi profil yang ditambahkan Paket H;
-- exchange_transactions beserta exchange_transaction_lines dan ACCUMULATED_TRANSACTION_STATUSES —
-  dari sinilah persentase transaksi pada mata uang berisiko tinggi harus datang;
-- server/customerProfileMonitoring.ts — Paket H sudah membangun pembacaan aktivitas bulanan per
-  nasabah; JANGAN menulis pembaca kedua yang berbeda pendapat dengannya;
-- sanctions watchlist / DTTOT yang sudah ada, dan employee_profile_reviews beserta
-  employees/employee_pic_assignments untuk pilar Manajemen SDM;
-- company_profile untuk risiko lokasi cabang.
-
-Bobot IRA, pilar KPMR, dan skala penilaiannya pada bagian "Fakta yang sudah diverifikasi" di
-ROADMAP sudah dibaca langsung dari template BI milik saya — pakai apa adanya, jangan diturunkan
-ulang dan jangan dicari lagi. Istilahnya juga sudah tetap: yang dibangun IRA, sedangkan SRA adalah
-sumber peringkat risiko eksternal yang menjadi masukannya.
-
-Rancang secara eksplisit bagian mana dari sisi risiko inheren yang dapat dihitung otomatis dari
-data yang sudah dimiliki aplikasi, dan bagian mana yang menuntut jawaban manusia. Untuk setiap
-faktor inheren, sebutkan penulisnya yang sudah ada; bila sebuah faktor menuntut data yang belum
-pernah ditulis kode mana pun, penulisnya harus ikut dirancang dalam paket ini — atau faktornya
-tidak dibangun sama sekali. Skor yang selalu nol karena sumbernya tidak ada bukan penyelesaian.
-
-Pertanyaan yang merupakan keputusan kebijakan kepatuhan TANYAKAN kepada saya — jangan ditebak.
-Untuk paket ini, yang hampir pasti keputusan saya dan bukan turunan analisis:
-
-- Ambang tiap faktor risiko inheren: berapa persen transaksi pada mata uang berisiko tinggi yang
-  menjadikan skornya naik, dan daftar mata uang mana yang dianggap berisiko tinggi.
-- Daftar pekerjaan berisiko tinggi dan daftar kewarganegaraan FATF mana yang dipakai, serta
-  siapa yang memeliharanya dan bagaimana ia dikinikan.
-- Siklus penilaian: setahun sekali, atau mengikuti pemicu tertentu.
-- Siapa yang mengisi kuesioner KPMR, siapa yang menyetujui hasil akhirnya, dan apakah penilaian
-  yang sudah disetujui boleh disunting atau hanya dapat digantikan penilaian baru.
-- Apakah hasil IRA boleh mengubah riskLevel nasabah secara otomatis, atau hanya mengusulkan —
-  Paket H sudah menetapkan bahwa pemantauan profil TIDAK PERNAH mengubah data nasabah, jadi
-  jawabannya harus sejalan atau perbedaannya dijelaskan.
-
-Hormati batas yang sudah ada dan jangan menawarnya: jangan menambahkan pengiriman otomatis ke BI
-maupun PPATK; jangan memblokir transaksi; otorisasi ditegakkan di tRPC/server, bukan disembunyikan
-di UI; dan jangan menyimpan data KYC nyata, workbook aktual, atau secret di source, fixture, log,
-screenshot, dokumentasi, maupun commit.
-
-Hasilkan dua berkas:
-
-1. docs/superpowers/specs/2026-09-09-individual-risk-assessment-design.md
-   Masalah, yang sudah diputuskan pengguna, rancangan, yang sengaja tidak dikerjakan, risiko
-   residual. Ikuti bentuk docs/superpowers/specs/2026-09-08-arsip-dokumen-perusahaan-design.md.
-
-2. docs/superpowers/plans/2026-09-09-individual-risk-assessment.md
-   Rencana bertugas dengan bagian "Status Pengerjaan" di atas, bagian "Keputusan pengguna yang
-   mengikat", tabel berkas, lalu tiap tugas berisi langkah bernomor dengan checkbox, potongan kode
-   konkret, perintah verifikasi, dan perintah commit. Satu tugas = satu commit yang berdiri sendiri
-   beserta ujinya sendiri. Ikuti bentuk
-   docs/superpowers/plans/2026-09-08-arsip-dokumen-perusahaan.md — termasuk bagian
-   "Global Constraints" yang menyebut baseline uji, uji flaky yang diketahui, dan aturan migrasi.
-
-Seluruh aritmetika penilaian — bobot, rata-rata pilar yang mengecualikan N/A, dan matriks nilai
-akhir — harus menjadi fungsi MURNI di shared/, teruji sendiri, tanpa menyentuh basis data dan
-tanpa membaca jam. Angka kepatuhan harus dapat ditunjuk di satu tempat, bukan tersebar sebagai
-angka telanjang di tengah kode.
-
-Bila paket ini butuh migrasi, rencanakan tepat SATU tugas migrasi, dan tugas itu wajib memuat:
-baca SQL hasil drizzle-kit generate sebelum menerapkan, tulis rencana rollback di berkas rencana
-sebelum menerapkan, dan terapkan hanya lewat `node scripts/tenant.mjs migrate-all`. Jangan pernah
-menjalankan .sql langsung, dan jangan menerapkan migrasi ke produksi. Migrasi terakhir adalah 0052.
-
-Baseline uji yang benar-benar dijalankan 9 September 2026 sesudah Paket I:
-Test Files 138 passed (138), Tests 1119 passed | 2 skipped (1121). Pakai angka ini pada
-"Global Constraints" rencanamu; jangan mengarang angka lain.
-
-Bila paketnya ternyata terlalu besar untuk satu rencana, katakan demikian dan usulkan
-pemecahannya sebelum menulis — jangan memaksakan dua puluh tugas ke dalam satu berkas.
-
-JANGAN menulis kode aplikasi pada sesi ini. Commit dokumentasinya saja, lalu berhenti dan laporkan.
+```
+Baca docs/superpowers/plans/2026-09-09-individual-risk-assessment-j2-penilaian.md.
+Baca juga bagian "Keputusan pengguna yang mengikat" dan bagian "Angka yang mengikat — dari
+template BI" pada berkas itu. Bobot, anchor predikat, dan matriks nilai akhir di sana sudah
+dibaca langsung dari template BI milik pengguna — pakai apa adanya, jangan diturunkan ulang
+dan jangan dicari lagi.
+Kerjakan HANYA Tugas <N>, ikuti langkahnya berurutan.
+Centang setiap langkah di berkas rencana setelah selesai,
+lalu centang barisnya di bagian Status Pengerjaan.
+Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 ```
 
 ### Paket K2 — Ganti nama PPPSM menjadi PPPSPM (sesi rancangan dulu)
