@@ -145,6 +145,7 @@ import {
   iraEditDenial,
   listAssessments,
   readAssessment,
+  readInherentMachineScores,
   saveInherentValues,
   saveKpmrAnswers,
   saveStructuralDeclarations,
@@ -586,6 +587,12 @@ export const appRouter = router({
         if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
         return createAssessment(input, ctx.user);
       }),
+    /** Nilai mesin ke-24 parameter terhitung untuk periode penilaian ini, beserta agregat pembentuknya. */
+    machineScores: adminProcedure.input(z.object({ id: z.number().int().positive() })).query(({ input, ctx }) => {
+      const denial = iraEditDenial(ctx.user, null);
+      if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+      return readInherentMachineScores(input.id);
+    }),
     saveInherent: adminProcedure
       .input(z.object({
         assessmentId: z.number().int().positive(),

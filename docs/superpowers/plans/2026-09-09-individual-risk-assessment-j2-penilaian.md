@@ -28,7 +28,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 4 — Migrasi: empat tabel penilaian
 - [x] Tugas 5 — Penghitung sisi inheren dari agregat dan klasifikasi
 - [x] Tugas 6 — Penulis penilaian: buat, simpan, ajukan, setujui, gantikan
-- [ ] Tugas 7 — Halaman penilaian: Form C1, Form A1, pernyataan struktural
+- [x] Tugas 7 — Halaman penilaian: Form C1, Form A1, pernyataan struktural
 - [ ] Tugas 8 — Kuesioner KPMR dan halaman hasil
 - [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
@@ -432,20 +432,46 @@ describe("penilaian IRA", () => {
 **Files:** Create `client/src/pages/PenilaianRisiko.tsx`, `PenilaianRisikoDetail.tsx`;
 Modify `client/src/App.tsx`, `shared/backOfficeNavigation.ts`, `server/backOfficeNavigation.test.ts`
 
-- [ ] **Step 1:** Daftarkan `/kepatuhan/ira` dan `/kepatuhan/ira/:id` pada navigasi **dan** pada
+- [x] **Step 1:** Daftarkan `/kepatuhan/ira` dan `/kepatuhan/ira/:id` pada navigasi **dan** pada
       `server/backOfficeNavigation.test.ts`.
 
-- [ ] **Step 2:** Detailnya bertiga bagian: **Form C1** (angka terhitung, dengan hitungan nasabah
+- [x] **Step 2:** Detailnya bertiga bagian: **Form C1** (angka terhitung, dengan hitungan nasabah
       belum berkategori tampil jujur di atas), **Form A1** (nilai mesin, nilai terpakai, tombol
       menyimpang beserta alasan wajib), dan **pernyataan struktural** (sembilan parameter
       `DINYATAKAN`, berlabel *"dinyatakan penilai"*).
 
-- [ ] **Step 3:** Penilaian `DISETUJUI` tampil **hanya-baca seluruhnya**, dengan tombol "buat
+- [x] **Step 3:** Penilaian `DISETUJUI` tampil **hanya-baca seluruhnya**, dengan tombol "buat
       penilaian pengganti" — bukan tombol sunting yang menolak saat diklik.
 
-- [ ] **Step 4:** Keadaan loading, kosong, dan **error** ketiganya dilihat di layar sungguhan.
+- [x] **Step 4:** Keadaan loading, kosong, dan **error** ketiganya dilihat di layar sungguhan.
 
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Halaman penilaian risiko IRA"`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Halaman penilaian risiko IRA"`.
+
+> **Diperagakan di browser 9 September 2026** pada basis data lokal, penilaian `#1` periode
+> 1 Jan – 31 Des 2026: Form C1 membaca 8 bon dan omzet Rp 219.800.000 (USD 95,91% · SGD 2,73% ·
+> JPY 1,36%), Form A1 memberi `TPPU_1A = 1` dengan basis *"216800000.00 dari 219800000.00 =
+> 98,64%"*, lalu **Ajukan → Setujui** menghasilkan nilai beku inheren **4,3160 · Rendah ke
+> Menengah**, KPMR **4,0000 · Satisfactory**, dan nilai akhir **4 · Rendah ke Menengah** — sesuai
+> matriksnya. `frozenThresholds` berisi 33 baris, `frozenClassifications` 7 baris, dan `audit_logs`
+> memuat ketiga jejaknya (CREATED, SUBMITTED, APPROVED).
+>
+> **Dua hal yang hanya terlihat karena dibuka di layar:**
+>
+> 1. **Borang sempat mengarang nilai.** Parameter `NYATAKAN` yang belum dinyatakan ikut terkirim
+>    bernilai 5 karena tombol simpannya memakai `score ?? 5`. Itu memberi nilai **teraman** kepada
+>    parameter yang justru belum dinilai siapa pun. Sekarang parameter tanpa nilai **tidak dikirim**,
+>    nilai parameter `NYATAKAN` diturunkan dari pilihan pernyataannya, dan layar menghitung berapa
+>    yang belum bernilai (*"9 parameter belum bernilai"*) sebelum penilaiannya diajukan.
+> 2. **Keadaan error tidak muncul dengan sendirinya.** `QueryClient` aplikasi ini memakai bawaan,
+>    dan percobaan ulangnya berstatus `fetchStatus: "paused"`, sehingga halaman **bertahan di
+>    keadaan memuat** alih-alih menampilkan galat — persis alasan bercabang pada `isPending` dan
+>    bukan `isLoading`. Cabang error-nya dibuktikan dengan menahan percobaan ulang satu kali
+>    (`retry: 0`, dikembalikan sesudahnya) dan membuka `/kepatuhan/ira/9999`: *"Penilaian gagal
+>    dimuat. Penilaian 9999 tidak ditemukan."* beserta tombol **Coba lagi**.
+>
+> `readInherentMachineScores` ditambahkan pada `server/iraAssessment.ts` sebagai **satu-satunya
+> pemanggil** `scoreInherentParameters` — tanpa itu penghitung Tugas 5 tidak punya pemanggil sama
+> sekali, dan halamannya tidak akan punya angka mesin.
 
 ---
 

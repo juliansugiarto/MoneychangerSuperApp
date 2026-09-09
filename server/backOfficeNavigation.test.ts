@@ -39,6 +39,7 @@ const pageByPath: Record<string, string> = {
   "/operasional/profil-perusahaan": "CompanyProfile",
   "/operasional/go-live": "GoLiveSetup",
   "/kepatuhan/klasifikasi-risiko": "KlasifikasiRisiko",
+  "/kepatuhan/ira": "PenilaianRisiko",
 };
 
 const routeFor = (path: string, minimumRole: string, page: string) =>

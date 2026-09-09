@@ -178,7 +178,9 @@ MEDIUM 3 bulan, LOW 12 bulan**; tindak lanjut **worklist Controller yang hanya m
 - [x] Tugas 6 — Penulis penilaian: buat, simpan, ajukan, setujui, gantikan — **SELESAI 9 September 2026.**
       `server/iraAssessment.ts`, `iraEditDenial`/`iraApprovalDenial`, pembekuan snapshot saat
       disetujui, penggantian yang menautkan pendahulunya, dan prosedur `ira.*`.
-- [ ] Tugas 7 — Halaman penilaian: Form C1, Form A1, pernyataan struktural
+- [x] Tugas 7 — Halaman penilaian: Form C1, Form A1, pernyataan struktural — **SELESAI 9 September 2026.**
+      `/kepatuhan/ira` dan `/kepatuhan/ira/:id`, diperagakan end-to-end sampai penilaian disetujui
+      dan terkunci.
 - [ ] Tugas 8 — Kuesioner KPMR dan halaman hasil
 - [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 

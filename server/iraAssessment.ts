@@ -42,8 +42,11 @@ import {
 import { IRA_KPMR_PILLARS, IRA_KPMR_QUESTIONS, questionsOfPillar, type IraKpmrPillar } from "../shared/iraKpmrCatalogue";
 import { IRA_PARAMETER_CATALOGUE, catalogueEntry } from "../shared/iraParameterCatalogue";
 import type { IraParameterRiskType } from "../shared/iraParameters";
-import { listClassifications, listParameterThresholds } from "./iraRiskClassification";
-import { databaseOrThrow, writeAudit } from "./operations";
+import { readIraDataForm } from "./iraDataForm";
+import { scoreInherentParameters, type InherentParameterValue } from "./iraInherentScoring";
+import { listClassifications, listParameterThresholds, readClassifications } from "./iraRiskClassification";
+import { databaseOrThrow, getCompanyProfile, writeAudit } from "./operations";
+import type { IraProvince } from "../shared/iraVocabulary";
 
 export type AssessmentActor = { id: number };
 type GateUser = { role: string; mustChangePassword: boolean };
@@ -473,6 +476,40 @@ export async function readAssessment(assessmentId: number) {
   const assessment = await assessmentOrThrow(assessmentId);
   const { values, answers, declarations } = await readValues(assessmentId);
   return { assessment, values, answers, declarations };
+}
+
+/**
+ * Nilai mesin ke-24 parameter terhitung untuk periode sebuah penilaian, beserta agregat Form C1
+ * yang membentuknya.
+ *
+ * Inilah satu-satunya pemanggil `scoreInherentParameters`, dan itu disengaja: penghitungnya murni,
+ * dan seluruh pembacaan basis datanya berkumpul di sini — agregat, klasifikasi, ambang, dan
+ * provinsi gerai.
+ *
+ * Ambang yang dipakai adalah yang **tersimpan**; parameter yang belum pernah disunting memakai
+ * bawaan jenis pitanya di dalam penghitung, bukan di sini.
+ */
+export async function readInherentMachineScores(assessmentId: number): Promise<{
+  form: Awaited<ReturnType<typeof readIraDataForm>>;
+  province: IraProvince | null;
+  values: InherentParameterValue[];
+}> {
+  const assessment = await assessmentOrThrow(assessmentId);
+  const [form, levels, thresholds, profile] = await Promise.all([
+    readIraDataForm(assessment.periodStart, assessment.periodEnd),
+    readClassifications(),
+    listParameterThresholds(),
+    getCompanyProfile(),
+  ]);
+
+  const stored = new Map(
+    thresholds
+      .filter((row) => !row.isTemplateDefault && row.upperBoundPercent)
+      .map((row) => [row.parameterCode, row.upperBoundPercent as (string | null)[]]),
+  );
+  const province = (profile?.province ?? null) as IraProvince | null;
+
+  return { form, province, values: scoreInherentParameters({ form, levels, province, thresholds: stored }) };
 }
 
 /** Daftar penilaian, terbaru lebih dulu. */
