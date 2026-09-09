@@ -197,7 +197,7 @@ spec `specs/2026-09-09-ganti-nama-dppspm-design.md` (dirancang 9 September 2026)
 sudah `DTTOT`, sama-sama sebuah *Daftar*. Lihat spec bagian Masalah 2.
 
 - [x] Tugas 1 — Peragaan dasar: isi kedua basis data lokal dan catat jumlah baris sebelum migrasi — **SELESAI 9 September 2026**
-- [ ] Tugas 2 — Migrasi `0056` dan seluruh tipe enum, satu commit atomik
+- [x] Tugas 2 — Migrasi `0056` dan seluruh tipe enum, satu commit atomik — **SELESAI 9 September 2026**
 - [ ] Tugas 3 — Sapuan prosa, pesan validasi, dan uji penjaga
 - [ ] Tugas 4 — Dokumentasi, rollback tertulis, dan antrean migrasi produksi
 
@@ -752,9 +752,11 @@ ketinggalan. Ditelusuri ulang 9 September 2026:
 
 Sentuhan basis datanya satu, dan **bukan kosmetik**: produksi menyimpan **239 baris**
 `listType = 'PPPSM'` (`DPRK` 155, `IR` 84) di samping 531 baris `DTTOT`, diperiksa baca-saja
-9 September 2026. Redefinisi enum satu langkah hasil `drizzle-kit` menyunting ke-239 baris itu
-menjadi string kosong `''` tanpa melanggar batasan apa pun — karena itu migrasinya **ditulis tangan
-tiga pernyataan** dan rencana rollbacknya tertulis.
+9 September 2026. Redefinisi enum satu langkah hasil `drizzle-kit` **gagal** di bawah
+`STRICT_TRANS_TABLES` (dipakai lokal maupun produksi) dengan `ERROR 1265`, menahan rilis di tengah
+jalan; tanpa mode ketat ia justru menyunting baris berjenis lama menjadi `''` secara senyap. Karena
+itu migrasinya **ditulis tangan tiga pernyataan** — tidak bergantung pada `sql_mode` sama sekali —
+dan rencana rollbacknya tertulis.
 
 **Temuan sampingan yang lebih besar dari paketnya:** jurnal migrasi produksi berisi **34 baris**
 (`0000`–`0033`) sementara `drizzle/` berisi 56 berkas. Yang tertunda bukan lima migrasi seperti

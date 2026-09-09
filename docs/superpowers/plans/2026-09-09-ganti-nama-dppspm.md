@@ -21,7 +21,7 @@ dua entri.
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu.**
 
 - [x] Tugas 1 — Peragaan dasar: isi kedua basis data lokal dan catat jumlah baris sebelum migrasi — **SELESAI 9 September 2026**
-- [ ] Tugas 2 — Migrasi `0056` dan seluruh tipe enum, satu commit atomik
+- [x] Tugas 2 — Migrasi `0056` dan seluruh tipe enum, satu commit atomik — **SELESAI 9 September 2026**
 - [ ] Tugas 3 — Sapuan prosa, pesan validasi, dan uji penjaga
 - [ ] Tugas 4 — Dokumentasi, rollback tertulis, dan catatan antrean migrasi produksi
 
@@ -214,7 +214,7 @@ dan di tiga peta label berkunci-string. Memecahnya meninggalkan `tsc --noEmit` m
 riwayat, atau lebih buruk — peta label yang kuncinya tidak lagi cocok dengan nilai basis data,
 sehingga daftarnya tampil tanpa label **dan tanpa galat.**
 
-- [ ] **Step 1: Ubah skemanya.** `drizzle/schema.ts:477`:
+- [x] **Step 1: Ubah skemanya.** `drizzle/schema.ts:477`:
 
 ```ts
 listType: mysqlEnum("listType", ["DTTOT", "DPPSPM"]).notNull(),
@@ -224,7 +224,7 @@ listType: mysqlEnum("listType", ["DTTOT", "DPPSPM"]).notNull(),
       Kepanjangannya ditulis sekali di komentar itu: **D**aftar **P**endanaan **P**roliferasi
       **S**enjata **P**emusnah **M**assal — sejajar dengan `DTTOT` yang juga sebuah *Daftar*.
 
-- [ ] **Step 2: Hasilkan migrasinya, lalu BACA SQL-nya.**
+- [x] **Step 2: Hasilkan migrasinya, lalu BACA SQL-nya.**
 
 ```bash
 ./node_modules/.bin/drizzle-kit generate
@@ -232,10 +232,18 @@ cat drizzle/0056_*.sql
 ```
 
       Yang dihasilkan akan berupa **satu** pernyataan `MODIFY COLUMN … enum('DTTOT','DPPSPM')`.
-      **Jangan menerapkannya.** Di produksi, pernyataan itu sendirian menyunting 239 baris menjadi
-      string kosong `''` tanpa melanggar satu pun batasan.
+      **Jangan menerapkannya.** Diukur 9 September 2026 di atas salinan sekali-pakai:
 
-- [ ] **Step 3: Ganti isi berkas `.sql` itu dengan tiga pernyataan berpenanda.** Persis seperti ini,
+      - Dengan `STRICT_TRANS_TABLES` — **yang dipakai lokal maupun produksi** — pernyataan itu
+        **gagal**: `ERROR 1265 Data truncated for column 'listType' at row 7`, tanpa mengubah apa
+        pun. DDL MySQL tidak transaksional, jadi `0056` berhenti dengan galat dan barisnya tidak
+        masuk `__drizzle_migrations`; rilisnya tertahan.
+      - Tanpa mode ketat, ia hanya memberi *warning* dan setiap baris berjenis lama menjadi `''` —
+        11 dari 17 baris uji, senyap.
+
+      Migrasi yang benar tidak boleh bergantung pada `sql_mode` sama sekali.
+
+- [x] **Step 3: Ganti isi berkas `.sql` itu dengan tiga pernyataan berpenanda.** Persis seperti ini,
       termasuk penandanya:
 
 ```sql
@@ -248,20 +256,28 @@ ALTER TABLE `sanctions_watchlist_entries` MODIFY COLUMN `listType` enum('DTTOT',
       `drizzle/meta/0056_*.json` hasil `generate` **dibiarkan apa adanya** — ia menggambarkan
       keadaan akhir, dan keadaan akhirnya memang `enum('DTTOT','DPPSPM')`.
 
-- [ ] **Step 4: Ambil cadangan sebelum menerapkan.**
+- [x] **Step 4: Ambil cadangan sebelum menerapkan.**
+
+`--set-gtid-purged=OFF` **wajib**: tanpanya berkasnya menyertakan `SET @@GLOBAL.GTID_PURGED` dan
+**menolak dipulihkan** ke server yang sama (`ERROR 3546`) — yang tersimpan bukan cadangan,
+melainkan berkas yang tampak seperti cadangan.
 
 ```bash
-mysqldump -h 127.0.0.1 -u root moneychanger sanctions_watchlist_entries > /tmp/k2-watchlist-moneychanger-before.sql
-mysqldump -h 127.0.0.1 -u root mc_t_abcvalas sanctions_watchlist_entries > /tmp/k2-watchlist-abcvalas-before.sql
+mysqldump -h 127.0.0.1 -u root --single-transaction --set-gtid-purged=OFF moneychanger sanctions_watchlist_entries > /tmp/k2-watchlist-moneychanger-before.sql
+mysqldump -h 127.0.0.1 -u root --single-transaction --set-gtid-purged=OFF mc_t_abcvalas sanctions_watchlist_entries > /tmp/k2-watchlist-abcvalas-before.sql
+# Buktikan cadangannya benar-benar dapat dipulihkan sebelum melangkah:
+mysql -h 127.0.0.1 -u root -e "DROP DATABASE IF EXISTS mc_k2_scratch; CREATE DATABASE mc_k2_scratch;"
+mysql -h 127.0.0.1 -u root mc_k2_scratch < /tmp/k2-watchlist-moneychanger-before.sql && echo "cadangan dapat dipulihkan"
+mysql -h 127.0.0.1 -u root -e "DROP DATABASE mc_k2_scratch;"
 ```
 
-- [ ] **Step 5: Terapkan ke DUA basis data lokal saja.**
+- [x] **Step 5: Terapkan ke DUA basis data lokal saja.**
 
 ```bash
 node scripts/tenant.mjs migrate-all
 ```
 
-- [ ] **Step 6: Buktikan tidak ada baris yang hilang atau menjadi `''`.** Ini verifikasi inti
+- [x] **Step 6: Buktikan tidak ada baris yang hilang atau menjadi `''`.** Ini verifikasi inti
       seluruh paket:
 
 ```bash
@@ -276,7 +292,7 @@ SELECT 'enum_baru', COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHE
       `enum('DTTOT','DPPSPM')`. Bila `sisa_kosong` bukan nol, **berhenti**, pulihkan dari cadangan
       Step 4, dan laporkan.
 
-- [ ] **Step 7: Ganti seluruh tipe dan peta labelnya.** Tepat di tempat-tempat ini:
+- [x] **Step 7: Ganti seluruh tipe dan peta labelnya.** Tepat di tempat-tempat ini:
 
 ```ts
 // server/operations.ts:2351, 2363 — dan server/sanctionsWatchlistImport.ts:46, 210
@@ -295,14 +311,14 @@ const listTypeTint: Record<string, string> = { DTTOT: "bg-rose-100 text-rose-700
       `isPppsm` → `isDppspm` (`sanctionsWatchlistImport.ts:199,200,206`) dan
       `parsePppsmSheet` → `parseDppspmSheet` (`:126,206`).
 
-- [ ] **Step 8: Perbarui fixture dan harapan ujinya.**
+- [x] **Step 8: Perbarui fixture dan harapan ujinya.**
       `server/sanctionsWatchlistImport.test.ts:52-89` (`pppsmOrangHeader` → `dppspmOrangHeader`,
       `pppsmEntitasHeader` → `dppspmEntitasHeader`, harapan `:70`) dan
       `server/sanctionsWatchlistOperations.test.ts:67,75,83`. Perbarui juga `SCOPES` pada
       `scripts/seedWatchlistDemo.mjs` menjadi `DPPSPM`, supaya menjalankannya ulang tidak
       mengembalikan nilai lama.
 
-- [ ] **Step 9: Tambahkan satu uji baru** pada `server/sanctionsWatchlistImport.test.ts` yang
+- [x] **Step 9: Tambahkan satu uji baru** pada `server/sanctionsWatchlistImport.test.ts` yang
       menegakkan nilai enumnya, bukan sekadar mengikutinya:
 
 ```ts
@@ -314,7 +330,7 @@ it("menghasilkan listType DPPSPM — bukan PPPSM maupun PPPSPM", () => {
 });
 ```
 
-- [ ] **Step 10: Verifikasi dan commit.** Bila `vite build` atau `tsc` masih menyebut `PPPSM`,
+- [x] **Step 10: Verifikasi dan commit.** Bila `vite build` atau `tsc` masih menyebut `PPPSM`,
       ada kunci peta label yang terlewat.
 
 ```bash
@@ -322,6 +338,25 @@ it("menghasilkan listType DPPSPM — bukan PPPSM maupun PPPSPM", () => {
 git add drizzle/ server/ client/ scripts/
 git commit -m "Nilai daftar sanksi PPPSM menjadi DPPSPM beserta migrasi datanya"
 ```
+
+**Hasil nyata, 9 September 2026.** Migrasinya `0056_young_zzzax.sql`. Jumlah per lingkup **identik**
+dengan pembanding Tugas 1, `PPPSM` berganti menjadi `DPPSPM`, `sisa_kosong` = 0 pada kedua basis
+data, `enum_baru` = `enum('DTTOT','DPPSPM')`. Uji: 151 berkas, **1299 lulus** (naik satu dari
+baseline 1298), 2 dilewati; `tsc` bersih; `vite build` sukses.
+
+**Satu perubahan perilaku yang tidak terduga pada rancangan — dan terlihat pengguna.**
+`listSanctionsWatchlistSummary` (`server/operations.ts:2358`) mengurutkan menurut
+`listType.localeCompare(...)`. Secara alfabetis `PPPSM` jatuh **sesudah** `DTTOT`, sedangkan
+`DPPSPM` jatuh **sebelumnya**. Halaman Cek Watchlist karena itu kini menampilkan daftar
+proliferasi lebih dahulu. Ini ditemukan oleh uji yang gagal, bukan oleh pembacaan rancangan —
+`server/sanctionsWatchlistOperations.test.ts` kini mengunci urutan barunya beserta alasannya,
+supaya perubahan itu tercatat sebagai keputusan, bukan sebagai kejutan berikutnya.
+
+Satu fixture nyaris lolos: `{ id: 2, listType: "PPPSM" as const, … }` pada blok
+`searchSanctionsWatchlist` tidak cocok dengan pola penggantian yang dipakai untuk baris lainnya,
+**dan `tsc` tidak mengeluhkannya** karena larik itu tidak pernah diadu dengan tipe enumnya. Ia
+tertangkap hanya karena berkasnya dibaca ulang. Uji penjaga pada Tugas 3 ada justru untuk kelas
+kesalahan ini.
 
 ---
 

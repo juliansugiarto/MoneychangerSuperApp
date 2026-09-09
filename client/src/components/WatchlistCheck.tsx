@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { AlertTriangle, Search } from "lucide-react";
 import { useState } from "react";
 
-const listTypeLabels: Record<string, string> = { DTTOT: "DTTOT", PPPSM: "PPPSM" };
+const listTypeLabels: Record<string, string> = { DTTOT: "DTTOT", DPPSPM: "DPPSPM" };
 
 /**
  * Inline "Cek sekarang" assist for the DTTOT/PPPSM checkbox on the customer form. Purely a

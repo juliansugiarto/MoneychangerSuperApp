@@ -43,7 +43,7 @@ export type ParsedSanctionsEntry = {
 };
 
 export type ParsedSanctionsWorkbook = {
-  listType: "DTTOT" | "PPPSM";
+  listType: "DTTOT" | "DPPSPM";
   sourceLabel: string | null;
   entries: ParsedSanctionsEntry[];
 };
@@ -123,7 +123,7 @@ function parseDttotSheet(rows: unknown[][]): ParsedSanctionsEntry[] {
   return entries;
 }
 
-function parsePppsmSheet(rows: unknown[][], entityType: "INDIVIDUAL" | "ENTITY"): ParsedSanctionsEntry[] {
+function parseDppspmSheet(rows: unknown[][], entityType: "INDIVIDUAL" | "ENTITY"): ParsedSanctionsEntry[] {
   const header = rows[0].map((cell) => String(cell ?? ""));
   const referenceIndex = headerIndex(header, "Referensi");
   const nameIndex = headerIndex(header, "Nama");
@@ -196,18 +196,18 @@ export function parseSanctionsWatchlistWorkbook(data: Buffer): ParsedSanctionsWo
     return { listType: "DTTOT", sourceLabel: null, entries: parseDttotSheet(sheets[0].rows) };
   }
 
-  const isPppsm = firstHeader.some((cell) => cell === "Referensi") && firstHeader.some((cell) => cell === "Nama");
-  if (!isPppsm) throw new Error("Struktur berkas tidak dikenali sebagai daftar DTTOT maupun PPPSM. Periksa apakah berkas ini sesuai format resmi PPATK/DK PBB.");
+  const isDppspm = firstHeader.some((cell) => cell === "Referensi") && firstHeader.some((cell) => cell === "Nama");
+  if (!isDppspm) throw new Error("Struktur berkas tidak dikenali sebagai daftar DTTOT maupun PPPSM. Periksa apakah berkas ini sesuai format resmi PPATK/DK PBB.");
 
   const entries: ParsedSanctionsEntry[] = [];
   for (const sheet of sheets) {
     const header = sheet.rows[0].map((cell) => String(cell ?? "").trim());
     const isIndividualSheet = header.some((cell) => cell === "Gelar" || cell === "Pekerjaan");
-    entries.push(...parsePppsmSheet(sheet.rows, isIndividualSheet ? "INDIVIDUAL" : "ENTITY"));
+    entries.push(...parseDppspmSheet(sheet.rows, isIndividualSheet ? "INDIVIDUAL" : "ENTITY"));
   }
   if (!entries.length) throw new Error("Berkas PPPSM tidak berisi baris data yang dapat diimpor.");
   const sourceLabel = commonReferencePrefix(entries);
-  return { listType: "PPPSM", sourceLabel, entries };
+  return { listType: "DPPSPM", sourceLabel, entries };
 }
 
 export function decodeSanctionsWatchlistUpload(input: { dataBase64: string; mimeType: string; byteSize: number }) {

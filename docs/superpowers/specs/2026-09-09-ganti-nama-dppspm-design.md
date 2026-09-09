@@ -62,11 +62,29 @@ Diperiksa **baca-saja** pada produksi 9 September 2026
 
 Dua hal penting dari tabel itu.
 
-**Pertama, redefinisi enum satu langkah akan menghapus 239 baris tanpa suara.** `drizzle-kit`
-menghasilkan satu pernyataan `MODIFY COLUMN listType enum('DTTOT','DPPSPM') NOT NULL`. MySQL
-menyunting nilai enum yang tidak lagi sah menjadi string kosong `''` — dan karena kolomnya `NOT
-NULL` dan `''` bukan `NULL`, tidak ada satu pun batasan yang menolaknya. Daftar sanksi yang dipakai
-menyaring nasabah akan menjadi 239 baris tak berjenis, dan halamannya tetap tampil rapi.
+**Pertama, redefinisi enum satu langkah tidak dapat dipakai — dan akibatnya bergantung pada
+`sql_mode`.** `drizzle-kit` menghasilkan satu pernyataan
+`MODIFY COLUMN listType enum('DTTOT','DPPSPM') NOT NULL`. Diukur 9 September 2026 di atas salinan
+sekali-pakai dari cadangan lokal:
+
+| `sql_mode` | Akibatnya |
+|---|---|
+| `STRICT_TRANS_TABLES` (**yang dipakai lokal maupun produksi**) | `ERROR 1265 Data truncated for column 'listType' at row 7`. Pernyataannya **gagal dan tidak mengubah apa pun.** |
+| Tanpa mode ketat | Hanya *warning*, dan setiap baris berjenis lama menjadi string kosong `''` — 11 dari 17 baris uji, senyap. |
+
+Jadi yang mengancam produksi hari ini **bukan** kehilangan data, melainkan **migrasi yang gagal di
+tengah rilis**: DDL MySQL tidak transaksional, sehingga `0056` berhenti dengan galat, barisnya tidak
+masuk `__drizzle_migrations`, dan rilisnya tertahan sampai seseorang menulis ulang migrasinya —
+persis pekerjaan yang seharusnya sudah selesai di sini.
+
+Kehilangan senyap tetap ditulis di sini karena ia **tidak mustahil**: `sql_mode` adalah setelan
+server yang dapat berbeda pada basis data hasil pemulihan, pada penyedia terkelola, atau lewat
+`SET SESSION`. Migrasi yang benar tidak bergantung pada setelan itu sama sekali.
+
+Catatan yang ditemukan sambil lalu: `mysqldump` di mesin ini menyertakan `SET @@GLOBAL.GTID_PURGED`,
+yang membuat berkasnya **menolak dipulihkan** ke server yang sama (`ERROR 3546`). Cadangan untuk
+paket ini wajib memakai `--single-transaction --set-gtid-purged=OFF`; tanpa itu, yang tersimpan
+bukan cadangan melainkan berkas yang tampak seperti cadangan.
 
 **Kedua, `dttotPpsdmMatch` tidak punya utang data sama sekali.** Nol baris memakainya. Itulah yang
 membuat keputusan pengguna nomor 1 di bawah murah: yang tersisa hanyalah pengenal yang salah baca,

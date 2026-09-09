@@ -10,9 +10,9 @@ import { AlertTriangle, CheckCircle2, Clock, FileSpreadsheet, Radiation, ScanSea
 import { useState } from "react";
 import { toast } from "sonner";
 
-const listTypeLabels: Record<string, string> = { DTTOT: "DTTOT (Terduga Teroris)", PPPSM: "PPPSM (Proliferasi Senjata Pemusnah Massal)" };
-const listTypeIcon: Record<string, typeof ShieldAlert> = { DTTOT: ShieldAlert, PPPSM: Radiation };
-const listTypeTint: Record<string, string> = { DTTOT: "bg-rose-100 text-rose-700", PPPSM: "bg-amber-100 text-amber-700" };
+const listTypeLabels: Record<string, string> = { DTTOT: "DTTOT (Terduga Teroris)", DPPSPM: "DPPSPM (Proliferasi Senjata Pemusnah Massal)" };
+const listTypeIcon: Record<string, typeof ShieldAlert> = { DTTOT: ShieldAlert, DPPSPM: Radiation };
+const listTypeTint: Record<string, string> = { DTTOT: "bg-rose-100 text-rose-700", DPPSPM: "bg-amber-100 text-amber-700" };
 
 function fileToBase64(file: File) {
   return new Promise<string>((resolve, reject) => {

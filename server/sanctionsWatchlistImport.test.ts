@@ -49,25 +49,25 @@ describe("parseSanctionsWatchlistWorkbook — DTTOT shape", () => {
   });
 });
 
-const pppsmOrangHeader = ["Referensi", "Nama", "Gelar", "Pekerjaan", "Tanggal Lahir", "Tempat Lahir", "Alias 1", "Alias 2", "Kewarganegaraan", "Nomor Paspor", "Nomor Identitas", "Alamat", "Informasi Lain"];
-const pppsmEntitasHeader = ["Referensi", "Nama", "Alias 1", "Alias 2", "Alamat 1", "Alamat 2", "Informasi Lain"];
+const dppspmOrangHeader = ["Referensi", "Nama", "Gelar", "Pekerjaan", "Tanggal Lahir", "Tempat Lahir", "Alias 1", "Alias 2", "Kewarganegaraan", "Nomor Paspor", "Nomor Identitas", "Alamat", "Informasi Lain"];
+const dppspmEntitasHeader = ["Referensi", "Nama", "Alias 1", "Alias 2", "Alamat 1", "Alamat 2", "Informasi Lain"];
 
-describe("parseSanctionsWatchlistWorkbook — PPPSM shape", () => {
+describe("parseSanctionsWatchlistWorkbook — DPPSPM shape", () => {
   it("parses Orang and Entitas sheets, skipping the section-marker row, deriving sourceLabel from the reference-code prefix", () => {
     const data = workbookBuffer([
       { name: "Sheet1", rows: [
-        pppsmOrangHeader,
+        dppspmOrangHeader,
         ["ZZTESTi.001", "", "", "", "", "", "", "", "", "", "", "", ""],
         ["ZZTESTi.001", "Contoh Orang", "NA", "Pejabat uji", "1 Januari 1970", "Kota Uji", "Alias Satu", "NA", "Testland", "12345", "NA", "NA", "Keterangan uji"],
       ] },
       { name: "Sheet2", rows: [
-        pppsmEntitasHeader,
+        dppspmEntitasHeader,
         ["ZZTESTe.001", "", "", "", "", "", ""],
         ["ZZTESTe.001", "Contoh Entitas", "Alias Entitas", "NA", "Alamat Satu", "Alamat Dua", "Keterangan entitas uji"],
       ] },
     ]);
     const result = parseSanctionsWatchlistWorkbook(data);
-    expect(result.listType).toBe("PPPSM");
+    expect(result.listType).toBe("DPPSPM");
     expect(result.sourceLabel).toBe("ZZTEST");
     expect(result.entries).toHaveLength(2);
 
@@ -86,7 +86,7 @@ describe("parseSanctionsWatchlistWorkbook — PPPSM shape", () => {
 
   it("rejects a workbook whose reference codes mix more than one sub-list prefix", () => {
     const data = workbookBuffer([{ name: "Sheet1", rows: [
-      pppsmOrangHeader,
+      dppspmOrangHeader,
       ["AAAi.001", "", "", "", "", "", "", "", "", "", "", "", ""],
       ["AAAi.001", "Orang A", "NA", "NA", "NA", "NA", "NA", "NA", "NA", "NA", "NA", "NA", "NA"],
       ["BBBi.001", "Orang B", "NA", "NA", "NA", "NA", "NA", "NA", "NA", "NA", "NA", "NA", "NA"],
@@ -97,6 +97,23 @@ describe("parseSanctionsWatchlistWorkbook — PPPSM shape", () => {
   it("rejects an unrecognized workbook shape", () => {
     const data = workbookBuffer([{ name: "Sheet1", rows: [["Kolom Acak", "Lainnya"], ["nilai", "lain"]] }]);
     expect(() => parseSanctionsWatchlistWorkbook(data)).toThrow(/tidak dikenali/);
+  });
+
+  it("menghasilkan listType DPPSPM — bukan PPPSM maupun PPPSPM", () => {
+    // PPSPM menamai tindak pidananya dan PPPSPM menamai program pencegahannya; keduanya dipakai
+    // dengan benar di tempat lain. Yang disimpan tabel ini adalah DAFTAR penetapannya, sejajar
+    // dengan DTTOT — sebagaimana templat BI memasangkan keduanya pada shared/iraKpmrCatalogue.ts.
+    // Menegakkan nilainya, bukan sekadar mengikutinya: nilai enum ini adalah data tersimpan, dan
+    // mengubahnya kembali menuntut migrasi, bukan sekadar penyuntingan konstanta.
+    const data = workbookBuffer([{ name: "Sheet1", rows: [
+      dppspmOrangHeader,
+      ["ZZTESTi.001", "", "", "", "", "", "", "", "", "", "", "", ""],
+      ["ZZTESTi.001", "Contoh Orang", "NA", "NA", "NA", "NA", "NA", "NA", "NA", "NA", "NA", "NA", "NA"],
+    ] }]);
+    const result = parseSanctionsWatchlistWorkbook(data);
+    expect(result.listType).toBe("DPPSPM");
+    expect(JSON.stringify(result)).not.toContain("PPPSM");
+    expect(JSON.stringify(result)).not.toContain("PPPSPM");
   });
 });
 

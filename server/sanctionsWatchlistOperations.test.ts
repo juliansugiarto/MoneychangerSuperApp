@@ -64,15 +64,19 @@ describe("listSanctionsWatchlistSummary", () => {
     const rows = [
       { listType: "DTTOT" as const, sourceLabel: null, sourceFileName: "dttot.xlsx", importedByUserId: 1, importedAt: new Date("2026-08-19") },
       { listType: "DTTOT" as const, sourceLabel: null, sourceFileName: "dttot.xlsx", importedByUserId: 1, importedAt: new Date("2026-08-19") },
-      { listType: "PPPSM" as const, sourceLabel: "DPRK", sourceFileName: "dprk.xlsx", importedByUserId: 2, importedAt: new Date("2024-12-24") },
+      { listType: "DPPSPM" as const, sourceLabel: "DPRK", sourceFileName: "dprk.xlsx", importedByUserId: 2, importedAt: new Date("2024-12-24") },
     ];
     const fakeDb = { select: vi.fn(() => makeReader(rows)) };
     const getDb = vi.spyOn(db, "getDb").mockResolvedValue(fakeDb as never);
     const summary = await listSanctionsWatchlistSummary();
     getDb.mockRestore();
+    // Urutannya menurut listType secara alfabetis, dan penggantian nama MEMBALIKNYA: `PPPSM`
+    // dahulu jatuh sesudah `DTTOT`, sedangkan `DPPSPM` jatuh sebelumnya. Halaman Cek Watchlist
+    // karena itu kini menampilkan daftar proliferasi lebih dahulu — perubahan yang terlihat
+    // pengguna, dan disengaja, bukan kebetulan yang lolos.
     expect(summary).toEqual([
+      { listType: "DPPSPM", sourceLabel: "DPRK", sourceFileName: "dprk.xlsx", importedByUserId: 2, importedAt: rows[2].importedAt, recordCount: 1 },
       { listType: "DTTOT", sourceLabel: null, sourceFileName: "dttot.xlsx", importedByUserId: 1, importedAt: rows[0].importedAt, recordCount: 2 },
-      { listType: "PPPSM", sourceLabel: "DPRK", sourceFileName: "dprk.xlsx", importedByUserId: 2, importedAt: rows[2].importedAt, recordCount: 1 },
     ]);
   });
 });
@@ -80,7 +84,7 @@ describe("listSanctionsWatchlistSummary", () => {
 describe("searchSanctionsWatchlist", () => {
   const entries = [
     { id: 1, listType: "DTTOT" as const, sourceLabel: null, entityType: "INDIVIDUAL" as const, referenceCode: "TEST-001", fullName: "Budi Santoso", aliases: "Budi S\nSi Budi", dateOfBirth: null, placeOfBirth: null, nationality: null, address: null, description: null },
-    { id: 2, listType: "PPPSM" as const, sourceLabel: "DPRK", entityType: "ENTITY" as const, referenceCode: "DPRKe.001", fullName: "Yayasan Tidak Terkait", aliases: null, dateOfBirth: null, placeOfBirth: null, nationality: null, address: null, description: null },
+    { id: 2, listType: "DPPSPM" as const, sourceLabel: "DPRK", entityType: "ENTITY" as const, referenceCode: "DPRKe.001", fullName: "Yayasan Tidak Terkait", aliases: null, dateOfBirth: null, placeOfBirth: null, nationality: null, address: null, description: null },
   ];
 
   function mockSearchDb() {

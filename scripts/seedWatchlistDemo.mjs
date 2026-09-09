@@ -30,14 +30,15 @@ import { createConnection } from "mysql2/promise";
 const SEED_FILE_PREFIX = "peragaan-k2-";
 
 /**
- * `listType` di sini masih `PPPSM` — skrip ini menyiapkan keadaan SEBELUM migrasi `0056`.
- * Tugas 2 menggantinya menjadi `DPPSPM` sesudah migrasinya ada, supaya menjalankan ulang skrip ini
- * tidak mengembalikan nilai lama ke dalam basis data.
+ * `listType` memakai `DPPSPM`, nilai sesudah migrasi `0056`. Ia sempat ditulis `PPPSM` sewaktu
+ * skrip ini menyiapkan keadaan SEBELUM migrasi; dikembalikan ke nilai baru pada commit yang sama
+ * dengan migrasinya, supaya menjalankan ulang skrip ini tidak pernah menyisipkan nilai lama yang
+ * kini tidak lagi sah bagi kolomnya.
  */
 const SCOPES = [
   { listType: "DTTOT", sourceLabel: null, prefix: "DTTOT", individuals: 4, entities: 2 },
-  { listType: "PPPSM", sourceLabel: "DPRK", prefix: "DPRK", individuals: 3, entities: 3 },
-  { listType: "PPPSM", sourceLabel: "IR", prefix: "IR", individuals: 2, entities: 3 },
+  { listType: "DPPSPM", sourceLabel: "DPRK", prefix: "DPRK", individuals: 3, entities: 3 },
+  { listType: "DPPSPM", sourceLabel: "IR", prefix: "IR", individuals: 2, entities: 3 },
 ];
 
 const TARGETS = [

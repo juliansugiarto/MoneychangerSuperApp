@@ -2348,7 +2348,7 @@ export async function listSanctionsWatchlistSummary() {
       listType: sanctionsWatchlistEntries.listType, sourceLabel: sanctionsWatchlistEntries.sourceLabel,
       sourceFileName: sanctionsWatchlistEntries.sourceFileName, importedByUserId: sanctionsWatchlistEntries.importedByUserId, importedAt: sanctionsWatchlistEntries.importedAt,
     }).from(sanctionsWatchlistEntries);
-    const grouped = new Map<string, { listType: "DTTOT" | "PPPSM"; sourceLabel: string | null; sourceFileName: string; importedByUserId: number; importedAt: Date; recordCount: number }>();
+    const grouped = new Map<string, { listType: "DTTOT" | "DPPSPM"; sourceLabel: string | null; sourceFileName: string; importedByUserId: number; importedAt: Date; recordCount: number }>();
     for (const row of rows) {
       const key = `${row.listType}:${row.sourceLabel ?? ""}`;
       const existing = grouped.get(key);
@@ -2360,7 +2360,7 @@ export async function listSanctionsWatchlistSummary() {
 }
 
 export type SanctionsWatchlistMatch = {
-  id: number; listType: "DTTOT" | "PPPSM"; sourceLabel: string | null; entityType: "INDIVIDUAL" | "ENTITY";
+  id: number; listType: "DTTOT" | "DPPSPM"; sourceLabel: string | null; entityType: "INDIVIDUAL" | "ENTITY";
   referenceCode: string | null; fullName: string; matchedOn: string; score: number;
   dateOfBirth: string | null; placeOfBirth: string | null; nationality: string | null; address: string | null; description: string | null;
 };
