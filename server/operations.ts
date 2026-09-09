@@ -51,6 +51,7 @@ import { buildSipesatCsv, buildSipesatInitialFileName, buildSipesatTriwulanFileN
 import { buildGoAmlLtktReportXml, buildGoAmlLtkmReportXml, type GoAmlCustomer, type GoAmlLtktLine, type GoAmlLtkmLine } from "../shared/goAmlExport";
 import { isKnownGoAmlReportIndicator } from "../shared/goAmlReportIndicators";
 import { decodeSanctionsWatchlistUpload, parseSanctionsWatchlistWorkbook, cleanSanctionsWatchlistFileName } from "./sanctionsWatchlistImport";
+import { screenCustomer, type ScreeningTrigger } from "./customerWatchlistScreening";
 import { findBestNameMatch, parseWatchlistNameList, scoreNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
 import { compareDenominationCounts, type DenominationVarianceRow } from "../shared/denominationVariance";
 
@@ -803,6 +804,35 @@ async function resolveProfileDeclaration(
   };
 }
 
+/**
+ * Menyaring nasabah sesudah penyimpanannya berhasil, dan **tidak pernah** menggagalkan penyimpanan
+ * itu.
+ *
+ * Nasabah yang gagal disimpan karena daftar sanksi sedang bermasalah adalah kerugian yang lebih
+ * besar daripada satu baris jejak yang hilang — karena itu kegagalannya dicatat ke `audit_logs`
+ * (yang dapat dicari kembali dan disaring ulang), bukan dilemparkan ke penggunanya. Pencatatan
+ * auditnya pun dijaga: bila basis datanya yang sedang tumbang, penulisan jejak kegagalan ikut gagal
+ * dan itu tetap tidak boleh menjatuhkan penyimpanan nasabahnya.
+ */
+async function screenCustomerAfterSave(
+  customer: { id: number; fullName: string },
+  trigger: ScreeningTrigger,
+  screenedByUserId: number | null,
+) {
+  try {
+    await screenCustomer({ customerId: customer.id, fullName: customer.fullName, trigger, screenedByUserId });
+  } catch (error) {
+    try {
+      await writeAudit({
+        actorUserId: screenedByUserId, action: "CUSTOMER_SCREENING_FAILED", entityType: "customer", entityId: String(customer.id),
+        metadata: { trigger, message: error instanceof Error ? error.message : String(error) },
+      });
+    } catch {
+      // Jejak kegagalannya pun tidak dapat ditulis; penyimpanan nasabahnya tetap berlaku.
+    }
+  }
+}
+
 export async function createCustomer(input: CustomerInput, actorUserId: number) {
   if (input.hasBeneficialOwner && !input.beneficialOwner) throw new Error("Data pemilik manfaat (beneficial owner) wajib diisi.");
   if (input.pepStatus && input.pepStatus !== "NONE" && !input.pepDetails?.trim()) throw new Error("Keterangan PEP wajib diisi.");
@@ -817,6 +847,7 @@ export async function createCustomer(input: CustomerInput, actorUserId: number) 
   const db = await databaseOrThrow();
   const declaration = await resolveProfileDeclaration(db as never, input);
   const categories = resolveCustomerCategories(input);
+  let createdBeneficialOwner: { id: number; fullName: string } | null = null;
   const created = await db.transaction(async (tx) => {
     await tx.insert(customers).values({
       cifNumber,
@@ -880,6 +911,9 @@ export async function createCustomer(input: CustomerInput, actorUserId: number) 
         const [insertedBo] = await tx.select().from(customers).where(eq(customers.cifNumber, boCif)).limit(1);
         if (!insertedBo) throw new Error("Profil pemilik manfaat (beneficial owner) tidak dapat dibuat.");
         beneficialOwnerCustomerId = insertedBo.id;
+        // Profil pemilik manfaat yang baru dibuat adalah nasabah juga: tanpa penyaringan di sini ia
+        // tidak akan pernah punya satu pun baris jejak sampai ada yang menyuntingnya.
+        createdBeneficialOwner = { id: insertedBo.id, fullName: insertedBo.fullName };
       }
       await tx.update(customers).set({ beneficialOwnerCustomerId }).where(eq(customers.id, row.id));
       row.beneficialOwnerCustomerId = beneficialOwnerCustomerId;
@@ -887,6 +921,8 @@ export async function createCustomer(input: CustomerInput, actorUserId: number) 
     return row;
   });
   await writeAudit({ actorUserId, action: "CUSTOMER_CREATED", entityType: "customer", entityId: String(created.id), afterState: { cifNumber: created.cifNumber, fullName: created.fullName, riskLevel: created.riskLevel, profileStatus: created.profileStatus, hasBeneficialOwner: created.hasBeneficialOwner, pepStatus: created.pepStatus, dttotPpsdmMatch: created.dttotPpsdmMatch } });
+  await screenCustomerAfterSave(created, "NASABAH_DIBUAT", actorUserId);
+  if (createdBeneficialOwner) await screenCustomerAfterSave(createdBeneficialOwner, "NASABAH_DIBUAT", actorUserId);
   return created;
 }
 
@@ -998,6 +1034,8 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
   });
   const [updated] = await db.select().from(customers).where(eq(customers.id, input.customerId)).limit(1);
   if (!updated) throw new Error("Nasabah tidak dapat diperbarui.");
+  // Namanya boleh berubah pada penyuntingan ini, jadi yang disaring adalah nama sesudahnya.
+  await screenCustomerAfterSave(updated, "NASABAH_DIUBAH", actor.id);
   return updated;
 }
 

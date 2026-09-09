@@ -18,7 +18,7 @@ tiga pemanggil; satu fungsi penolakan murni yang ditegakkan di penulis transaksi
 ## Status Pengerjaan
 
 - [x] Tugas 1 — Migrasi `0057`: tabel riwayat penyaringan dan empat kolom keputusan — **SELESAI 9 September 2026**
-- [ ] Tugas 2 — Penulis penyaringan beserta pemanggil saat nasabah dibuat dan diubah
+- [x] Tugas 2 — Penulis penyaringan beserta pemanggil saat nasabah dibuat dan diubah — **SELESAI 9 September 2026**
 - [ ] Tugas 3 — Penyaringan ulang massal saat daftar diimpor
 - [ ] Tugas 4 — Gerbang persetujuan: fungsi penolakan murni dan penegakannya pada bon
 - [ ] Tugas 5 — Halaman: riwayat penyaringan, peringatan daftar usang, kendali setujui/tolak
@@ -160,7 +160,7 @@ Modify `server/operations.ts`.
 - Consumes: `searchSanctionsWatchlist` (`server/operations.ts:2373`), `getDb`.
 - Produces: `screenCustomer({ customerId, fullName, trigger, screenedByUserId })`.
 
-- [ ] **Step 1: Tulis ujinya lebih dulu.** Yang wajib ada:
+- [x] **Step 1: Tulis ujinya lebih dulu.** Yang wajib ada:
 
 ```ts
 describe("screenCustomer", () => {
@@ -177,16 +177,16 @@ describe("screenCustomer", () => {
       penyaringan otomatis membuat pengisian otomatis kotak centang terasa masuk akal — dan itu
       melanggar aturan yang sudah berlaku sejak `shared/sanctionsNameMatch.ts`.
 
-- [ ] **Step 2:** Tulis `screenCustomer`. Ringkasannya dibatasi panjangnya dan memuat nama beserta
+- [x] **Step 2:** Tulis `screenCustomer`. Ringkasannya dibatasi panjangnya dan memuat nama beserta
       skor; jangan menyimpan seluruh baris daftar sanksi.
 
-- [ ] **Step 3:** Panggil dari `createCustomer` (`operations.ts:806`) dengan
+- [x] **Step 3:** Panggil dari `createCustomer` (`operations.ts:806`) dengan
       `trigger: "NASABAH_DIBUAT"` dan dari `updateCustomer` (`:936`) dengan `"NASABAH_DIUBAH"`.
       **Kegagalan penyaringan tidak boleh menggagalkan penyimpanan nasabah** — tangkap, catat ke
       `audit_logs`, lanjutkan. Nasabah yang gagal disimpan karena daftar sanksi bermasalah adalah
       kerugian yang lebih besar daripada satu baris jejak yang hilang.
 
-- [ ] **Step 4:** Perintah mutu, commit `"Penulis penyaringan nasabah terhadap DTTOT/DPPSPM"`.
+- [x] **Step 4:** Perintah mutu, commit `"Penulis penyaringan nasabah terhadap DTTOT/DPPSPM"`.
 
 ---
 

@@ -1,0 +1,281 @@
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import * as db from "./db";
+import { screenCustomer, summarizeScreeningMatches, SCREENING_SUMMARY_MAX_LENGTH } from "./customerWatchlistScreening";
+
+/**
+ * Penulis penyaringan nasabah terhadap DTTOT/DPPSPM.
+ *
+ * Dua uji di bawah ini adalah inti paket ini: baris ditulis meski nihil (bukti yang dicari
+ * pemeriksa justru baris nihilnya), dan `dttotPpsdmMatch` tidak pernah tersentuh (mesin mencatat
+ * kemungkinan, manusia yang memutuskan).
+ */
+
+/**
+ * Pasangan kolom-nilai terikat pada klausa Drizzle — disalin dari `server/iraDataForm.test.ts`,
+ * bukan dari basis data palsu yang mengabaikan `where`.
+ */
+function boundValues(clause: unknown): Record<string, unknown[]> {
+  const pairs: Record<string, unknown[]> = {};
+  let lastColumn: string | null = null;
+  const walk = (node: unknown) => {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    const candidate = node as { name?: unknown; value?: unknown; queryChunks?: unknown[]; columnType?: unknown };
+    if (typeof candidate.name === "string" && candidate.columnType) lastColumn = candidate.name;
+    else if (lastColumn && "value" in candidate && !Array.isArray(candidate.value)) {
+      (pairs[lastColumn] ??= []).push(candidate.value);
+    }
+    if (Array.isArray(candidate.queryChunks)) candidate.queryChunks.forEach(walk);
+  };
+  walk(clause);
+  return pairs;
+}
+
+function makeReader(rows: unknown[]): Record<string, unknown> & PromiseLike<unknown[]> {
+  return {
+    from: () => makeReader(rows),
+    innerJoin: () => makeReader(rows),
+    leftJoin: () => makeReader(rows),
+    where: (clause: unknown) => {
+      const pairs = boundValues(clause);
+      return makeReader(rows.filter((row) => Object.entries(pairs).every(([key, values]) => {
+        const record = row as Record<string, unknown>;
+        if (!(key in record)) return true;
+        return values.some((value) => value instanceof Date && record[key] instanceof Date ? true : record[key] === value);
+      })));
+    },
+    orderBy: () => makeReader(rows),
+    limit: () => makeReader(rows),
+    then: (onfulfilled: any, onrejected: any) => Promise.resolve(rows).then(onfulfilled, onrejected),
+  };
+}
+
+function tableName(table: unknown) {
+  return String((table as { [k: symbol]: unknown })?.[Symbol.for("drizzle:Name")] ?? "");
+}
+
+type Inserted = { table: string; values: Record<string, unknown> };
+
+function mockDb(rowsByTable: Record<string, unknown[]>) {
+  const inserted: Inserted[] = [];
+  const updated: string[] = [];
+  const fakeDb = {
+    select: vi.fn(() => ({ from: (table: unknown) => makeReader(rowsByTable[tableName(table)] ?? []) })),
+    insert: vi.fn((table: unknown) => ({
+      values: async (values: Record<string, unknown>) => { inserted.push({ table: tableName(table), values }); },
+    })),
+    update: vi.fn((table: unknown) => {
+      updated.push(tableName(table));
+      return { set: () => ({ where: async () => {} }) };
+    }),
+  };
+  vi.spyOn(db, "getDb").mockResolvedValue(fakeDb as never);
+  return { inserted, updated };
+}
+
+/** Satu baris daftar sanksi yang lengkap seperlunya bagi `searchSanctionsWatchlist`. */
+function entriDaftar(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 1, listType: "DTTOT", sourceLabel: "DTTOT 2026", entityType: "INDIVIDUAL", referenceCode: "IDN-001",
+    fullName: "ABDUL RAHMAN SALEH", aliases: null, dateOfBirth: null, placeOfBirth: null, nationality: null,
+    address: null, description: null, sourceFileName: "dttot.xlsx", importedByUserId: 1,
+    importedAt: new Date("2026-09-01T03:00:00Z"),
+    ...overrides,
+  };
+}
+
+const penyaringan = "customer_watchlist_screenings";
+
+beforeEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("screenCustomer", () => {
+  it("menulis baris meski TIDAK ada kecocokan — nihil adalah buktinya", async () => {
+    const { inserted } = mockDb({ sanctions_watchlist_entries: [entriDaftar()] });
+
+    const hasil = await screenCustomer({ customerId: 7, fullName: "BUDI SANTOSO WIJAYA", trigger: "NASABAH_DIBUAT", screenedByUserId: 3 });
+
+    expect(hasil.matchCount).toBe(0);
+    const baris = inserted.filter((row) => row.table === penyaringan);
+    expect(baris).toHaveLength(1);
+    expect(baris[0].values).toMatchObject({ customerId: 7, matchCount: 0, trigger: "NASABAH_DIBUAT", screenedByUserId: 3, summary: null });
+  });
+
+  it("mencatat listSnapshotAt dari importedAt terbaru yang sedang termuat", async () => {
+    const terbaru = new Date("2026-09-08T04:00:00Z");
+    const { inserted } = mockDb({
+      sanctions_watchlist_entries: [
+        entriDaftar({ id: 1, importedAt: new Date("2026-07-01T03:00:00Z") }),
+        entriDaftar({ id: 2, fullName: "SITI AMINAH", listType: "DPPSPM", importedAt: terbaru }),
+        entriDaftar({ id: 3, fullName: "JOKO PRABOWO", importedAt: new Date("2026-08-11T03:00:00Z") }),
+      ],
+    });
+
+    await screenCustomer({ customerId: 7, fullName: "BUDI SANTOSO WIJAYA", trigger: "NASABAH_DIUBAH", screenedByUserId: 3 });
+
+    const baris = inserted.find((row) => row.table === penyaringan)!;
+    expect(baris.values.listSnapshotAt).toEqual(terbaru);
+  });
+
+  it("listSnapshotAt null bila belum ada daftar sama sekali", async () => {
+    const { inserted } = mockDb({ sanctions_watchlist_entries: [] });
+
+    const hasil = await screenCustomer({ customerId: 7, fullName: "BUDI SANTOSO WIJAYA", trigger: "NASABAH_DIBUAT", screenedByUserId: 3 });
+
+    expect(hasil.listSnapshotAt).toBeNull();
+    expect(inserted.find((row) => row.table === penyaringan)!.values.listSnapshotAt).toBeNull();
+  });
+
+  it("screenedByUserId null saat dipicu sistem", async () => {
+    const { inserted } = mockDb({ sanctions_watchlist_entries: [] });
+
+    await screenCustomer({ customerId: 7, fullName: "BUDI SANTOSO WIJAYA", trigger: "DAFTAR_DIIMPOR", screenedByUserId: null });
+
+    expect(inserted.find((row) => row.table === penyaringan)!.values).toMatchObject({ screenedByUserId: null, trigger: "DAFTAR_DIIMPOR" });
+  });
+
+  it("TIDAK pernah menyentuh dttotPpsdmMatch", async () => {
+    const { inserted, updated } = mockDb({ sanctions_watchlist_entries: [entriDaftar()] });
+
+    // Nama yang persis sama dengan entri daftar: kecocokan sekuat mungkin, dan tetap tidak
+    // mengubah apa pun pada nasabahnya.
+    const hasil = await screenCustomer({ customerId: 7, fullName: "ABDUL RAHMAN SALEH", trigger: "NASABAH_DIBUAT", screenedByUserId: 3 });
+
+    expect(hasil.matchCount).toBe(1);
+    expect(updated).toEqual([]);
+    expect(inserted.every((row) => row.table === penyaringan)).toBe(true);
+    expect(inserted.every((row) => !("dttotPpsdmMatch" in row.values))).toBe(true);
+  });
+
+  it("mencatat ringkasan yang menyebut nama dan skornya saat ada kecocokan", async () => {
+    const { inserted } = mockDb({ sanctions_watchlist_entries: [entriDaftar()] });
+
+    await screenCustomer({ customerId: 7, fullName: "ABDUL RAHMAN SALEH", trigger: "MANUAL", screenedByUserId: 3 });
+
+    const summary = inserted.find((row) => row.table === penyaringan)!.values.summary as string;
+    expect(summary).toContain("ABDUL RAHMAN SALEH");
+    expect(summary).toContain("DTTOT");
+    expect(summary).toContain("1.00");
+  });
+
+  it("nama terlalu pendek untuk disaring tetap menghasilkan baris, bukan galat", async () => {
+    const { inserted } = mockDb({ sanctions_watchlist_entries: [entriDaftar()] });
+
+    const hasil = await screenCustomer({ customerId: 7, fullName: "AB", trigger: "NASABAH_DIBUAT", screenedByUserId: 3 });
+
+    expect(hasil.matchCount).toBe(0);
+    expect(inserted.find((row) => row.table === penyaringan)!.values.summary).toContain("terlalu pendek");
+  });
+});
+
+describe("summarizeScreeningMatches", () => {
+  const cocok = (fullName: string, score: number) => ({
+    id: 1, listType: "DTTOT" as const, sourceLabel: null, entityType: "INDIVIDUAL" as const, referenceCode: "IDN-001",
+    fullName, matchedOn: fullName, score, dateOfBirth: "1970-01-01", placeOfBirth: "JAKARTA", nationality: "ID",
+    address: "Jalan Panjang Sekali Nomor Seratus Dua Puluh Tiga", description: "Uraian panjang dari daftar sanksi",
+  });
+
+  it("nihil berarti null, bukan untaian kosong", () => {
+    expect(summarizeScreeningMatches([])).toBeNull();
+  });
+
+  it("tidak menyimpan alamat maupun uraian baris daftar sanksi", () => {
+    const summary = summarizeScreeningMatches([cocok("ABDUL RAHMAN SALEH", 0.91)])!;
+    expect(summary).not.toContain("Jalan Panjang");
+    expect(summary).not.toContain("Uraian panjang");
+  });
+
+  it("dibatasi panjangnya dan menyebut sisanya bila kecocokannya banyak", () => {
+    const banyak = Array.from({ length: 25 }, (_, index) => cocok(`NAMA PANJANG SEKALI NOMOR ${index} DARI DAFTAR SANKSI`, 0.7));
+    const summary = summarizeScreeningMatches(banyak)!;
+    expect(summary.length).toBeLessThanOrEqual(SCREENING_SUMMARY_MAX_LENGTH);
+    expect(summary).toMatch(/dan \d+ lainnya/);
+  });
+});
+
+/**
+ * Pemanggilnya pada jalur simpan nasabah. Yang diuji di sini bukan pencocokannya lagi, melainkan
+ * dua hal yang menentukan apakah jejaknya sungguh terkumpul: barisnya ditulis saat nasabah dibuat
+ * dan diubah, dan kegagalan penyaringan **tidak** menjatuhkan penyimpanan nasabahnya.
+ */
+describe("pemanggil pada createCustomer dan updateCustomer", () => {
+  const nasabahLama = {
+    id: 1, cifNumber: "TEST-CIF-0001", fullName: "Nasabah Lama", phoneNumber: "081100000000", identityType: "KTP" as const, identityNumber: "1234",
+    identityExpiryDate: null, placeOfBirth: "Jakarta", dateOfBirth: new Date("1990-01-01"), gender: "MALE" as const, nationality: "ID",
+    address: "Jl. Lama", addressType: "RUMAH" as const, addressCountry: "ID", addressProvince: null, addressCity: "Jakarta",
+    addressDistrict: null, addressPostalCode: null, npwp: null, occupation: "Pegawai",
+    sourceOfFunds: "Gaji", transactionPurpose: "Liburan", profileStatus: "ACTIVE" as const, riskLevel: "LOW" as const, riskNotes: null,
+    pepStatus: "NONE" as const, pepDetails: null, dttotPpsdmMatch: false, dttotPpsdmNotes: null, isDemo: false, isHistorical: false,
+    declaredMonthlyValueIdr: null, declaredMonthlyCount: null, declaredCurrencies: null,
+    customerType: null, entityLegalForm: null, occupationCategory: null,
+  };
+
+  /** `gagalkanDaftar` membuat pembacaan daftar sanksi melemparkan galat — persis keadaan yang tidak boleh menjatuhkan penyimpanan. */
+  function mockCustomerDb(gagalkanDaftar = false) {
+    const inserted: Inserted[] = [];
+    const reader = (table: unknown) => {
+      const name = tableName(table);
+      if (name === "sanctions_watchlist_entries" && gagalkanDaftar) {
+        return { from: () => reader(table), where: () => reader(table), limit: () => reader(table), orderBy: () => reader(table),
+          then: (_ok: any, onrejected: any) => Promise.reject(new Error("Daftar sanksi tidak dapat dibaca.")).then(undefined, onrejected) } as never;
+      }
+      if (name === "currencies") return makeReader([{ id: 1, code: "USD", name: "Dolar Amerika Serikat", active: true }]);
+      if (name === "sanctions_watchlist_entries") return makeReader([]);
+      return makeReader([nasabahLama]);
+    };
+    const fakeDb: Record<string, unknown> = {
+      select: vi.fn(() => ({ from: (table: unknown) => reader(table) })),
+      insert: vi.fn((table: unknown) => ({ values: (values: Record<string, unknown>) => { inserted.push({ table: tableName(table), values }); return Promise.resolve(undefined); } })),
+      update: vi.fn(() => ({ set: () => ({ where: () => Promise.resolve(undefined) }) })),
+    };
+    fakeDb.transaction = vi.fn((run: (tx: unknown) => Promise<unknown>) => run(fakeDb));
+    vi.spyOn(db, "getDb").mockResolvedValue(fakeDb as never);
+    return { inserted };
+  }
+
+  const ubahInput = {
+    customerId: 1, changeReason: "Pembaruan alamat nasabah",
+    fullName: "Nasabah Lama", phoneNumber: "081100000000", identityType: "KTP" as const, identityNumber: "1234",
+    placeOfBirth: "Jakarta", dateOfBirth: new Date("1990-01-01"), gender: "MALE" as const, nationality: "ID",
+    address: "Jl. Baru", addressType: "RUMAH" as const, addressCountry: "ID", addressCity: "Jakarta",
+    occupation: "Pegawai", sourceOfFunds: "Gaji", transactionPurpose: "Liburan",
+    profileStatus: "ACTIVE" as const, riskLevel: "LOW" as const, pepStatus: "NONE" as const, dttotPpsdmMatch: false,
+  };
+
+  it("nasabah yang baru dibuat langsung punya baris penyaringan", async () => {
+    const { inserted } = mockCustomerDb();
+    const { createCustomer } = await import("./operations");
+    const { v1Fixtures } = await import("./v1Fixtures");
+
+    await createCustomer({ ...v1Fixtures.customer }, 3);
+
+    const baris = inserted.filter((row) => row.table === penyaringan);
+    expect(baris).toHaveLength(1);
+    expect(baris[0].values).toMatchObject({ customerId: 1, trigger: "NASABAH_DIBUAT", screenedByUserId: 3, matchCount: 0 });
+  });
+
+  it("nasabah yang disunting disaring ulang dengan nama sesudahnya", async () => {
+    const { inserted } = mockCustomerDb();
+    const { updateCustomer } = await import("./operations");
+
+    await updateCustomer(ubahInput, { id: 5, role: "ADMIN" });
+
+    const baris = inserted.filter((row) => row.table === penyaringan);
+    expect(baris).toHaveLength(1);
+    expect(baris[0].values).toMatchObject({ customerId: 1, trigger: "NASABAH_DIUBAH", screenedByUserId: 5 });
+  });
+
+  it("penyaringan yang gagal tidak menggagalkan penyimpanan, dan kegagalannya masuk audit_logs", async () => {
+    const { inserted } = mockCustomerDb(true);
+    const { createCustomer } = await import("./operations");
+    const { v1Fixtures } = await import("./v1Fixtures");
+
+    const created = await createCustomer({ ...v1Fixtures.customer }, 3);
+
+    expect(created.id).toBe(1);
+    expect(inserted.filter((row) => row.table === penyaringan)).toHaveLength(0);
+    const audit = inserted.filter((row) => row.table === "audit_logs").map((row) => row.values.action);
+    expect(audit).toContain("CUSTOMER_SCREENING_FAILED");
+  });
+});
