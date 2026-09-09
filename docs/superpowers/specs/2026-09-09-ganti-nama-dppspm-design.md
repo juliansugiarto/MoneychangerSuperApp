@@ -46,6 +46,26 @@ ROADMAP menulis `PPPSPM` pada 4 September. Perancangan ini menolaknya, atas dua 
 `PPPSPM` tidak salah sebagai akronim; ia hanya menamai hal yang lain, dan sudah dipakai dengan benar
 untuk hal itu di 25 tempat. Memakainya di sini akan menciptakan ejaan keenam yang bertabrakan makna.
 
+### 2a. Dikonfirmasi peraturan yang berlaku, bukan hanya oleh penalaran di atas
+
+Ditemukan 9 September 2026 sesudah paketnya dikerjakan, pada berkas milik pengguna
+(`PBI_102024.pdf`) — **Peraturan Bank Indonesia Nomor 10 Tahun 2024** tentang Penerapan APU, PPT,
+dan PPPSPM bagi Pihak yang Diatur dan Diawasi oleh Bank Indonesia. **Pasal 1 angka 8** mendefinisikan
+istilahnya secara harfiah:
+
+> *"Daftar Pendanaan Proliferasi Senjata Pemusnah Massal yang selanjutnya disingkat **DPPSPM**
+> adalah daftar nama terduga pelaku PPSPM sebagaimana dimaksud dalam peraturan mengenai pencegahan
+> PPSPM."*
+
+Hitungan di seluruh naskahnya: `DTTOT` **17**, `DPPSPM` **17** — jumlah yang sama, karena keduanya
+selalu berpasangan (*"penanganan DTTOT dan DPPSPM"*, Pasal 589 dan Bagian "Penanganan DTTOT dan
+DPPSPM"). Ejaan `PPPSM`: **nol**. Peraturan ini juga menyebut `KUPVA` lima kali, jadi ia memang
+mengikat perusahaan ini.
+
+Artinya keputusan enum paket ini tidak bertumpu pada penalaran atas kutipan templat KPMR saja,
+melainkan pada **pasal definisi sebuah peraturan yang berlaku**. Bila pemeriksa menanyakan mengapa
+nilainya `DPPSPM`, jawabannya adalah PBI 10/2024 Pasal 1 angka 8 — bukan pendapat.
+
 ### 3. Perubahannya menyentuh 239 baris produksi — ini bukan kosmetik
 
 Diperiksa **baca-saja** pada produksi 9 September 2026

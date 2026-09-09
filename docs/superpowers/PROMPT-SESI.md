@@ -383,6 +383,11 @@ Yang perlu diketahui sesi berikutnya, **jangan diturunkan ulang**:
   `ira_inherent_values`), `PPPSPM` menamai program pencegahannya, `DPPSPM` menamai daftarnya.
   **Jangan pernah menjalankan cari-ganti naif atas `PPSPM`** — ia substring dari dua lainnya.
   Penjaganya `server/sanctionsListNaming.test.ts`.
+- **`DPPSPM` dikonfirmasi PBI No. 10 Tahun 2024 Pasal 1 angka 8**, yang mendefinisikan singkatan itu
+  secara harfiah dan memasangkannya dengan `DTTOT` (17 kemunculan masing-masing; `PPPSM` nol).
+  Naskahnya ada pada berkas pengguna `PBI_102024.pdf`, belum masuk proyek. Peraturan ini juga
+  ketentuan APU/PPT/PPPSPM yang **berlaku sekarang** dan menyebut KUPVA — layak dibaca utuh bila
+  ada paket kepatuhan berikutnya.
 - **Dua kemunculan `PPPSM` sengaja tetap ada:** kutipan templat BI pada
   `shared/iraKpmrCatalogue.ts:291` dan berkas penjaganya sendiri. Riwayat migrasi
   (`drizzle/0033*.sql`, `drizzle/meta/*.json`) juga tidak pernah disunting.
