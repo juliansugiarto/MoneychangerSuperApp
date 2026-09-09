@@ -171,7 +171,10 @@ MEDIUM 3 bulan, LOW 12 bulan**; tindak lanjut **worklist Controller yang hanya m
       dan kaitan ke temuan pemeriksaan 8-12.
 - [x] Tugas 4 — Migrasi: empat tabel penilaian — **SELESAI 9 September 2026.** `0054_silent_jackal`,
       murni penambahan, diterapkan ke dua basis data lokal saja.
-- [ ] Tugas 5 — Penghitung sisi inheren dari agregat dan klasifikasi
+- [x] Tugas 5 — Penghitung sisi inheren dari agregat dan klasifikasi — **SELESAI 9 September 2026.**
+      `server/iraInherentScoring.ts`, murni. Menuntut tiga keputusan pengguna lebih dulu: dimensi
+      klasifikasi `DISTRIBUTION_CHANNEL` (migrasi `0055`), komposisi kewarganegaraan nasabah pada
+      `readIraDataForm`, dan ambang bawaan per jenis pita.
 - [ ] Tugas 6 — Penulis penilaian: buat, simpan, ajukan, setujui, gantikan
 - [ ] Tugas 7 — Halaman penilaian: Form C1, Form A1, pernyataan struktural
 - [ ] Tugas 8 — Kuesioner KPMR dan halaman hasil

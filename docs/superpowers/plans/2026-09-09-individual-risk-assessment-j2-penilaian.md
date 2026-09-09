@@ -26,7 +26,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 2 — Katalog 33 parameter risiko inheren
 - [x] Tugas 3 — Katalog 31 pertanyaan KPMR
 - [x] Tugas 4 — Migrasi: empat tabel penilaian
-- [ ] Tugas 5 — Penghitung sisi inheren dari agregat dan klasifikasi
+- [x] Tugas 5 — Penghitung sisi inheren dari agregat dan klasifikasi
 - [ ] Tugas 6 — Penulis penilaian: buat, simpan, ajukan, setujui, gantikan
 - [ ] Tugas 7 — Halaman penilaian: Form C1, Form A1, pernyataan struktural
 - [ ] Tugas 8 — Kuesioner KPMR dan halaman hasil
@@ -345,21 +345,31 @@ describe("aritmetika IRA", () => {
 >    dibaca penghitung mana pun. Sebelum ini seluruh 33 parameter memakai `20/40/60/80`, sehingga
 >    layar menampilkan angka yang bukan angka yang dipakai menghitung.
 
-- [ ] **Step 1: Uji lebih dulu:** agregat Form C1 palsu ditambah klasifikasi palsu menghasilkan
+- [x] **Step 1: Uji lebih dulu:** agregat Form C1 palsu ditambah klasifikasi palsu menghasilkan
       nilai parameter yang diharapkan; parameter `DINYATAKAN` **tidak** dihitung di sini melainkan
       dibiarkan kosong; mata uang tanpa klasifikasi diperlakukan `RENDAH` dan **tidak** ikut
       persentase berisiko tinggi; nasabah tanpa `occupationCategory` tidak ikut penyebut dan
       jumlahnya dilaporkan.
 
-- [ ] **Step 2:** Susun fungsinya sebagai **murni juga** — masukannya agregat dan klasifikasi,
+- [x] **Step 2:** Susun fungsinya sebagai **murni juga** — masukannya agregat dan klasifikasi,
       keluarannya nilai parameter beserta angka mentahnya. Yang menyentuh basis data hanya
       pemanggilnya. Dengan begitu seluruh perhitungan kepatuhan dapat diuji tanpa MySQL.
 
-- [ ] **Step 3: Setiap nilai membawa angka mentahnya** (pembilang, penyebut, persentase, pita yang
+- [x] **Step 3: Setiap nilai membawa angka mentahnya** (pembilang, penyebut, persentase, pita yang
       terpilih). Pemeriksa yang bertanya *"dari mana angka ini?"* dijawab layar, bukan dijawab
       dengan membuka kode.
 
-- [ ] **Step 4:** Perintah mutu, lalu commit `"Penghitung sisi risiko inheren"`.
+- [x] **Step 4:** Perintah mutu, lalu commit `"Penghitung sisi risiko inheren"`.
+
+> **Dua hal yang ditetapkan saat menulisnya:**
+>
+> - **Kosong yang terhitung selalu membawa `missingReason`.** Bila provinsi gerai belum diisi,
+>   keempat parameter Wilayah Geografis bernilai kosong beserta alasannya — **bukan** RENDAH.
+>   Membiarkannya jatuh ke RENDAH akan memberi nilai 5 kepada lembaga yang justru belum
+>   memberitahukan lokasinya.
+> - **`PPSPM_3C` mengakui batasnya di `basis`.** Skala usaha tidak tersimpan di mana pun, sehingga
+>   seluruh nasabah berbentuk PT ikut terhitung termasuk yang UMKM; keterangannya ikut ke layar
+>   supaya pemeriksa membaca batasnya, bukan menyangkanya angka yang persis.
 
 ---
 
