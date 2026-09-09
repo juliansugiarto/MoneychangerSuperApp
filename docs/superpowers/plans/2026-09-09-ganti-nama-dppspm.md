@@ -508,14 +508,14 @@ penegasan, bukan hanya prosa.**
 **Files:** Modify `docs/SKEMA-DATABASE-PROJECT.md`, `docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md`,
 `docs/superpowers/ROADMAP-SISA-PEKERJAAN.md`, `docs/superpowers/PROMPT-SESI.md`.
 
-- [ ] **Step 1: `SKEMA-DATABASE-PROJECT.md`** — nilai enum `sanctions_watchlist_entries.listType`
+- [x] **Step 1: `SKEMA-DATABASE-PROJECT.md`** — nilai enum `sanctions_watchlist_entries.listType`
       menjadi `DTTOT | DPPSPM`, beserta catatan bahwa `customers.dttotPpsdm*` salah eja dengan
       sengaja dan yang dimaksud adalah DPPSPM.
 
-- [ ] **Step 2: `BUKU-PANDUAN-PENGGUNAAN-A-Z.md`** — teks yang dilihat pengguna pada halaman Cek
+- [x] **Step 2: `BUKU-PANDUAN-PENGGUNAAN-A-Z.md`** — teks yang dilihat pengguna pada halaman Cek
       Watchlist dan borang nasabah.
 
-- [ ] **Step 3: Tulis prosedur rollback** di bagian akhir rencana ini (bukan di dokumen terpisah,
+- [x] **Step 3: Tulis prosedur rollback** di bagian akhir rencana ini (bukan di dokumen terpisah,
       supaya terbaca oleh sesi yang menjalankan migrasinya):
 
 ```sql
@@ -528,22 +528,64 @@ ALTER TABLE `sanctions_watchlist_entries` MODIFY COLUMN `listType` enum('DTTOT',
 -- 4. git revert commit Tugas 2 dan Tugas 3.
 ```
 
-- [ ] **Step 4: Perbarui angka antrean migrasi produksi pada `PROMPT-SESI.md` menjadi 23.**
+- [x] **Step 4: Perbarui angka antrean migrasi produksi pada `PROMPT-SESI.md` menjadi 23.**
       Koreksi besarnya **sudah dilakukan pada sesi rancangan 9 September 2026** — bagian "Risiko
       residual Paket J2" dahulu menyebut `0051`–`0055`, sementara jurnal produksi berisi 34 baris
       sehingga yang tertunda adalah `0034`–`0055`, **dua puluh dua**. Yang tersisa di sini hanyalah
       menambahkan `0056` sehingga antreannya menjadi **dua puluh tiga**.
 
-- [ ] **Step 5: Centang seluruh baris Status Pengerjaan** pada rencana ini dan pada bagian Paket K2
+- [x] **Step 5: Centang seluruh baris Status Pengerjaan** pada rencana ini dan pada bagian Paket K2
       di ROADMAP.
 
-- [ ] **Step 6: Verifikasi dan commit.**
+- [x] **Step 6: Verifikasi dan commit.**
 
 ```bash
 ./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build
 git add docs/
 git commit -m "Dokumentasi Paket K2 dan koreksi antrean migrasi produksi"
 ```
+
+---
+
+## Prosedur rollback migrasi `0056`
+
+Ditulis sebelum migrasinya dijalankan, dan **belum pernah dijalankan** — 239 baris produksi belum
+tersentuh karena paket ini tidak menyentuh produksi sama sekali.
+
+```bash
+# 1. Cadangkan lebih dulu. --set-gtid-purged=OFF WAJIB: tanpanya berkasnya menyertakan
+#    SET @@GLOBAL.GTID_PURGED dan MENOLAK dipulihkan ke server yang sama (ERROR 3546).
+mysqldump -h <host> -u <user> -p --single-transaction --set-gtid-purged=OFF <db> sanctions_watchlist_entries > k2-rollback-before.sql
+
+# 2. Buktikan cadangannya benar-benar dapat dipulihkan SEBELUM melangkah.
+mysql -h <host> -u <user> -p -e "DROP DATABASE IF EXISTS mc_k2_scratch; CREATE DATABASE mc_k2_scratch;"
+mysql -h <host> -u <user> -p mc_k2_scratch < k2-rollback-before.sql && echo "cadangan dapat dipulihkan"
+mysql -h <host> -u <user> -p -e "DROP DATABASE mc_k2_scratch;"
+```
+
+```sql
+-- 3. Kebalikan persis dari 0056, tiga langkah, urutannya mengikat.
+ALTER TABLE `sanctions_watchlist_entries` MODIFY COLUMN `listType` enum('DTTOT','PPPSM','DPPSPM') NOT NULL;
+UPDATE `sanctions_watchlist_entries` SET `listType` = 'PPPSM' WHERE `listType` = 'DPPSPM';
+ALTER TABLE `sanctions_watchlist_entries` MODIFY COLUMN `listType` enum('DTTOT','PPPSM') NOT NULL;
+
+-- 4. Periksa: tidak boleh ada baris berjenis kosong, dan jumlah per lingkup harus utuh.
+SELECT listType, IFNULL(sourceLabel,'(null)'), entityType, COUNT(*) FROM `sanctions_watchlist_entries` GROUP BY 1,2,3 ORDER BY 1,2,3;
+SELECT COUNT(*) AS sisa_kosong FROM `sanctions_watchlist_entries` WHERE `listType` = '';
+
+-- 5. Hapus baris 0056 dari jurnal migrasinya.
+DELETE FROM `__drizzle_migrations` WHERE `hash` = (SELECT hash FROM (SELECT hash FROM `__drizzle_migrations` ORDER BY id DESC LIMIT 1) t);
+```
+
+```bash
+# 6. Kembalikan kodenya. Ketiga commit-nya berdiri sendiri dan dapat di-revert terpisah,
+#    tetapi Tugas 3 harus lebih dulu daripada Tugas 2 — penjaganya melarang ejaan yang
+#    dikembalikan Tugas 2.
+git revert <commit Tugas 3> <commit Tugas 2>
+```
+
+**Yang membuat rollback ini aman:** langkah 3 melebarkan enum lebih dulu, persis seperti migrasinya,
+sehingga setiap baris tetap sah pada setiap langkah dan hasilnya tidak bergantung pada `sql_mode`.
 
 ---
 

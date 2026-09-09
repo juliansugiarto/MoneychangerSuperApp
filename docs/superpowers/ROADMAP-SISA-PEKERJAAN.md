@@ -187,7 +187,7 @@ MEDIUM 3 bulan, LOW 12 bulan**; tindak lanjut **worklist Controller yang hanya m
 - [x] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi — **SELESAI 9 September 2026.**
       **Paket J selesai seluruhnya (J1 tujuh tugas, J2 sembilan tugas).**
 
-### Paket K2 — Ganti nama PPPSM menjadi `DPPSPM`
+### Paket K2 — Ganti nama PPPSM menjadi `DPPSPM` — **SELESAI 9 September 2026**
 
 **Rencana rinci sudah ada:** `plans/2026-09-09-ganti-nama-dppspm.md` ·
 spec `specs/2026-09-09-ganti-nama-dppspm-design.md` (dirancang 9 September 2026).
@@ -199,9 +199,24 @@ sudah `DTTOT`, sama-sama sebuah *Daftar*. Lihat spec bagian Masalah 2.
 - [x] Tugas 1 — Peragaan dasar: isi kedua basis data lokal dan catat jumlah baris sebelum migrasi — **SELESAI 9 September 2026**
 - [x] Tugas 2 — Migrasi `0056` dan seluruh tipe enum, satu commit atomik — **SELESAI 9 September 2026**
 - [x] Tugas 3 — Sapuan prosa, pesan validasi, dan uji penjaga — **SELESAI 9 September 2026**
-- [ ] Tugas 4 — Dokumentasi, rollback tertulis, dan antrean migrasi produksi
+- [x] Tugas 4 — Dokumentasi, rollback tertulis, dan antrean migrasi produksi — **SELESAI 9 September 2026**
 
-Urutannya mengikat seluruhnya. **Tepat satu tugas migrasi: Tugas 2.**
+Urutannya mengikat seluruhnya. **Tepat satu tugas migrasi: Tugas 2** (`0056`).
+
+**Risiko residual yang tetap terbuka:**
+
+1. Pengenal `customers.dttotPpsdmMatch`/`dttotPpsdmNotes` **tetap salah eja, sengaja** — nol baris
+   memakainya. Peredamnya hanya komentar penambat di `drizzle/schema.ts`.
+2. Migrasi `0056` **belum pernah dijalankan di atas 239 baris produksi.** Peragaan lokal memakai 17
+   baris sintetis berbentuk sama; yang belum terbukti adalah waktunya, bukan kebenarannya.
+3. **Antrean migrasi produksi menjadi 23** (`0034`–`0056`). Menerapkannya adalah pekerjaan
+   tersendiri yang harus direncanakan sendiri.
+4. Prosedur rollback `0056` **tertulis tetapi belum pernah dijalankan.**
+5. Kutipan `PPPSM` pada `KPMR_P4_3` akan selalu tampak seperti bug bagi sesi berikutnya. Daftar
+   putih pada `server/sanctionsListNaming.test.ts` beserta komentarnya adalah satu-satunya
+   penahannya.
+6. `pnpm audit --prod --audit-level=high` masih **9 temuan** (6 sedang, 3 tinggi). Paket ini tidak
+   menambah dependensi dan tidak memperbaikinya. **Jangan menyebut audit bersih.**
 
 ### Paket K3 — Pembandingan nota terhadap SE BI 18/41/DKSP
 - [ ] **Menunggu pengguna:** naskah SE BI 18/41/DKSP belum ada di proyek
