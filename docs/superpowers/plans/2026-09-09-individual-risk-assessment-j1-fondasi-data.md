@@ -150,6 +150,11 @@ spec bagian "Yang sudah diputuskan pengguna"; yang mengikat J1:
 - [x] **Step 3: Jalur distribusi** `KANTOR`, `LAYANAN_DELIVERY`, `ONLINE_MERCHANT`, dan **34
       provinsi** sebagai kode kebab-uppercase.
 
+      > **Diubah pengguna 9 September 2026, sesudah Tugas 7:** kodenya memakai **garis bawah**
+      > (`JAWA_BARAT`), bukan kebab. Alasannya keseragaman dengan seluruh kosakata IRA lain dan
+      > dengan contoh pada spec; belum ada satu pun baris `PROVINCE` maupun `company_profile.province`
+      > terisi ketika diubah, sehingga tidak ada data yang perlu dimigrasikan.
+
 - [x] **Step 4: Uji** bahwa tiap daftar berkode unik, tiap kode punya label, dan tidak ada label
       kembar. Uji ini murah dan menangkap salin-tempel yang meleset — kesalahan paling mungkin pada
       tugas yang isinya memang menyalin.

@@ -67,7 +67,7 @@ describe("kosakata IRA — hal yang tidak boleh bergeser", () => {
     expect(IRA_DISTRIBUTION_CHANNELS[0]).toBe("KANTOR");
   });
 
-  it("kode provinsi memakai kebab-uppercase tanpa spasi", () => {
-    for (const kode of IRA_PROVINCES) expect(kode).toMatch(/^[A-Z]+(-[A-Z]+)*$/);
+  it("kode provinsi seragam dengan kosakata lain: huruf besar dan garis bawah, tanpa tanda hubung", () => {
+    for (const kode of IRA_PROVINCES) expect(kode).toMatch(/^[A-Z]+(_[A-Z]+)*$/);
   });
 });

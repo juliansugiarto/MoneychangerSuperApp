@@ -725,7 +725,7 @@ export const companyProfile = mysqlTable("company_profile", {
   goamlReportingUserCode: varchar("goamlReportingUserCode", { length: 50 }),
   address: text("address"),
   /**
-   * Provinsi tempat gerai beroperasi, kode kosakata `shared/iraVocabulary.ts` (mis. "JAWA-BARAT").
+   * Provinsi tempat gerai beroperasi, kode kosakata `shared/iraVocabulary.ts` (mis. "JAWA_BARAT").
    *
    * Dinyatakan pada profil, bukan diturunkan dari tabel cabang: aplikasi ini masih satu outlet.
    * Sumber parameter Wilayah Geografis TPPU/TPPT 4a/4b, dipasangkan dengan klasifikasi `PROVINCE`.

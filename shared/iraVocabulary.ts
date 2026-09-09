@@ -102,7 +102,11 @@ export const IRA_DISTRIBUTION_CHANNELS = Object.keys(IRA_DISTRIBUTION_CHANNEL_LA
 export const IRA_DISTRIBUTION_CHANNEL_VALUES = IRA_DISTRIBUTION_CHANNELS as unknown as [IraDistributionChannel, ...IraDistributionChannel[]];
 
 /**
- * 34 provinsi sebagaimana tertulis pada template C1, berkode kebab-uppercase.
+ * 34 provinsi sebagaimana tertulis pada template C1.
+ *
+ * Berkode garis bawah seperti seluruh kosakata IRA lain — ditetapkan pengguna 9 September 2026,
+ * mengganti bentuk kebab pada rancangan awal. Provinsi yang berbeda bentuk sendirian hanya menjadi
+ * pengecualian yang harus diingat setiap pemanggil.
  *
  * Daftarnya mengikuti template, bukan pemekaran wilayah terbaru: parameter Wilayah Geografis
  * dinilai terhadap peringkat risiko provinsi yang diterbitkan pada daftar yang sama, sehingga
@@ -110,38 +114,38 @@ export const IRA_DISTRIBUTION_CHANNEL_VALUES = IRA_DISTRIBUTION_CHANNELS as unkn
  */
 export const IRA_PROVINCE_LABELS = {
   ACEH: "Aceh",
-  "SUMATERA-UTARA": "Sumatera Utara",
-  "SUMATERA-BARAT": "Sumatera Barat",
+  SUMATERA_UTARA: "Sumatera Utara",
+  SUMATERA_BARAT: "Sumatera Barat",
   RIAU: "Riau",
   JAMBI: "Jambi",
-  "SUMATERA-SELATAN": "Sumatera Selatan",
+  SUMATERA_SELATAN: "Sumatera Selatan",
   BENGKULU: "Bengkulu",
   LAMPUNG: "Lampung",
-  "KEPULAUAN-BANGKA-BELITUNG": "Kepulauan Bangka Belitung",
-  "KEPULAUAN-RIAU": "Kepulauan Riau",
-  "DKI-JAKARTA": "DKI Jakarta",
-  "JAWA-BARAT": "Jawa Barat",
-  "JAWA-TENGAH": "Jawa Tengah",
-  "DI-YOGYAKARTA": "DI Yogyakarta",
-  "JAWA-TIMUR": "Jawa Timur",
+  KEPULAUAN_BANGKA_BELITUNG: "Kepulauan Bangka Belitung",
+  KEPULAUAN_RIAU: "Kepulauan Riau",
+  DKI_JAKARTA: "DKI Jakarta",
+  JAWA_BARAT: "Jawa Barat",
+  JAWA_TENGAH: "Jawa Tengah",
+  DI_YOGYAKARTA: "DI Yogyakarta",
+  JAWA_TIMUR: "Jawa Timur",
   BANTEN: "Banten",
   BALI: "Bali",
-  "NUSA-TENGGARA-BARAT": "Nusa Tenggara Barat",
-  "NUSA-TENGGARA-TIMUR": "Nusa Tenggara Timur",
-  "KALIMANTAN-BARAT": "Kalimantan Barat",
-  "KALIMANTAN-TENGAH": "Kalimantan Tengah",
-  "KALIMANTAN-SELATAN": "Kalimantan Selatan",
-  "KALIMANTAN-TIMUR": "Kalimantan Timur",
-  "KALIMANTAN-UTARA": "Kalimantan Utara",
-  "SULAWESI-UTARA": "Sulawesi Utara",
-  "SULAWESI-TENGAH": "Sulawesi Tengah",
-  "SULAWESI-SELATAN": "Sulawesi Selatan",
-  "SULAWESI-TENGGARA": "Sulawesi Tenggara",
+  NUSA_TENGGARA_BARAT: "Nusa Tenggara Barat",
+  NUSA_TENGGARA_TIMUR: "Nusa Tenggara Timur",
+  KALIMANTAN_BARAT: "Kalimantan Barat",
+  KALIMANTAN_TENGAH: "Kalimantan Tengah",
+  KALIMANTAN_SELATAN: "Kalimantan Selatan",
+  KALIMANTAN_TIMUR: "Kalimantan Timur",
+  KALIMANTAN_UTARA: "Kalimantan Utara",
+  SULAWESI_UTARA: "Sulawesi Utara",
+  SULAWESI_TENGAH: "Sulawesi Tengah",
+  SULAWESI_SELATAN: "Sulawesi Selatan",
+  SULAWESI_TENGGARA: "Sulawesi Tenggara",
   GORONTALO: "Gorontalo",
-  "SULAWESI-BARAT": "Sulawesi Barat",
+  SULAWESI_BARAT: "Sulawesi Barat",
   MALUKU: "Maluku",
-  "MALUKU-UTARA": "Maluku Utara",
-  "PAPUA-BARAT": "Papua Barat",
+  MALUKU_UTARA: "Maluku Utara",
+  PAPUA_BARAT: "Papua Barat",
   PAPUA: "Papua",
 } as const;
 
