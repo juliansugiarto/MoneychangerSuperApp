@@ -26,7 +26,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 2 — Migrasi: tiga kolom nasabah/bon/profil dan dua tabel klasifikasi
 - [x] Tugas 3 — Penulis klasifikasi risiko beserta gerbang peran dan auditnya
 - [x] Tugas 4 — Borang nasabah: jenis nasabah, bentuk badan hukum, kategori pekerjaan
-- [ ] Tugas 5 — Jalur distribusi pada bon
+- [x] Tugas 5 — Jalur distribusi pada bon
 - [ ] Tugas 6 — Pembaca agregat Form C1
 - [ ] Tugas 7 — Halaman Klasifikasi Risiko dan Ambang
 
@@ -331,18 +331,18 @@ describe("kategori nasabah pada borang", () => {
 **Files:** Modify `server/operations.ts`, `server/routers.ts`, `client/src/pages/Transactions.tsx`;
 Create `server/transactionChannel.test.ts`
 
-- [ ] **Step 1: Uji lebih dulu:** bon baru tanpa pilihan tersimpan `KANTOR`; bon dengan
+- [x] **Step 1: Uji lebih dulu:** bon baru tanpa pilihan tersimpan `KANTOR`; bon dengan
       `LAYANAN_DELIVERY` tersimpan apa adanya; nilai di luar enum ditolak Zod.
 
-- [ ] **Step 2:** Tambahkan ruasnya pada jalur pembuatan bon dan pada borangnya. Bawaannya `KANTOR`
+- [x] **Step 2:** Tambahkan ruasnya pada jalur pembuatan bon dan pada borangnya. Bawaannya `KANTOR`
       dan terpilih lebih dulu — petugas kasir tidak boleh dipaksa memilih hal yang hampir selalu
       sama.
 
-- [ ] **Step 3: Jangan menyentuh sisi pecahan maupun sisi Rupiah bon.** Tugas ini menambah satu
+- [x] **Step 3: Jangan menyentuh sisi pecahan maupun sisi Rupiah bon.** Tugas ini menambah satu
       kolom keterangan; bila ia mulai menyentuh validasi stok atau posting kas, **berhenti dan
       laporkan**.
 
-- [ ] **Step 4:** Perintah mutu, lalu commit `"Jalur distribusi pada bon"`.
+- [x] **Step 4:** Perintah mutu, lalu commit `"Jalur distribusi pada bon"`.
 
 ---
 

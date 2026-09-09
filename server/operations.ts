@@ -40,7 +40,7 @@ import {
   transactionReviewActions,
   type StaffRole,
 } from "../drizzle/schema";
-import type { IraCustomerType, IraLegalForm, IraOccupationCategory } from "../shared/iraVocabulary";
+import type { IraCustomerType, IraDistributionChannel, IraLegalForm, IraOccupationCategory } from "../shared/iraVocabulary";
 import { getDb } from "./db";
 import { knownDenominationsFor } from "../shared/currencyDenominations";
 import { PRIMARY_REVENUE_ROW_KEY } from "../shared/regulatoryForms";
@@ -1328,6 +1328,8 @@ export type CreateTransactionInput = {
   dealNotes?: string;
   paymentMethod: "CASH" | "BANK_TRANSFER" | "OTHER";
   paymentReference?: string;
+  /** Jalur distribusi bon (Form C1). Kosong berarti kantor/gerai, sebagaimana bawaan kolomnya. */
+  distributionChannel?: IraDistributionChannel;
   /** Physical Rupiah denomination breakdown for the payment leg — required when paymentMethod is CASH. */
   paymentDenominations?: DenominationEntryInput[];
   /** Company bank account the transfer moved through — required when paymentMethod is BANK_TRANSFER. */
@@ -1642,6 +1644,7 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
       rupiahAmount,
       paymentMethod: input.paymentMethod,
       paymentReference: input.paymentReference?.trim() || null,
+      distributionChannel: input.distributionChannel ?? "KANTOR",
       bankAccountId: bankAccount?.id ?? null,
       counterpartyBankName: bankAccount ? input.counterpartyBankName!.trim() : null,
       counterpartyAccountNumber: bankAccount ? input.counterpartyAccountNumber!.trim() : null,

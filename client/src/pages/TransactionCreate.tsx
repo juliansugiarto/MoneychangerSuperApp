@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatPlainAmount } from "@/lib/money";
 import { trpc } from "@/lib/trpc";
+import { IRA_DISTRIBUTION_CHANNEL_LABELS, type IraDistributionChannel } from "@shared/iraVocabulary";
 import { SUSPICIOUS_TRANSACTION_INDICATOR_CATEGORIES } from "@shared/suspiciousTransactionIndicators";
 import { ArrowLeftRight, Banknote, CircleDollarSign, FileText, Plus, Printer, Search, Sparkles, Trash2, Upload, UserPlus } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -52,6 +53,9 @@ export default function TransactionCreate() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [lines, setLines] = useState<LineDraft[]>([emptyLine()]);
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "BANK_TRANSFER" | "OTHER">("CASH");
+  // Terpilih lebih dulu: hampir seluruh bon dilayani di gerai, dan kasir tidak boleh dipaksa
+  // memilih hal yang sama setiap kali. Sumber parameter jalur distribusi Form C1.
+  const [distributionChannel, setDistributionChannel] = useState<IraDistributionChannel>("KANTOR");
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentDenominations, setPaymentDenominations] = useState<PlainDenominationRow[]>([emptyPlainDenominationRow()]);
   const [bankAccountId, setBankAccountId] = useState<number | null>(null);
@@ -271,6 +275,7 @@ export default function TransactionCreate() {
       customerId: customer.id,
       lines: lines.map((line) => ({ currencyId: line.currency!.id, quoteUnit: line.quoteUnit || "1", denominations: line.denominations.map((row) => ({ value: row.value, quantity: Number(row.quantity), rate: row.rate })) })),
       paymentMethod,
+      distributionChannel,
       paymentReference,
       paymentDenominations: paymentMethod === "CASH" ? paymentDenominations.map((row) => ({ value: row.value, quantity: Number(row.quantity) })) : undefined,
       bankAccountId: paymentMethod === "BANK_TRANSFER" ? bankAccountId ?? undefined : undefined,
@@ -369,6 +374,7 @@ export default function TransactionCreate() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div><Label>Cara bayar</Label><Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as typeof paymentMethod)}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="CASH">Tunai</SelectItem><SelectItem value="BANK_TRANSFER">Transfer bank</SelectItem><SelectItem value="OTHER">Lainnya</SelectItem></SelectContent></Select></div>
             <div><Label>Referensi pembayaran</Label><Input className="mt-1" value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} placeholder="No. transfer / keterangan kas" /></div>
+            <div><Label>Jalur distribusi</Label><Select value={distributionChannel} onValueChange={(value) => setDistributionChannel(value as IraDistributionChannel)}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(IRA_DISTRIBUTION_CHANNEL_LABELS).map(([code, label]) => <SelectItem key={code} value={code}>{label}</SelectItem>)}</SelectContent></Select><p className="mt-1 text-xs text-[#94a7bb]">Bagaimana bon ini dilayani. Bawaannya kantor/gerai.</p></div>
           </div>
           {paymentMethod === "BANK_TRANSFER" ? <div className="space-y-3 rounded-xl border border-[#cbd9e7] bg-[#f8fbfe] p-3">
             <div>

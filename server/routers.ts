@@ -138,7 +138,7 @@ import { OPERATIONAL_TIMEZONE_VALUES } from "../shared/regulatoryActionQueue";
 import { simulateArchiveReadiness, simulateClosing, simulateExchange, simulateRateShock } from "./simulation";
 import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedure, router, staffProcedure } from "./_core/trpc";
 import { classifyRisk, iraClassificationDenial, listClassifications } from "./iraRiskClassification";
-import { IRA_CUSTOMER_TYPE_VALUES, IRA_LEGAL_FORM_VALUES, IRA_OCCUPATION_CATEGORY_VALUES } from "../shared/iraVocabulary";
+import { IRA_CUSTOMER_TYPE_VALUES, IRA_DISTRIBUTION_CHANNEL_VALUES, IRA_LEGAL_FORM_VALUES, IRA_OCCUPATION_CATEGORY_VALUES } from "../shared/iraVocabulary";
 import { iraRiskDimensions, iraRiskLevels, iraRiskTypes } from "../drizzle/schema";
 import { createInternalSession, hashPassword, internalSessionMaxAge, validateUsername, verifyInternalCredentials, verifyPassword } from "./internalAuth";
 import { createInternalUser, getInternalUserById, listInternalUsers, updateInternalUserPassword, updateInternalUserRole, updateInternalUserStatus } from "./db";
@@ -325,6 +325,70 @@ export const customerUpdateInput = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Catatan kecocokan DTTOT/PPSPM wajib diisi.", path: ["dttotPpsdmNotes"] });
   }
 });
+
+/**
+ * Masukan pembuatan bon. Diekspor supaya kontraknya dapat diuji tanpa menyalakan tRPC — bawaan
+ * `distributionChannel` dan penolakan nilai di luar enum hidup di sini, bukan di handler.
+ */
+export const transactionCreateInput = z.object({
+      operation: z.enum(["BUY", "SELL"]),
+      customerId: z.number().int().positive(),
+      /** Physical receipt-book number, typed manually by the teller. Jual and Beli books are numbered independently. */
+      receiptNumber: z.string().trim().min(1).max(80),
+      lines: z.array(z.object({
+        currencyId: z.number().int().positive(),
+        quoteUnit: decimalString.optional(),
+        /** Every denomination group is priced on its own (e.g. USD 100s vs USD 10s), so this is required — no line-level price/amount. */
+        denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive(), rate: decimalString })).min(1).max(50),
+      })).min(1).max(30),
+      dealNotes: z.string().trim().max(255).optional(),
+      paymentMethod: z.enum(["CASH", "BANK_TRANSFER", "OTHER"]),
+      paymentReference: z.string().trim().max(160).optional(),
+      /** Jalur distribusi bon (Form C1, parameter TPPU/TPPT 2a/2b). Bawaannya kantor/gerai. */
+      distributionChannel: z.enum(IRA_DISTRIBUTION_CHANNEL_VALUES).default("KANTOR"),
+      /** Physical Rupiah denomination breakdown for the payment leg — required when paymentMethod is CASH; bank transfer/other never touch physical stock. */
+      paymentDenominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).max(80).optional(),
+      /** Which company bank account the transfer moved through — required when paymentMethod is BANK_TRANSFER. */
+      bankAccountId: z.number().int().positive().optional(),
+      /** The other side of the transfer — whose account the money came from (JUAL) or went to (BELI). Required together when paymentMethod is BANK_TRANSFER. */
+      counterpartyBankName: z.string().trim().max(120).optional(),
+      counterpartyAccountNumber: z.string().trim().max(60).optional(),
+      counterpartyAccountHolderName: z.string().trim().max(160).optional(),
+      /** Required only when counterpartyAccountHolderName doesn't match the customer's own name. */
+      counterpartyNameMismatchReason: z.string().trim().max(1000).optional(),
+      transactionPurposeSnapshot: z.string().trim().min(3).max(1000).optional(),
+      customerActingAs: z.enum(["SELF", "REPRESENTATIVE"]).default("SELF"),
+      /** Registered customer id acting as representative/kuasa; must be picked from search, never typed freely. */
+      representativeCustomerId: z.number().int().positive().optional(),
+      underlyingRequired: z.boolean().default(false),
+      underlyingReference: z.string().trim().max(160).optional(),
+      underlyingNotes: z.string().trim().max(1000).optional(),
+      /** Required once the transaction meets the >=10,000 USD-equivalent threshold — validated for real server-side (createTransaction), since only the server knows the live BI rate at save time. */
+      thresholdReason: z.string().trim().max(1000).optional(),
+      isSuspiciousTransaction: z.boolean().default(false),
+      suspiciousIndicators: z.array(z.string()).max(20).optional(),
+      suspiciousNotes: z.string().trim().max(1000).optional(),
+      transactionAt: z.coerce.date(),
+    }).superRefine((value, ctx) => {
+      if (value.customerActingAs === "REPRESENTATIVE" && !value.representativeCustomerId) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Pilih nasabah terdaftar sebagai pihak kuasa/wakil." });
+      }
+      if (value.underlyingRequired && !value.underlyingReference) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Referensi underlying wajib diisi." });
+      }
+      if (value.isSuspiciousTransaction && !value.suspiciousIndicators?.length) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Pilih minimal satu indikator TKM.", path: ["suspiciousIndicators"] });
+      }
+      if (value.paymentMethod === "CASH" && !value.paymentDenominations?.length) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Rincian pecahan Rupiah wajib diisi untuk pembayaran tunai.", path: ["paymentDenominations"] });
+      }
+      if (value.paymentMethod === "BANK_TRANSFER") {
+        if (!value.bankAccountId) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Pilih rekening bank perusahaan yang menerima/mengirim transfer.", path: ["bankAccountId"] });
+        if (!value.counterpartyBankName) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Nama bank rekening lawan wajib diisi.", path: ["counterpartyBankName"] });
+        if (!value.counterpartyAccountNumber) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Nomor rekening lawan wajib diisi.", path: ["counterpartyAccountNumber"] });
+        if (!value.counterpartyAccountHolderName) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Atas nama rekening lawan wajib diisi.", path: ["counterpartyAccountHolderName"] });
+      }
+    });
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -873,63 +937,7 @@ export const appRouter = router({
   transactions: router({
     list: staffProcedure.query(({ ctx }) => listTransactions(ctx.user)),
     denominations: staffProcedure.input(z.object({ transactionId: z.number().int().positive() })).query(({ input }) => listTransactionDenominations(input.transactionId)),
-    create: staffProcedure.input(z.object({
-      operation: z.enum(["BUY", "SELL"]),
-      customerId: z.number().int().positive(),
-      /** Physical receipt-book number, typed manually by the teller. Jual and Beli books are numbered independently. */
-      receiptNumber: z.string().trim().min(1).max(80),
-      lines: z.array(z.object({
-        currencyId: z.number().int().positive(),
-        quoteUnit: decimalString.optional(),
-        /** Every denomination group is priced on its own (e.g. USD 100s vs USD 10s), so this is required — no line-level price/amount. */
-        denominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive(), rate: decimalString })).min(1).max(50),
-      })).min(1).max(30),
-      dealNotes: z.string().trim().max(255).optional(),
-      paymentMethod: z.enum(["CASH", "BANK_TRANSFER", "OTHER"]),
-      paymentReference: z.string().trim().max(160).optional(),
-      /** Physical Rupiah denomination breakdown for the payment leg — required when paymentMethod is CASH; bank transfer/other never touch physical stock. */
-      paymentDenominations: z.array(z.object({ value: decimalString, quantity: z.number().int().positive() })).max(80).optional(),
-      /** Which company bank account the transfer moved through — required when paymentMethod is BANK_TRANSFER. */
-      bankAccountId: z.number().int().positive().optional(),
-      /** The other side of the transfer — whose account the money came from (JUAL) or went to (BELI). Required together when paymentMethod is BANK_TRANSFER. */
-      counterpartyBankName: z.string().trim().max(120).optional(),
-      counterpartyAccountNumber: z.string().trim().max(60).optional(),
-      counterpartyAccountHolderName: z.string().trim().max(160).optional(),
-      /** Required only when counterpartyAccountHolderName doesn't match the customer's own name. */
-      counterpartyNameMismatchReason: z.string().trim().max(1000).optional(),
-      transactionPurposeSnapshot: z.string().trim().min(3).max(1000).optional(),
-      customerActingAs: z.enum(["SELF", "REPRESENTATIVE"]).default("SELF"),
-      /** Registered customer id acting as representative/kuasa; must be picked from search, never typed freely. */
-      representativeCustomerId: z.number().int().positive().optional(),
-      underlyingRequired: z.boolean().default(false),
-      underlyingReference: z.string().trim().max(160).optional(),
-      underlyingNotes: z.string().trim().max(1000).optional(),
-      /** Required once the transaction meets the >=10,000 USD-equivalent threshold — validated for real server-side (createTransaction), since only the server knows the live BI rate at save time. */
-      thresholdReason: z.string().trim().max(1000).optional(),
-      isSuspiciousTransaction: z.boolean().default(false),
-      suspiciousIndicators: z.array(z.string()).max(20).optional(),
-      suspiciousNotes: z.string().trim().max(1000).optional(),
-      transactionAt: z.coerce.date(),
-    }).superRefine((value, ctx) => {
-      if (value.customerActingAs === "REPRESENTATIVE" && !value.representativeCustomerId) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Pilih nasabah terdaftar sebagai pihak kuasa/wakil." });
-      }
-      if (value.underlyingRequired && !value.underlyingReference) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Referensi underlying wajib diisi." });
-      }
-      if (value.isSuspiciousTransaction && !value.suspiciousIndicators?.length) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Pilih minimal satu indikator TKM.", path: ["suspiciousIndicators"] });
-      }
-      if (value.paymentMethod === "CASH" && !value.paymentDenominations?.length) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Rincian pecahan Rupiah wajib diisi untuk pembayaran tunai.", path: ["paymentDenominations"] });
-      }
-      if (value.paymentMethod === "BANK_TRANSFER") {
-        if (!value.bankAccountId) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Pilih rekening bank perusahaan yang menerima/mengirim transfer.", path: ["bankAccountId"] });
-        if (!value.counterpartyBankName) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Nama bank rekening lawan wajib diisi.", path: ["counterpartyBankName"] });
-        if (!value.counterpartyAccountNumber) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Nomor rekening lawan wajib diisi.", path: ["counterpartyAccountNumber"] });
-        if (!value.counterpartyAccountHolderName) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Atas nama rekening lawan wajib diisi.", path: ["counterpartyAccountHolderName"] });
-      }
-    })).mutation(({ input, ctx }) => createTransaction(input, ctx.user.id)),
+    create: staffProcedure.input(transactionCreateInput).mutation(({ input, ctx }) => createTransaction(input, ctx.user.id)),
     submit: staffProcedure.input(z.object({ transactionId: z.number().int().positive() })).mutation(({ input, ctx }) => submitTransaction(input.transactionId, ctx.user)),
     cancel: staffProcedure.input(z.object({ transactionId: z.number().int().positive(), reason: z.string().trim().min(5).max(1000) })).mutation(({ input, ctx }) => cancelTransaction(input.transactionId, input.reason, ctx.user)),
     review: adminProcedure.input(z.object({ transactionId: z.number().int().positive(), action: z.enum(["APPROVED", "RETURNED", "ESCALATED"]), notes: z.string().trim().min(3).max(1000) })).mutation(({ input, ctx }) => recordReviewAction(input, ctx.user)),
