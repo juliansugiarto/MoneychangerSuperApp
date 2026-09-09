@@ -22,7 +22,7 @@ inherennya akan selalu nol, dan itu bukan penyelesaian.
 
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu.**
 
-- [ ] Tugas 1 — Aritmetika penilaian, murni dan teruji
+- [x] Tugas 1 — Aritmetika penilaian, murni dan teruji
 - [ ] Tugas 2 — Katalog 33 parameter risiko inheren
 - [ ] Tugas 3 — Katalog 31 pertanyaan KPMR
 - [ ] Tugas 4 — Migrasi: empat tabel penilaian
@@ -138,7 +138,7 @@ kejanggalannya sengaja tidak diperbaiki (lihat spec Rancangan 4).
   `inherentTotalScore`, `riskPredicate`, `kpmrPillarAverage`, `kpmrScore`, `finalAssessmentValue`,
   beserta konstanta bobot, anchor, dan matriksnya.
 
-- [ ] **Step 1: Tulis uji yang gagal lebih dulu.** Yang wajib ada:
+- [x] **Step 1: Tulis uji yang gagal lebih dulu.** Yang wajib ada:
 
 ```ts
 describe("aritmetika IRA", () => {
@@ -158,14 +158,14 @@ describe("aritmetika IRA", () => {
       **Uji keenam sengaja mengunci kejanggalan template** (spec Rancangan 4.1). Bila kelak BI
       menuntut rata-rata berbobot, uji inilah yang harus diubah lebih dulu — dengan sadar.
 
-- [ ] **Step 2: Tulis fungsinya.** Setiap konstanta bernama beserta komentar yang menyebut sel
+- [x] **Step 2: Tulis fungsinya.** Setiap konstanta bernama beserta komentar yang menyebut sel
       asalnya pada template (`A1!F62`, `B!K46`, dan seterusnya). Tidak ada satu pun angka telanjang
       di tengah kode.
 
-- [ ] **Step 3: Uang dan persentase memakai `Decimal`**, bukan `number` mentah, sama seperti
+- [x] **Step 3: Uang dan persentase memakai `Decimal`**, bukan `number` mentah, sama seperti
       `foldMonthlyActivity`. Nilai akhirnya dibulatkan hanya saat ditampilkan, tidak saat dihitung.
 
-- [ ] **Step 4:** Perintah mutu, lalu commit `"Aritmetika penilaian risiko IRA, murni"`.
+- [x] **Step 4:** Perintah mutu, lalu commit `"Aritmetika penilaian risiko IRA, murni"`.
 
 ---
 
