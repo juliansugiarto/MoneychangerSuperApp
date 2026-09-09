@@ -70,8 +70,8 @@ describe("listSanctionsWatchlistSummary", () => {
     const getDb = vi.spyOn(db, "getDb").mockResolvedValue(fakeDb as never);
     const summary = await listSanctionsWatchlistSummary();
     getDb.mockRestore();
-    // Urutannya menurut listType secara alfabetis, dan penggantian nama MEMBALIKNYA: `PPPSM`
-    // dahulu jatuh sesudah `DTTOT`, sedangkan `DPPSPM` jatuh sebelumnya. Halaman Cek Watchlist
+    // Urutannya menurut listType secara alfabetis, dan penggantian nama Paket K2 MEMBALIKNYA:
+    // ejaan lama jatuh SESUDAH `DTTOT`, sedangkan `DPPSPM` jatuh SEBELUMNYA. Halaman Cek Watchlist
     // karena itu kini menampilkan daftar proliferasi lebih dahulu — perubahan yang terlihat
     // pengguna, dan disengaja, bukan kebetulan yang lolos.
     expect(summary).toEqual([

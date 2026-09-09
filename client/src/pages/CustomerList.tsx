@@ -119,7 +119,7 @@ export default function CustomerList() {
   const saveEdit = () => {
     if (!selectedCustomer || !editForm) return;
     if (editForm.pepStatus !== "NONE" && !editForm.pepDetails.trim()) return toast.error("Keterangan PEP wajib diisi.");
-    if (editForm.dttotPpsdmMatch && !editForm.dttotPpsdmNotes.trim()) return toast.error("Catatan kecocokan DTTOT/PPSPM wajib diisi.");
+    if (editForm.dttotPpsdmMatch && !editForm.dttotPpsdmNotes.trim()) return toast.error("Catatan kecocokan DTTOT/DPPSPM wajib diisi.");
     if (editForm.changeReason.trim().length < 5) return toast.error("Alasan perubahan wajib diisi (minimal 5 karakter).");
     update.mutate({
       customerId: selectedCustomer.id,
@@ -144,7 +144,7 @@ export default function CustomerList() {
   }, [customers, search]);
 
   const exportCsv = () => {
-    const headers = ["CIF", "Nama Lengkap", "Jenis Identitas", "Nomor Identitas", "Berlaku Hingga", "Telepon", "Tempat Lahir", "Tanggal Lahir", "Alamat", "Pekerjaan", "Sumber Dana", "Tujuan Transaksi", "Status Profil", "Tingkat Risiko", "Catatan Risiko", "Beneficial Owner", "Nama Beneficial Owner", "Status PEP", "Keterangan PEP", "Cocok DTTOT/PPSPM", "Catatan DTTOT/PPSPM", "Tanggal Dibuat"];
+    const headers = ["CIF", "Nama Lengkap", "Jenis Identitas", "Nomor Identitas", "Berlaku Hingga", "Telepon", "Tempat Lahir", "Tanggal Lahir", "Alamat", "Pekerjaan", "Sumber Dana", "Tujuan Transaksi", "Status Profil", "Tingkat Risiko", "Catatan Risiko", "Beneficial Owner", "Nama Beneficial Owner", "Status PEP", "Keterangan PEP", "Cocok DTTOT/DPPSPM", "Catatan DTTOT/DPPSPM", "Tanggal Dibuat"];
     const rows = filtered.map((customer) => [
       customer.cifNumber, customer.fullName, customer.identityType, customer.identityNumber,
       customer.identityExpiryDate ? formatDate(customer.identityExpiryDate) : "Seumur hidup",
@@ -222,7 +222,7 @@ export default function CustomerList() {
                         <div className="flex flex-wrap gap-1">
                           {customer.hasBeneficialOwner ? <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700">BO{customer.beneficialOwnerCustomerId ? `: ${nameById.get(customer.beneficialOwnerCustomerId) ?? `#${customer.beneficialOwnerCustomerId}`}` : ""}</Badge> : null}
                           {customer.pepStatus !== "NONE" ? <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">{customer.pepStatus === "SELF" ? "PEP" : "Hub. PEP"}</Badge> : null}
-                          {customer.dttotPpsdmMatch ? <Badge className="bg-rose-600 text-white hover:bg-rose-600">DTTOT/PPSPM</Badge> : null}
+                          {customer.dttotPpsdmMatch ? <Badge className="bg-rose-600 text-white hover:bg-rose-600">DTTOT/DPPSPM</Badge> : null}
                           {kategoriBelumDiisi(customer) ? <Badge variant="outline" className="border-slate-300 bg-slate-50 text-slate-600">Kategori BI belum diisi</Badge> : null}
                           {!customer.hasBeneficialOwner && customer.pepStatus === "NONE" && !customer.dttotPpsdmMatch && !kategoriBelumDiisi(customer) ? <span className="text-xs text-[#94a7bb]">—</span> : null}
                         </div>
@@ -319,11 +319,11 @@ export default function CustomerList() {
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div><Label className="text-xs">Status PEP</Label><Select value={editForm.pepStatus} onValueChange={(v) => setEditForm({ ...editForm, pepStatus: v as typeof editForm.pepStatus })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="NONE">Bukan PEP</SelectItem><SelectItem value="SELF">Nasabah adalah PEP</SelectItem><SelectItem value="RELATED">Berhubungan dengan PEP</SelectItem></SelectContent></Select></div>
-                <div><Label className="text-xs">Cocok DTTOT/PPSPM</Label><Select value={editForm.dttotPpsdmMatch ? "yes" : "no"} onValueChange={(v) => setEditForm({ ...editForm, dttotPpsdmMatch: v === "yes" })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="no">Tidak</SelectItem><SelectItem value="yes">Ya</SelectItem></SelectContent></Select></div>
+                <div><Label className="text-xs">Cocok DTTOT/DPPSPM</Label><Select value={editForm.dttotPpsdmMatch ? "yes" : "no"} onValueChange={(v) => setEditForm({ ...editForm, dttotPpsdmMatch: v === "yes" })}><SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="no">Tidak</SelectItem><SelectItem value="yes">Ya</SelectItem></SelectContent></Select></div>
               </div>
               {editForm.pepStatus !== "NONE" ? <div><Label className="text-xs">Keterangan PEP</Label><Input className="mt-1" value={editForm.pepDetails} onChange={(e) => setEditForm({ ...editForm, pepDetails: e.target.value })} /></div> : null}
               <WatchlistCheckButton name={editForm.fullName} />
-              {editForm.dttotPpsdmMatch ? <div><Label className="text-xs">Catatan DTTOT/PPSPM</Label><Input className="mt-1" value={editForm.dttotPpsdmNotes} onChange={(e) => setEditForm({ ...editForm, dttotPpsdmNotes: e.target.value })} /></div> : null}
+              {editForm.dttotPpsdmMatch ? <div><Label className="text-xs">Catatan DTTOT/DPPSPM</Label><Input className="mt-1" value={editForm.dttotPpsdmNotes} onChange={(e) => setEditForm({ ...editForm, dttotPpsdmNotes: e.target.value })} /></div> : null}
               <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-3">
                 <Label className="text-xs font-semibold text-amber-900">Alasan perubahan (wajib, tercatat di jejak audit)</Label>
                 <Input className="mt-1" value={editForm.changeReason} onChange={(e) => setEditForm({ ...editForm, changeReason: e.target.value })} placeholder="Contoh: koreksi nomor telepon sesuai konfirmasi nasabah" />
@@ -349,8 +349,8 @@ export default function CustomerList() {
               <DetailField label="Beneficial owner" value={selectedCustomer.hasBeneficialOwner ? (selectedCustomer.beneficialOwnerCustomerId ? (nameById.get(selectedCustomer.beneficialOwnerCustomerId) ?? `#${selectedCustomer.beneficialOwnerCustomerId}`) : "Ya") : "Tidak"} />
               <DetailField label="Status PEP" value={selectedCustomer.pepStatus === "SELF" ? "Nasabah adalah PEP" : selectedCustomer.pepStatus === "RELATED" ? "Berhubungan dengan PEP" : "Bukan PEP"} />
               {selectedCustomer.pepDetails ? <DetailField label="Keterangan PEP" value={selectedCustomer.pepDetails} full /> : null}
-              <DetailField label="Cocok DTTOT/PPSPM" value={selectedCustomer.dttotPpsdmMatch ? "Ya" : "Tidak"} />
-              {selectedCustomer.dttotPpsdmNotes ? <DetailField label="Catatan DTTOT/PPSPM" value={selectedCustomer.dttotPpsdmNotes} full /> : null}
+              <DetailField label="Cocok DTTOT/DPPSPM" value={selectedCustomer.dttotPpsdmMatch ? "Ya" : "Tidak"} />
+              {selectedCustomer.dttotPpsdmNotes ? <DetailField label="Catatan DTTOT/DPPSPM" value={selectedCustomer.dttotPpsdmNotes} full /> : null}
             </div>}
           </> : null}
         </DialogContent>

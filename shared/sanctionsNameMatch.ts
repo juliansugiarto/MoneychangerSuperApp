@@ -1,10 +1,10 @@
 /**
- * Fuzzy name-matching for DTTOT/PPPSM watchlist screening. Deliberately simple and dependency-free
+ * Fuzzy name-matching for DTTOT/DPPSPM watchlist screening. Deliberately simple and dependency-free
  * (token-level Levenshtein similarity, no external NLP/fuzzy-matching library) so the scoring logic
  * stays auditable — a compliance reviewer can be told exactly how a match score was produced.
  *
  * This is a *screening aid*, never a determination: it surfaces candidates above MATCH_THRESHOLD for
- * a human to review. It must never auto-flag a customer as a confirmed DTTOT/PPPSM match — that
+ * a human to review. It must never auto-flag a customer as a confirmed DTTOT/DPPSPM match — that
  * stays a manual checkbox+notes decision (see customers.dttotPpsdmMatch), same as every other
  * regulatory judgment call in this app.
  */
@@ -103,7 +103,7 @@ export type WatchlistNameListEntry = { name: string; note: string | null };
  * Parses a pasted plain-text watchlist name list — one entry per line, optionally
  * "Nama Lengkap, catatan" (e.g. a reference/ID number copied alongside the name). Deliberately not
  * an Excel/XML parser: PPATK's SIPENDAR portal watchlist export column layout isn't documented in a
- * sample we've verified (unlike DTTOT/PPPSM, where the user supplied real files — see
+ * sample we've verified (unlike DTTOT/DPPSPM, where the user supplied real files — see
  * server/sanctionsWatchlistImport.ts), so rather than guess at a schema, staff copy the names
  * straight out of whatever export PPATK gives them. The note is carried through for display only —
  * it never affects the match score.

@@ -198,7 +198,7 @@ sudah `DTTOT`, sama-sama sebuah *Daftar*. Lihat spec bagian Masalah 2.
 
 - [x] Tugas 1 — Peragaan dasar: isi kedua basis data lokal dan catat jumlah baris sebelum migrasi — **SELESAI 9 September 2026**
 - [x] Tugas 2 — Migrasi `0056` dan seluruh tipe enum, satu commit atomik — **SELESAI 9 September 2026**
-- [ ] Tugas 3 — Sapuan prosa, pesan validasi, dan uji penjaga
+- [x] Tugas 3 — Sapuan prosa, pesan validasi, dan uji penjaga — **SELESAI 9 September 2026**
 - [ ] Tugas 4 — Dokumentasi, rollback tertulis, dan antrean migrasi produksi
 
 Urutannya mengikat seluruhnya. **Tepat satu tugas migrasi: Tugas 2.**

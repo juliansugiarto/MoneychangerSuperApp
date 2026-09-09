@@ -99,12 +99,16 @@ describe("parseSanctionsWatchlistWorkbook — DPPSPM shape", () => {
     expect(() => parseSanctionsWatchlistWorkbook(data)).toThrow(/tidak dikenali/);
   });
 
-  it("menghasilkan listType DPPSPM — bukan PPPSM maupun PPPSPM", () => {
+  it("menghasilkan listType DPPSPM, nilai yang tersimpan di basis data", () => {
     // PPSPM menamai tindak pidananya dan PPPSPM menamai program pencegahannya; keduanya dipakai
     // dengan benar di tempat lain. Yang disimpan tabel ini adalah DAFTAR penetapannya, sejajar
     // dengan DTTOT — sebagaimana templat BI memasangkan keduanya pada shared/iraKpmrCatalogue.ts.
     // Menegakkan nilainya, bukan sekadar mengikutinya: nilai enum ini adalah data tersimpan, dan
     // mengubahnya kembali menuntut migrasi, bukan sekadar penyuntingan konstanta.
+    //
+    // Ejaan di seluruh SUMBER dijaga terpisah oleh server/sanctionsListNaming.test.ts; berkas ini
+    // sengaja tidak memuat ejaan terlarangnya sebagai literal, supaya penjaga itu tetap dapat
+    // memindainya tanpa daftar putih tambahan.
     const data = workbookBuffer([{ name: "Sheet1", rows: [
       dppspmOrangHeader,
       ["ZZTESTi.001", "", "", "", "", "", "", "", "", "", "", "", ""],
@@ -112,8 +116,6 @@ describe("parseSanctionsWatchlistWorkbook — DPPSPM shape", () => {
     ] }]);
     const result = parseSanctionsWatchlistWorkbook(data);
     expect(result.listType).toBe("DPPSPM");
-    expect(JSON.stringify(result)).not.toContain("PPPSM");
-    expect(JSON.stringify(result)).not.toContain("PPPSPM");
   });
 });
 

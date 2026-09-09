@@ -2,7 +2,7 @@ import * as XLSX from "xlsx";
 import { splitAliasNames } from "../shared/sanctionsNameMatch";
 
 /**
- * Parses PPATK/DK PBB public sanctions-list workbooks (DTTOT, PPPSM) into normalized entries ready
+ * Parses PPATK/DK PBB public sanctions-list workbooks (DTTOT, DPPSPM) into normalized entries ready
  * for `sanctions_watchlist_entries`. Two known shapes, auto-detected from the header row rather than
  * assumed from the file name (file names are just opaque export timestamps):
  *
@@ -10,16 +10,16 @@ import { splitAliasNames } from "../shared/sanctionsNameMatch";
  *    Tempat Lahir/Tanggal Lahir/WN atau Asal Negara/Alamat. Entity type comes from the "Terduga"
  *    column per row. Aliases aren't a separate column — they're embedded in the name field itself
  *    ("X alias Y alias Z"), so they're split out of `fullName` with `splitAliasNames`.
- *  - PPPSM: two sheets per country/regime sub-list (Orang = individuals, Entitas = corporate/other),
+ *  - DPPSPM: two sheets per country/regime sub-list (Orang = individuals, Entitas = corporate/other),
  *    columns Referensi/Nama/[Gelar/Pekerjaan for Orang]/Tanggal Lahir/Tempat Lahir/"Alias N" columns
  *    (variable count)/Kewarganegaraan/Nomor Paspor/Nomor Identitas/"Alamat"[" N"] (variable
  *    count)/Informasi Lain. The very first data row is a section-title marker ("ORANG ATAU
  *    INDIVIDUAL" / "KORPORASI ATAU ENTITAS") that must be skipped, not imported as a record.
  *    `sourceLabel` (e.g. "DPRK", "IR") is derived from the alpha prefix of `Referensi` codes
  *    (DPRKi.001 / IRe.003, ...) so each country/regime sub-list can be re-imported independently
- *    without wiping the others — PPPSM is a family of lists, not one file.
+ *    without wiping the others — DPPSPM is a family of lists, not one file.
  *
- * A workbook that matches neither shape, or whose PPPSM reference-code prefixes are inconsistent
+ * A workbook that matches neither shape, or whose DPPSPM reference-code prefixes are inconsistent
  * across rows, is rejected with a specific error rather than guessed at.
  */
 
@@ -135,7 +135,7 @@ function parseDppspmSheet(rows: unknown[][], entityType: "INDIVIDUAL" | "ENTITY"
   const infoIndex = headerIndex(header, "Informasi Lain");
   const aliasIndices = multiColumnIndices(header, "Alias");
   const addressIndices = multiColumnIndices(header, "Alamat");
-  if (referenceIndex === null || nameIndex === null) throw new Error("Struktur berkas PPPSM tidak dikenali — kolom Referensi/Nama wajib ada.");
+  if (referenceIndex === null || nameIndex === null) throw new Error("Struktur berkas DPPSPM tidak dikenali — kolom Referensi/Nama wajib ada.");
 
   const entries: ParsedSanctionsEntry[] = [];
   for (const row of rows.slice(1)) {
@@ -170,7 +170,7 @@ function sheetRows(sheet: XLSX.WorkSheet): unknown[][] {
   return XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "", raw: false }).filter((row) => row.some((cell) => cleanValue(cell) !== null));
 }
 
-/** Extracts the alpha prefix shared by every PPPSM reference code in a sheet (e.g. "DPRKi.001"/"DPRKe.002" → "DPRK"), or throws if the sheet mixes codes from more than one sub-list. */
+/** Extracts the alpha prefix shared by every DPPSPM reference code in a sheet (e.g. "DPRKi.001"/"DPRKe.002" → "DPRK"), or throws if the sheet mixes codes from more than one sub-list. */
 function commonReferencePrefix(entries: ParsedSanctionsEntry[]): string {
   const prefixes = new Set<string>();
   for (const entry of entries) {
@@ -178,7 +178,7 @@ function commonReferencePrefix(entries: ParsedSanctionsEntry[]): string {
     const match = entry.referenceCode.match(/^([A-Za-z]+)[ie]\./);
     if (match) prefixes.add(match[1].toUpperCase());
   }
-  if (prefixes.size !== 1) throw new Error(`Berkas PPPSM harus berisi satu sumber daftar per unggahan (ditemukan ${prefixes.size} pola kode referensi berbeda) — pisahkan per sumber sebelum mengimpor.`);
+  if (prefixes.size !== 1) throw new Error(`Berkas DPPSPM harus berisi satu sumber daftar per unggahan (ditemukan ${prefixes.size} pola kode referensi berbeda) — pisahkan per sumber sebelum mengimpor.`);
   return Array.from(prefixes)[0];
 }
 
@@ -197,7 +197,7 @@ export function parseSanctionsWatchlistWorkbook(data: Buffer): ParsedSanctionsWo
   }
 
   const isDppspm = firstHeader.some((cell) => cell === "Referensi") && firstHeader.some((cell) => cell === "Nama");
-  if (!isDppspm) throw new Error("Struktur berkas tidak dikenali sebagai daftar DTTOT maupun PPPSM. Periksa apakah berkas ini sesuai format resmi PPATK/DK PBB.");
+  if (!isDppspm) throw new Error("Struktur berkas tidak dikenali sebagai daftar DTTOT maupun DPPSPM. Periksa apakah berkas ini sesuai format resmi PPATK/DK PBB.");
 
   const entries: ParsedSanctionsEntry[] = [];
   for (const sheet of sheets) {
@@ -205,7 +205,7 @@ export function parseSanctionsWatchlistWorkbook(data: Buffer): ParsedSanctionsWo
     const isIndividualSheet = header.some((cell) => cell === "Gelar" || cell === "Pekerjaan");
     entries.push(...parseDppspmSheet(sheet.rows, isIndividualSheet ? "INDIVIDUAL" : "ENTITY"));
   }
-  if (!entries.length) throw new Error("Berkas PPPSM tidak berisi baris data yang dapat diimpor.");
+  if (!entries.length) throw new Error("Berkas DPPSPM tidak berisi baris data yang dapat diimpor.");
   const sourceLabel = commonReferencePrefix(entries);
   return { listType: "DPPSPM", sourceLabel, entries };
 }

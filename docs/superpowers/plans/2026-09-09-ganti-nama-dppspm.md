@@ -22,7 +22,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 
 - [x] Tugas 1 — Peragaan dasar: isi kedua basis data lokal dan catat jumlah baris sebelum migrasi — **SELESAI 9 September 2026**
 - [x] Tugas 2 — Migrasi `0056` dan seluruh tipe enum, satu commit atomik — **SELESAI 9 September 2026**
-- [ ] Tugas 3 — Sapuan prosa, pesan validasi, dan uji penjaga
+- [x] Tugas 3 — Sapuan prosa, pesan validasi, dan uji penjaga — **SELESAI 9 September 2026**
 - [ ] Tugas 4 — Dokumentasi, rollback tertulis, dan catatan antrean migrasi produksi
 
 Urutannya **mengikat seluruhnya**: 1 sebelum 2 (tanpa data, migrasinya tidak membuktikan apa pun),
@@ -366,7 +366,7 @@ kesalahan ini.
 `client/src/pages/SanctionsWatchlist.tsx`, `client/src/components/WatchlistCheck.tsx`,
 `server/sanctionsWatchlistImport.ts`. Create `server/sanctionsListNaming.test.ts`.
 
-- [ ] **Step 1: Tulis uji penjaganya lebih dulu — ia harus GAGAL sekarang.** Meniru
+- [x] **Step 1: Tulis uji penjaganya lebih dulu — ia harus GAGAL sekarang.** Meniru
       `server/notaKupvaIdentity.test.ts`, yang sudah menegakkan temuan BI 4 dengan cara yang sama.
 
 ```ts
@@ -432,7 +432,7 @@ describe("ejaan daftar sanksi proliferasi", () => {
       sesi berikutnya yang menjalankan sapuan cari-ganti akan "merapikan" `drizzle/` dan baru
       ketahuan saat migrasi produksi gagal.
 
-- [ ] **Step 2: Perbaiki 15 kemunculan `"DTTOT/PPSPM"`** menjadi `"DTTOT/DPPSPM"` — di antaranya
+- [x] **Step 2: Perbaiki 15 kemunculan `"DTTOT/PPSPM"`** menjadi `"DTTOT/DPPSPM"` — di antaranya
       `server/routers.ts:302,344` dan `server/operations.ts:645,809,940`. Ini adalah separuh
       ketidakkonsistenan yang dikeluhkan spec: petugas yang mencentang kotak dan petugas yang gagal
       validasi selama ini melihat dua ejaan berbeda untuk hal yang sama.
@@ -440,7 +440,7 @@ describe("ejaan daftar sanksi proliferasi", () => {
       **Nama kolom `dttotPpsdmMatch`/`dttotPpsdmNotes` TIDAK ikut berubah** (keputusan pengguna 1) —
       yang berubah hanya teks pesannya, bukan `path: ["dttotPpsdmNotes"]`.
 
-- [ ] **Step 3: Sapu prosa dan teks UI** yang tersisa: `shared/sanctionsNameMatch.ts:2,7,106`,
+- [x] **Step 3: Sapu prosa dan teks UI** yang tersisa: `shared/sanctionsNameMatch.ts:2,7,106`,
       `server/operations.ts:2310,2315,2316,2369,2405,2408`,
       `server/sanctionsWatchlistImport.ts:5,13,20,22,138,173,181,200,208`,
       `client/src/components/WatchlistCheck.tsx:10,11,25`,
@@ -450,7 +450,7 @@ describe("ejaan daftar sanksi proliferasi", () => {
       yang paling sering dibaca petugas, dan membiarkannya berbeda dari label di layar adalah
       persis ketidakkonsistenan yang sedang ditutup.
 
-- [ ] **Step 4: Tambahkan komentar penambat** di atas kolom `dttotPpsdmMatch`
+- [x] **Step 4: Tambahkan komentar penambat** di atas kolom `dttotPpsdmMatch`
       (`drizzle/schema.ts:154-156`), karena pengenalnya sengaja dibiarkan salah:
 
 ```ts
@@ -462,7 +462,7 @@ describe("ejaan daftar sanksi proliferasi", () => {
  */
 ```
 
-- [ ] **Step 5: Verifikasi dan commit.**
+- [x] **Step 5: Verifikasi dan commit.**
 
 ```bash
 ./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build
@@ -471,6 +471,35 @@ grep -rn "PPPSM\|DTTOT/PPSPM" --include='*.ts' --include='*.tsx' server shared c
 git add server/ shared/ client/ drizzle/schema.ts
 git commit -m "Satu ejaan DPPSPM pada prosa dan pesan, dengan uji penjaganya"
 ```
+
+**Hasil nyata, 9 September 2026.** Penjaganya `server/sanctionsListNaming.test.ts`, enam uji.
+Sesudah sapuan, satu-satunya berkas sumber yang masih memuat `PPPSM` adalah kedua berkas daftar
+putihnya. Uji: 152 berkas, **1305 lulus**, 2 dilewati; `tsc` bersih; `vite build` sukses.
+
+Penjaganya **diuji negatif**: satu baris `PPPSM` disisipkan ke `shared/sanctionsNameMatch.ts`,
+ujinya gagal dan menyebut berkasnya; baris itu lalu dibuang.
+
+**Dua uji tambahan di luar rencana semula, keduanya menutup cara penjaga ini gagal diam-diam:**
+
+1. **"memindai berkas sumber dalam jumlah yang masuk akal"** — bila `sourceFiles` salah jalur, ia
+   mengembalikan larik kosong dan **seluruh uji lainnya lulus tanpa memeriksa apa pun.** Penjaga
+   yang selalu hijau lebih berbahaya daripada tidak ada penjaga.
+2. **"kode parameter IRA tidak ikut tersapu"** — mengunci `PPSPM_1A`, `PPSPM_4A`, dan
+   `iraRiskTypes`. `PPSPM` adalah substring dari `PPPSPM` maupun `DPPSPM`, jadi sapuan cari-ganti
+   naif berikutnya akan merusak kunci basis data pada `ira_inherent_values`.
+
+**Sapuan `perl -pi -e s{PPPSM}{DPPSPM}g` merusak dua hal yang ditulisnya sendiri**, dan keduanya
+hanya tertangkap karena uji dijalankan:
+
+- Penegasan negatif `not.toContain("PPPSM")` pada Tugas 2 berubah menjadi `not.toContain("DPPSPM")`
+  — yang jelas dilanggar nilainya sendiri. Penegasan itu **dihapus**, bukan diperbaiki: ejaan pada
+  sumber sudah dijaga berkas penjaga, dan menuliskan literal terlarang di sana justru menuntut
+  daftar putih tambahan.
+- Komentar urutan pada `sanctionsWatchlistOperations.test.ts` berubah menjadi kalimat yang
+  membandingkan `DPPSPM` dengan dirinya sendiri. Ditulis ulang tanpa literal terlarangnya.
+
+Pelajarannya ditulis di sini supaya tidak diulang: **sapuan buta atas berkas uji akan menyunting
+penegasan, bukan hanya prosa.**
 
 ---
 

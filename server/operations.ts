@@ -642,7 +642,7 @@ export type CustomerInput = {
   beneficialOwner?: BeneficialOwnerInput;
   pepStatus?: "NONE" | "SELF" | "RELATED";
   pepDetails?: string;
-  /** Kecocokan dengan DTTOT/PPSPM; bila true, wajib dilaporkan LTKM ke PPATK secara manual sesuai prosedur resmi. */
+  /** Kecocokan dengan DTTOT/DPPSPM; bila true, wajib dilaporkan LTKM ke PPATK secara manual sesuai prosedur resmi. */
   dttotPpsdmMatch?: boolean;
   dttotPpsdmNotes?: string;
   /** Kategori tertutup BI (Form C1). Tidak dikirim berarti biarkan; null berarti kosongkan. */
@@ -806,7 +806,7 @@ async function resolveProfileDeclaration(
 export async function createCustomer(input: CustomerInput, actorUserId: number) {
   if (input.hasBeneficialOwner && !input.beneficialOwner) throw new Error("Data pemilik manfaat (beneficial owner) wajib diisi.");
   if (input.pepStatus && input.pepStatus !== "NONE" && !input.pepDetails?.trim()) throw new Error("Keterangan PEP wajib diisi.");
-  if (input.dttotPpsdmMatch && !input.dttotPpsdmNotes?.trim()) throw new Error("Catatan kecocokan DTTOT/PPSPM wajib diisi.");
+  if (input.dttotPpsdmMatch && !input.dttotPpsdmNotes?.trim()) throw new Error("Catatan kecocokan DTTOT/DPPSPM wajib diisi.");
   const cifNumber = input.cifNumber.trim().toUpperCase();
   const identityType = input.identityType;
   const identityNumber = input.identityNumber.trim().toUpperCase();
@@ -937,7 +937,7 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
   const changeReason = input.changeReason.trim();
   if (changeReason.length < 5) throw new Error("Alasan perubahan wajib diisi (minimal 5 karakter) untuk jejak audit.");
   if (input.pepStatus !== "NONE" && !input.pepDetails?.trim()) throw new Error("Keterangan PEP wajib diisi.");
-  if (input.dttotPpsdmMatch && !input.dttotPpsdmNotes?.trim()) throw new Error("Catatan kecocokan DTTOT/PPSPM wajib diisi.");
+  if (input.dttotPpsdmMatch && !input.dttotPpsdmNotes?.trim()) throw new Error("Catatan kecocokan DTTOT/DPPSPM wajib diisi.");
 
   const db = await databaseOrThrow();
   const existing = (await db.select().from(customers).where(and(eq(customers.id, input.customerId), eq(customers.isDemo, false), eq(customers.isHistorical, false))).limit(1))[0];
@@ -2307,13 +2307,13 @@ export async function getGoAmlLtkmExport(input: { from: Date; to: Date; indicato
 }
 
 /**
- * Imports a DTTOT/PPPSM watchlist workbook — Controller/Shareholder only (enforced at the router,
+ * Imports a DTTOT/DPPSPM watchlist workbook — Controller/Shareholder only (enforced at the router,
  * same gate as the financial-snapshot import). Public PPATK/DK PBB sanctions-list reference data,
  * never customer/transaction data, so it's fine to hold in the database (unlike the hard rule
  * against injecting real customer/transaction/cash data). Full-replaces every prior entry in the
  * same (listType, sourceLabel) scope in one transaction — a fresh DTTOT upload replaces all DTTOT
- * rows; a fresh PPPSM "DPRK" upload replaces only the DPRK rows, leaving other PPPSM sub-lists
- * (e.g. "IR") untouched, since PPPSM is a family of independently-updated country/regime lists.
+ * rows; a fresh DPPSPM "DPRK" upload replaces only the DPRK rows, leaving other DPPSPM sub-lists
+ * (e.g. "IR") untouched, since DPPSPM is a family of independently-updated country/regime lists.
  */
 export async function importSanctionsWatchlist(input: { dataBase64: string; originalFileName: string; mimeType: string; byteSize: number; actorUserId: number }) {
   const data = decodeSanctionsWatchlistUpload(input);
@@ -2366,7 +2366,7 @@ export type SanctionsWatchlistMatch = {
 };
 
 /**
- * Fuzzy name screening against the currently-loaded DTTOT/PPPSM entries — a screening aid only.
+ * Fuzzy name screening against the currently-loaded DTTOT/DPPSPM entries — a screening aid only.
  * It never sets `customers.dttotPpsdmMatch` itself; a human still reviews the candidates and ticks
  * that checkbox (with notes) if they judge it a real match, exactly as before this tool existed.
  */
@@ -2402,10 +2402,10 @@ export type SipendarWatchlistNameCheckResult = { watchlistName: string; note: st
  * Bulk screening aid for SIPENDAR watchlist "pemadanan data" (Peraturan PPATK No. 11 Tahun 2021,
  * §C6-C9 of the FAQ): PPATK expects the PJK to check every watchlist record against its *entire*
  * customer base itself, with the similarity threshold left to the PJK's own judgment — there is no
- * fixed PPATK-mandated cutoff. This reuses the same fuzzy-matching engine as DTTOT/PPPSM screening,
+ * fixed PPATK-mandated cutoff. This reuses the same fuzzy-matching engine as DTTOT/DPPSPM screening,
  * but runs in the opposite direction (many watchlist names against many customers) and never
  * persists the pasted watchlist — SIPENDAR's own portal watchlist export column layout isn't
- * something we've verified against a real sample (unlike DTTOT/PPPSM, where the user supplied real
+ * something we've verified against a real sample (unlike DTTOT/DPPSPM, where the user supplied real
  * files), so this deliberately stays a plain-text paste rather than an XLSX/XML importer that would
  * have to guess at an unconfirmed schema.
  *
