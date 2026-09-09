@@ -136,8 +136,23 @@ import {
 } from "./sdmOperations";
 import { OPERATIONAL_TIMEZONE_VALUES } from "../shared/regulatoryActionQueue";
 import { simulateArchiveReadiness, simulateClosing, simulateExchange, simulateRateShock } from "./simulation";
-import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedure, router, staffProcedure } from "./_core/trpc";
+import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedure, router, shareholderProcedure, staffProcedure } from "./_core/trpc";
 import { classifyRisk, iraClassificationDenial, listClassifications, listParameterThresholds, resetParameterThresholds, setParameterThresholds } from "./iraRiskClassification";
+import {
+  approveAssessment,
+  createAssessment,
+  iraApprovalDenial,
+  iraEditDenial,
+  listAssessments,
+  readAssessment,
+  saveInherentValues,
+  saveKpmrAnswers,
+  saveStructuralDeclarations,
+  submitAssessment,
+} from "./iraAssessment";
+import { IRA_KPMR_QUESTIONS } from "../shared/iraKpmrCatalogue";
+
+const KPMR_QUESTION_CODES = IRA_KPMR_QUESTIONS.map((question) => question.code) as [string, ...string[]];
 import { readIraDataForm } from "./iraDataForm";
 import { operationalMonthWindow } from "./customerProfileMonitoring";
 import { IRA_CUSTOMER_TYPE_VALUES, IRA_DISTRIBUTION_CHANNEL_VALUES, IRA_LEGAL_FORM_VALUES, IRA_OCCUPATION_CATEGORY_VALUES, IRA_PROVINCE_VALUES } from "../shared/iraVocabulary";
@@ -541,6 +556,98 @@ export const appRouter = router({
         // Jendela bawaannya memakai helper Paket H, bukan helper keempat yang ditulis ulang di sini.
         const { start, end } = operationalMonthWindow(input.asOf ?? new Date());
         return readIraDataForm(input.periodStart ?? start, input.periodEnd ?? end);
+      }),
+
+    /**
+     * Penilaian risiko itu sendiri. **ADMIN mengisi, SHAREHOLDER menyetujui** — dua gerbang jalur
+     * yang berbeda, masing-masing dikawal lagi oleh fungsi `*Denial` yang dapat diuji tanpa
+     * menyalakan tRPC. Penilaian yang sudah disetujui terkunci, dan penguncian itu ditegakkan
+     * penulisnya juga, bukan hanya oleh gerbang di sini.
+     */
+    list: adminProcedure.query(({ ctx }) => {
+      const denial = iraEditDenial(ctx.user, null);
+      if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+      return listAssessments();
+    }),
+    detail: adminProcedure.input(z.object({ id: z.number().int().positive() })).query(({ input, ctx }) => {
+      const denial = iraEditDenial(ctx.user, null);
+      if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+      return readAssessment(input.id);
+    }),
+    create: adminProcedure
+      .input(z.object({
+        periodStart: z.coerce.date(),
+        periodEnd: z.coerce.date(),
+        trigger: z.enum(["TAHUNAN", "MANUAL"]),
+        triggerReason: z.string().trim().max(1000).nullable().default(null),
+      }))
+      .mutation(({ input, ctx }) => {
+        const denial = iraEditDenial(ctx.user, null);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        return createAssessment(input, ctx.user);
+      }),
+    saveInherent: adminProcedure
+      .input(z.object({
+        assessmentId: z.number().int().positive(),
+        values: z.array(z.object({
+          parameterCode: z.enum(IRA_PARAMETER_CODES as [string, ...string[]]),
+          machineScore: z.number().int().min(1).max(5).nullable(),
+          appliedScore: z.number().int().min(1).max(5),
+          bandIndex: z.number().int().min(1).max(5).nullable().default(null),
+          overrideReason: z.string().trim().max(1000).nullable().default(null),
+          basis: z.unknown().nullable().default(null),
+        })).min(1),
+      }))
+      .mutation(({ input, ctx }) => {
+        const denial = iraEditDenial(ctx.user, null);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        return saveInherentValues(input.assessmentId, input.values, ctx.user);
+      }),
+    saveDeclarations: adminProcedure
+      .input(z.object({
+        assessmentId: z.number().int().positive(),
+        declarations: z.array(z.object({
+          parameterCode: z.enum(IRA_PARAMETER_CODES as [string, ...string[]]),
+          choiceCode: z.string().trim().min(1).max(30),
+          // Pernyataan tanpa dasar sama saja dengan angka tanpa asal.
+          reason: z.string().trim().min(3).max(1000),
+        })).min(1),
+      }))
+      .mutation(({ input, ctx }) => {
+        const denial = iraEditDenial(ctx.user, null);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        return saveStructuralDeclarations(input.assessmentId, input.declarations, ctx.user);
+      }),
+    saveKpmr: adminProcedure
+      .input(z.object({
+        assessmentId: z.number().int().positive(),
+        answers: z.array(z.object({
+          questionCode: z.enum(KPMR_QUESTION_CODES),
+          answered: z.boolean(),
+          /** `null` berarti N/A — jawaban yang sah, berbeda dari belum dijawab. */
+          score: z.number().int().min(1).max(5).nullable(),
+          note: z.string().trim().max(2000).nullable().default(null),
+          documentReference: z.string().trim().max(500).nullable().default(null),
+        })).min(1),
+      }))
+      .mutation(({ input, ctx }) => {
+        const denial = iraEditDenial(ctx.user, null);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        return saveKpmrAnswers(input.assessmentId, input.answers, ctx.user);
+      }),
+    submit: adminProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(({ input, ctx }) => {
+        const denial = iraEditDenial(ctx.user, null);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        return submitAssessment(input.id, ctx.user);
+      }),
+    approve: shareholderProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(({ input, ctx }) => {
+        const denial = iraApprovalDenial(ctx.user);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        return approveAssessment(input.id, ctx.user);
       }),
   }),
 

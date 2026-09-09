@@ -27,7 +27,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 3 — Katalog 31 pertanyaan KPMR
 - [x] Tugas 4 — Migrasi: empat tabel penilaian
 - [x] Tugas 5 — Penghitung sisi inheren dari agregat dan klasifikasi
-- [ ] Tugas 6 — Penulis penilaian: buat, simpan, ajukan, setujui, gantikan
+- [x] Tugas 6 — Penulis penilaian: buat, simpan, ajukan, setujui, gantikan
 - [ ] Tugas 7 — Halaman penilaian: Form C1, Form A1, pernyataan struktural
 - [ ] Tugas 8 — Kuesioner KPMR dan halaman hasil
 - [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
@@ -378,7 +378,7 @@ describe("aritmetika IRA", () => {
 **Files:** Create `server/iraAssessment.ts`, `server/iraAssessment.test.ts`,
 `server/iraAssessment.authorization.test.ts`; Modify `server/routers.ts`
 
-- [ ] **Step 1: Uji yang gagal lebih dulu**, dan uji otorisasinya terpisah:
+- [x] **Step 1: Uji yang gagal lebih dulu**, dan uji otorisasinya terpisah:
 
 ```ts
 describe("penilaian IRA", () => {
@@ -399,15 +399,31 @@ describe("penilaian IRA", () => {
 
       **Uji kedelapan menegakkan keputusan 3** dan meniru uji "hanya mencatat" Paket H dan Paket I.
 
-- [ ] **Step 2: `iraApprovalDenial(role)` dan `iraEditDenial(role, status)`** sebagai fungsi
+- [x] **Step 2: `iraApprovalDenial(role)` dan `iraEditDenial(role, status)`** sebagai fungsi
       tersendiri yang dapat diuji.
 
-- [ ] **Step 3:** Penulisnya mencatat `audit_logs` pada pembuatan, pengajuan, persetujuan, dan
+- [x] **Step 3:** Penulisnya mencatat `audit_logs` pada pembuatan, pengajuan, persetujuan, dan
       penggantian.
 
-- [ ] **Step 4:** Prosedur tRPC `ira.*`.
+- [x] **Step 4:** Prosedur tRPC `ira.*`.
 
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Penulis penilaian risiko IRA"`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Penulis penilaian risiko IRA"`.
+
+> **Catatan pelaksanaan:**
+>
+> - **`ira` sudah menjadi router sejak J1** (berisi `dataForm`). Prosedur penilaian **disisipkan ke
+>   dalamnya**, bukan dibuat sebagai router `ira` kedua — dua kunci bernama sama pada satu objek
+>   memang ditolak `tsc`, dan itulah yang menangkapnya.
+> - **`iraEditDenial` menerima statusnya sebagai masukan**, bukan hanya peran: penguncian penilaian
+>   yang sudah disetujui adalah bagian dari otorisasi, dan menaruhnya di tempat lain berarti ada
+>   jalur yang lupa memeriksanya. Penulisnya menegakkannya **sekali lagi** lewat `assertEditable`,
+>   sehingga pemanggil mana pun terkena, bukan hanya yang lewat tRPC.
+> - **`computeAssessmentTotals` murni** dan melempar bila ada parameter yang belum bernilai atau
+>   pertanyaan yang belum dijawab. Penilaian setengah jadi yang tetap menghasilkan angka adalah
+>   dokumen yang tampak lengkap padahal separuhnya karangan.
+> - Pembacaan **tidak pernah menghitung ulang**; uji "nilai beku TIDAK berubah" memasang klasifikasi
+>   hidup yang sengaja berbeda dari yang dibekukan, dan lulus justru karena pembacanya tidak
+>   menyentuh klasifikasi itu.
 
 ---
 

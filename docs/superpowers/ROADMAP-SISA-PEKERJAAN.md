@@ -175,7 +175,9 @@ MEDIUM 3 bulan, LOW 12 bulan**; tindak lanjut **worklist Controller yang hanya m
       `server/iraInherentScoring.ts`, murni. Menuntut tiga keputusan pengguna lebih dulu: dimensi
       klasifikasi `DISTRIBUTION_CHANNEL` (migrasi `0055`), komposisi kewarganegaraan nasabah pada
       `readIraDataForm`, dan ambang bawaan per jenis pita.
-- [ ] Tugas 6 — Penulis penilaian: buat, simpan, ajukan, setujui, gantikan
+- [x] Tugas 6 — Penulis penilaian: buat, simpan, ajukan, setujui, gantikan — **SELESAI 9 September 2026.**
+      `server/iraAssessment.ts`, `iraEditDenial`/`iraApprovalDenial`, pembekuan snapshot saat
+      disetujui, penggantian yang menautkan pendahulunya, dan prosedur `ira.*`.
 - [ ] Tugas 7 — Halaman penilaian: Form C1, Form A1, pernyataan struktural
 - [ ] Tugas 8 — Kuesioner KPMR dan halaman hasil
 - [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
