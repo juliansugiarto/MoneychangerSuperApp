@@ -161,9 +161,11 @@ MEDIUM 3 bulan, LOW 12 bulan**; tindak lanjut **worklist Controller yang hanya m
 - [x] Tugas 1 — Aritmetika penilaian, murni dan teruji — **SELESAI 9 September 2026.** Bobot jenis
       risiko dan bobot kelompok ikut ditetapkan di sini (`IRA_RISK_TYPE_WEIGHTS`,
       `IRA_GROUP_WEIGHTS`); yang tersisa untuk Tugas 2 hanyalah bobot tiap parameter.
-- [ ] Tugas 2 — Katalog 33 parameter risiko inheren — *sebagian sudah ada:* `shared/iraParameters.ts`
-      (kode, label, kelompok, sumber hitung/nyatakan, pita bawaan, `scoreFromBand`) dibangun pada J1
-      Tugas 7 karena halaman ambang menuntutnya. Yang tersisa: bobot tiap parameter dan kelompoknya.
+- [x] Tugas 2 — Katalog 33 parameter risiko inheren — **SELESAI 9 September 2026.**
+      `shared/iraParameterCatalogue.ts` menambahkan bobot tiap parameter, jenis pita, dan teks
+      kriterianya di atas `shared/iraParameters.ts`, tanpa menyalin ke-33 barisnya. Jenis pitanya
+      ternyata **enam**, bukan empat: ada `TINGKAT_RISIKO` (Rendah/Menengah/Tinggi, empat parameter
+      Wilayah Geografis) dan `PERSENTASE_KEPEMILIKAN` (Tidak ada/1-99%/100%).
 - [ ] Tugas 3 — Katalog 31 pertanyaan KPMR
 - [ ] Tugas 4 — Migrasi: empat tabel penilaian
 - [ ] Tugas 5 — Penghitung sisi inheren dari agregat dan klasifikasi

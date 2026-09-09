@@ -23,7 +23,7 @@ inherennya akan selalu nol, dan itu bukan penyelesaian.
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu.**
 
 - [x] Tugas 1 — Aritmetika penilaian, murni dan teruji
-- [ ] Tugas 2 — Katalog 33 parameter risiko inheren
+- [x] Tugas 2 — Katalog 33 parameter risiko inheren
 - [ ] Tugas 3 — Katalog 31 pertanyaan KPMR
 - [ ] Tugas 4 — Migrasi: empat tabel penilaian
 - [ ] Tugas 5 — Penghitung sisi inheren dari agregat dan klasifikasi
@@ -173,20 +173,37 @@ describe("aritmetika IRA", () => {
 
 **Files:** Create `shared/iraParameterCatalogue.ts`, `shared/iraParameterCatalogue.test.ts`
 
-- [ ] **Step 1:** Satu entri per parameter: `code`, `riskType`, `group`, `groupWeight`,
+- [x] **Step 1:** Satu entri per parameter: `code`, `riskType`, `group`, `groupWeight`,
       `parameterWeight`, `bandType` (`PERSENTASE_LEBAR` 0-20/21-40/… · `PERSENTASE_SEMPIT`
       tidak ada/>0-1/… · `PERSENTASE_MENENGAH` 0-2/>2-4/… · `KEHADIRAN` ada/tidak ada), `source`
       (`TERHITUNG` atau `DINYATAKAN`), dan teks parameternya sebagaimana tertulis di template.
 
-- [ ] **Step 2:** Uji bahwa **bobot parameter dalam tiap kelompok berjumlah 1**, dan **bobot
+- [x] **Step 2:** Uji bahwa **bobot parameter dalam tiap kelompok berjumlah 1**, dan **bobot
       kelompok dalam tiap jenis risiko berjumlah 1**. Salin-tempel 33 baris pasti meleset di suatu
       tempat; uji inilah yang menemukannya, bukan pemeriksa BI.
 
-- [ ] **Step 3:** Uji bahwa jumlah parameter `TERHITUNG` adalah **24** dan `DINYATAKAN` adalah
+- [x] **Step 3:** Uji bahwa jumlah parameter `TERHITUNG` adalah **24** dan `DINYATAKAN` adalah
       **9** — angka dari spec bagian Rancangan 6. Bila implementasinya menghasilkan angka lain,
       salah satu parameter kehilangan sumbernya dan itu harus terlihat sekarang, bukan nanti.
 
-- [ ] **Step 4:** Perintah mutu, lalu commit `"Katalog parameter risiko inheren IRA"`.
+- [x] **Step 4:** Perintah mutu, lalu commit `"Katalog parameter risiko inheren IRA"`.
+
+> **Dibaca dari templatenya 9 September 2026, dua penyimpangan dari sketsa di atas:**
+>
+> 1. **Jenis pitanya enam, bukan empat.** Selain `PERSENTASE_LEBAR`, `PERSENTASE_SEMPIT`,
+>    `PERSENTASE_MENENGAH`, dan `KEHADIRAN`, lembar `A1` memuat `TINGKAT_RISIKO`
+>    (`Rendah / Menengah / Tinggi` — empat parameter Wilayah Geografis, tiga tingkat, tidak dapat
+>    dipaksakan menjadi kehadiran) dan `PERSENTASE_KEPEMILIKAN` (`Tidak ada / 1-99% / 100%` pada
+>    `STRUKTURAL_1A`). Keduanya berupa **pilihan**, bukan batas numerik, dan karena itu
+>    `IRA_BAND_DEFINITIONS` memberi tiap jenis pita `defaultUpperBounds` **atau** `choices`, tidak
+>    keduanya.
+> 2. **Kosakata sumbernya `HITUNG`/`NYATAKAN`**, bukan `TERHITUNG`/`DINYATAKAN` — J1 sudah
+>    menetapkannya di `shared/iraParameters.ts` dan katalog ini membacanya dari sana alih-alih
+>    membuat kosakata kedua. Jumlahnya tetap 24 dan 9.
+>
+> Katalognya **menggabung**, bukan menyalin: `code`, `label`, `group`, `riskType`, dan `source`
+> datang dari `IRA_PARAMETERS`, `groupWeight` dari `IRA_GROUP_WEIGHTS`, dan hanya `parameterWeight`,
+> `bandType`, serta `criterion` yang baru. Ujinya menjaga ketiga sumber itu tetap satu.
 
 ---
 
