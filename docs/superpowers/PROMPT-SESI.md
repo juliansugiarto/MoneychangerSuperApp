@@ -65,13 +65,13 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 8 September 2026
+## Sesi berikutnya — keadaan per 9 September 2026
 
-Paket K1, B, D, C, E, F1, F2, **G**, dan **H sudah selesai** dan diperagakan end-to-end.
-**Pekerjaan berikutnya adalah sesi rancangan Paket I** — bloknya di bawah.
+Paket K1, B, D, C, E, F1, F2, **G**, **H**, dan **I sudah selesai** dan diperagakan end-to-end.
+**Pekerjaan berikutnya adalah sesi rancangan Paket J** — bloknya di bawah.
 
-Baseline uji yang benar-benar dijalankan 8 September 2026 sesudah Paket H:
-`Test Files 132 passed (132)`, `Tests 1049 passed | 2 skipped (1051)`. `tsc --noEmit` bersih,
+Baseline uji yang benar-benar dijalankan 9 September 2026 sesudah Paket I:
+`Test Files 138 passed (138)`, `Tests 1119 passed | 2 skipped (1121)`. `tsc --noEmit` bersih,
 `vite build` sukses.
 
 **Satu uji diketahui flaky dan bukan bagian paket mana pun:** `server/tenantIsolation.live.test.ts`
@@ -94,6 +94,52 @@ jalankan ulang berkas itu saja.
   (`declaredMonthlyValueIdr`, `declaredMonthlyCount`, `declaredCurrencies`). Yang tidak dikirim akan
   **dikosongkan**; itu disengaja, dan sudah pernah menjadi bug yang tertangkap hanya karena borangnya
   dibuka sungguhan di browser.
+- **Nilai kolom `date` dibaca dengan penggetah LOKAL, "hari ini" dengan zona operasional.** Driver
+  membangun nilai kolom `date` sebagai tengah malam waktu lokal proses, sehingga
+  `toISOString().slice(0, 10)` atasnya memundurkan tanggalnya satu hari di WIB. Pakai
+  `archiveDateKey` (`shared/companyDocumentArchive.ts`) untuk nilai kolom, dan `operationalDateKey`
+  (`shared/regulatoryActionQueue.ts`) untuk "hari ini". **Jangan menyaring kolom `date` lewat SQL
+  dengan `Date` tengah malam UTC** — itu menjatuhkan baris tepat pada batasnya.
+- **Gerbang peran pada rute Express dipisahkan menjadi fungsi `*Denial` yang dapat diuji.** Dua
+  preseden: `financialFormExportDenial` (`server/financialFormExport.ts:413`) dan
+  `operationalDocumentUploadDenial` (`server/documentOperations.ts`). Otorisasi yang hanya hidup di
+  dalam handler tidak pernah dibuktikan uji mana pun.
+- **Basis data palsu pada uji wajib ikut menyaring `where` dan menerapkan `orderBy`.** Palsu yang
+  mengabaikan keduanya membuat uji lulus karena kebetulan atau gagal karena kekeliruan palsunya
+  sendiri. Polanya sudah ada di `server/companyDocumentArchive.test.ts` dan
+  `server/companyDocumentArchiveScenario.test.ts` — **salin dari sana**. Jebakannya: `StringChunk`
+  pemisah pada klausa Drizzle juga punya `value` (berupa array), dan harus disisihkan agar tidak
+  merebut giliran `Param` yang sesungguhnya.
+- **Rute baru wajib didaftarkan pada `server/backOfficeNavigation.test.ts`**, yang memetakan tiap
+  tujuan sidebar ke nama halamannya. Ujinya gagal sampai rutenya ditambahkan.
+- **Dialog wajib memakai `max-h-[85vh] overflow-y-auto`.** Tanpa itu, borang yang lebih tinggi
+  daripada viewport menyembunyikan tombol tindakannya dan yang menggulir justru halaman di
+  belakangnya — cacat yang tidak pernah muncul pada uji maupun `tsc`.
+- **Berkas dokumen dan berkas impor punya dua batas yang BERBEDA.** Jalur dokumen
+  (`server/documentOperations.ts`): **8 MB**, MIME saja, **tanpa** pemeriksaan signature. Jalur
+  impor XLS/XLSX (`server/financialImport.ts`, `server/sanctionsWatchlistImport.ts`): **5 MB** plus
+  `assertSpreadsheetSignature`. Jangan mencampurnya, dan jangan melonggarkan salah satunya.
+
+### Risiko residual Paket I yang masih terbuka
+
+1. **Unggah berkas dan tombol "Buka" belum pernah dijalankan sungguhan.** `.env` lokal tidak memuat
+   kredensial R2, sehingga `storagePut` melempar galat di mesin ini. Baris `operational_documents`
+   untuk peragaan disisipkan lewat SQL; seluruh alur di hilirnya sudah dijalankan lewat penulis yang
+   sesungguhnya, tetapi kedua ujung jalur berkasnya masih belum terbukti di lingkungan mana pun.
+2. **`deleteCompanyDocument` lama masih `DELETE` sungguhan tanpa audit**
+   (`server/documentOperations.ts`). Ia melayani halaman Profil Perusahaan dan sengaja tidak
+   disentuh Paket I.
+3. **Jalur unggah dokumen tidak memeriksa signature** untuk PDF/JPG/PNG/WEBP — MIME saja. Keadaan
+   yang sudah berlaku sebelum Paket I; menutupnya menyentuh unggahan KTP, underlying, dan struk,
+   jadi pantas menjadi paketnya sendiri.
+4. **Sertifikat izin pada Profil Perusahaan tidak mendapat peringatan masa berlaku** — akibat
+   keputusan pengguna bahwa dokumen Profil Perusahaan tetap di tempatnya.
+5. **Zona waktu server memakai bawaan `Asia/Jakarta`, bukan `company_profile.timezone`.** Tidak ada
+   satu pun pemanggil di server yang membaca kolom itu. Tenant yang menyetel WITA atau WIT mendapat
+   batas hari WIB di seluruh aplikasi — satu perbaikan menyeluruh, bukan tambalan di satu modul.
+6. **`employee_certifications.documentId` dan `employee_pic_assignments.documentId` tetap selalu
+   kosong** — tidak ada `ownerType` pegawai dan tidak ada layar yang mengunggahnya. Pekerjaan yang
+   belum selesai pada jalur Kepegawaian, bukan keadaan sah.
 
 ### Risiko residual Paket H yang masih terbuka
 
@@ -107,12 +153,19 @@ jalankan ulang berkas itu saja.
 
 ### Keadaan basis data lokal
 
-`moneychanger` memuat data peragaan paket E, F1, F2, G, dan H. **Jangan membersihkannya.**
+`moneychanger` memuat data peragaan paket E, F1, F2, G, H, dan I. **Jangan membersihkannya.**
+
 Data Paket H: dua nasabah (`CIF-000001` berdeklarasi Rp 25.000.000 / 4 / USD+SGD, `CIF-000002`
 tanpa deklarasi), bon `FX-UJI-T4-*` dan `UJI-T8-0001`, serta satu baris `customer_profile_reviews`.
+
+Data Paket I: enam dokumen arsip pada `company_documents` (satu berversi dua, satu nonaktif), tujuh
+baris `operational_documents` ber-`ownerType` `COMPANY_ARCHIVE`, dan satu pegawai
+**"Sari Kepatuhan"** pada `employees` — pegawai itu satu-satunya baris `employees` di basis data
+lokal, jadi Paket J yang menyentuh SDM akan menemukannya.
+
 **Membuat data uji pada basis data lokal diizinkan pada tahap mana pun tanpa bertanya lebih dulu**
 (ditetapkan pengguna 8 September 2026, tercatat di `CLAUDE.md`). Produksi tetap tidak boleh
-disentuh — **migrasi `0051` belum diterapkan ke produksi.**
+disentuh — **migrasi `0051` dan `0052` belum diterapkan ke produksi.**
 
 ---
 
@@ -263,79 +316,99 @@ lalu centang barisnya di bagian Status Pengerjaan.
 Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 ```
 
-### Paket I — Arsip dokumen perusahaan (sesi rancangan dulu) — **PEKERJAAN BERIKUTNYA**
+### Paket I — Arsip dokumen perusahaan (7 tugas) — **SELESAI 9 September 2026**
 
-Blok lengkap di bawah, sudah termasuk isian Prompt A. Salin apa adanya.
+Spec `specs/2026-09-08-arsip-dokumen-perusahaan-design.md`, rencana
+`plans/2026-09-08-arsip-dokumen-perusahaan.md`, beserta tujuh keputusan kebijakan pengguna. Seluruh
+tujuh tugasnya sudah dikerjakan dan diperagakan end-to-end: enam jenis dokumen pada enum tertutup,
+riwayat versi penuh dengan versi lama tetap dapat dibuka, penghapusan yang sesungguhnya
+penonaktifan beserta alasannya, dan worklist masa berlaku dengan peringatan 30 hari. Migrasi `0052`.
+
+### Paket J — Individual Risk Assessment (sesi rancangan dulu) — **PEKERJAAN BERIKUTNYA**
+
+Paket terbesar yang tersisa. Blok lengkap di bawah, sudah termasuk isian Prompt A. Salin apa adanya.
 
 ```
-Baca docs/superpowers/ROADMAP-SISA-PEKERJAAN.md bagian "Paket I", lalu baca juga bagian
+Baca docs/superpowers/ROADMAP-SISA-PEKERJAAN.md bagian "Paket J", lalu baca juga bagian
 "Aturan kerja yang berlaku untuk seluruh paket" pada dokumen yang sama.
 
 Rancang paket ini. Telusuri kodenya sungguhan lebih dulu — sketsa di ROADMAP sengaja tidak cukup
 untuk langsung menulis kode, dan rujukan berkas:baris di sana ditulis 4 September 2026 dan mungkin
-sudah bergeser. Yang wajib dibaca sungguhan sebelum merancang: tabel operational_documents di
-drizzle/schema.ts, seluruh penulis dan pembacanya (rute unggah REST, halaman Profil Perusahaan,
-lampiran pengeluaran), serta batas keamanan impor yang sudah berlaku — ukuran 5 MB, validasi
-MIME/base64/signature.
+sudah bergeser. Yang wajib dibaca sungguhan sebelum merancang, karena inilah data yang menentukan
+apakah sisi risiko inheren dapat dihitung otomatis atau tidak:
 
-Jawab dulu setiap pertanyaan pada bagian "Pertanyaan yang harus dijawab spec-nya" bila ada.
-Pertanyaan yang merupakan keputusan kebijakan (akuntansi, operasional, kepatuhan) TANYAKAN kepada
-saya — jangan ditebak. Untuk paket ini, yang hampir pasti keputusan saya dan bukan turunan analisis:
+- tabel customers di drizzle/schema.ts — khususnya occupation, nationality, riskLevel, pepStatus,
+  dan ketiga kolom deklarasi profil yang ditambahkan Paket H;
+- exchange_transactions beserta exchange_transaction_lines dan ACCUMULATED_TRANSACTION_STATUSES —
+  dari sinilah persentase transaksi pada mata uang berisiko tinggi harus datang;
+- server/customerProfileMonitoring.ts — Paket H sudah membangun pembacaan aktivitas bulanan per
+  nasabah; JANGAN menulis pembaca kedua yang berbeda pendapat dengannya;
+- sanctions watchlist / DTTOT yang sudah ada, dan employee_profile_reviews beserta
+  employees/employee_pic_assignments untuk pilar Manajemen SDM;
+- company_profile untuk risiko lokasi cabang.
 
-- Jenis dokumen apa saja yang harus punya tempat (SOP, kebijakan internal, surat-menyurat BI,
-  notulen rapat, korespondensi regulator, lainnya) — dan apakah daftarnya enum tertutup atau bebas.
-- Apakah arsip menyimpan RIWAYAT VERSI (berkas lama tetap dapat dibuka) atau hanya versi berlaku.
-  Ini menentukan bentuk tabelnya, jadi tanyakan sebelum menulis rencana.
-- Siapa yang boleh mengunggah, mengganti versi, dan menghapus; dan apakah menghapus benar-benar
-  menghapus atau hanya menonaktifkan.
-- Apakah dokumen kedaluwarsa (tanggal berlaku terlampaui) perlu muncul sebagai tindakan yang
-  menunggu, seperti worklist pemantauan profil pada Paket H.
+Bobot IRA, pilar KPMR, dan skala penilaiannya pada bagian "Fakta yang sudah diverifikasi" di
+ROADMAP sudah dibaca langsung dari template BI milik saya — pakai apa adanya, jangan diturunkan
+ulang dan jangan dicari lagi. Istilahnya juga sudah tetap: yang dibangun IRA, sedangkan SRA adalah
+sumber peringkat risiko eksternal yang menjadi masukannya.
 
-Hormati batas yang sudah ada dan jangan menawarnya: batas 5 MB serta validasi
-MIME/base64/signature impor tetap berlaku apa adanya; hanya berkas internal tepercaya yang boleh
-diunggah; dan jangan menyimpan dokumen KYC nyata, workbook aktual, atau secret di source, fixture,
-maupun commit.
+Rancang secara eksplisit bagian mana dari sisi risiko inheren yang dapat dihitung otomatis dari
+data yang sudah dimiliki aplikasi, dan bagian mana yang menuntut jawaban manusia. Untuk setiap
+faktor inheren, sebutkan penulisnya yang sudah ada; bila sebuah faktor menuntut data yang belum
+pernah ditulis kode mana pun, penulisnya harus ikut dirancang dalam paket ini — atau faktornya
+tidak dibangun sama sekali. Skor yang selalu nol karena sumbernya tidak ada bukan penyelesaian.
 
-Aturan CLAUDE.md "Fitur Harus Punya Sumber Data" berlaku penuh: bila rancanganmu menuntut kolom
-atau status baru, penulisnya harus ikut dirancang dalam paket yang sama. Halaman arsip yang selalu
-kosong bukan penyelesaian.
+Pertanyaan yang merupakan keputusan kebijakan kepatuhan TANYAKAN kepada saya — jangan ditebak.
+Untuk paket ini, yang hampir pasti keputusan saya dan bukan turunan analisis:
+
+- Ambang tiap faktor risiko inheren: berapa persen transaksi pada mata uang berisiko tinggi yang
+  menjadikan skornya naik, dan daftar mata uang mana yang dianggap berisiko tinggi.
+- Daftar pekerjaan berisiko tinggi dan daftar kewarganegaraan FATF mana yang dipakai, serta
+  siapa yang memeliharanya dan bagaimana ia dikinikan.
+- Siklus penilaian: setahun sekali, atau mengikuti pemicu tertentu.
+- Siapa yang mengisi kuesioner KPMR, siapa yang menyetujui hasil akhirnya, dan apakah penilaian
+  yang sudah disetujui boleh disunting atau hanya dapat digantikan penilaian baru.
+- Apakah hasil IRA boleh mengubah riskLevel nasabah secara otomatis, atau hanya mengusulkan —
+  Paket H sudah menetapkan bahwa pemantauan profil TIDAK PERNAH mengubah data nasabah, jadi
+  jawabannya harus sejalan atau perbedaannya dijelaskan.
+
+Hormati batas yang sudah ada dan jangan menawarnya: jangan menambahkan pengiriman otomatis ke BI
+maupun PPATK; jangan memblokir transaksi; otorisasi ditegakkan di tRPC/server, bukan disembunyikan
+di UI; dan jangan menyimpan data KYC nyata, workbook aktual, atau secret di source, fixture, log,
+screenshot, dokumentasi, maupun commit.
 
 Hasilkan dua berkas:
 
-1. docs/superpowers/specs/2026-09-08-arsip-dokumen-perusahaan-design.md
+1. docs/superpowers/specs/2026-09-09-individual-risk-assessment-design.md
    Masalah, yang sudah diputuskan pengguna, rancangan, yang sengaja tidak dikerjakan, risiko
-   residual. Ikuti bentuk docs/superpowers/specs/2026-09-07-profil-transaksi-pemantauan-design.md.
+   residual. Ikuti bentuk docs/superpowers/specs/2026-09-08-arsip-dokumen-perusahaan-design.md.
 
-2. docs/superpowers/plans/2026-09-08-arsip-dokumen-perusahaan.md
+2. docs/superpowers/plans/2026-09-09-individual-risk-assessment.md
    Rencana bertugas dengan bagian "Status Pengerjaan" di atas, bagian "Keputusan pengguna yang
    mengikat", tabel berkas, lalu tiap tugas berisi langkah bernomor dengan checkbox, potongan kode
    konkret, perintah verifikasi, dan perintah commit. Satu tugas = satu commit yang berdiri sendiri
    beserta ujinya sendiri. Ikuti bentuk
-   docs/superpowers/plans/2026-09-07-profil-transaksi-pemantauan.md — termasuk bagian
+   docs/superpowers/plans/2026-09-08-arsip-dokumen-perusahaan.md — termasuk bagian
    "Global Constraints" yang menyebut baseline uji, uji flaky yang diketahui, dan aturan migrasi.
+
+Seluruh aritmetika penilaian — bobot, rata-rata pilar yang mengecualikan N/A, dan matriks nilai
+akhir — harus menjadi fungsi MURNI di shared/, teruji sendiri, tanpa menyentuh basis data dan
+tanpa membaca jam. Angka kepatuhan harus dapat ditunjuk di satu tempat, bukan tersebar sebagai
+angka telanjang di tengah kode.
 
 Bila paket ini butuh migrasi, rencanakan tepat SATU tugas migrasi, dan tugas itu wajib memuat:
 baca SQL hasil drizzle-kit generate sebelum menerapkan, tulis rencana rollback di berkas rencana
 sebelum menerapkan, dan terapkan hanya lewat `node scripts/tenant.mjs migrate-all`. Jangan pernah
-menjalankan .sql langsung, dan jangan menerapkan migrasi ke produksi.
+menjalankan .sql langsung, dan jangan menerapkan migrasi ke produksi. Migrasi terakhir adalah 0052.
 
-Baseline uji yang benar-benar dijalankan 8 September 2026 sesudah Paket H:
-Test Files 132 passed (132), Tests 1049 passed | 2 skipped (1051). Pakai angka ini pada
+Baseline uji yang benar-benar dijalankan 9 September 2026 sesudah Paket I:
+Test Files 138 passed (138), Tests 1119 passed | 2 skipped (1121). Pakai angka ini pada
 "Global Constraints" rencanamu; jangan mengarang angka lain.
 
+Bila paketnya ternyata terlalu besar untuk satu rencana, katakan demikian dan usulkan
+pemecahannya sebelum menulis — jangan memaksakan dua puluh tugas ke dalam satu berkas.
+
 JANGAN menulis kode aplikasi pada sesi ini. Commit dokumentasinya saja, lalu berhenti dan laporkan.
-```
-
-### Paket J — Individual Risk Assessment (sesi rancangan dulu)
-
-Pakai **Prompt A** dengan `<PAKET>` = `J` dan `<NAMA-BERKAS>` = `individual-risk-assessment`.
-Tambahkan baris ini di akhir prompt:
-
-```
-Bobot IRA, pilar KPMR, dan skala penilaiannya pada bagian "Fakta yang sudah diverifikasi" di
-ROADMAP sudah dibaca langsung dari template BI milik saya — pakai apa adanya, jangan diturunkan
-ulang. Rancang juga bagian mana dari sisi risiko inheren yang dapat dihitung otomatis dari data
-yang sudah dimiliki aplikasi.
 ```
 
 ### Paket K2 — Ganti nama PPPSM menjadi PPPSPM (sesi rancangan dulu)
