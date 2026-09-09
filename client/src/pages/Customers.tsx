@@ -124,7 +124,7 @@ export default function Customers() {
       return toast.error("Lengkapi nama, identitas, alamat, dan hubungan pemilik manfaat (beneficial owner).");
     }
     if (pepStatus !== "NONE" && !pepDetails.trim()) return toast.error("Isi keterangan PEP (nama/jabatan pejabat dan jenis hubungan).");
-    if (dttotMatch && !dttotNotes.trim()) return toast.error("Isi catatan pencocokan DTTOT/PPSPM sebelum menyimpan.");
+    if (dttotMatch && !dttotNotes.trim()) return toast.error("Isi catatan pencocokan DTTOT/DPPSPM sebelum menyimpan.");
     createCustomer.mutate({
       ...form,
       identityExpiryDate: identityNeverExpires ? undefined : new Date(`${form.identityExpiryDate}T00:00:00`),
@@ -149,7 +149,7 @@ export default function Customers() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div><p className="mt-2 max-w-2xl text-sm leading-6 text-[#475569]">Simpan data identifikasi, pemilik manfaat, status PEP, dan pencocokan DTTOT/PPSPM sebelum nasabah digunakan pada transaksi valuta.</p>
+        <div><p className="mt-2 max-w-2xl text-sm leading-6 text-[#475569]">Simpan data identifikasi, pemilik manfaat, status PEP, dan pencocokan DTTOT/DPPSPM sebelum nasabah digunakan pada transaksi valuta.</p>
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">
           <Badge variant="outline" className="w-fit border-[#cfe2d6] bg-[#f5fbf5] px-3 py-1.5 text-[#3c6f48]">{customers?.length ?? 0} profil tersimpan</Badge>
@@ -340,7 +340,7 @@ export default function Customers() {
               <label className="flex items-start gap-3 text-sm">
                 <Checkbox className="mt-0.5" checked={dttotMatch} onCheckedChange={(checked) => setDttotMatch(checked === true)} />
                 <span>
-                  <b className={dttotMatch ? "text-rose-700" : "text-[#18395f]"}>Nama nasabah cocok dengan Daftar DTTOT/PPSPM</b>
+                  <b className={dttotMatch ? "text-rose-700" : "text-[#18395f]"}>Nama nasabah cocok dengan Daftar DTTOT/DPPSPM</b>
                   <br /><small className={dttotMatch ? "text-rose-700" : "text-[#475569]"}>Daftar Terduga Teroris dan Organisasi Teroris / Daftar Pendanaan Proliferasi Senjata Pemusnah Massal.</small>
                 </span>
               </label>

@@ -4,11 +4,11 @@ import { trpc } from "@/lib/trpc";
 import { AlertTriangle, Search } from "lucide-react";
 import { useState } from "react";
 
-const listTypeLabels: Record<string, string> = { DTTOT: "DTTOT", PPPSM: "PPPSM" };
+const listTypeLabels: Record<string, string> = { DTTOT: "DTTOT", DPPSPM: "DPPSPM" };
 
 /**
- * Inline "Cek sekarang" assist for the DTTOT/PPPSM checkbox on the customer form. Purely a
- * screening aid — it never sets the checkbox itself. Staff still ticks "Cocok DTTOT/PPPSM" and
+ * Inline "Cek sekarang" assist for the DTTOT/DPPSPM checkbox on the customer form. Purely a
+ * screening aid — it never sets the checkbox itself. Staff still ticks "Cocok DTTOT/DPPSPM" and
  * writes notes manually after reviewing whatever this turns up (or finds nothing).
  */
 export function WatchlistCheckButton({ name }: { name: string }) {
@@ -22,7 +22,7 @@ export function WatchlistCheckButton({ name }: { name: string }) {
   };
 
   return <div className="mt-2">
-    <Button type="button" size="sm" variant="outline" disabled={name.trim().length < 3} onClick={runCheck} className="border-[#bcd1e5] text-[#315879]"><Search className="mr-1.5 size-3.5" />Cek sekarang di DTTOT/PPPSM</Button>
+    <Button type="button" size="sm" variant="outline" disabled={name.trim().length < 3} onClick={runCheck} className="border-[#bcd1e5] text-[#315879]"><Search className="mr-1.5 size-3.5" />Cek sekarang di DTTOT/DPPSPM</Button>
     {checkedName ? <div className="mt-2">
       {search.isFetching ? <p className="text-xs text-[#718297]">Memeriksa "{checkedName}"…</p> : null}
       {!search.isFetching && search.data ? (

@@ -67,14 +67,13 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ## Sesi berikutnya — keadaan per 9 September 2026 (sesudah Paket J selesai)
 
-Paket K1, B, D, C, E, F1, F2, **G**, **H**, **I**, dan **J (J1 + J2) sudah selesai** dan
-diperagakan end-to-end. **Pekerjaan berikutnya adalah sesi rancangan Paket K2** — bloknya di bawah.
-Paket K3 tetap **menunggu naskah SE BI 18/41/DKSP** dari pengguna dan tidak boleh dimulai tanpa
-naskah atau daftar field wajibnya.
+Paket K1, B, D, C, E, F1, F2, **G**, **H**, **I**, **J (J1 + J2)**, dan **K2 sudah selesai**.
+**Yang tersisa hanyalah Paket K3**, dan ia tetap **menunggu naskah SE BI 18/41/DKSP** dari pengguna
+— tidak boleh dimulai tanpa naskah atau daftar field wajibnya.
 
-Baseline uji yang benar-benar dijalankan 9 September 2026 sesudah Paket J2:
-`Test Files 151 passed (151)`, `Tests 1298 passed | 2 skipped (1300)`. `tsc --noEmit` bersih,
-`vite build` sukses. Migrasi terakhir adalah **`0055`**.
+Baseline uji yang benar-benar dijalankan 9 September 2026 sesudah Paket K2:
+`Test Files 152 passed (152)`, `Tests 1305 passed | 2 skipped (1307)`. `tsc --noEmit` bersih,
+`vite build` sukses. Migrasi terakhir adalah **`0056`**.
 
 **Satu uji diketahui flaky dan bukan bagian paket mana pun:** `server/tenantIsolation.live.test.ts`
 > *"setiap ikatan hanya melihat database miliknya sendiri"*. Bila gagal sendirian di bawah beban,
@@ -139,8 +138,9 @@ dan kode tanpa baris dibaca RENDAH; dimensi `COUNTRY` tanpa daftar FATF/PBB; `PP
 membedakan UMKM; `TPPU_4A` dan `TPPU_4B` selalu sama karena hanya ada satu provinsi gerai;
 `pnpm audit --prod --audit-level=high` masih **9 temuan** (6 sedang, 3 tinggi) — **jangan menyebut
 audit bersih**; migrasi **`0034`–`0055` belum diterapkan ke produksi** — jurnal produksi berisi 34
-baris (`0000`–`0033`) sementara `drizzle/` berisi 56 berkas, jadi yang tertunda **dua puluh dua**,
-bukan lima seperti tercatat di sini sampai 9 September 2026; dan zona waktu server masih
+baris (`0000`–`0033`) sementara `drizzle/` berisi 56 berkas, jadi yang tertunda **dua puluh dua** —
+**dua puluh tiga** sesudah Paket K2 menambahkan `0056` — bukan lima seperti tercatat di sini
+sampai 9 September 2026; dan zona waktu server masih
 memakai bawaan `Asia/Jakarta`, bukan `company_profile.timezone`.
 
 ### Risiko residual paket sebelumnya yang masih terbuka
@@ -371,30 +371,36 @@ lalu centang barisnya di bagian Status Pengerjaan.
 Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 ```
 
-### Paket K2 — Ganti nama PPPSM menjadi `DPPSPM` (4 tugas) — **PEKERJAAN BERIKUTNYA**
+### Paket K2 — Ganti nama PPPSM menjadi `DPPSPM` (4 tugas) — **SELESAI 9 September 2026**
 
-**Sesi rancangan SELESAI 9 September 2026.** Spec `specs/2026-09-09-ganti-nama-dppspm-design.md`,
-rencana `plans/2026-09-09-ganti-nama-dppspm.md`.
+Spec `specs/2026-09-09-ganti-nama-dppspm-design.md`, rencana `plans/2026-09-09-ganti-nama-dppspm.md`
+(keempat tugas tercentang, memuat prosedur rollback `0056` yang belum pernah dijalankan).
 
-Tiga hal yang berubah dari perkiraan sebelumnya — **jangan diturunkan ulang**:
+Yang perlu diketahui sesi berikutnya, **jangan diturunkan ulang**:
 
-- **Sasarannya `DPPSPM`, bukan `PPPSPM`.** Templat BI memasangkan *"DTTOT dan DPPSPM"*
-  (`shared/iraKpmrCatalogue.ts:183`) dan nilai saudaranya sudah `DTTOT`; keduanya sebuah *Daftar*.
-  `PPPSPM` menamai program pencegahannya dan sudah dipakai dengan benar di 25 tempat.
-- **Produksi menyimpan 239 baris `listType = 'PPPSM'`** (`DPRK` 155, `IR` 84) di samping 531 baris
-  `DTTOT` — diperiksa baca-saja 9 September 2026. Ini **bukan** perubahan kosmetik: redefinisi enum
-  satu langkah hasil `drizzle-kit` menyunting ke-239 baris itu menjadi `''` tanpa suara. Sebaliknya,
-  **nol** baris memakai `dttotPpsdmMatch`, dan kolom itu **sengaja tidak diganti nama**.
-- **Basis data lokal kosong untuk keduanya**, karena itu Tugas 1 mengisinya lebih dulu dengan data
-  sintetis berbentuk sama sebelum migrasinya dijalankan.
-
-```
-Baca docs/superpowers/plans/2026-09-09-ganti-nama-dppspm.md dan spec yang dirujuknya. Kerjakan
-Tugas <N> saja, satu commit, beserta ujinya. Patuhi bagian "Global Constraints" pada rencana itu —
-terutama: tiga ejaan yang BENAR dan tidak boleh disentuh (PPSPM, PPPSPM, DPPSPM), dua kemunculan
-PPPSM yang tidak boleh diganti (kutipan templat BI dan riwayat migrasi), dan larangan menerapkan
-migrasi ke produksi.
-```
+- **Empat ejaan hidup berdampingan dan tiga di antaranya BENAR.** `PPSPM` menamai tindak pidananya
+  (kode parameter IRA `PPSPM_1A`…`PPSPM_4A` dan `iraRiskTypes` adalah **kunci basis data** pada
+  `ira_inherent_values`), `PPPSPM` menamai program pencegahannya, `DPPSPM` menamai daftarnya.
+  **Jangan pernah menjalankan cari-ganti naif atas `PPSPM`** — ia substring dari dua lainnya.
+  Penjaganya `server/sanctionsListNaming.test.ts`.
+- **Dua kemunculan `PPPSM` sengaja tetap ada:** kutipan templat BI pada
+  `shared/iraKpmrCatalogue.ts:291` dan berkas penjaganya sendiri. Riwayat migrasi
+  (`drizzle/0033*.sql`, `drizzle/meta/*.json`) juga tidak pernah disunting.
+- **Kolom `customers.dttotPpsdmMatch`/`dttotPpsdmNotes` tetap salah eja, sengaja.** Nol baris
+  memakainya. Komentar penambatnya ada di `drizzle/schema.ts`.
+- **Redefinisi enum satu langkah hasil `drizzle-kit` tidak dapat dipakai.** Di bawah
+  `STRICT_TRANS_TABLES` — dipakai lokal maupun produksi — ia gagal dengan `ERROR 1265`; tanpa mode
+  ketat ia menyunting baris menjadi `''` secara senyap. Pola yang benar: melebarkan enum →
+  `UPDATE` → menyempitkan, ditulis tangan dengan `--> statement-breakpoint`. **Pakai ulang pola ini
+  untuk setiap penggantian nilai enum berikutnya.**
+- **`mysqldump` di mesin ini menghasilkan berkas yang menolak dipulihkan** (`ERROR 3546`) kecuali
+  dipanggil dengan `--single-transaction --set-gtid-purged=OFF`. Buktikan pemulihannya sebelum
+  mengandalkan cadangan apa pun.
+- **Urutan halaman Cek Watchlist berubah:** `DPPSPM` jatuh sebelum `DTTOT` secara alfabetis,
+  sehingga daftar proliferasi kini tampil lebih dahulu. Dikunci uji beserta alasannya.
+- **Basis data lokal kini berisi 17 baris peragaan** per basis data, dibuat
+  `scripts/seedWatchlistDemo.mjs` (idempoten, menolak host/basis data non-lokal). **Jangan
+  dibersihkan.**
 
 ### Paket K3 — Nota terhadap SE BI 18/41/DKSP
 

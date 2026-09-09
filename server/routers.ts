@@ -299,7 +299,7 @@ export const customerInput = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Keterangan PEP wajib diisi.", path: ["pepDetails"] });
   }
   if (value.dttotPpsdmMatch && !value.dttotPpsdmNotes?.trim()) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Catatan kecocokan DTTOT/PPSPM wajib diisi.", path: ["dttotPpsdmNotes"] });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Catatan kecocokan DTTOT/DPPSPM wajib diisi.", path: ["dttotPpsdmNotes"] });
   }
 });
 
@@ -341,7 +341,7 @@ export const customerUpdateInput = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Keterangan PEP wajib diisi.", path: ["pepDetails"] });
   }
   if (value.dttotPpsdmMatch && !value.dttotPpsdmNotes?.trim()) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Catatan kecocokan DTTOT/PPSPM wajib diisi.", path: ["dttotPpsdmNotes"] });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Catatan kecocokan DTTOT/DPPSPM wajib diisi.", path: ["dttotPpsdmNotes"] });
   }
 });
 

@@ -151,7 +151,16 @@ export const customers = mysqlTable("customers", {
   pepStatus: mysqlEnum("pepStatus", ["NONE", "SELF", "RELATED"]).default("NONE").notNull(),
   /** Wajib diisi ketika pepStatus bukan NONE: jabatan/nama pejabat dan jenis hubungan bila RELATED. */
   pepDetails: text("pepDetails"),
-  /** Kecocokan dengan Daftar Terduga Teroris dan Organisasi Teroris / Daftar Pendanaan Proliferasi Senjata Pemusnah Massal. */
+  /**
+   * Kecocokan dengan DTTOT / DPPSPM — Daftar Terduga Teroris dan Organisasi Teroris, dan Daftar
+   * Pendanaan Proliferasi Senjata Pemusnah Massal.
+   *
+   * **Nama kolomnya salah eja.** `Ppsdm` adalah akronim kepegawaian (Pengembangan Sumber Daya
+   * Manusia), sama sekali bukan proliferasi; yang dimaksud adalah DPPSPM. Sengaja TIDAK diganti
+   * (Paket K2, keputusan pengguna 9 September 2026): nol baris memakainya di produksi maupun
+   * lokal, sehingga penggantian nama menyentuh skema masukan tRPC dan muatan klien — sebuah
+   * perubahan antarmuka yang menuntut urutan rilis yang benar — demi hasil yang murni kosmetik.
+   */
   dttotPpsdmMatch: boolean("dttotPpsdmMatch").default(false).notNull(),
   dttotPpsdmNotes: text("dttotPpsdmNotes"),
   profileStatus: mysqlEnum("profileStatus", ["ACTIVE", "RESTRICTED", "INACTIVE"]).default("ACTIVE").notNull(),
@@ -464,22 +473,26 @@ export const operationalExpenses = mysqlTable("operational_expenses", {
 ]);
 
 /**
- * Reference data for DTTOT/PPPSM screening — imported from PPATK/DK PBB public sanctions lists
- * (Daftar Terduga Teroris dan Organisasi Teroris; Daftar Pendanaan Proliferasi Senjata Pemusnah
- * Massal), never customer or transaction data. `sourceLabel` distinguishes independent PPPSM
- * sub-lists (e.g. "DPRK", "IR") that each get imported/replaced separately — DTTOT has none
- * (single unified list, `sourceLabel` is null and the whole `listType` is replaced together).
- * A fresh import for the same (listType, sourceLabel) scope fully replaces prior rows in that
- * scope; it never merges, so a partial/older re-upload can't leave stale entries mixed in.
+ * Reference data for DTTOT/DPPSPM screening — imported from PPATK/DK PBB public sanctions lists,
+ * never customer or transaction data. Both enum values name a *daftar* (a designation list), which
+ * is why the proliferation one is DPPSPM — Daftar Pendanaan Proliferasi Senjata Pemusnah Massal —
+ * and not PPSPM (the offence) or PPPSPM (the prevention programme). BI's own template pairs them
+ * exactly this way; see the KPMR question quoted verbatim in `shared/iraKpmrCatalogue.ts`.
+ *
+ * `sourceLabel` distinguishes independent DPPSPM sub-lists (e.g. "DPRK", "IR") that each get
+ * imported/replaced separately — DTTOT has none (single unified list, `sourceLabel` is null and the
+ * whole `listType` is replaced together). A fresh import for the same (listType, sourceLabel) scope
+ * fully replaces prior rows in that scope; it never merges, so a partial/older re-upload can't
+ * leave stale entries mixed in.
  */
 export const sanctionsWatchlistEntries = mysqlTable("sanctions_watchlist_entries", {
   id: int("id").autoincrement().primaryKey(),
-  listType: mysqlEnum("listType", ["DTTOT", "PPPSM"]).notNull(),
+  listType: mysqlEnum("listType", ["DTTOT", "DPPSPM"]).notNull(),
   sourceLabel: varchar("sourceLabel", { length: 60 }),
   entityType: mysqlEnum("entityType", ["INDIVIDUAL", "ENTITY"]).notNull(),
   referenceCode: varchar("referenceCode", { length: 60 }),
   fullName: varchar("fullName", { length: 500 }).notNull(),
-  /** Newline-separated known aliases, parsed from dedicated "Alias N" columns (PPPSM) or split out of the name field itself (DTTOT's "X alias Y alias Z" convention). */
+  /** Newline-separated known aliases, parsed from dedicated "Alias N" columns (DPPSPM) or split out of the name field itself (DTTOT's "X alias Y alias Z" convention). */
   aliases: text("aliases"),
   dateOfBirth: varchar("dateOfBirth", { length: 255 }),
   placeOfBirth: varchar("placeOfBirth", { length: 255 }),
