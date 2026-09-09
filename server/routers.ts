@@ -137,6 +137,8 @@ import {
 import { OPERATIONAL_TIMEZONE_VALUES } from "../shared/regulatoryActionQueue";
 import { simulateArchiveReadiness, simulateClosing, simulateExchange, simulateRateShock } from "./simulation";
 import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedure, router, staffProcedure } from "./_core/trpc";
+import { classifyRisk, iraClassificationDenial, listClassifications } from "./iraRiskClassification";
+import { iraRiskDimensions, iraRiskLevels, iraRiskTypes } from "../drizzle/schema";
 import { createInternalSession, hashPassword, internalSessionMaxAge, validateUsername, verifyInternalCredentials, verifyPassword } from "./internalAuth";
 import { createInternalUser, getInternalUserById, listInternalUsers, updateInternalUserPassword, updateInternalUserRole, updateInternalUserStatus } from "./db";
 import type { TrpcContext } from "./_core/context";
@@ -412,6 +414,34 @@ export const appRouter = router({
    * Hanya mencatat: prosedurnya membaca, dan tidak ada satu pun di sini yang mengubah data nasabah,
    * status transaksi, maupun mengirim laporan ke regulator.
    */
+  /**
+   * Klasifikasi risiko inheren IRA. Controller ke atas, ditegakkan dua kali dengan sengaja:
+   * `controllerProcedure` sebagai gerbang jalur, dan `iraClassificationDenial` sebagai gerbang yang
+   * dapat diuji tanpa menyalakan tRPC. Yang kedua itulah yang membuat otorisasinya punya uji.
+   */
+  iraClassification: router({
+    list: controllerProcedure.query(({ ctx }) => {
+      const denial = iraClassificationDenial(ctx.user);
+      if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+      return listClassifications();
+    }),
+    set: controllerProcedure
+      .input(z.object({
+        dimension: z.enum(iraRiskDimensions),
+        code: z.string().trim().min(1).max(60),
+        riskType: z.enum(iraRiskTypes),
+        level: z.enum(iraRiskLevels),
+        // Klasifikasi tanpa rujukan adalah angka tanpa asal; `trim` lebih dulu agar spasi kosong
+        // tidak lolos sebagai alasan.
+        sourceNote: z.string().trim().min(3).max(1000),
+      }))
+      .mutation(({ input, ctx }) => {
+        const denial = iraClassificationDenial(ctx.user);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        return classifyRisk(input, ctx.user);
+      }),
+  }),
+
   /**
    * Arsip dokumen perusahaan. Seluruhnya Controller ke atas, ditegakkan di sini dan bukan
    * disembunyikan di UI. Tidak ada prosedur penghapusan: menghapus berarti menonaktifkan.

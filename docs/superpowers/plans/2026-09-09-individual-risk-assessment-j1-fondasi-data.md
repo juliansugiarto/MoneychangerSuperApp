@@ -24,7 +24,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 
 - [x] Tugas 1 — Kosakata tertutup BI sebagai konstanta murni
 - [x] Tugas 2 — Migrasi: tiga kolom nasabah/bon/profil dan dua tabel klasifikasi
-- [ ] Tugas 3 — Penulis klasifikasi risiko beserta gerbang peran dan auditnya
+- [x] Tugas 3 — Penulis klasifikasi risiko beserta gerbang peran dan auditnya
 - [ ] Tugas 4 — Borang nasabah: jenis nasabah, bentuk badan hukum, kategori pekerjaan
 - [ ] Tugas 5 — Jalur distribusi pada bon
 - [ ] Tugas 6 — Pembaca agregat Form C1
@@ -249,7 +249,7 @@ province: varchar("province", { length: 60 }),
 **Files:** Create `server/iraRiskClassification.ts`, `server/iraRiskClassification.test.ts`;
 Modify `server/routers.ts`
 
-- [ ] **Step 1: Tulis uji yang gagal lebih dulu.**
+- [x] **Step 1: Tulis uji yang gagal lebih dulu.**
 
 ```ts
 describe("klasifikasi risiko", () => {
@@ -265,21 +265,21 @@ describe("klasifikasi risiko", () => {
       Uji keempat adalah alasan keberadaan tabel ini — bila implementasinya diam-diam menyatukan
       jenis risiko, uji itulah yang jatuh.
 
-- [ ] **Step 2: `iraClassificationDenial(role)`** sebagai fungsi tersendiri yang mengembalikan
+- [x] **Step 2: `iraClassificationDenial(role)`** sebagai fungsi tersendiri yang mengembalikan
       alasan penolakan atau `null`, meniru `financialFormExportDenial`. **Jangan** menaruh gerbangnya
       di dalam handler: otorisasi yang hanya hidup di sana tidak pernah dibuktikan uji mana pun.
 
-- [ ] **Step 3: `classifyRisk`** menulis satu baris dengan `ON DUPLICATE KEY UPDATE`, mencatat nilai
+- [x] **Step 3: `classifyRisk`** menulis satu baris dengan `ON DUPLICATE KEY UPDATE`, mencatat nilai
       lama dan baru ke `audit_logs`.
 
-- [ ] **Step 4: `readClassifications`** mengembalikan `Map` berkunci `dimension|code|riskType`,
+- [x] **Step 4: `readClassifications`** mengembalikan `Map` berkunci `dimension|code|riskType`,
       beserta fungsi murni `classificationLevel(map, dimension, code, riskType)` yang
       **mengembalikan `RENDAH` untuk yang tidak ada**. Ketiadaan yang berperilaku seperti `RENDAH`
       harus ditulis satu kali di sini, bukan diulang setiap pemanggil.
 
-- [ ] **Step 5:** Prosedur tRPC `iraClassification.list` dan `.set` dengan skema Zod.
+- [x] **Step 5:** Prosedur tRPC `iraClassification.list` dan `.set` dengan skema Zod.
 
-- [ ] **Step 6:** Perintah mutu, lalu commit `"Penulis klasifikasi risiko IRA"`.
+- [x] **Step 6:** Perintah mutu, lalu commit `"Penulis klasifikasi risiko IRA"`.
 
 ---
 
