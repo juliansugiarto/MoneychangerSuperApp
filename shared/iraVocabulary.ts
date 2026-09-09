@@ -8,6 +8,8 @@
  *
  * Murni: tanpa basis data, tanpa jam, tanpa impor apa pun. Skema Drizzle dan skema Zod sama-sama
  * memakai tuple `*_VALUES` di bawah supaya satu daftar berlaku untuk penyimpanan dan validasi.
+ * Tuple-nya bertipe literal, bukan `string[]`, agar `mysqlEnum` dan `z.enum` menghasilkan union
+ * kode yang sebenarnya — kolom bertipe `string` akan meloloskan kode salah ketik sampai runtime.
  */
 
 /**
@@ -51,7 +53,7 @@ export type IraOccupationCategory = keyof typeof IRA_OCCUPATION_CATEGORY_LABELS;
 
 export const IRA_OCCUPATION_CATEGORIES = Object.keys(IRA_OCCUPATION_CATEGORY_LABELS) as IraOccupationCategory[];
 
-export const IRA_OCCUPATION_CATEGORY_VALUES = IRA_OCCUPATION_CATEGORIES as unknown as [string, ...string[]];
+export const IRA_OCCUPATION_CATEGORY_VALUES = IRA_OCCUPATION_CATEGORIES as unknown as [IraOccupationCategory, ...IraOccupationCategory[]];
 
 /**
  * Bentuk badan hukum nasabah korporasi menurut Form C1.
@@ -81,7 +83,7 @@ export type IraLegalForm = keyof typeof IRA_LEGAL_FORM_LABELS;
 
 export const IRA_LEGAL_FORMS = Object.keys(IRA_LEGAL_FORM_LABELS) as IraLegalForm[];
 
-export const IRA_LEGAL_FORM_VALUES = IRA_LEGAL_FORMS as unknown as [string, ...string[]];
+export const IRA_LEGAL_FORM_VALUES = IRA_LEGAL_FORMS as unknown as [IraLegalForm, ...IraLegalForm[]];
 
 /**
  * Jalur distribusi transaksi. Bawaannya `KANTOR` pada `exchange_transactions` — sebagian besar bon
@@ -97,7 +99,7 @@ export type IraDistributionChannel = keyof typeof IRA_DISTRIBUTION_CHANNEL_LABEL
 
 export const IRA_DISTRIBUTION_CHANNELS = Object.keys(IRA_DISTRIBUTION_CHANNEL_LABELS) as IraDistributionChannel[];
 
-export const IRA_DISTRIBUTION_CHANNEL_VALUES = IRA_DISTRIBUTION_CHANNELS as unknown as [string, ...string[]];
+export const IRA_DISTRIBUTION_CHANNEL_VALUES = IRA_DISTRIBUTION_CHANNELS as unknown as [IraDistributionChannel, ...IraDistributionChannel[]];
 
 /**
  * 34 provinsi sebagaimana tertulis pada template C1, berkode kebab-uppercase.
@@ -147,7 +149,7 @@ export type IraProvince = keyof typeof IRA_PROVINCE_LABELS;
 
 export const IRA_PROVINCES = Object.keys(IRA_PROVINCE_LABELS) as IraProvince[];
 
-export const IRA_PROVINCE_VALUES = IRA_PROVINCES as unknown as [string, ...string[]];
+export const IRA_PROVINCE_VALUES = IRA_PROVINCES as unknown as [IraProvince, ...IraProvince[]];
 
 /** Jenis nasabah; menentukan ruas mana yang berlaku pada borang nasabah. */
 export const IRA_CUSTOMER_TYPE_LABELS = {
@@ -159,4 +161,4 @@ export type IraCustomerType = keyof typeof IRA_CUSTOMER_TYPE_LABELS;
 
 export const IRA_CUSTOMER_TYPES = Object.keys(IRA_CUSTOMER_TYPE_LABELS) as IraCustomerType[];
 
-export const IRA_CUSTOMER_TYPE_VALUES = IRA_CUSTOMER_TYPES as unknown as [string, ...string[]];
+export const IRA_CUSTOMER_TYPE_VALUES = IRA_CUSTOMER_TYPES as unknown as [IraCustomerType, ...IraCustomerType[]];

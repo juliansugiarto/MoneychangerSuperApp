@@ -13,6 +13,12 @@ import {
   uniqueIndex,
   varchar,
 } from "drizzle-orm/mysql-core";
+import {
+  IRA_CUSTOMER_TYPE_VALUES,
+  IRA_DISTRIBUTION_CHANNEL_VALUES,
+  IRA_LEGAL_FORM_VALUES,
+  IRA_OCCUPATION_CATEGORY_VALUES,
+} from "../shared/iraVocabulary";
 
 export const staffRoles = ["STAFF", "ADMIN", "CONTROLLER", "SHAREHOLDER"] as const;
 
@@ -115,6 +121,23 @@ export const customers = mysqlTable("customers", {
   npwp: varchar("npwp", { length: 20 }),
   gender: mysqlEnum("gender", ["MALE", "FEMALE"]),
   occupation: varchar("occupation", { length: 160 }),
+  /**
+   * Jenis nasabah menurut Form C1. Nullable dan itu disengaja: nasabah lama belum pernah ditanyai,
+   * dan menebaknya dari nama atau bentuk identitas berarti mengarang data nasabah.
+   */
+  customerType: mysqlEnum("customerType", IRA_CUSTOMER_TYPE_VALUES),
+  /** Bentuk badan hukum; hanya berlaku ketika `customerType` adalah BADAN_USAHA. */
+  entityLegalForm: mysqlEnum("entityLegalForm", IRA_LEGAL_FORM_VALUES),
+  /**
+   * Kategori pekerjaan menurut kosakata tertutup BI (Form C1). Berdampingan dengan `occupation` di
+   * atas yang tetap memuat kata-kata sebagaimana tertulis pada KTP — kwitansi dan ekspor goAML
+   * mencetak yang itu, dan kolom ini tidak menggantikannya.
+   *
+   * Kosong pada nasabah lama dan itu disengaja: menebaknya dari teks bebas berarti mengarang data
+   * nasabah. Yang kosong muncul pada worklist pelengkapan dan ikut dilaporkan sebagai jumlah
+   * nasabah belum berkategori, bukan diam-diam mengecilkan penyebut Form C1.
+   */
+  occupationCategory: mysqlEnum("occupationCategory", IRA_OCCUPATION_CATEGORY_VALUES),
   sourceOfFunds: text("sourceOfFunds"),
   transactionPurpose: text("transactionPurpose"),
   /** Nasabah ini hanya bertindak atas nama pihak lain (mis. supir disuruh bos); identitas pemilik manfaat sebenarnya wajib dicatat terpisah. */
@@ -211,6 +234,14 @@ export const exchangeTransactions = mysqlTable("exchange_transactions", {
   rupiahAmount: decimal("rupiahAmount", { precision: 24, scale: 2 }).notNull(),
   paymentMethod: mysqlEnum("paymentMethod", ["CASH", "BANK_TRANSFER", "OTHER"]).notNull(),
   paymentReference: varchar("paymentReference", { length: 160 }),
+  /**
+   * Jalur distribusi bon — sumber parameter TPPU/TPPT 2a/2b pada Form C1.
+   *
+   * Berbawaan `KANTOR` dan `NOT NULL`: hampir seluruh bon dilayani di gerai, sehingga kasir tidak
+   * dipaksa memilih hal yang sama setiap kali, dan bon lama ikut terbaca sebagai KANTOR — yang
+   * memang keadaannya, karena layanan delivery dan online belum pernah dijalankan.
+   */
+  distributionChannel: mysqlEnum("distributionChannel", IRA_DISTRIBUTION_CHANNEL_VALUES).default("KANTOR").notNull(),
   /** Immutable KYC values rendered on the bon even if a profile is later updated. */
   customerFullNameSnapshot: varchar("customerFullNameSnapshot", { length: 200 }),
   customerIdentityTypeSnapshot: varchar("customerIdentityTypeSnapshot", { length: 20 }),
@@ -693,6 +724,13 @@ export const companyProfile = mysqlTable("company_profile", {
   /** Kode user pelapor goAML (reporting_user_code) yang terdaftar di aplikasi goAML — dipakai di header laporan sebagai pengganti detail lengkap petugas pelapor. */
   goamlReportingUserCode: varchar("goamlReportingUserCode", { length: 50 }),
   address: text("address"),
+  /**
+   * Provinsi tempat gerai beroperasi, kode kosakata `shared/iraVocabulary.ts` (mis. "JAWA-BARAT").
+   *
+   * Dinyatakan pada profil, bukan diturunkan dari tabel cabang: aplikasi ini masih satu outlet.
+   * Sumber parameter Wilayah Geografis TPPU/TPPT 4a/4b, dipasangkan dengan klasifikasi `PROVINCE`.
+   */
+  province: varchar("province", { length: 60 }),
   phone: varchar("phone", { length: 60 }),
   email: varchar("email", { length: 200 }),
   website: varchar("website", { length: 200 }),
@@ -1694,3 +1732,72 @@ export type StaffRole = User["role"];
 export type CompanyDocument = typeof companyDocuments.$inferSelect;
 export type CompanyDocumentVersion = typeof companyDocumentVersions.$inferSelect;
 export type CompanyDocumentCategory = CompanyDocument["category"];
+
+/**
+ * Dimensi yang dapat diklasifikasikan risikonya. Kode barisnya bergantung dimensinya: kode mata
+ * uang (`USD`), kategori pekerjaan dan bentuk badan hukum dari `shared/iraVocabulary.ts`, ISO
+ * alpha-2 untuk negara, dan kode provinsi kosakata yang sama.
+ */
+export const iraRiskDimensions = ["CURRENCY", "OCCUPATION", "LEGAL_FORM", "COUNTRY", "PROVINCE"] as const;
+
+/** Jenis risiko yang dinilai terpisah — satu kode dapat berlainan tingkat pada ketiganya. */
+export const iraRiskTypes = ["TPPU", "TPPT", "PPSPM"] as const;
+
+export const iraRiskLevels = ["RENDAH", "MENENGAH", "TINGGI"] as const;
+
+/**
+ * Klasifikasi risiko inheren yang dipelihara manusia — satu tabel untuk kelima dimensi.
+ *
+ * Satu baris per `(dimension, code, riskType)`, bukan satu kolom `isHighRisk` pada tabel masing
+ * masing: USD dapat berisiko TINGGI untuk TPPU sekaligus MENENGAH untuk TPPT, dan satu kolom boolean
+ * memaksa ketiga jenis risiko sepakat padahal SRA memang menilai berbeda.
+ *
+ * `sourceNote` **wajib**: klasifikasi tanpa rujukan SRA adalah angka tanpa asal, dan pemeriksa
+ * menanyakan dasarnya, bukan nilainya saja. Kode tanpa baris di sini dibaca sebagai RENDAH — satu
+ * kali, di `classificationLevel`, bukan diulang setiap pemanggil.
+ */
+export const iraRiskClassifications = mysqlTable("ira_risk_classifications", {
+  id: int("id").autoincrement().primaryKey(),
+  dimension: mysqlEnum("dimension", iraRiskDimensions).notNull(),
+  code: varchar("code", { length: 60 }).notNull(),
+  riskType: mysqlEnum("riskType", iraRiskTypes).notNull(),
+  level: mysqlEnum("level", iraRiskLevels).notNull(),
+  /** Alasan atau rujukan SRA. Wajib diisi; ditegakkan juga di Zod agar spasi kosong tidak lolos. */
+  sourceNote: text("sourceNote").notNull(),
+  updatedByUserId: int("updatedByUserId").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("ira_risk_classifications_key_uq").on(table.dimension, table.code, table.riskType),
+  index("ira_risk_classifications_dimension_idx").on(table.dimension, table.riskType),
+]);
+
+/**
+ * Ambang pita penilaian per parameter — lima pita untuk tiap parameter Form C1.
+ *
+ * Nilai bawaannya hasil seed persis template, tetapi dapat disunting CONTROLLER: ambang SRA berubah
+ * mengikuti terbitan barunya, dan ambang yang terkunci di kode memaksa rilis aplikasi setiap kali
+ * regulatornya menggeser satu angka.
+ *
+ * `upperBoundPercent` nullable pada pita teratas — null berarti tak berbatas atas, bukan nol.
+ */
+export const iraParameterThresholds = mysqlTable("ira_parameter_thresholds", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Kode parameter Form C1, mis. "TPPU_1A". */
+  parameterCode: varchar("parameterCode", { length: 40 }).notNull(),
+  /** 1 sampai 5, dari pita terendah ke tertinggi. */
+  bandIndex: int("bandIndex").notNull(),
+  /** Batas atas pita dalam persen; null hanya pada pita teratas dan berarti tak berbatas. */
+  upperBoundPercent: decimal("upperBoundPercent", { precision: 6, scale: 2 }),
+  updatedByUserId: int("updatedByUserId").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("ira_parameter_thresholds_band_uq").on(table.parameterCode, table.bandIndex),
+]);
+
+export type IraRiskClassification = typeof iraRiskClassifications.$inferSelect;
+export type IraRiskDimension = IraRiskClassification["dimension"];
+export type IraRiskType = IraRiskClassification["riskType"];
+export type IraRiskLevel = IraRiskClassification["level"];
+export type IraParameterThreshold = typeof iraParameterThresholds.$inferSelect;

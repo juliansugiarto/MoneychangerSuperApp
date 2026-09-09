@@ -23,7 +23,7 @@ dikerjakan sebelum J1 selesai.** J2 tidak punya sumber data tanpa J1.
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu.**
 
 - [x] Tugas 1 — Kosakata tertutup BI sebagai konstanta murni
-- [ ] Tugas 2 — Migrasi: tiga kolom nasabah/bon/profil dan dua tabel klasifikasi
+- [x] Tugas 2 — Migrasi: tiga kolom nasabah/bon/profil dan dua tabel klasifikasi
 - [ ] Tugas 3 — Penulis klasifikasi risiko beserta gerbang peran dan auditnya
 - [ ] Tugas 4 — Borang nasabah: jenis nasabah, bentuk badan hukum, kategori pekerjaan
 - [ ] Tugas 5 — Jalur distribusi pada bon
@@ -164,7 +164,7 @@ spec bagian "Yang sudah diputuskan pengguna"; yang mengikat J1:
 
 **Ini satu-satunya tugas migrasi di rencana ini.**
 
-- [ ] **Step 1: Tulis rencana rollback di berkas ini lebih dulu**, sebelum menyentuh apa pun:
+- [x] **Step 1: Tulis rencana rollback di berkas ini lebih dulu**, sebelum menyentuh apa pun:
 
       > **Rollback Tugas 2.** Dua tabel baru di-`DROP TABLE`; lima kolom baru di-`DROP COLUMN`.
       > Seluruhnya nullable atau berbawaan dan belum punya pembaca di luar paket ini, sehingga
@@ -172,7 +172,38 @@ spec bagian "Yang sudah diputuskan pengguna"; yang mengikat J1:
       > `__drizzle_migrations` untuk `0053` dihapus pada kedua basis data lokal. Sebelum menerapkan:
       > `mysqldump moneychanger customers exchange_transactions company_profile > <scratchpad>/pre-0053.sql`.
 
-- [ ] **Step 2: Tulis skemanya di `drizzle/schema.ts`**, jangan menulis SQL sendiri.
+#### Rollback Tugas 2 — tertulis sebelum migrasi diterapkan
+
+Lima kolom baru dan dua tabel baru. Seluruh kolom baru nullable atau berbawaan, tidak ada kolom
+lama yang berubah tipe/nama/hilang, dan belum ada pembaca di luar paket ini — sehingga
+menjatuhkannya mengembalikan keadaan sebelum migrasi tanpa kehilangan data lama.
+
+**Cadangan sebelum menerapkan** (kedua basis data lokal, ke scratchpad sesi, bukan ke repo):
+
+```bash
+mysqldump --no-tablespaces moneychanger customers exchange_transactions company_profile \
+  > "$SCRATCH/pre-0053-moneychanger.sql"
+mysqldump --no-tablespaces mc_t_abcvalas customers exchange_transactions company_profile \
+  > "$SCRATCH/pre-0053-mc_t_abcvalas.sql"
+```
+
+**Membatalkan** — jalankan pada `moneychanger` dan `mc_t_abcvalas`:
+
+```sql
+DROP TABLE IF EXISTS `ira_parameter_thresholds`;
+DROP TABLE IF EXISTS `ira_risk_classifications`;
+ALTER TABLE `customers` DROP COLUMN `customerType`, DROP COLUMN `entityLegalForm`, DROP COLUMN `occupationCategory`;
+ALTER TABLE `exchange_transactions` DROP COLUMN `distributionChannel`;
+ALTER TABLE `company_profile` DROP COLUMN `province`;
+DELETE FROM `__drizzle_migrations` WHERE `hash` = '<hash baris 0053>';
+```
+
+Migrasinya terbit sebagai `drizzle/0053_spooky_thunderball.sql`. Lalu `git revert` commit Tugas 2 agar `drizzle/schema.ts`, `drizzle/0053_*.sql`, dan
+`drizzle/meta/*` kembali sejalan dengan basis datanya. Yang hilang saat rollback hanyalah nilai
+yang ditulis sesudah migrasi (kategori nasabah yang telanjur diisi petugas dan baris klasifikasi);
+tidak ada data pra-migrasi yang tersentuh.
+
+- [x] **Step 2: Tulis skemanya di `drizzle/schema.ts`**, jangan menulis SQL sendiri.
 
 ```ts
 // customers — tiga kolom, seluruhnya nullable
@@ -192,7 +223,7 @@ distributionChannel: mysqlEnum("distributionChannel", ["KANTOR", "LAYANAN_DELIVE
 province: varchar("province", { length: 60 }),
 ```
 
-- [ ] **Step 3: Dua tabel baru.** `ira_risk_classifications` dengan indeks unik
+- [x] **Step 3: Dua tabel baru.** `ira_risk_classifications` dengan indeks unik
       `(dimension, code, riskType)` dan `sourceNote` **wajib** — klasifikasi tanpa alasan adalah
       angka tanpa asal. `ira_parameter_thresholds` menyimpan pita per parameter:
       `parameterCode`, `bandIndex` (1–5), `upperBoundPercent` nullable (null = tak berbatas atas),
@@ -201,15 +232,15 @@ province: varchar("province", { length: 60 }),
       Keduanya memuat `updatedByUserId` dan `updatedAt`; halaman pemeliharaannya menampilkan
       kapan terakhir disentuh, karena klasifikasi usang adalah risiko residual yang sudah dicatat.
 
-- [ ] **Step 4: Hasilkan migrasinya** dengan `./node_modules/.bin/drizzle-kit generate`, lalu
+- [x] **Step 4: Hasilkan migrasinya** dengan `./node_modules/.bin/drizzle-kit generate`, lalu
       **baca SQL-nya sungguhan.** Yang dicari: tidak ada `DROP`, tidak ada `MODIFY` atas kolom lama,
       dan `distributionChannel` benar-benar terbit dengan `DEFAULT 'KANTOR'` — tanpa bawaan, MySQL
       akan menolak menambah kolom `NOT NULL` pada tabel yang sudah berisi baris.
 
-- [ ] **Step 5: Terapkan** dengan `node scripts/tenant.mjs migrate-all`. **Hanya lokal.** Lalu
+- [x] **Step 5: Terapkan** dengan `node scripts/tenant.mjs migrate-all`. **Hanya lokal.** Lalu
       periksa dengan `DESCRIBE` bahwa bon lama mendapat `KANTOR` dan bukan string kosong.
 
-- [ ] **Step 6:** Perintah mutu, lalu commit `"Migrasi 0053: kosakata nasabah, jalur distribusi, klasifikasi risiko"`.
+- [x] **Step 6:** Perintah mutu, lalu commit `"Migrasi 0053: kosakata nasabah, jalur distribusi, klasifikasi risiko"`.
 
 ---
 

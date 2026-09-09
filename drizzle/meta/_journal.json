@@ -372,6 +372,13 @@
       "when": 1788885376981,
       "tag": "0052_spicy_skreet",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "5",
+      "when": 1788938972235,
+      "tag": "0053_spooky_thunderball",
+      "breakpoints": true
     }
   ]
 }
