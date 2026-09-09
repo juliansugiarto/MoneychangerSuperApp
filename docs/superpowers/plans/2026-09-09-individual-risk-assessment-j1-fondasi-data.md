@@ -22,7 +22,7 @@ dikerjakan sebelum J1 selesai.** J2 tidak punya sumber data tanpa J1.
 
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu.**
 
-- [ ] Tugas 1 — Kosakata tertutup BI sebagai konstanta murni
+- [x] Tugas 1 — Kosakata tertutup BI sebagai konstanta murni
 - [ ] Tugas 2 — Migrasi: tiga kolom nasabah/bon/profil dan dua tabel klasifikasi
 - [ ] Tugas 3 — Penulis klasifikasi risiko beserta gerbang peran dan auditnya
 - [ ] Tugas 4 — Borang nasabah: jenis nasabah, bentuk badan hukum, kategori pekerjaan
@@ -126,7 +126,7 @@ spec bagian "Yang sudah diputuskan pengguna"; yang mengikat J1:
 - Produces: `IRA_OCCUPATION_CATEGORIES`, `IRA_LEGAL_FORMS`, `IRA_DISTRIBUTION_CHANNELS`,
   `IRA_PROVINCES`, beserta label Indonesianya.
 
-- [ ] **Step 1: Salin kosakatanya dari lembar `C1. Form KUPVA BB`** — **daftarnya, bukan angkanya.**
+- [x] **Step 1: Salin kosakatanya dari lembar `C1. Form KUPVA BB`** — **daftarnya, bukan angkanya.**
       Kategori pekerjaan persis seperti tertulis di template, termasuk yang bernilai nol di berkas
       milik pengguna: Pejabat Negara, Wirausaha/Wiraswasta, Karyawan Swasta, PNS/ASN (termasuk
       pensiunan), Profesi Keuangan Lainnya, Profesional, Pengurus dan Pegawai BUMN/BUMD/BUMS/BUMDes,
@@ -139,7 +139,7 @@ spec bagian "Yang sudah diputuskan pengguna"; yang mengikat J1:
       di layar, bukan cara menyembunyikan nasabah yang belum dikategorikan — yang belum
       dikategorikan tetap `null`.
 
-- [ ] **Step 2: Bentuk badan hukum**, juga dari C1: `PT` (termasuk BUMN/BUMD/BUMS),
+- [x] **Step 2: Bentuk badan hukum**, juga dari C1: `PT` (termasuk BUMN/BUMD/BUMS),
       `PERUSAHAAN_PERSEORANGAN` (termasuk UMKM per PP 7/2021), `SOCIAL_ENTERPRISE`, `CV`, `FIRMA`,
       `PERSEKUTUAN_PERDATA`, `KOPERASI`, `YAYASAN`, `PERKUMPULAN`, `ORMAS_TERDAFTAR`,
       `ORMAS_TIDAK_TERDAFTAR`.
@@ -147,14 +147,14 @@ spec bagian "Yang sudah diputuskan pengguna"; yang mengikat J1:
       **`PT` dan `PERUSAHAAN_PERSEORANGAN` sengaja terpisah** — parameter PPSPM 3c menanyakan PT
       **non-UMKM**, jadi menggabungkan keduanya membuat parameter itu tidak mungkin dihitung.
 
-- [ ] **Step 3: Jalur distribusi** `KANTOR`, `LAYANAN_DELIVERY`, `ONLINE_MERCHANT`, dan **34
+- [x] **Step 3: Jalur distribusi** `KANTOR`, `LAYANAN_DELIVERY`, `ONLINE_MERCHANT`, dan **34
       provinsi** sebagai kode kebab-uppercase.
 
-- [ ] **Step 4: Uji** bahwa tiap daftar berkode unik, tiap kode punya label, dan tidak ada label
+- [x] **Step 4: Uji** bahwa tiap daftar berkode unik, tiap kode punya label, dan tidak ada label
       kembar. Uji ini murah dan menangkap salin-tempel yang meleset — kesalahan paling mungkin pada
       tugas yang isinya memang menyalin.
 
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Kosakata tertutup BI untuk penilaian risiko"`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Kosakata tertutup BI untuk penilaian risiko"`.
 
 ---
 
