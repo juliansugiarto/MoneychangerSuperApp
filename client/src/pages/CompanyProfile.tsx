@@ -6,13 +6,14 @@ import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEFAULT_OPERATIONAL_TIMEZONE, OPERATIONAL_TIMEZONES } from "@shared/regulatoryActionQueue";
+import { IRA_PROVINCE_LABELS } from "@shared/iraVocabulary";
 import { Building2, FileImage, Paperclip, ShieldCheck, Trash2, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const fileToBase64 = (file: File) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
 
-const emptyForm = { legalEntityName: "", tradingName: "", licenseNumber: "", kupvaCode: "", npwp: "", nib: "", biReporterCode: "", sipesatIdPjk: "", goamlRentityId: "", goamlReportingUserCode: "", address: "", phone: "", email: "", website: "", timezone: "Asia/Jakarta" };
+const emptyForm = { legalEntityName: "", tradingName: "", licenseNumber: "", kupvaCode: "", npwp: "", nib: "", biReporterCode: "", sipesatIdPjk: "", goamlRentityId: "", goamlReportingUserCode: "", address: "", phone: "", email: "", website: "", timezone: "Asia/Jakarta", province: "" };
 
 export default function CompanyProfile() {
   const utils = trpc.useUtils();
@@ -29,7 +30,7 @@ export default function CompanyProfile() {
       legalEntityName: profile.legalEntityName, tradingName: profile.tradingName, licenseNumber: profile.licenseNumber ?? "",
       kupvaCode: profile.kupvaCode ?? "", npwp: profile.npwp ?? "", nib: profile.nib ?? "", biReporterCode: profile.biReporterCode ?? "", sipesatIdPjk: profile.sipesatIdPjk ?? "",
       goamlRentityId: profile.goamlRentityId ? String(profile.goamlRentityId) : "", goamlReportingUserCode: profile.goamlReportingUserCode ?? "",
-      address: profile.address ?? "", phone: profile.phone ?? "", email: profile.email ?? "", website: profile.website ?? "", timezone: profile.timezone ?? DEFAULT_OPERATIONAL_TIMEZONE,
+      address: profile.address ?? "", phone: profile.phone ?? "", email: profile.email ?? "", website: profile.website ?? "", timezone: profile.timezone ?? DEFAULT_OPERATIONAL_TIMEZONE, province: profile.province ?? "",
     });
   }, [profile]);
 
@@ -42,7 +43,9 @@ export default function CompanyProfile() {
     onError: (error) => toast.error(error.message),
   });
 
-  const toPayload = () => ({ ...form, goamlRentityId: form.goamlRentityId.trim() ? Number(form.goamlRentityId) : undefined });
+  // Provinsi dikirim `null` saat dikosongkan, bukan dihilangkan: penulisnya membiarkan ruas yang
+  // tidak dikirim, sehingga menghilangkannya membuat provinsi tidak pernah dapat dihapus.
+  const toPayload = () => ({ ...form, goamlRentityId: form.goamlRentityId.trim() ? Number(form.goamlRentityId) : undefined, province: (form.province || null) as never });
 
   const save = () => {
     if (!form.legalEntityName.trim() || !form.tradingName.trim()) return toast.error("Nama PT dan nama moneychanger wajib diisi.");
@@ -146,6 +149,14 @@ export default function CompanyProfile() {
               <SelectContent>{OPERATIONAL_TIMEZONES.map((zone) => <SelectItem key={zone.value} value={zone.value}>{zone.label}</SelectItem>)}</SelectContent>
             </Select>
             <p className="mt-1.5 text-xs leading-5 text-[#718398]">Menentukan batas &ldquo;hari ini&rdquo; untuk tenggat pelaporan. Server berjalan pada UTC, sehingga tanpa pengaturan ini tenggat pukul 23.59 waktu setempat terbaca sebagai hari berikutnya.</p>
+          </div>
+          <div>
+            <Label className="text-xs">Provinsi gerai</Label>
+            <Select value={form.province || "BELUM"} onValueChange={(value) => setForm({ ...form, province: value === "BELUM" ? "" : value })}>
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="BELUM">Belum dinyatakan</SelectItem>{Object.entries(IRA_PROVINCE_LABELS).map(([code, label]) => <SelectItem key={code} value={code}>{label}</SelectItem>)}</SelectContent>
+            </Select>
+            <p className="mt-1.5 text-xs leading-5 text-[#718398]">Dinyatakan di sini, bukan diturunkan dari alamat: penilaian risiko membandingkannya dengan klasifikasi risiko provinsi (parameter Wilayah Geografis). Selama kosong, kedua parameter itu tidak punya sumber data.</p>
           </div>
         </div>
         <Button disabled={update.isPending} onClick={save} className="w-full bg-[#183f70] text-white hover:bg-[#12345d]">{update.isPending ? "Menyimpan…" : "Simpan profil"}</Button>

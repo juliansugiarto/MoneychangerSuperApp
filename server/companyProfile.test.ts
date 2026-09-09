@@ -12,11 +12,12 @@ function makeReader(rows: unknown[]): Record<string, unknown> & PromiseLike<unkn
   };
 }
 
-function mockDb(existingRows: unknown[]) {
+function mockDb(existingRows: unknown[], written?: Record<string, unknown>[]) {
+  const catat = (values: Record<string, unknown>) => { written?.push(values); return Promise.resolve(undefined); };
   const fakeDb = {
     select: vi.fn(() => makeReader(existingRows)),
-    insert: vi.fn(() => ({ values: () => Promise.resolve(undefined) })),
-    update: vi.fn(() => ({ set: () => ({ where: () => Promise.resolve(undefined) }) })),
+    insert: vi.fn(() => ({ values: catat })),
+    update: vi.fn(() => ({ set: (values: Record<string, unknown>) => { written?.push(values); return { where: () => Promise.resolve(undefined) }; } })),
   };
   return vi.spyOn(db, "getDb").mockResolvedValue(fakeDb as never);
 }
@@ -49,6 +50,39 @@ describe("getCompanyProfile", () => {
     const getDb = mockDb([]);
     const result = await getCompanyProfile();
     expect(result).toBeNull();
+    getDb.mockRestore();
+  });
+});
+
+/**
+ * Provinsi gerai adalah **satu-satunya** sumber parameter Wilayah Geografis TPPU/TPPT 4a/4b.
+ * Kolomnya lahir pada migrasi `0053`; uji ini ada supaya ia tidak kembali menjadi kolom yang tidak
+ * pernah ada yang mengisi — keadaan yang membuat kedua parameter itu selalu bernilai nol.
+ */
+describe("provinsi gerai pada profil perusahaan", () => {
+  it("menyimpan provinsi yang dinyatakan", async () => {
+    const written: Record<string, unknown>[] = [];
+    const getDb = mockDb([{ id: 1 }], written);
+    await updateCompanyProfile({ ...baseInput, province: "JAWA_BARAT" }, { id: 1, role: "CONTROLLER" });
+    expect(written[0].province).toBe("JAWA_BARAT");
+    getDb.mockRestore();
+  });
+
+  it("mengosongkannya ketika dikirim null dengan sengaja", async () => {
+    const written: Record<string, unknown>[] = [];
+    const getDb = mockDb([{ id: 1 }], written);
+    await updateCompanyProfile({ ...baseInput, province: null }, { id: 1, role: "CONTROLLER" });
+    expect(written[0].province).toBeNull();
+    getDb.mockRestore();
+  });
+
+  it("membiarkannya apa adanya ketika tidak dikirim", async () => {
+    const written: Record<string, unknown>[] = [];
+    const getDb = mockDb([{ id: 1 }], written);
+    await updateCompanyProfile(baseInput, { id: 1, role: "CONTROLLER" });
+    // Borang lain pada halaman yang sama tidak mengenal ruas ini; menyertakannya sebagai null akan
+    // menghapus provinsi diam-diam setiap kali logo atau zona waktu disimpan.
+    expect("province" in written[0]).toBe(false);
     getDb.mockRestore();
   });
 });

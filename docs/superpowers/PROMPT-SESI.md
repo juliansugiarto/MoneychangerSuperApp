@@ -67,12 +67,12 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ## Sesi berikutnya — keadaan per 9 September 2026
 
-Paket K1, B, D, C, E, F1, F2, **G**, **H**, dan **I sudah selesai** dan diperagakan end-to-end.
-**Pekerjaan berikutnya adalah Tugas 1 Paket J1** — rancangan Paket J selesai 9 September 2026, bloknya di bawah.
+Paket K1, B, D, C, E, F1, F2, **G**, **H**, **I**, dan **J1 sudah selesai** dan diperagakan
+end-to-end. **Pekerjaan berikutnya adalah Tugas 1 Paket J2** — bloknya di bawah.
 
-Baseline uji yang benar-benar dijalankan 9 September 2026 sesudah Paket I:
-`Test Files 138 passed (138)`, `Tests 1119 passed | 2 skipped (1121)`. `tsc --noEmit` bersih,
-`vite build` sukses.
+Baseline uji yang benar-benar dijalankan 9 September 2026 sesudah Paket J1:
+`Test Files 144 passed (144)`, `Tests 1194 passed | 2 skipped (1196)`. `tsc --noEmit` bersih,
+`vite build` sukses. Migrasi terakhir adalah **`0053`**; J2 menghasilkan `0054`.
 
 **Satu uji diketahui flaky dan bukan bagian paket mana pun:** `server/tenantIsolation.live.test.ts`
 > *"setiap ikatan hanya melihat database miliknya sendiri"*. Bila gagal sendirian di bawah beban,
@@ -106,19 +106,71 @@ jalankan ulang berkas itu saja.
   dalam handler tidak pernah dibuktikan uji mana pun.
 - **Basis data palsu pada uji wajib ikut menyaring `where` dan menerapkan `orderBy`.** Palsu yang
   mengabaikan keduanya membuat uji lulus karena kebetulan atau gagal karena kekeliruan palsunya
-  sendiri. Polanya sudah ada di `server/companyDocumentArchive.test.ts` dan
-  `server/companyDocumentArchiveScenario.test.ts` — **salin dari sana**. Jebakannya: `StringChunk`
-  pemisah pada klausa Drizzle juga punya `value` (berupa array), dan harus disisihkan agar tidak
-  merebut giliran `Param` yang sesungguhnya.
+  sendiri. **Salin dari `server/iraDataForm.test.ts`**, bukan dari
+  `server/companyDocumentArchive.test.ts` — versi lama itu punya lubang yang baru ketahuan
+  9 September 2026 (lihat butir berikutnya). Dua jebakannya:
+  1. `StringChunk` pemisah pada klausa Drizzle juga punya `value` (berupa array) dan harus
+     disisihkan agar tidak merebut giliran `Param` yang sesungguhnya.
+  2. **`inArray` menaruh nilainya sebagai larik `Param` telanjang** di antara chunk klausanya, bukan
+     sebagai satu `Param` bernilai larik. Penelusur yang hanya menuruni `queryChunks` melewatkannya
+     seluruhnya, sehingga penyaringan status **diam-diam tidak berlaku** dan bon `CANCELLED` ikut
+     terhitung. Penelusurnya wajib ikut menuruni larik.
+- **`server/companyDocumentArchive.test.ts` masih memakai penelusur lama yang buta terhadap
+  `inArray`.** Tidak berbahaya hari ini karena berkas itu tidak memakai klausa `inArray`, tetapi
+  jangan menyalinnya lagi, dan bila menyentuhnya, perbaiki sekalian.
 - **Rute baru wajib didaftarkan pada `server/backOfficeNavigation.test.ts`**, yang memetakan tiap
   tujuan sidebar ke nama halamannya. Ujinya gagal sampai rutenya ditambahkan.
 - **Dialog wajib memakai `max-h-[85vh] overflow-y-auto`.** Tanpa itu, borang yang lebih tinggi
   daripada viewport menyembunyikan tombol tindakannya dan yang menggulir justru halaman di
   belakangnya — cacat yang tidak pernah muncul pada uji maupun `tsc`.
+- **Bercabanglah pada `isPending`, bukan `isLoading`, untuk keadaan memuat React Query.** Di sela
+  percobaan ulang, `isLoading` bernilai `false` sementara `data` masih kosong, sehingga halaman
+  jatuh ke cabang "berhasil" dan menampilkan daftar kosong seolah-olah memang tidak ada isinya.
+  Pada halaman Klasifikasi Risiko kekeliruan itu berarti seluruh kode tampil "belum
+  diklasifikasikan", yang dibaca penilaian sebagai **RENDAH**. Tertangkap 9 September 2026 hanya
+  karena keadaan error dipaksa terjadi sungguhan, bukan lewat tinjauan kode.
+- **Kolom kategori nasabah berkontrak KEBALIKAN dari kolom deklarasi profil.** Pada
+  `customerType`/`entityLegalForm`/`occupationCategory`, ruas yang **tidak dikirim dibiarkan** dan
+  hanya `null` yang dikirim sengaja yang mengosongkan (`resolveCustomerCategories`,
+  `server/operations.ts`). Itu disengaja: nasabah yang disunting karena berganti nomor telepon tidak
+  boleh kehilangan kategorinya. Kedua borang tetap selalu mengirim ketiganya, jadi dari layar
+  perilakunya seragam.
+- **Kode tanpa baris klasifikasi dibaca sebagai `RENDAH`**, ditetapkan satu kali di
+  `classificationLevel` (`server/iraRiskClassification.ts`). Jangan mengulang bawaan itu di
+  pemanggil — pemanggil yang lupa akan mendapat `undefined` dan mendiamkan kodenya keluar dari
+  penyebut.
+- **Kosakata dan parameter IRA sudah ada dan jangan diturunkan ulang:** `shared/iraVocabulary.ts`
+  (23 kategori pekerjaan, 11 bentuk badan hukum, 3 jalur distribusi, 34 provinsi, 2 jenis nasabah —
+  seluruhnya berkode **garis bawah**) dan `shared/iraParameters.ts` (33 parameter beserta kelompok,
+  sumber hitung/nyatakan, pita bawaan `20/40/60/80/null`, dan `scoreFromBand` yang menuliskan skala
+  terbaliknya). **Tugas 2 J2 karena itu sudah sebagian jadi** — yang tersisa adalah bobot tiap
+  parameter dan kelompoknya.
+- **`/kepatuhan/` adalah bagian yang disengaja, bukan rute nyasar.** `/kepatuhan/klasifikasi-risiko`
+  sudah hidup; J2 menambahkan `/kepatuhan/ira`, `/kepatuhan/ira/:id`, dan `/kepatuhan/ira/:id/kpmr`
+  di bawahnya.
 - **Berkas dokumen dan berkas impor punya dua batas yang BERBEDA.** Jalur dokumen
   (`server/documentOperations.ts`): **8 MB**, MIME saja, **tanpa** pemeriksaan signature. Jalur
   impor XLS/XLSX (`server/financialImport.ts`, `server/sanctionsWatchlistImport.ts`): **5 MB** plus
   `assertSpreadsheetSignature`. Jangan mencampurnya, dan jangan melonggarkan salah satunya.
+
+### Risiko residual Paket J1 yang masih terbuka
+
+1. **Ambang pita punya penulis, bobot parameter belum.** `ira_parameter_thresholds` sudah diisi
+   lewat halaman, tetapi bobot tiap parameter dan kelompoknya belum ada di mana pun — itu J2
+   Tugas 1–2, dan tanpa itu tidak ada nilai akhir yang dapat dihitung.
+2. **Peringkat SRA tidak di-seed.** Tabel klasifikasi kosong saat dipasang; Controller mengisinya
+   sendiri beserta rujukannya. Ditetapkan pengguna 9 September 2026. Konsekuensinya, pada pemasangan
+   baru **seluruh** kode terbaca RENDAH sampai seseorang mengisinya, dan halaman menampilkan
+   hitungan yang belum diklasifikasikan sebagai pekerjaan yang menunggu.
+3. **Dimensi `COUNTRY` tidak punya kosakata tertutup.** Kode ISO dua huruf diketik petugas; tidak
+   ada daftar FATF maupun sanksi PBB yang tertanam, dan aplikasi tidak menariknya dari mana pun.
+4. **Borang bon belum pernah disimpan sungguhan lewat browser dengan jalur distribusi terpilih.**
+   Ruasnya dilihat di layar dan nilainya dibuktikan tersimpan lewat `createTransaction` langsung;
+   yang belum terbukti secara visual adalah bahwa borang mengirim pilihan kasir sampai ke server.
+5. **Provinsi gerai sudah punya penulis** (ruas *Provinsi gerai* pada Profil Perusahaan, ditambahkan
+   9 September 2026 sesudah J1 ditutup — kolomnya sempat terbit tanpa satu pun penulis, dan tidak
+   ada tugas di J1 maupun J2 yang menugaskannya). Kontraknya sama seperti zona waktu: ruas yang
+   tidak dikirim **dibiarkan**, hanya `null` yang dikirim sengaja yang mengosongkan.
 
 ### Risiko residual Paket I yang masih terbuka
 
@@ -163,9 +215,25 @@ baris `operational_documents` ber-`ownerType` `COMPANY_ARCHIVE`, dan satu pegawa
 **"Sari Kepatuhan"** pada `employees` — pegawai itu satu-satunya baris `employees` di basis data
 lokal, jadi Paket J yang menyentuh SDM akan menemukannya.
 
+Data Paket J1 (9 September 2026), **jangan dibersihkan**:
+
+- `customers` — `CIF-000001` kini `INDIVIDU` / `WIRAUSAHA` (teks bebas `occupation` tetap
+  "Wiraswasta"), `CIF-000002` sengaja **tanpa kategori** sebagai contoh nasabah lama, dan
+  `CIF-000003` **PT Tekstil Nusantara Jaya** `BADAN_USAHA` / `PT`.
+- `exchange_transactions` — satu bon `LAYANAN_DELIVERY` (`FX-20260909075051-9QHSP-`, status DRAFT,
+  Rp 4.800.000); sisanya `KANTOR`.
+- `ira_risk_classifications` — tujuh baris: USD (TPPU/TPPT/PPSPM semuanya TINGGI), SGD (TINGGI /
+  MENENGAH / TINGGI), dan `COUNTRY ID` TPPU RENDAH.
+- `ira_parameter_thresholds` — satu parameter tersimpan (`TPPU_1A`, sudah dikembalikan ke nilai
+  template lewat tombolnya).
+- `company_profile.province` = `JAWA_BARAT`.
+- **Satu kurs uji** `operational_rates` ACTIVE untuk USD (16.000/16.200) bercatatan "Kurs uji lokal
+  Paket J1 Tugas 5 — bukan kurs operasional nyata". Tanpa itu tidak ada bon yang dapat dibuat;
+  basis data lokal sebelumnya tidak punya satu pun kurs aktif.
+
 **Membuat data uji pada basis data lokal diizinkan pada tahap mana pun tanpa bertanya lebih dulu**
 (ditetapkan pengguna 8 September 2026, tercatat di `CLAUDE.md`). Produksi tetap tidak boleh
-disentuh — **migrasi `0051` dan `0052` belum diterapkan ke produksi.**
+disentuh — **migrasi `0051`, `0052`, dan `0053` belum diterapkan ke produksi.**
 
 ---
 
@@ -339,20 +407,12 @@ J2 tidak punya sumber data tanpa J1.
   yang skornya selalu nol karena sumbernya tidak ada.
 - **IRA tidak pernah menulis ke `customers`**, sejalan dengan Paket H.
 
-**J1 — Fondasi data risiko inheren** (7 tugas, migrasi `0053`). Ganti `<N>`:
+**J1 — Fondasi data risiko inheren** (7 tugas, migrasi `0053`) — **SELESAI 9 September 2026.**
+Kosakata, migrasi, penulis klasifikasi, kategori nasabah, jalur distribusi bon, pembaca agregat
+Form C1, dan halaman `/kepatuhan/klasifikasi-risiko` seluruhnya hidup dan diperagakan end-to-end.
 
-```
-Baca docs/superpowers/plans/2026-09-09-individual-risk-assessment-j1-fondasi-data.md.
-Baca juga bagian "Keputusan pengguna yang mengikat" pada berkas itu — enam keputusan di sana
-tidak boleh diturunkan ulang maupun ditawar.
-Kerjakan HANYA Tugas <N>, ikuti langkahnya berurutan.
-Centang setiap langkah di berkas rencana setelah selesai,
-lalu centang barisnya di bagian Status Pengerjaan.
-Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
-```
-
-**J2 — Penilaian, kuesioner, dan persetujuan** (9 tugas, migrasi `0054`). **Jangan dimulai sebelum
-seluruh tugas J1 tercentang.** Ganti `<N>`:
+**J2 — Penilaian, kuesioner, dan persetujuan** (9 tugas, migrasi `0054`). **Inilah pekerjaan
+berikutnya.** Ganti `<N>`, mulai dari `1`:
 
 ```
 Baca docs/superpowers/plans/2026-09-09-individual-risk-assessment-j2-penilaian.md.

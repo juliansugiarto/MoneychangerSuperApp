@@ -2443,6 +2443,7 @@ export async function updateCompanyProfile(
     legalEntityName: string; tradingName: string; licenseNumber?: string; kupvaCode?: string; npwp?: string; nib?: string;
     biReporterCode?: string; sipesatIdPjk?: string; goamlRentityId?: number; goamlReportingUserCode?: string;
     address?: string; phone?: string; email?: string; website?: string; logoDocumentId?: number; timezone?: string;
+    province?: string | null;
   },
   actor: { id: number; role: StaffRole },
 ) {
@@ -2462,6 +2463,9 @@ export async function updateCompanyProfile(
     logoDocumentId: input.logoDocumentId ?? null, updatedByUserId: actor.id,
     // Dibiarkan apa adanya bila tidak dikirim, agar penyimpanan form lain tidak diam-diam mereset zona.
     ...(input.timezone ? { timezone: input.timezone } : {}),
+    // Sama seperti zona waktu: yang tidak dikirim dibiarkan, yang dikirim `null` dikosongkan.
+    // Borang lain yang tidak mengenal ruas ini karena itu tidak menghapus provinsi diam-diam.
+    ...(input.province === undefined ? {} : { province: input.province }),
   };
   const existing = (await db.select({ id: companyProfile.id }).from(companyProfile).orderBy(companyProfile.id).limit(1))[0];
   if (existing) {

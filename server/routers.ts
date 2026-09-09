@@ -140,7 +140,7 @@ import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedur
 import { classifyRisk, iraClassificationDenial, listClassifications, listParameterThresholds, resetParameterThresholds, setParameterThresholds } from "./iraRiskClassification";
 import { readIraDataForm } from "./iraDataForm";
 import { operationalMonthWindow } from "./customerProfileMonitoring";
-import { IRA_CUSTOMER_TYPE_VALUES, IRA_DISTRIBUTION_CHANNEL_VALUES, IRA_LEGAL_FORM_VALUES, IRA_OCCUPATION_CATEGORY_VALUES } from "../shared/iraVocabulary";
+import { IRA_CUSTOMER_TYPE_VALUES, IRA_DISTRIBUTION_CHANNEL_VALUES, IRA_LEGAL_FORM_VALUES, IRA_OCCUPATION_CATEGORY_VALUES, IRA_PROVINCE_VALUES } from "../shared/iraVocabulary";
 import { iraRiskDimensions, iraRiskLevels, iraRiskTypes } from "../drizzle/schema";
 import { IRA_PARAMETER_CODES } from "../shared/iraParameters";
 import { createInternalSession, hashPassword, internalSessionMaxAge, validateUsername, verifyInternalCredentials, verifyPassword } from "./internalAuth";
@@ -980,6 +980,8 @@ export const appRouter = router({
       website: z.string().trim().max(200).optional(),
       logoDocumentId: z.number().int().positive().optional(),
       timezone: z.enum(OPERATIONAL_TIMEZONE_VALUES).optional(),
+      /** Provinsi tempat gerai beroperasi; sumber parameter Wilayah Geografis TPPU/TPPT 4a/4b. */
+      province: z.enum(IRA_PROVINCE_VALUES).optional().nullable(),
     })).mutation(({ input, ctx }) => updateCompanyProfile(input, ctx.user)),
   }),
 
