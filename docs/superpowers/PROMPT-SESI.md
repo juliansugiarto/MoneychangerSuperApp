@@ -402,10 +402,24 @@ Yang perlu diketahui sesi berikutnya, **jangan diturunkan ulang**:
   `scripts/seedWatchlistDemo.mjs` (idempoten, menolak host/basis data non-lokal). **Jangan
   dibersihkan.**
 
-### Paket K3 — Nota terhadap SE BI 18/41/DKSP
+### Paket K3 — Nota terhadap SE BI 18/41/DKSP — **PREMISNYA SALAH, menunggu keputusan**
 
-**Menunggu naskah SE BI 18/41/DKSP.** Jangan mulai sebelum naskah atau daftar field wajibnya
-tersedia di proyek — aturan proyek melarang menebak skema regulator.
+Naskahnya sudah diberikan dan dibaca **9 September 2026** (`SE_184116.pdf`, 40 halaman).
+**Bukan tentang KUPVA BB maupun nota:** perihalnya *Penyelenggaraan Pemrosesan Transaksi
+Pembayaran*, dasarnya **PBI 18/40/PBI/2016**, dan isinya perizinan Switching, Payment Gateway,
+Dompet Elektronik, Transfer Dana. Kemunculan `KUPVA`, `valuta asing`, `penukaran`, `nota`,
+`bukti transaksi`, `kuitansi` di seluruh naskahnya: **nol**.
+
+**Jangan menurunkan field nota dari dokumen itu.** Hasilnya akan kosong, dan melaporkannya sebagai
+"nota sudah sesuai" adalah penyelesaian palsu.
+
+Yang dibutuhkan adalah naskah **PBI 18/20/PBI/2016** (KUPVA BB, sudah dikutip nota sebagai
+disclaimer) atau **SE BI 18/42/DKSP** (pelaksananya). Angka `18/41` kemungkinan salah ketik atas
+`18/42` sejak awal — **dugaan, jangan dijadikan dasar.**
+
+Inventaris ±25 field yang dicetak `printBon()` hari ini sudah siap di
+`specs/2026-09-09-nota-inventaris-field-k3.md`; begitu naskah yang benar ada, kerjanya tinggal satu
+kali pembandingan berdampingan.
 
 ---
 

@@ -218,8 +218,9 @@ Urutannya mengikat seluruhnya. **Tepat satu tugas migrasi: Tugas 2** (`0056`).
 6. `pnpm audit --prod --audit-level=high` masih **9 temuan** (6 sedang, 3 tinggi). Paket ini tidak
    menambah dependensi dan tidak memperbaikinya. **Jangan menyebut audit bersih.**
 
-### Paket K3 — Pembandingan nota terhadap SE BI 18/41/DKSP
-- [ ] **Menunggu pengguna:** naskah SE BI 18/41/DKSP belum ada di proyek
+### Paket K3 — Pembandingan nota terhadap SE BI 18/41/DKSP — **PREMISNYA SALAH**
+- [ ] **Menunggu keputusan pengguna:** naskahnya sudah dibaca 9 September 2026 dan **ternyata
+      bukan tentang KUPVA BB maupun nota.** Lihat blok Paket K3 di bawah.
 
 ---
 
@@ -781,7 +782,47 @@ tercatat di `PROMPT-SESI.md`, melainkan **dua puluh dua** (`0034`–`0055`).
 
 # Paket K3 — Pembandingan nota terhadap SE BI 18/41/DKSP
 
-**Menunggu pengguna.** Naskah SE BI 18/41/DKSP tidak ada di proyek.
+**PREMIS PAKET INI SALAH.** Naskahnya diberikan pengguna dan dibaca 9 September 2026
+(`SE_184116.pdf`, 40 halaman). Surat edaran itu **tidak mengatur KUPVA BB maupun nota**.
+
+| Yang diperiksa | Hasil |
+|---|---|
+| Perihal | **Penyelenggaraan Pemrosesan Transaksi Pembayaran** |
+| Tanggal | 30 Desember 2016 |
+| Dasar hukum | **PBI No. 18/40/PBI/2016**, bukan 18/20/PBI/2016 |
+| Bab | I Umum · II Perizinan Switching/Payment Gateway/Dompet Elektronik · III Kepemilikan saham · IV Persetujuan pengembangan · V Pemrosesan domestik · VI Dompet Elektronik · VII Payment Gateway · VIII Pengawasan dan laporan · IX Penggabungan/peleburan · X Sanksi · XI Pencabutan izin · XII Lain-lain · XIII Peralihan |
+| Kemunculan `KUPVA` | **0** |
+| Kemunculan `valuta asing`, `penukaran` | **0** |
+| Kemunculan `nota`, `bukti transaksi`, `kuitansi`, `tanda terima` | **0** |
+| Kemunculan `18/20/PBI` | **0** |
+
+Yang diaturnya adalah Penyelenggara Jasa Sistem Pembayaran — Prinsipal, Switching, Penerbit,
+Acquirer, Payment Gateway, Kliring, Penyelesaian Akhir, Transfer Dana, Dompet Elektronik. Rezim
+perizinan yang **berbeda sama sekali** dari KUPVA Bukan Bank.
+
+**Tidak ada satu pun field nota yang dapat diturunkan dari dokumen ini.** Membandingkan nota
+terhadapnya akan menghasilkan daftar kosong, dan melaporkannya sebagai "sudah sesuai" adalah
+penyelesaian palsu.
+
+## Ke mana seharusnya paket ini diarahkan
+
+Landasan KUPVA BB yang benar, dan keduanya **belum ada naskahnya di proyek**:
+
+- **PBI No. 18/20/PBI/2016** — Kegiatan Usaha Penukaran Valuta Asing Bukan Bank. Sudah dikutip
+  nota sebagai disclaimer (`client/src/pages/Transactions.tsx`), tetapi naskahnya tidak pernah
+  dibaca.
+- **SE BI No. 18/42/DKSP** — surat edaran pelaksananya. Sudah dirujuk
+  `docs/regulatory-reporting-design-2026-08-24.md` untuk Laporan Kegiatan Usaha, juga tanpa naskah.
+
+**Angka `18/41` pada nama paket ini kemungkinan besar salah ketik atas `18/42` sejak awal** — tetapi
+itu dugaan, dan aturan proyek melarang menebak dasar hukum. Yang dibutuhkan adalah salah satu dari
+kedua naskah di atas.
+
+## Yang sudah siap begitu naskah yang benar tiba
+
+`specs/2026-09-09-nota-inventaris-field-k3.md` memuat inventaris ±25 field yang dicetak `printBon()`
+hari ini. Pekerjaannya tinggal satu kali pembandingan berdampingan terhadap daftar wajib yang
+sebenarnya.
 
 ## Keadaan sekarang
 
