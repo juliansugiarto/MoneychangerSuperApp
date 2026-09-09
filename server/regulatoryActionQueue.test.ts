@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_OPERATIONAL_TIMEZONE, endOfOperationalDay, getRegulatoryActionQueue, getRegulatoryReportingReadiness } from "../shared/regulatoryActionQueue";
+import { getIraAssessmentDue, DEFAULT_OPERATIONAL_TIMEZONE, endOfOperationalDay, getRegulatoryActionQueue, getRegulatoryReportingReadiness } from "../shared/regulatoryActionQueue";
 
 describe("antrian tindak lanjut paket regulator", () => {
   it("memunculkan draf, paket siap diperiksa, dan paket dikembalikan sebagai tindakan manual", () => {
@@ -45,5 +45,54 @@ describe("antrian tindak lanjut paket regulator", () => {
     expect(getRegulatoryReportingReadiness(completed)).toMatchObject({ ready: true, unavailable: false, detail: "Tidak ada draf atau paket yang menunggu pemeriksaan." });
     expect(getRegulatoryReportingReadiness([{ id: 2, packageNumber: "LKU-2", reportType: "LKU", status: "DRAFT", createdAt: new Date() }, { id: 3, packageNumber: "FIN-1", reportType: "FINANCIAL_READINESS", status: "PREPARED", createdAt: new Date() }])).toMatchObject({ ready: false, unavailable: false, detail: "1 draf, 1 paket siap diperiksa, 0 paket dikembalikan." });
     expect(getRegulatoryReportingReadiness([], true)).toMatchObject({ ready: false, unavailable: true, detail: "Status paket belum tersedia. Buka Pelaporan Regulator untuk pemeriksaan." });
+  });
+});
+
+describe("jatuh tempo penilaian risiko tahunan", () => {
+  const item = (id: number, year: number, status: string, supersededByAssessmentId: number | null = null) => ({
+    id,
+    periodStart: new Date(Date.UTC(year - 1, 11, 31, 17, 0, 0)), // 1 Januari 00.00 WIB
+    periodEnd: new Date(Date.UTC(year, 11, 31, 17, 0, 0)),
+    status,
+    supersededByAssessmentId,
+  });
+  const now = new Date("2026-09-09T03:00:00.000Z"); // 9 September 2026, 10.00 WIB
+
+  it("tahun yang sudah berakhir tanpa penilaian disetujui terhitung terlambat", () => {
+    const hasil = getIraAssessmentDue([], now);
+    expect([hasil.year, hasil.previousYear]).toEqual([2026, 2025]);
+    expect(hasil.overdue).toBe(true);
+    expect(hasil.detail).toMatch(/2025 belum disetujui/);
+  });
+
+  it("penilaian tahun lalu yang sudah disetujui menghentikan keterlambatan", () => {
+    const hasil = getIraAssessmentDue([item(1, 2025, "DISETUJUI")], now);
+    expect(hasil.overdue).toBe(false);
+    expect(hasil.currentApproved).toBe(false);
+    expect(hasil.detail).toMatch(/2026 belum disetujui/);
+  });
+
+  it("penilaian yang sudah digantikan tidak lagi dihitung sebagai disetujui", () => {
+    const hasil = getIraAssessmentDue([item(1, 2025, "DISETUJUI", 2)], now);
+    expect(hasil.previousApproved).toBe(false);
+    expect(hasil.overdue).toBe(true);
+  });
+
+  it("draf tahun berjalan terhitung sebagai sedang dikerjakan, bukan sebagai selesai", () => {
+    const hasil = getIraAssessmentDue([item(1, 2025, "DISETUJUI"), item(2, 2026, "DRAFT")], now);
+    expect(hasil.inProgressCount).toBe(1);
+    expect(hasil.currentApproved).toBe(false);
+  });
+
+  it("jatuh temponya akhir tahun berjalan di zona operasional, bukan tengah malam UTC", () => {
+    const hasil = getIraAssessmentDue([], now);
+    // 1 Januari 2027 pukul 00.00 WIB = 31 Desember 2026 pukul 17.00 UTC.
+    expect(hasil.dueAt.toISOString()).toBe("2026-12-31T17:00:00.000Z");
+  });
+
+  it("keduanya disetujui berarti tidak ada yang menunggu", () => {
+    const hasil = getIraAssessmentDue([item(1, 2025, "DISETUJUI"), item(2, 2026, "DISETUJUI")], now);
+    expect([hasil.overdue, hasil.currentApproved]).toEqual([false, true]);
+    expect(hasil.detail).toMatch(/2026 sudah disetujui/);
   });
 });

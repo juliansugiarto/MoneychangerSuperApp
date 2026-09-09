@@ -29,7 +29,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 5 — Penghitung sisi inheren dari agregat dan klasifikasi
 - [x] Tugas 6 — Penulis penilaian: buat, simpan, ajukan, setujui, gantikan
 - [x] Tugas 7 — Halaman penilaian: Form C1, Form A1, pernyataan struktural
-- [ ] Tugas 8 — Kuesioner KPMR dan halaman hasil
+- [x] Tugas 8 — Kuesioner KPMR dan halaman hasil
 - [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 Urutannya mengikat: **1, 2, dan 3 sebelum 5**; 4 sebelum 6; 5 dan 6 sebelum 7; 7 sebelum 8;
@@ -480,22 +480,49 @@ Modify `client/src/App.tsx`, `shared/backOfficeNavigation.ts`, `server/backOffic
 **Files:** Create `client/src/pages/PenilaianRisikoKpmr.tsx`; Modify `client/src/App.tsx`,
 `shared/backOfficeNavigation.ts`, `server/backOfficeNavigation.test.ts`, `shared/regulatoryActionQueue.ts`
 
-- [ ] **Step 1:** Kuesioner lima pilar, jawaban 1–5 atau **N/A**, dengan catatan dan rujukan
+- [x] **Step 1:** Kuesioner lima pilar, jawaban 1–5 atau **N/A**, dengan catatan dan rujukan
       dokumen. Pertanyaan yang pernah menjadi temuan pemeriksaan diberi penanda (Tugas 3 Step 3).
 
-- [ ] **Step 2:** Rata-rata tiap pilar tampil hidup di sampingnya, beserta **berapa pertanyaan yang
+- [x] **Step 2:** Rata-rata tiap pilar tampil hidup di sampingnya, beserta **berapa pertanyaan yang
       ikut dihitung** — angka pembagi harus terlihat, karena N/A yang mengubahnya tidak kelihatan
       dari hasilnya saja.
 
-- [ ] **Step 3:** Bagian hasil: nilai inheren, nilai KPMR, matriks dengan **sel terpilih ditandai**,
+- [x] **Step 3:** Bagian hasil: nilai inheren, nilai KPMR, matriks dengan **sel terpilih ditandai**,
       dan nilai akhir beserta predikatnya. Matriksnya digambar, bukan sekadar disebutkan — itu
       bentuk yang dikenali pemeriksa.
 
-- [ ] **Step 4: Jatuh tempo tahunan pada antrean tindakan regulator.** Pakai helper jendela
+- [x] **Step 4: Jatuh tempo tahunan pada antrean tindakan regulator.** Pakai helper jendela
       operasional yang sudah ada; **jangan menulis helper keempat**, dan jangan membuat penilaian
       secara otomatis saat tahun berganti.
 
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Kuesioner KPMR dan hasil penilaian"`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Kuesioner KPMR dan hasil penilaian"`.
+
+> **Satu keputusan rancangan yang muncul saat mengerjakannya:** halaman kuesioner harus menampilkan
+> nilai akhir **sebelum** penilaiannya disetujui, sedangkan rumusnya hidup di `server/`. Menyalin
+> rumusnya ke klien berarti dua salinan yang pasti berselisih — dan selisihnya baru terlihat ketika
+> pemeriksa membandingkan layar dengan dokumen yang sudah ditandatangani. Karena itu
+> `computeAssessmentTotals` **dipindahkan ke `shared/iraAssessmentTotals.ts`**; server mengekspornya
+> ulang sehingga ujinya tidak berubah, dan layar memakai fungsi yang sama persis dengan yang
+> membekukan nilai.
+>
+> **Jatuh temponya tidak mengarang tenggat regulator.** `getIraAssessmentDue` menyatakan satu hal
+> saja: tiap tahun kalender operasional membutuhkan satu penilaian `DISETUJUI`, dan sebuah tahun
+> *terlambat* begitu tahun itu berakhir tanpa persetujuan. Batas tahunnya memakai
+> `startOfOperationalMonth` yang sudah ada — 1 Januari 00.00 di zona operasional adalah awal bulan
+> Januari — sehingga **tidak ada helper jendela keempat**. Penilaian yang sudah digantikan tidak
+> lagi dihitung sebagai disetujui, dan tidak ada satu pun penilaian yang dibuat otomatis.
+>
+> **Diperagakan di layar 9 September 2026:** penilaian `#2` (2025, kosong) menampilkan *"Nilai akhir
+> belum dapat dihitung — Parameter TPPU_1A belum bernilai"* beserta *"31 pertanyaan KPMR belum
+> dijawab"*; penilaian `#1` menggambar matriksnya dengan sel **Rendah ke Menengah × Satisfactory =
+> 4** ditandai; pilar Kebijakan dan Prosedur menampilkan *"Rata-rata pilar: 4.0000 dari 7 jawaban
+> yang ikut dihitung, 8 pertanyaan"* — pembaginya terlihat, dan N/A transfer dana memang tidak ikut;
+> pertanyaan yang pernah menjadi temuan bertanda *"Temuan pemeriksaan 8"*. Halaman Status Kesiapan
+> menampilkan kartu **Penilaian risiko (IRA) — PERLU TINDAKAN — "Penilaian 2025 belum disetujui
+> padahal tahunnya sudah berakhir."**
+>
+> Rutenya `/kepatuhan/ira/:id/kpmr` berparameter, jadi **bukan** tujuan sidebar dan tidak menyentuh
+> `server/backOfficeNavigation.test.ts`; jalan masuknya tombol pada halaman penilaian.
 
 ---
 

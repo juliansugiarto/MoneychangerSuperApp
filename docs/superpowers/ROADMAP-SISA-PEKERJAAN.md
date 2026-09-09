@@ -181,7 +181,9 @@ MEDIUM 3 bulan, LOW 12 bulan**; tindak lanjut **worklist Controller yang hanya m
 - [x] Tugas 7 — Halaman penilaian: Form C1, Form A1, pernyataan struktural — **SELESAI 9 September 2026.**
       `/kepatuhan/ira` dan `/kepatuhan/ira/:id`, diperagakan end-to-end sampai penilaian disetujui
       dan terkunci.
-- [ ] Tugas 8 — Kuesioner KPMR dan halaman hasil
+- [x] Tugas 8 — Kuesioner KPMR dan halaman hasil — **SELESAI 9 September 2026.**
+      `/kepatuhan/ira/:id/kpmr`, matriks bergambar dengan sel terpilih ditandai, rata-rata pilar
+      beserta pembaginya, dan jatuh tempo tahunan pada Status Kesiapan.
 - [ ] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 ### Paket K2 — Ganti nama PPPSM menjadi PPPSPM

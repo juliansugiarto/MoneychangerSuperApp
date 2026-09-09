@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { IRA_BAND_DEFINITIONS, IRA_PARAMETER_CATALOGUE } from "@shared/iraParameterCatalogue";
-import { AlertTriangle, ArrowLeft, Lock, RefreshCcw, Send, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ListChecks, Lock, RefreshCcw, Send, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Link, useLocation, useParams } from "wouter";
@@ -151,9 +151,14 @@ export default function PenilaianRisikoDetail() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <Link href="/kepatuhan/ira">
-          <Button type="button" variant="outline" size="sm"><ArrowLeft className="mr-1 size-4" /> Daftar penilaian</Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/kepatuhan/ira">
+            <Button type="button" variant="outline" size="sm"><ArrowLeft className="mr-1 size-4" /> Daftar penilaian</Button>
+          </Link>
+          <Link href={`/kepatuhan/ira/${assessmentId}/kpmr`}>
+            <Button type="button" variant="outline" size="sm"><ListChecks className="mr-1 size-4" /> Kuesioner KPMR &amp; hasil</Button>
+          </Link>
+        </div>
         <div className="flex items-center gap-2">
           {locked ? (
             <>

@@ -127,6 +127,69 @@ export function startOfNextOperationalMonth(now: Date, timeZone: string = DEFAUL
   return operationalMidnight(now, timeZone, month === 12 ? year + 1 : year, month === 12 ? 1 : month + 1, 1);
 }
 
+/** Satu penilaian IRA sebagaimana dibutuhkan antrean — bukan seluruh barisnya. */
+export type IraAssessmentQueueItem = {
+  id: number;
+  periodStart: Date | string;
+  periodEnd: Date | string;
+  status: string;
+  supersededByAssessmentId: number | null;
+};
+
+/**
+ * Jatuh tempo penilaian risiko tahunan.
+ *
+ * Aturannya sederhana dan tidak mengarang tenggat regulator: **setiap tahun kalender operasional
+ * membutuhkan satu penilaian yang DISETUJUI**, dan penilaian sebuah tahun menjadi *terlambat*
+ * begitu tahun itu berakhir tanpa persetujuan. Tidak ada tanggal jatuh tempo di tengah tahun yang
+ * dikarang sendiri di sini; bila BI kelak menetapkannya, tempat menuliskannya adalah fungsi ini.
+ *
+ * **Tidak membuat penilaian secara otomatis.** Yang dihasilkan hanya keterangan; membuat dokumen
+ * kepatuhan tanpa ada manusia yang memutuskannya bukan kemudahan, melainkan dokumen tanpa penulis.
+ *
+ * Batas tahunnya memakai `startOfOperationalMonth` yang sudah ada — 1 Januari pukul 00.00 di zona
+ * operasional adalah awal bulan Januari, sehingga tidak ada helper jendela keempat yang ditulis.
+ */
+export function getIraAssessmentDue(
+  assessments: IraAssessmentQueueItem[],
+  now = new Date(),
+  timeZone: string = DEFAULT_OPERATIONAL_TIMEZONE,
+) {
+  const year = Number(operationalDateKey(now, timeZone).slice(0, 4));
+  const startOfYear = (value: number) => startOfOperationalMonth(new Date(Date.UTC(value, 0, 15)), timeZone);
+
+  const approvedFor = (value: number) =>
+    assessments.some((item) => {
+      if (item.status !== "DISETUJUI" || item.supersededByAssessmentId) return false;
+      return Number(operationalDateKey(new Date(item.periodStart), timeZone).slice(0, 4)) === value;
+    });
+  const anyFor = (value: number) =>
+    assessments.filter((item) => Number(operationalDateKey(new Date(item.periodStart), timeZone).slice(0, 4)) === value);
+
+  const previousYear = year - 1;
+  const currentApproved = approvedFor(year);
+  const previousApproved = approvedFor(previousYear);
+  const inProgress = anyFor(year).filter((item) => item.status !== "DISETUJUI");
+
+  return {
+    year,
+    previousYear,
+    currentApproved,
+    previousApproved,
+    /** Tahun yang sudah berakhir tanpa penilaian disetujui — inilah yang benar-benar terlambat. */
+    overdue: !previousApproved,
+    /** Sedang dikerjakan untuk tahun berjalan, belum disetujui. */
+    inProgressCount: inProgress.length,
+    /** Akhir tahun berjalan; penilaian tahun ini harus disetujui sebelum instan ini. */
+    dueAt: startOfYear(year + 1),
+    detail: previousApproved
+      ? currentApproved
+        ? `Penilaian ${year} sudah disetujui.`
+        : `Penilaian ${year} belum disetujui; ${previousYear} sudah.`
+      : `Penilaian ${previousYear} belum disetujui padahal tahunnya sudah berakhir.`,
+  };
+}
+
 export function getRegulatoryActionQueue(items: RegulatoryActionItem[], now = new Date(), timeZone: string = DEFAULT_OPERATIONAL_TIMEZONE) {
   const draft = items.filter((item) => item.status === "DRAFT");
   const prepared = items.filter((item) => item.status === "PREPARED");

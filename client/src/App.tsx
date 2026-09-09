@@ -39,6 +39,7 @@ const ArsipDokumen = lazy(() => import("./pages/ArsipDokumen"));
 const KlasifikasiRisiko = lazy(() => import("./pages/KlasifikasiRisiko"));
 const PenilaianRisiko = lazy(() => import("./pages/PenilaianRisiko"));
 const PenilaianRisikoDetail = lazy(() => import("./pages/PenilaianRisikoDetail"));
+const PenilaianRisikoKpmr = lazy(() => import("./pages/PenilaianRisikoKpmr"));
 const ExpenseEntry = lazy(() => import("./pages/ExpenseEntry"));
 const SanctionsWatchlist = lazy(() => import("./pages/SanctionsWatchlist"));
 const Kepegawaian = lazy(() => import("./pages/Kepegawaian"));
@@ -100,6 +101,7 @@ function Router() {
       <Route path="/operasional/arsip-dokumen"><OperationsRoute minimumRole="CONTROLLER" page={<ArsipDokumen />} /></Route>
       <Route path="/kepatuhan/klasifikasi-risiko"><OperationsRoute minimumRole="CONTROLLER" page={<KlasifikasiRisiko />} /></Route>
       <Route path="/kepatuhan/ira"><OperationsRoute minimumRole="ADMIN" page={<PenilaianRisiko />} /></Route>
+      <Route path="/kepatuhan/ira/:id/kpmr"><OperationsRoute minimumRole="ADMIN" page={<PenilaianRisikoKpmr />} /></Route>
       <Route path="/kepatuhan/ira/:id"><OperationsRoute minimumRole="ADMIN" page={<PenilaianRisikoDetail />} /></Route>
       <Route path="/operasional/nasabah/pemantauan"><OperationsRoute minimumRole="CONTROLLER" page={<PemantauanProfil />} /></Route>
       <Route path="/404" component={NotFound} />

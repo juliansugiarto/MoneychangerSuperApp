@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { calculateOperationalReadiness } from "@shared/operationalReadiness";
-import { DEFAULT_OPERATIONAL_TIMEZONE, getRegulatoryReportingReadiness } from "@shared/regulatoryActionQueue";
+import { DEFAULT_OPERATIONAL_TIMEZONE, getIraAssessmentDue, getRegulatoryReportingReadiness } from "@shared/regulatoryActionQueue";
 import { ArrowRight, CheckCircle2, CircleAlert, ClipboardCheck, FileLock2, FileText, Landmark, RefreshCcw, ShieldCheck, WalletCards } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -23,7 +23,10 @@ export default function OperationalReadiness() {
   const referenceRows = (comparison.data ?? []).filter((row) => Boolean(row.bi || row.jisdor || row.market));
   const directorOpen = (acknowledgements.data ?? []).filter((item) => !item.acknowledgedAt).length;
   const companyTimezone = trpc.companyProfile.get.useQuery().data?.timezone ?? DEFAULT_OPERATIONAL_TIMEZONE;
+  const iraAssessments = trpc.ira.list.useQuery();
   const reportingReadiness = getRegulatoryReportingReadiness(regulatoryPackages.data ?? [], regulatoryPackages.isError, new Date(), companyTimezone);
+  // Penilaian risiko tahunan: keterangan saja, tidak pernah membuat penilaian sendiri.
+  const iraDue = getIraAssessmentDue((iraAssessments.data ?? []) as never, new Date(), companyTimezone);
   const reportingReady = reportingReadiness.ready;
   const readiness = calculateOperationalReadiness({ openingChecks: checklist.data?.openingChecks, closingChecks: checklist.data?.closingChecks, closingCompletedAt: checklist.data?.closingCompletedAt, cashBalanceCount: dashboard.data?.cashBalances.length ?? 0, activeRateCount: activeRateRows.length, referenceRateCount: referenceRows.length, pendingReviewCount: dashboard.data?.pendingReview.length ?? 0, varianceCount: dashboard.data?.variances.length ?? 0, directorOpenCount: directorOpen });
   const { openingReady, closingReady, cashReady, rateReady, pendingReviews, oversightReady, readyCount } = readiness; const totalReady = readyCount + (reportingReady ? 1 : 0);
@@ -35,6 +38,8 @@ export default function OperationalReadiness() {
     { label: "Pengawasan", detail: dashboard.isError || acknowledgements.isError ? "Status pengawasan belum tersedia. Buka Monitoring untuk pemeriksaan." : oversightReady ? "Tidak ada review transaksi, varians, atau laporan Direksi terbuka." : `${pendingReviews} review/varians dan ${directorOpen} laporan Direksi perlu ditindaklanjuti.`, ready: oversightReady, loading: dashboard.isLoading || acknowledgements.isLoading, unavailable: dashboard.isError || acknowledgements.isError, icon: ShieldCheck, action: "Buka pengawasan", path: "/operasional/monitoring" },
     { label: "Arsip penutupan", detail: checklist.isError ? "Status arsip belum tersedia. Buka checklist dan coba perbarui." : closingReady ? "Ringkasan penutupan sudah dapat dicetak atau disimpan PDF." : "Arsip tersedia setelah checklist penutupan benar-benar selesai.", ready: closingReady, loading: checklist.isLoading, unavailable: checklist.isError, icon: FileText, action: "Buka penutupan", path: "/operasional/checklist" },
     { label: "Paket pelaporan", detail: reportingReadiness.detail, ready: reportingReady, loading: regulatoryPackages.isLoading, unavailable: reportingReadiness.unavailable, icon: FileLock2, action: "Buka pelaporan", path: "/operasional/pelaporan-regulator" },
+    // Siklus tahunan: barisnya hanya memberitahu, tidak pernah membuat penilaian sendiri.
+    { label: "Penilaian risiko (IRA)", detail: iraAssessments.isError ? "Status penilaian belum tersedia. Buka Penilaian Risiko untuk pemeriksaan." : iraDue.detail, ready: !iraDue.overdue && iraDue.currentApproved, loading: iraAssessments.isPending, unavailable: iraAssessments.isError, icon: ShieldCheck, action: "Buka penilaian", path: "/kepatuhan/ira" },
   ];
 
   return <div className="mx-auto max-w-7xl space-y-6">
