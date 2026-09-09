@@ -218,9 +218,13 @@ Urutannya mengikat seluruhnya. **Tepat satu tugas migrasi: Tugas 2** (`0056`).
 6. `pnpm audit --prod --audit-level=high` masih **9 temuan** (6 sedang, 3 tinggi). Paket ini tidak
    menambah dependensi dan tidak memperbaikinya. **Jangan menyebut audit bersih.**
 
-### Paket K3 — Pembandingan nota terhadap SE BI 18/41/DKSP — **PREMISNYA SALAH**
-- [ ] **Menunggu keputusan pengguna:** naskahnya sudah dibaca 9 September 2026 dan **ternyata
-      bukan tentang KUPVA BB maupun nota.** Lihat blok Paket K3 di bawah.
+### Paket K3 — Pembandingan nota terhadap SE BI **18/42**/DKSP — **SELESAI 9 September 2026**
+- [x] Naskah 18/41 dibaca, **premisnya salah** — mengatur pemrosesan transaksi pembayaran, nol
+      kemunculan `KUPVA`.
+- [x] Naskah **18/42/DKSP** diperoleh dan dibandingkan berdampingan: huruf G angka 1, tujuh field
+      wajib. **Lima sudah terpenuhi**, dua kurang (arah pembayaran huruf d dan e).
+- [x] Arah pembayaran dicetak harfiah pada kedua sisinya; penjaga `server/notaSeBi1842.test.ts`.
+      Spec `specs/2026-09-09-nota-terhadap-se-bi-1842-design.md`.
 
 ---
 

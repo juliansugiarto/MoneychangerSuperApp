@@ -98,6 +98,8 @@ export function printBon(transaction: any, customer: Customer | null, lines: Pri
     thead td{background:#eef3f9;font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#42566b;font-weight:700}
     td{border:1px solid #c7d3e0;padding:8px 10px;font-size:12px;vertical-align:top}
     .r{text-align:right}
+    /* Arah pembayaran wajib terbaca tanpa mengetahui arti kode BNB/BNS — SE BI 18/42/DKSP huruf G angka 1 huruf d dan e. */
+    thead td.side-note{background:#f8fbff;text-transform:none;letter-spacing:0;font-weight:600;color:#315879}
     .total-row td{background:${accentSoft};font-weight:800;border-top:2px solid ${accent}}
     .notice{margin-top:16px;font-size:10.5px;color:#475569;line-height:1.6}
     .rule{margin-top:10px;padding:10px 12px;font-size:10px;line-height:1.6;color:#475569;background:#f8fafc;border-left:3px solid ${accent};border-radius:0 6px 6px 0}
@@ -128,7 +130,7 @@ export function printBon(transaction: any, customer: Customer | null, lines: Pri
         ${bankTransferLine}
       </div>
     </div>
-    <table><thead><tr><td>No.</td><td>Mata Uang</td><td class=r>Pecahan</td><td class=r>Lembar</td><td class=r>Jumlah</td><td class=r>Kurs</td><td class=r>Total</td></tr></thead><tbody>${rows}<tr class="total-row"><td colspan=6>Jumlah Total</td><td class=r>${escapeHtml(formatIdrDecimal(String(transaction.rupiahAmount)))}</td></tr></tbody></table>
+    <table><thead><tr><td colspan=7 class="side-note">Valuta asing &mdash; dibayarkan ${isSell ? "kepada" : "oleh"} Nasabah</td></tr><tr><td>No.</td><td>Mata Uang</td><td class=r>Pecahan</td><td class=r>Lembar</td><td class=r>Jumlah</td><td class=r>Kurs</td><td class=r>Total</td></tr></thead><tbody>${rows}<tr class="total-row"><td colspan=6>Jumlah Total (Rupiah) &mdash; dibayarkan ${isSell ? "oleh" : "kepada"} Nasabah</td><td class=r>${escapeHtml(formatIdrDecimal(String(transaction.rupiahAmount)))}</td></tr></tbody></table>
     <p class="notice">* Harap hitung kembali uang anda sebelum meninggalkan loket.<br>Komplain setelah meninggalkan loket tidak akan dilayani.<br>* wajib melengkapi semua data</p>
     <div class="rule">Sesuai Ketentuan Bank Indonesia PBI No. 18/20/PBI/2016, Customer wajib memberikan fotocopy kartu Identitas diri, dan akumulasi transaksi Customer dalam satu bulan yang mencapai 10.000 USD atau ekuivalennya wajib disertai dokumen pendukung (underlying). Dengan ini Saya Menyatakan Bahwa akumulasi transaksi saya dalam bulan ini belum mencapai senilai 10.000 USD</div>
     <div class="sign"><div class="sign-slot"><span class="sign-line"></span><span class="sign-label">Teller</span></div><div class="sign-slot"><span class="sign-line"></span><span class="sign-label">Nasabah</span></div></div>
