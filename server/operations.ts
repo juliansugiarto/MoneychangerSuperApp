@@ -52,6 +52,7 @@ import { buildGoAmlLtktReportXml, buildGoAmlLtkmReportXml, type GoAmlCustomer, t
 import { isKnownGoAmlReportIndicator } from "../shared/goAmlReportIndicators";
 import { decodeSanctionsWatchlistUpload, parseSanctionsWatchlistWorkbook, cleanSanctionsWatchlistFileName } from "./sanctionsWatchlistImport";
 import { matchWatchlistEntries, rescreenAllCustomers, screenCustomer, type SanctionsWatchlistMatch, type ScreeningTrigger } from "./customerWatchlistScreening";
+import { customerHighRiskDenial, highRiskResetValues } from "./customerHighRiskApproval";
 import { parseWatchlistNameList, scoreNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
 import { compareDenominationCounts, type DenominationVarianceRow } from "../shared/denominationVariance";
 
@@ -1012,6 +1013,9 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
     dttotPpsdmNotes: input.dttotPpsdmMatch ? input.dttotPpsdmNotes?.trim() || null : null,
     ...declaration,
     ...categories,
+    // Persetujuan lama tidak boleh diam-diam menaungi risiko tinggi yang timbul karena alasan baru:
+    // perpindahan MENJADI HIGH menyetel keputusannya kembali ke BELUM. HIGH → HIGH tidak.
+    ...(highRiskResetValues(existing.riskLevel, input.riskLevel) ?? {}),
   };
 
   await db.update(customers).set(nextValues).where(eq(customers.id, input.customerId));
@@ -1025,6 +1029,7 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
       occupation: existing.occupation, sourceOfFunds: existing.sourceOfFunds, transactionPurpose: existing.transactionPurpose, profileStatus: existing.profileStatus,
       riskLevel: existing.riskLevel, riskNotes: existing.riskNotes, pepStatus: existing.pepStatus, pepDetails: existing.pepDetails,
       dttotPpsdmMatch: existing.dttotPpsdmMatch, dttotPpsdmNotes: existing.dttotPpsdmNotes,
+      highRiskDecision: existing.highRiskDecision,
       declaredMonthlyValueIdr: existing.declaredMonthlyValueIdr, declaredMonthlyCount: existing.declaredMonthlyCount,
       declaredCurrencies: existing.declaredCurrencies,
       customerType: existing.customerType, entityLegalForm: existing.entityLegalForm, occupationCategory: existing.occupationCategory,
@@ -1488,6 +1493,11 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   if (!customer) throw new Error("Nasabah tidak ditemukan.");
   if (customer.isDemo || customer.isHistorical) throw new Error("Nasabah demo atau historis tidak dapat digunakan pada transaksi operasional.");
   if (customer.profileStatus === "INACTIVE") throw new Error("Nasabah tidak aktif dan tidak dapat digunakan pada transaksi.");
+  // Gerbang persetujuan nasabah berisiko tinggi — Pasal 32 ayat (5) dan (6) PBI 10/2024. Ditegakkan
+  // di penulisnya, bukan hanya disembunyikan di layar: bon yang dibuat lewat jalur lain mana pun
+  // tetap tertahan.
+  const highRiskDenial = customerHighRiskDenial(customer);
+  if (highRiskDenial) throw new Error(highRiskDenial);
   if (!input.lines?.length) throw new Error("Bon harus punya minimal satu baris mata uang.");
   if (input.lines.length > 30) throw new Error("Terlalu banyak baris pada satu bon.");
   const receiptNumber = input.receiptNumber.trim();
@@ -1501,6 +1511,9 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     representative = (await db.select().from(customers).where(and(eq(customers.id, input.representativeCustomerId), eq(customers.isDemo, false), eq(customers.isHistorical, false))).limit(1))[0];
     if (!representative) throw new Error("Nasabah pihak kuasa/wakil tidak ditemukan.");
     if (representative.profileStatus === "INACTIVE") throw new Error("Nasabah pihak kuasa/wakil tidak aktif.");
+    // Pihak kuasa/wakil ikut memakai bon ini, jadi gerbang yang sama berlaku atasnya.
+    const representativeDenial = customerHighRiskDenial(representative, "Nasabah pihak kuasa/wakil");
+    if (representativeDenial) throw new Error(representativeDenial);
     if (representative.id === customer.id) throw new Error("Pihak kuasa/wakil harus nasabah yang berbeda dari nasabah transaksi.");
   }
 

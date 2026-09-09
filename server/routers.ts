@@ -136,6 +136,7 @@ import {
 } from "./sdmOperations";
 import { OPERATIONAL_TIMEZONE_VALUES } from "../shared/regulatoryActionQueue";
 import { simulateArchiveReadiness, simulateClosing, simulateExchange, simulateRateShock } from "./simulation";
+import { decideHighRisk, highRiskDecisionDenial } from "./customerHighRiskApproval";
 import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedure, router, shareholderProcedure, staffProcedure } from "./_core/trpc";
 import { classifyRisk, iraClassificationDenial, listClassifications, listParameterThresholds, resetParameterThresholds, setParameterThresholds } from "./iraRiskClassification";
 import {
@@ -765,6 +766,25 @@ export const appRouter = router({
     create: staffProcedure.input(customerInput).mutation(({ input, ctx }) => createCustomer(input, ctx.user.id)),
     update: staffProcedure.input(customerUpdateInput).mutation(({ input, ctx }) => updateCustomer(input, ctx.user)),
     import: controllerProcedure.input(z.object({ rows: z.array(customerInput).min(1).max(300) })).mutation(({ input, ctx }) => importCustomers(input.rows, ctx.user.id)),
+
+    /**
+     * Keputusan Manajemen Senior atas nasabah berisiko tinggi — Pasal 32 ayat (5) dan (6) PBI
+     * 10/2024. Hanya Pemegang Saham, dan wajib beralasan tertulis.
+     *
+     * Gerbangnya diperiksa dua kali dengan sengaja: di sini agar layarnya berpesan benar, dan di
+     * dalam `decideHighRisk` agar datanya tetap terjaga bila kelak ada pemanggil kedua.
+     */
+    decideHighRisk: shareholderProcedure
+      .input(z.object({
+        customerId: z.number().int().positive(),
+        decision: z.enum(["DISETUJUI", "DITOLAK"]),
+        notes: z.string().trim().min(5).max(2000),
+      }))
+      .mutation(({ input, ctx }) => {
+        const denial = highRiskDecisionDenial(ctx.user);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        return decideHighRisk(input, ctx.user);
+      }),
   }),
 
   documents: router({

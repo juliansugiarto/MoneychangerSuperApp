@@ -203,3 +203,49 @@ describe("createTransaction — underlying threshold reason", () => {
     getDb.mockRestore();
   });
 });
+
+/**
+ * Gerbang persetujuan nasabah berisiko tinggi — pemblokiran operasional pertama di aplikasi ini.
+ *
+ * Diuji di penulisnya, bukan di router: bon yang dibuat lewat jalur lain mana pun harus tertahan
+ * oleh aturan yang sama.
+ */
+describe("createTransaction — nasabah berisiko tinggi yang belum disetujui", () => {
+  const highRiskBase = { ...activeCustomer, riskLevel: "HIGH" as const };
+
+  function mockCustomer(customer: Record<string, unknown>) {
+    return mockTopLevelDb(new Map<unknown, unknown[]>([
+      [customers, [customer]],
+      [exchangeTransactions, []],
+      [currencies, [usdCurrency]],
+      [operationalRates, []],
+      [bankAccounts, [activeBankAccount]],
+    ]));
+  }
+
+  it("menolak bon atas nasabah HIGH yang keputusannya masih BELUM", async () => {
+    const getDb = mockCustomer({ ...highRiskBase, highRiskDecision: "BELUM" });
+    await expect(createTransaction(baseInput, 9)).rejects.toThrow(/belum diputuskan Pemegang Saham/);
+    getDb.mockRestore();
+  });
+
+  it("menolak bon atas nasabah HIGH yang sudah DITOLAK", async () => {
+    const getDb = mockCustomer({ ...highRiskBase, highRiskDecision: "DITOLAK" });
+    await expect(createTransaction(baseInput, 9)).rejects.toThrow(/ditolak Pemegang Saham/);
+    getDb.mockRestore();
+  });
+
+  it("meloloskan bon atas nasabah HIGH yang sudah DISETUJUI", async () => {
+    const getDb = mockCustomer({ ...highRiskBase, highRiskDecision: "DISETUJUI" });
+    // Kasus kendali: gerbang risiko tingginya tidak lagi berbunyi — bon berjalan sampai ke
+    // pemeriksaan lain yang bukan urusan uji ini.
+    await expect(createTransaction(baseInput, 9)).rejects.not.toThrow(/Pemegang Saham/);
+    getDb.mockRestore();
+  });
+
+  it("meloloskan nasabah LOW apa pun keputusannya", async () => {
+    const getDb = mockCustomer({ ...activeCustomer, riskLevel: "LOW", highRiskDecision: "BELUM" });
+    await expect(createTransaction(baseInput, 9)).rejects.not.toThrow(/Pemegang Saham/);
+    getDb.mockRestore();
+  });
+});

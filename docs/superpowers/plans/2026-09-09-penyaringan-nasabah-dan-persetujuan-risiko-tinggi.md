@@ -20,7 +20,7 @@ tiga pemanggil; satu fungsi penolakan murni yang ditegakkan di penulis transaksi
 - [x] Tugas 1 — Migrasi `0057`: tabel riwayat penyaringan dan empat kolom keputusan — **SELESAI 9 September 2026**
 - [x] Tugas 2 — Penulis penyaringan beserta pemanggil saat nasabah dibuat dan diubah — **SELESAI 9 September 2026**
 - [x] Tugas 3 — Penyaringan ulang massal saat daftar diimpor — **SELESAI 9 September 2026**
-- [ ] Tugas 4 — Gerbang persetujuan: fungsi penolakan murni dan penegakannya pada bon
+- [x] Tugas 4 — Gerbang persetujuan: fungsi penolakan murni dan penegakannya pada bon — **SELESAI 9 September 2026**
 - [ ] Tugas 5 — Halaman: riwayat penyaringan, peringatan daftar usang, kendali setujui/tolak
 - [ ] Tugas 6 — Peragaan end-to-end dan dokumentasi
 
@@ -214,7 +214,7 @@ it("listSnapshotAt seluruh baris barunya sama dengan importedAt impor itu", () =
 **Files:** Create `server/customerHighRiskApproval.ts`, `.test.ts`. Modify `server/operations.ts`,
 `server/routers.ts`.
 
-- [ ] **Step 1: Uji fungsi murninya lebih dulu:**
+- [x] **Step 1: Uji fungsi murninya lebih dulu:**
 
 ```ts
 describe("customerHighRiskDenial", () => {
@@ -230,14 +230,14 @@ describe("decideHighRisk", () => {
 });
 ```
 
-- [ ] **Step 2:** Tegakkan pada `createTransaction` (`operations.ts:1447`), **di penulisnya**.
+- [x] **Step 2:** Tegakkan pada `createTransaction` (`operations.ts:1447`), **di penulisnya**.
 
-- [ ] **Step 3:** Terapkan aturan setel ulang pada `updateCustomer`: bila `riskLevel` berpindah
+- [x] **Step 3:** Terapkan aturan setel ulang pada `updateCustomer`: bila `riskLevel` berpindah
       **menjadi** `HIGH` dari nilai lain, setel `highRiskDecision` kembali ke `BELUM` beserta
       pengosongan tiga kolom penyertanya. Ujinya wajib memuat kasus `HIGH → HIGH` yang **tidak**
       menyetel ulang.
 
-- [ ] **Step 4:** Perintah mutu, commit `"Persetujuan SHAREHOLDER untuk nasabah berisiko tinggi"`.
+- [x] **Step 4:** Perintah mutu, commit `"Persetujuan SHAREHOLDER untuk nasabah berisiko tinggi"`.
 
 ---
 
