@@ -78,6 +78,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 | Pengawasan | Impor Nasabah | Memetakan file pelanggan sesuai format yang ditetapkan. | Controller |
 | Pengawasan | Akses Staf | Membuat, mengatur peran, menonaktifkan, mereset sandi, atau meninjau akun. Dashboard Shareholder menyediakan pintasan khusus untuk Admin dan Staff. | Controller |
 | Pengawasan | Profil Perusahaan | Nama PT, nama dagang, izin usaha, logo, dan lampiran sertifikat — tampil di kwitansi cetak. | Controller |
+| Pengawasan | Arsip Dokumen | SOP, kebijakan internal, surat-menyurat BI, notulen rapat, dan korespondensi regulator, beserta riwayat versi dan masa berlakunya. | Controller |
 
 ## 5. Alur Satu Hari Operasional
 
@@ -488,6 +489,71 @@ Kartu **Ekspor LTKM goAML (XML)** di halaman Pelaporan Regulator membangun file 
 6. Bila ada bon yang profil nasabahnya belum lengkap, bon tsb **dilewati** dan namanya ditampilkan di pesan galat — lengkapi profil nasabah tsb lewat Edit, lalu ulangi ekspor.
 7. **Batasan yang perlu diketahui**: sama seperti LTKT, bon dengan `Cara bayar` **Transfer Bank** belum didukung; report_code yang dihasilkan selalu `LTKM` — varian `LTKMP` (percobaan) dan `LTKMT` (terorisme) belum didukung dan harus dilaporkan lewat kanal lain bila berlaku.
 8. Unggah file yang dihasilkan secara manual melalui aplikasi goAML sesuai prosedur yang berlaku di perusahaan.
+
+## 7A. Arsip Dokumen Perusahaan
+
+Menutup temuan pemeriksaan BI 3. Menu **Pengawasan → Arsip Dokumen**, Controller ke atas.
+
+### Apa yang disimpan di sini
+
+Enam jenis dokumen, dan daftarnya tertutup: **SOP**, **kebijakan internal**, **surat-menyurat Bank
+Indonesia**, **notulen rapat**, **korespondensi regulator**, dan **lainnya**. Judul wajib diisi pada
+setiap dokumen, termasuk yang berjenis "lainnya", supaya tetap terbaca oleh siapa pun yang mencarinya.
+
+Logo, sertifikat izin, dan lampirannya **tetap di halaman Profil Perusahaan**, tidak dipindahkan ke
+sini.
+
+### Mengarsipkan dokumen baru
+
+1. Tekan **Arsipkan dokumen**.
+2. Pilih jenisnya, isi judul, dan nomor surat/SK bila ada.
+3. Tunjuk **penanggung jawab** dari daftar pegawai — orang yang bertanggung jawab memelihara dokumen
+   itu. Boleh dikosongkan bila belum ditunjuk.
+4. Isi **mulai berlaku**. **Berakhir** boleh dikosongkan; kosong berarti berlaku sampai diganti,
+   bukan berarti kedaluwarsa.
+5. Pilih berkasnya: PDF, JPG, PNG, atau WEBP, paling besar 8 MB. **Hanya berkas internal tepercaya
+   yang sudah dipindai antivirus.**
+
+### Mengganti versi
+
+Tekan **Ganti versi** pada dokumennya. Versi baru wajib disertai **alasan perubahan** — riwayat versi
+tanpa alasan menjawab "apa yang berubah" tetapi tidak pernah menjawab "mengapa", dan pertanyaan kedua
+itulah yang diajukan pemeriksa.
+
+**Versi lama tidak dihapus.** Ia tetap tercatat pada **Riwayat versi** dan tetap dapat dibuka, supaya
+pertanyaan "dokumen mana yang berlaku pada periode yang diperiksa" dapat dijawab.
+
+Satu hal yang perlu diketahui: versi baru **langsung menggantikan** pendahulunya begitu disimpan,
+walaupun tanggal mulai berlakunya masih di kemudian hari. Bila itu terjadi, dokumennya muncul pada
+daftar **Perlu ditindaklanjuti** dengan keterangan "tidak ada versi yang berlaku hari ini" sampai
+tanggal itu tiba. Itu memang keadaan yang sebenarnya, dan sengaja diperlihatkan.
+
+### Daftar "Perlu ditindaklanjuti"
+
+Memuat tiga hal: dokumen yang masa berlakunya **sudah terlampaui**, yang **berakhir dalam 30 hari
+atau kurang**, dan yang **tidak punya versi berlaku hari ini**.
+
+Daftar ini **hanya mencatat**. Ia tidak memblokir apa pun, tidak mengubah dokumennya, dan tidak
+mengirim laporan apa pun ke Bank Indonesia maupun PPATK. Penggantian dokumen tetap dikerjakan manusia.
+
+**Daftar yang kosong bukan bukti seluruh dokumen masih berlaku.** Dokumen tanpa tanggal berakhir tidak
+akan pernah muncul di sana, dan banyaknya dokumen semacam itu ditulis apa adanya di bawah daftarnya.
+
+### Menonaktifkan dokumen
+
+Tombolnya bernama **Nonaktifkan**, bukan Hapus, dan itu disengaja: **dokumennya tidak dihapus**.
+Barisnya tetap ada beserta siapa yang menonaktifkan, kapan, dan **alasannya — yang wajib diisi**.
+Berkasnya beserta seluruh riwayat versinya tetap tersimpan dan tetap dapat dibuka dari bagian
+**Nonaktif** di bawah daftar.
+
+Arsip yang isinya dapat lenyap tanpa jejak bernilai lebih kecil bagi pemeriksa daripada arsip yang
+tidak dapat.
+
+### Siapa yang boleh apa
+
+Mengunggah, mengganti versi, menonaktifkan, dan **membacanya** — seluruhnya **Controller ke atas**.
+Staff dan Admin tidak dapat membuka halaman ini maupun memanggil prosedurnya: arsip memuat
+surat-menyurat regulator dan notulen rapat, yang merupakan bacaan pengawasan dan bukan bacaan kasir.
 
 ## 8. Keluhan Nasabah
 

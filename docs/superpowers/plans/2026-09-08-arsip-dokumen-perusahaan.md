@@ -20,7 +20,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 4 — Penulis arsip: buat dokumen, ganti versi, nonaktifkan, beserta auditnya
 - [x] Tugas 5 — Pembaca arsip: daftar, riwayat versi, dan worklist
 - [x] Tugas 6 — Halaman Arsip Dokumen
-- [ ] Tugas 7 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
+- [x] Tugas 7 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 Urutannya mengikat: **1 dan 2 sebelum segalanya**; 3 sebelum 4; 4 sebelum 5; 4 dan 5 sebelum 6.
 Tugas 7 terakhir.
@@ -414,31 +414,45 @@ risiko residual, bukan diperbaiki diam-diam hanya di sini.
 
 **Files:** Create `server/companyDocumentArchiveScenario.test.ts`; Modify panduan A–Z, skema database, ROADMAP
 
-- [ ] **Step 1: Skenario menyeluruh** dari data karangan: SOP diunggah versi 1 → muncul sebagai
+- [x] **Step 1: Skenario menyeluruh** dari data karangan: SOP diunggah versi 1 → muncul sebagai
       berlaku → mendekati `validUntil` → muncul di worklist sebagai akan kedaluwarsa → versi 2
       diunggah dengan alasan perubahan → versi 1 `supersededAt` terisi tetapi **masih dapat
       diunduh** → dokumen keluar dari worklist → dinonaktifkan dengan alasan → hilang dari worklist
       dan dari daftar aktif, **barisnya tetap ada**.
-- [ ] **Step 2: Skenario sisi batas** — dokumen yang berakhir hari ini masih berlaku; dokumen tanpa
+- [x] **Step 2: Skenario sisi batas** — dokumen yang berakhir hari ini masih berlaku; dokumen tanpa
       `validUntil` tidak pernah muncul di worklist tetapi ikut terhitung pada angka "tanpa tanggal
       berakhir"; versi bertanggal berlaku di masa depan meninggalkan `TIDAK_ADA_VERSI_BERLAKU`.
-- [ ] **Step 3: Peragaan end-to-end** pada `moneychanger`, membuat data uji yang diperlukan
+- [x] **Step 3: Peragaan end-to-end** pada `moneychanger`, membuat data uji yang diperlukan
       langsung. Perlihatkan hasilnya di layar: worklist terisi, riwayat versi terbuka, versi lama
       terunduh.
-- [ ] **Step 4: Perbarui dokumentasi** — panduan A–Z (cara mengarsipkan dokumen, cara mengganti
+- [x] **Step 4: Perbarui dokumentasi** — panduan A–Z (cara mengarsipkan dokumen, cara mengganti
       versi, arti nonaktif, cara kerja worklist, dan apa yang aplikasi **tidak** lakukan),
       `docs/SKEMA-DATABASE-PROJECT.md` (dua tabel dan dua nilai enum baru beserta migrasinya), dan
       ROADMAP (centang Paket I).
-- [ ] **Step 5:** Perintah mutu, sebutkan angka uji yang benar-benar dilihat, lalu commit
+- [x] **Step 5:** Perintah mutu, sebutkan angka uji yang benar-benar dilihat, lalu commit
       `"Skenario arsip dokumen menyeluruh, peragaan, dan dokumentasi"`.
+
+**Catatan Tugas 7.** Dua hal yang ditemukan skenario menyeluruhnya, keduanya pada palsunya sendiri
+dan bukan pada kodenya:
+
+1. **Harapan awal skenario keliru, rancangannya benar.** Versi 2 yang diunggah 8 September dengan
+   `validFrom` 15 September **langsung** menggantikan pendahulunya, sehingga hari itu tidak ada versi
+   yang berlaku. Skenario semula mengharapkan worklist menjadi kosong; yang benar adalah
+   `TIDAK_ADA_VERSI_BERLAKU` muncul sampai 15 September tiba. Ini persis keadaan yang spec bagian 4
+   sebut, dan skenarionya kini menegaskannya alih-alih menutupinya.
+2. **`orderBy` pada basis data palsu semula diabaikan**, sehingga "versi terbaru lebih dulu" lulus
+   atau gagal karena urutan penyisipan, bukan karena query-nya. Palsunya kini benar-benar mengurutkan.
 
 ---
 
 ## Penutup Paket I
 
-Diisi saat paket selesai: perintah mutu terakhir yang **benar-benar dijalankan**, angka uji yang
-benar-benar dilihat, dan risiko residual yang jujur — termasuk yang sudah diketahui sejak sesi
-rancangan:
+Selesai 9 September 2026. Perintah mutu terakhir yang benar-benar dijalankan:
+`Test Files 138 passed (138)`, `Tests 1119 passed | 2 skipped (1121)`, `tsc --noEmit` bersih,
+`vite build` sukses. Baseline sebelum paket ini `132`/`1049`; tujuh tugas menambah 6 berkas uji dan
+70 uji.
+
+**Risiko residual yang jujur, bukan daftar kosong:**
 
 1. **Unggahan yatim** bila langkah kedua unggah gagal; tidak ada penyapunya.
 2. **Sertifikat izin pada Profil Perusahaan tidak mendapat peringatan masa berlaku** (keputusan 5).
@@ -449,3 +463,15 @@ rancangan:
    kosong** — pekerjaan yang belum selesai pada jalur Kepegawaian, bukan keadaan sah.
 6. **`pnpm audit --prod --audit-level=high` tetap 9 temuan**; jangan menyebut audit bersih.
 7. **Migrasi `0051` dan `0052` belum diterapkan ke produksi.**
+8. **Unggah berkas dan tombol "Buka" belum pernah dijalankan sungguhan.** `.env` lokal tidak memuat
+   kredensial R2, sehingga `storagePut` melempar galat di mesin ini. Baris `operational_documents`
+   untuk peragaan disisipkan lewat SQL sebagai pengganti unggahan; seluruh alur di hilirnya sudah
+   dijalankan lewat penulis yang sesungguhnya, tetapi **kedua ujung jalur berkasnya masih belum
+   terbukti di lingkungan mana pun**.
+9. **Zona waktu memakai bawaan `Asia/Jakarta`, bukan `company_profile.timezone`.** Konsisten dengan
+   seluruh pemanggil lain di server, tetapi berarti tenant yang menyetel WITA atau WIT mendapat batas
+   hari WIB — pada arsip ini maupun di seluruh aplikasi. Satu perbaikan menyeluruh, bukan tambalan
+   di satu modul.
+10. **Data uji lokal dibiarkan** pada `moneychanger`: enam dokumen arsip (satu berversi dua, satu
+    nonaktif), tujuh baris `operational_documents` ber-`ownerType` `COMPANY_ARCHIVE`, dan satu
+    pegawai "Sari Kepatuhan". Tidak ada yang menyentuh produksi.
