@@ -279,3 +279,119 @@ describe("pemanggil pada createCustomer dan updateCustomer", () => {
     expect(audit).toContain("CUSTOMER_SCREENING_FAILED");
   });
 });
+
+/**
+ * Penyaringan ulang massal sesudah daftar sanksi diimpor.
+ *
+ * Daftar yang baru masuk tidak ada gunanya bila nasabah lama tetap dinilai terhadap daftar yang
+ * kemarin: tanpa langkah ini, seorang nasabah yang baru hari ini muncul di DTTOT tidak akan pernah
+ * terlihat sampai ada yang kebetulan menyunting profilnya.
+ */
+describe("penyaringan ulang massal saat daftar diimpor", () => {
+  const dttotHeader = ["Nama", "Deskripsi", "Terduga", "Kode Densus", "Tempat Lahir", "Tanggal Lahir", "WN/Asal Negara", "Alamat"];
+
+  async function workbookBase64(rows: unknown[][]) {
+    const XLSX = await import("xlsx");
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(rows), "Sheet1");
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+    return { base64: buffer.toString("base64"), byteSize: buffer.byteLength };
+  }
+
+  const nasabahAktif = [
+    { id: 11, fullName: "Contoh Orang Uji", isDemo: false, isHistorical: false },
+    { id: 12, fullName: "Budi Santoso Wijaya", isDemo: false, isHistorical: false },
+    { id: 13, fullName: "Siti Aminah Lestari", isDemo: false, isHistorical: false },
+  ];
+
+  /**
+   * Basis data palsu yang menyambungkan impor dengan penyaringan ulangnya: entri yang ditulis
+   * transaksi impor itulah yang dibaca kembali oleh penyaringan ulang, sehingga `listSnapshotAt`
+   * yang diuji sungguh berasal dari impor tersebut, bukan dari nilai yang dipasang uji ini.
+   */
+  function mockImportDb(nasabah = nasabahAktif) {
+    let daftar: Record<string, unknown>[] = [];
+    const inserted: Inserted[] = [];
+    const catat = (table: unknown, values: unknown) => {
+      const name = tableName(table);
+      const rows = Array.isArray(values) ? values : [values];
+      for (const row of rows) inserted.push({ table: name, values: row as Record<string, unknown> });
+      if (name === "sanctions_watchlist_entries") daftar = rows as Record<string, unknown>[];
+    };
+    const fakeTx = {
+      delete: vi.fn(() => ({ where: () => Promise.resolve() })),
+      insert: vi.fn((table: unknown) => ({ values: (values: unknown) => { catat(table, values); return Promise.resolve(); } })),
+    };
+    const fakeDb = {
+      transaction: vi.fn((callback: (tx: unknown) => unknown) => callback(fakeTx)),
+      select: vi.fn(() => ({ from: (table: unknown) => makeReader(tableName(table) === "sanctions_watchlist_entries" ? daftar : nasabah) })),
+      insert: vi.fn((table: unknown) => ({ values: (values: unknown) => { catat(table, values); return Promise.resolve(); } })),
+    };
+    vi.spyOn(db, "getDb").mockResolvedValue(fakeDb as never);
+    return { inserted };
+  }
+
+  async function impor(inserted: () => Inserted[]) {
+    const { base64, byteSize } = await workbookBase64([
+      dttotHeader,
+      ["Contoh Orang Uji alias Nama Alias Uji", "- keterangan", "Orang", "TEST-001", "Kota Uji", "01/01/1980", "Indonesia", "Jalan Uji"],
+    ]);
+    const { importSanctionsWatchlist } = await import("./operations");
+    await importSanctionsWatchlist({
+      dataBase64: base64, originalFileName: "dttot-uji.xlsx",
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", byteSize, actorUserId: 9,
+    });
+    return inserted().filter((row) => row.table === penyaringan);
+  }
+
+  it("menyaring ulang SELURUH nasabah aktif sesudah impor, satu baris per nasabah", async () => {
+    const { inserted } = mockImportDb();
+
+    const baris = await impor(() => inserted);
+
+    expect(baris.map((row) => row.values.customerId).sort()).toEqual([11, 12, 13]);
+    // Nasabah yang namanya cocok tetap hanya satu baris, dan yang tidak cocok tetap dapat barisnya.
+    expect(baris.find((row) => row.values.customerId === 11)!.values.matchCount).toBe(1);
+    expect(baris.find((row) => row.values.customerId === 12)!.values.matchCount).toBe(0);
+  });
+
+  it("memakai trigger DAFTAR_DIIMPOR dan screenedByUserId null", async () => {
+    const { inserted } = mockImportDb();
+
+    const baris = await impor(() => inserted);
+
+    expect(baris.every((row) => row.values.trigger === "DAFTAR_DIIMPOR")).toBe(true);
+    // Impor dijalankan seseorang, tetapi penyaringan ulangnya dijalankan sistem.
+    expect(baris.every((row) => row.values.screenedByUserId === null)).toBe(true);
+  });
+
+  it("listSnapshotAt seluruh baris barunya sama dengan importedAt impor itu", async () => {
+    const { inserted } = mockImportDb();
+
+    const baris = await impor(() => inserted);
+
+    const importedAt = inserted.find((row) => row.table === "sanctions_watchlist_entries")!.values.importedAt as Date;
+    expect(importedAt).toBeInstanceOf(Date);
+    expect(baris.every((row) => row.values.listSnapshotAt === importedAt)).toBe(true);
+  });
+
+  it("penyaringan ulang yang gagal tidak membatalkan daftar yang sudah masuk", async () => {
+    const { inserted } = mockImportDb();
+    const { importSanctionsWatchlist } = await import("./operations");
+    const screening = await import("./customerWatchlistScreening");
+    vi.spyOn(screening, "rescreenAllCustomers").mockRejectedValue(new Error("Penyaringan ulang gagal."));
+    const { base64, byteSize } = await workbookBase64([
+      dttotHeader,
+      ["Contoh Orang Uji", "- keterangan", "Orang", "TEST-001", "Kota Uji", "01/01/1980", "Indonesia", "Jalan Uji"],
+    ]);
+
+    const hasil = await importSanctionsWatchlist({
+      dataBase64: base64, originalFileName: "dttot-uji.xlsx",
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", byteSize, actorUserId: 9,
+    });
+
+    expect(hasil.recordCount).toBe(1);
+    expect(inserted.some((row) => row.table === "sanctions_watchlist_entries")).toBe(true);
+    expect(inserted.filter((row) => row.table === "audit_logs").map((row) => row.values.action)).toContain("CUSTOMER_RESCREENING_FAILED");
+  });
+});

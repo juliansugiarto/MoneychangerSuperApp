@@ -1,6 +1,7 @@
-import { customerWatchlistScreenings, sanctionsWatchlistEntries } from "../drizzle/schema";
+import { and, eq } from "drizzle-orm";
+import { customers, customerWatchlistScreenings, sanctionsWatchlistEntries } from "../drizzle/schema";
+import { findBestNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
 import { getDb } from "./db";
-import { searchSanctionsWatchlist, type SanctionsWatchlistMatch } from "./operations";
 
 /**
  * Penulis jejak penyaringan nasabah terhadap DTTOT/DPPSPM — satu-satunya penulis
@@ -25,6 +26,48 @@ export const SCREENING_SUMMARY_MAX_LENGTH = 500;
 const MIN_SCREENABLE_NAME_LENGTH = 3;
 
 const TOO_SHORT_SUMMARY = "Nama nasabah terlalu pendek untuk disaring (minimal 3 karakter); tidak ada pencocokan yang dijalankan.";
+
+export type SanctionsWatchlistMatch = {
+  id: number; listType: "DTTOT" | "DPPSPM"; sourceLabel: string | null; entityType: "INDIVIDUAL" | "ENTITY";
+  referenceCode: string | null; fullName: string; matchedOn: string; score: number;
+  dateOfBirth: string | null; placeOfBirth: string | null; nationality: string | null; address: string | null; description: string | null;
+};
+
+/** Baris daftar sanksi seperlunya bagi pencocokan — bentuknya, bukan tabelnya, yang dituntut. */
+export type WatchlistEntryForMatching = {
+  id: number; listType: "DTTOT" | "DPPSPM"; sourceLabel: string | null; entityType: "INDIVIDUAL" | "ENTITY";
+  referenceCode: string | null; fullName: string; aliases: string | null;
+  dateOfBirth: string | null; placeOfBirth: string | null; nationality: string | null; address: string | null; description: string | null;
+};
+
+/**
+ * Pencocokan satu nama terhadap entri yang sedang termuat — murni, dan **satu-satunya** definisi
+ * "cocok" di aplikasi ini.
+ *
+ * Baik pencarian manual (`searchSanctionsWatchlist`) maupun penyaringan otomatis memanggil fungsi
+ * ini. Dua definisi kecocokan yang berbeda pendapat adalah kekeliruan yang tidak terlihat dari
+ * layar mana pun: jejak penyaringan akan mengatakan "nihil" atas nama yang justru ditemukan
+ * petugas lewat kotak pencarian.
+ *
+ * Hasilnya lengkap dan terurut menurun; pembatasan banyaknya untuk layar dilakukan pemanggilnya,
+ * supaya `matchCount` pada jejak tetap jumlah yang sebenarnya.
+ */
+export function matchWatchlistEntries(query: string, entries: WatchlistEntryForMatching[]): SanctionsWatchlistMatch[] {
+  const results: SanctionsWatchlistMatch[] = [];
+  for (const entry of entries) {
+    const candidateNames = [entry.fullName, ...(entry.aliases ? entry.aliases.split("\n") : [])];
+    const best = findBestNameMatch(query, candidateNames);
+    if (best && best.score >= MATCH_THRESHOLD) {
+      results.push({
+        id: entry.id, listType: entry.listType, sourceLabel: entry.sourceLabel, entityType: entry.entityType, referenceCode: entry.referenceCode,
+        fullName: entry.fullName, matchedOn: best.name, score: best.score,
+        dateOfBirth: entry.dateOfBirth, placeOfBirth: entry.placeOfBirth, nationality: entry.nationality, address: entry.address, description: entry.description,
+      });
+    }
+  }
+  results.sort((a, b) => b.score - a.score);
+  return results;
+}
 
 export type ScreeningResult = {
   customerId: number;
@@ -96,7 +139,9 @@ export async function screenCustomer(input: {
   const db = await databaseOrThrow();
   const fullName = input.fullName.trim();
 
-  const entries = await db.select({ importedAt: sanctionsWatchlistEntries.importedAt }).from(sanctionsWatchlistEntries);
+  // Sekali baca: daftar yang dicocokkan dan daftar yang menentukan `listSnapshotAt` wajib kumpulan
+  // baris yang sama, kalau tidak jejaknya menunjuk ke daftar yang bukan dipakainya.
+  const entries = await db.select().from(sanctionsWatchlistEntries);
   const listSnapshotAt = latestImportedAt(entries);
 
   let matches: SanctionsWatchlistMatch[] = [];
@@ -106,7 +151,7 @@ export async function screenCustomer(input: {
     // baris" dan "disaring, nihil" adalah dua keadaan yang berbeda bagi pemeriksa.
     summary = TOO_SHORT_SUMMARY;
   } else {
-    matches = await searchSanctionsWatchlist({ query: fullName });
+    matches = matchWatchlistEntries(fullName, entries);
     summary = summarizeScreeningMatches(matches);
   }
 
@@ -128,4 +173,42 @@ export async function screenCustomer(input: {
   });
 
   return result;
+}
+
+/** Sekali tulis maksimal sekian baris, supaya satu impor tidak menjadi satu pernyataan raksasa. */
+const RESCREEN_INSERT_CHUNK = 500;
+
+/**
+ * Menyaring ulang seluruh nasabah aktif terhadap daftar yang sedang termuat — satu baris per
+ * nasabah, dijalankan sistem.
+ *
+ * Daftarnya dibaca **sekali** untuk seluruh nasabah, bukan sekali per nasabah: pencocokannya toh
+ * berlangsung di memori, dan membaca ulang seluruh entri sebanyak jumlah nasabah adalah beban yang
+ * tidak membeli apa pun. Nasabah demo dan historis dilewati, sama seperti pemadanan SIPENDAR.
+ */
+export async function rescreenAllCustomers(): Promise<{ customerCount: number; listSnapshotAt: Date | null }> {
+  const db = await databaseOrThrow();
+  const entries = await db.select().from(sanctionsWatchlistEntries);
+  const listSnapshotAt = latestImportedAt(entries);
+  const liveCustomers = await db.select({ id: customers.id, fullName: customers.fullName })
+    .from(customers).where(and(eq(customers.isDemo, false), eq(customers.isHistorical, false)));
+
+  const rows = liveCustomers.map((customer) => {
+    const fullName = customer.fullName?.trim() ?? "";
+    const matches = fullName.length < MIN_SCREENABLE_NAME_LENGTH ? [] : matchWatchlistEntries(fullName, entries);
+    return {
+      customerId: customer.id,
+      screenedByUserId: null,
+      trigger: "DAFTAR_DIIMPOR" as const,
+      matchCount: matches.length,
+      summary: fullName.length < MIN_SCREENABLE_NAME_LENGTH ? TOO_SHORT_SUMMARY : summarizeScreeningMatches(matches),
+      listSnapshotAt,
+    };
+  });
+
+  for (let index = 0; index < rows.length; index += RESCREEN_INSERT_CHUNK) {
+    await db.insert(customerWatchlistScreenings).values(rows.slice(index, index + RESCREEN_INSERT_CHUNK));
+  }
+
+  return { customerCount: rows.length, listSnapshotAt };
 }

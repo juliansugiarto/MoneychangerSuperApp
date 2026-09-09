@@ -19,7 +19,7 @@ tiga pemanggil; satu fungsi penolakan murni yang ditegakkan di penulis transaksi
 
 - [x] Tugas 1 — Migrasi `0057`: tabel riwayat penyaringan dan empat kolom keputusan — **SELESAI 9 September 2026**
 - [x] Tugas 2 — Penulis penyaringan beserta pemanggil saat nasabah dibuat dan diubah — **SELESAI 9 September 2026**
-- [ ] Tugas 3 — Penyaringan ulang massal saat daftar diimpor
+- [x] Tugas 3 — Penyaringan ulang massal saat daftar diimpor — **SELESAI 9 September 2026**
 - [ ] Tugas 4 — Gerbang persetujuan: fungsi penolakan murni dan penegakannya pada bon
 - [ ] Tugas 5 — Halaman: riwayat penyaringan, peringatan daftar usang, kendali setujui/tolak
 - [ ] Tugas 6 — Peragaan end-to-end dan dokumentasi
@@ -194,7 +194,7 @@ describe("screenCustomer", () => {
 
 **Files:** Modify `server/operations.ts` (`importSanctionsWatchlist`), test.
 
-- [ ] **Step 1: Uji lebih dulu:**
+- [x] **Step 1: Uji lebih dulu:**
 
 ```ts
 it("menyaring ulang SELURUH nasabah aktif sesudah impor, satu baris per nasabah", () => {});
@@ -202,10 +202,10 @@ it("memakai trigger DAFTAR_DIIMPOR dan screenedByUserId null", () => {});
 it("listSnapshotAt seluruh baris barunya sama dengan importedAt impor itu", () => {});
 ```
 
-- [ ] **Step 2:** Jalankan sesudah impor berhasil, di luar transaksi impornya — penyaringan ulang
+- [x] **Step 2:** Jalankan sesudah impor berhasil, di luar transaksi impornya — penyaringan ulang
       yang gagal tidak boleh membatalkan daftar yang sudah masuk.
 
-- [ ] **Step 3:** Perintah mutu, commit `"Penyaringan ulang nasabah setiap daftar sanksi diimpor"`.
+- [x] **Step 3:** Perintah mutu, commit `"Penyaringan ulang nasabah setiap daftar sanksi diimpor"`.
 
 ---
 

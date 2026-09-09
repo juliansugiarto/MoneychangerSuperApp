@@ -51,8 +51,8 @@ import { buildSipesatCsv, buildSipesatInitialFileName, buildSipesatTriwulanFileN
 import { buildGoAmlLtktReportXml, buildGoAmlLtkmReportXml, type GoAmlCustomer, type GoAmlLtktLine, type GoAmlLtkmLine } from "../shared/goAmlExport";
 import { isKnownGoAmlReportIndicator } from "../shared/goAmlReportIndicators";
 import { decodeSanctionsWatchlistUpload, parseSanctionsWatchlistWorkbook, cleanSanctionsWatchlistFileName } from "./sanctionsWatchlistImport";
-import { screenCustomer, type ScreeningTrigger } from "./customerWatchlistScreening";
-import { findBestNameMatch, parseWatchlistNameList, scoreNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
+import { matchWatchlistEntries, rescreenAllCustomers, screenCustomer, type SanctionsWatchlistMatch, type ScreeningTrigger } from "./customerWatchlistScreening";
+import { parseWatchlistNameList, scoreNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
 import { compareDenominationCounts, type DenominationVarianceRow } from "../shared/denominationVariance";
 
 /** Rejects a denomination value that doesn't match a real banknote/coin for this currency (when we have a curated list — see shared/currencyDenominations.ts). Never trust the client alone here: this is exactly the check that stops a typo like "IDR 131250000 × 1 lembar" from being recorded as if it were a real note. */
@@ -2375,6 +2375,22 @@ export async function importSanctionsWatchlist(input: { dataBase64: string; orig
       metadata: { recordCount: parsed.entries.length, sourceFileName },
     });
   });
+  // Di luar transaksi impornya, dan sengaja: penyaringan ulang yang gagal tidak boleh membatalkan
+  // daftar yang sudah masuk. Daftar baru yang tidak pernah diadu dengan nasabah lama pun tidak ada
+  // gunanya, jadi kegagalannya dicatat agar dapat dijalankan ulang, bukan didiamkan.
+  try {
+    await rescreenAllCustomers();
+  } catch (error) {
+    try {
+      await writeAudit({
+        actorUserId: input.actorUserId, action: "CUSTOMER_RESCREENING_FAILED", entityType: "sanctions_watchlist",
+        entityId: `${parsed.listType}${parsed.sourceLabel ? `:${parsed.sourceLabel}` : ""}`,
+        metadata: { sourceFileName, message: error instanceof Error ? error.message : String(error) },
+      });
+    } catch {
+      // Basis datanya sedang tumbang; impornya sendiri sudah tersimpan dan tetap berlaku.
+    }
+  }
   return { listType: parsed.listType, sourceLabel: parsed.sourceLabel, recordCount: parsed.entries.length };
 }
 
@@ -2397,11 +2413,8 @@ export async function listSanctionsWatchlistSummary() {
   });
 }
 
-export type SanctionsWatchlistMatch = {
-  id: number; listType: "DTTOT" | "DPPSPM"; sourceLabel: string | null; entityType: "INDIVIDUAL" | "ENTITY";
-  referenceCode: string | null; fullName: string; matchedOn: string; score: number;
-  dateOfBirth: string | null; placeOfBirth: string | null; nationality: string | null; address: string | null; description: string | null;
-};
+/** Tipenya kini tinggal di `customerWatchlistScreening.ts` bersama pencocokannya; diteruskan di sini demi pemanggil lama. */
+export type { SanctionsWatchlistMatch };
 
 /**
  * Fuzzy name screening against the currently-loaded DTTOT/DPPSPM entries — a screening aid only.
@@ -2414,20 +2427,9 @@ export async function searchSanctionsWatchlist(input: { query: string }): Promis
   return retryTransientDatabaseRead(async () => {
     const db = await databaseOrThrow();
     const entries = await db.select().from(sanctionsWatchlistEntries);
-    const results: SanctionsWatchlistMatch[] = [];
-    for (const entry of entries) {
-      const candidateNames = [entry.fullName, ...(entry.aliases ? entry.aliases.split("\n") : [])];
-      const best = findBestNameMatch(query, candidateNames);
-      if (best && best.score >= MATCH_THRESHOLD) {
-        results.push({
-          id: entry.id, listType: entry.listType, sourceLabel: entry.sourceLabel, entityType: entry.entityType, referenceCode: entry.referenceCode,
-          fullName: entry.fullName, matchedOn: best.name, score: best.score,
-          dateOfBirth: entry.dateOfBirth, placeOfBirth: entry.placeOfBirth, nationality: entry.nationality, address: entry.address, description: entry.description,
-        });
-      }
-    }
-    results.sort((a, b) => b.score - a.score);
-    return results.slice(0, 25);
+    // Pencocokannya milik `customerWatchlistScreening.ts` — kotak pencarian ini dan penyaringan
+    // otomatis wajib sepakat tentang apa yang disebut cocok. Pemotongan 25 hanya untuk layar.
+    return matchWatchlistEntries(query, entries).slice(0, 25);
   });
 }
 
