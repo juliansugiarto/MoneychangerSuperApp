@@ -34,6 +34,7 @@ const pageByPath: Record<string, string> = {
   "/operasional/kepegawaian": "Kepegawaian",
   "/operasional/kesiapan": "OperationalReadiness",
   "/operasional/pengawasan-direksi": "DirectorAcknowledgements",
+  "/operasional/arsip-dokumen": "ArsipDokumen",
   "/operasional/pengguna": "UserManagement",
   "/operasional/profil-perusahaan": "CompanyProfile",
   "/operasional/go-live": "GoLiveSetup",

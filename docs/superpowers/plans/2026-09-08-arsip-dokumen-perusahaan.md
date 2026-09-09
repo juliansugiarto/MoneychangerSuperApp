@@ -19,7 +19,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 3 — Jalur unggah menerima berkas arsip, dengan gerbang Controller
 - [x] Tugas 4 — Penulis arsip: buat dokumen, ganti versi, nonaktifkan, beserta auditnya
 - [x] Tugas 5 — Pembaca arsip: daftar, riwayat versi, dan worklist
-- [ ] Tugas 6 — Halaman Arsip Dokumen
+- [x] Tugas 6 — Halaman Arsip Dokumen
 - [ ] Tugas 7 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 Urutannya mengikat: **1 dan 2 sebelum segalanya**; 3 sebelum 4; 4 sebelum 5; 4 dan 5 sebelum 6.
@@ -365,32 +365,48 @@ risiko residual, bukan diperbaiki diam-diam hanya di sini.
 
 **Files:** Create `client/src/pages/ArsipDokumen.tsx`; Modify `client/src/App.tsx`, `shared/backOfficeNavigation.ts`
 
-- [ ] **Step 1: Rute dan menu** — `/operasional/arsip-dokumen`, `minimumRole: "CONTROLLER"`, di
+- [x] **Step 1: Rute dan menu** — `/operasional/arsip-dokumen`, `minimumRole: "CONTROLLER"`, di
       grup **Pengawasan** bersama Kepegawaian dan Status Kesiapan. Pakai `OperationsRoute` seperti
       halaman lain (`client/src/App.tsx:86,96`).
-- [ ] **Step 2: Worklist di atas halaman** — kedaluwarsa, akan kedaluwarsa, tidak ada versi
+- [x] **Step 2: Worklist di atas halaman** — kedaluwarsa, akan kedaluwarsa, tidak ada versi
       berlaku, masing-masing dengan alasannya terbaca manusia. Di bawahnya, keterangan banyaknya
       dokumen tanpa tanggal berakhir apa adanya (Tugas 5 Step 5).
-- [ ] **Step 3: Daftar dokumen berkelompok kategori**, dengan versi berjalan, masa berlakunya,
+- [x] **Step 3: Daftar dokumen berkelompok kategori**, dengan versi berjalan, masa berlakunya,
       penanggung jawabnya, dan tombol membuka riwayat versi. Setiap versi punya tombol unduh yang
       memakai `/api/operational-documents/:documentId/download` yang sudah ada — pola `viewDocument`
       pada `client/src/pages/CompanyProfile.tsx:107` sudah menunjukkan caranya; ikuti, jangan
       membuat pola ketiga.
-- [ ] **Step 4: Borang unggah** — dua langkah: `POST /api/operational-documents` dengan
+- [x] **Step 4: Borang unggah** — dua langkah: `POST /api/operational-documents` dengan
       `documentType: "COMPANY_ARCHIVE_FILE"`, lalu `trpc.companyArchive.create`/`.addVersion`
       dengan id yang dikembalikannya. Pakai pola `uploadDocument` pada `CompanyProfile.tsx:53`;
       seluruh pembacaan lain tetap lewat `trpc.*.useQuery/useMutation`, jangan menambah pembungkus
       `fetch` baru.
-- [ ] **Step 5: Keadaan wajib** — loading, kosong, dan error; fokus keyboard; teks tindakan kritis
+- [x] **Step 5: Keadaan wajib** — loading, kosong, dan error; fokus keyboard; teks tindakan kritis
       yang jelas. Tombol nonaktifkan harus mengatakan **"Nonaktifkan"**, bukan "Hapus", dan
       meminta alasan — dokumennya memang tidak dihapus, dan label yang berbohong tentang itu lebih
       buruk daripada tidak ada label.
-- [ ] **Step 6: Verifikasi visual** pada `moneychanger` dengan data uji yang dibuat sendiri
+- [x] **Step 6: Verifikasi visual** pada `moneychanger` dengan data uji yang dibuat sendiri
       (diizinkan pengguna 8 September 2026): sebuah SOP dengan dua versi, satu dokumen kedaluwarsa,
       satu yang akan kedaluwarsa, satu tanpa tanggal berakhir. Login tetap dilakukan pengguna;
       minta pada giliran itu. **Halaman kosong belum membuktikan apa pun** — perlihatkan
       worklist-nya terisi.
-- [ ] **Step 7:** Perintah mutu, lalu commit `"Halaman arsip dokumen perusahaan"`.
+- [x] **Step 7:** Perintah mutu, lalu commit `"Halaman arsip dokumen perusahaan"`.
+
+**Temuan saat verifikasi visual.** Tiga hal yang hanya terlihat dari layar:
+
+1. **Dialog lebih tinggi daripada viewport, sehingga tombol tindakannya tidak terjangkau.** Pada
+   jendela setinggi 715 px, borang "Arsipkan dokumen" terpotong dan yang menggulir justru halaman
+   di belakangnya. Diperbaiki: ketiga dialog memakai `max-h-[85vh] overflow-y-auto`. Ini persis
+   jenis cacat yang tidak pernah muncul pada uji maupun `tsc`.
+2. **Rute barunya wajib didaftarkan pada `server/backOfficeNavigation.test.ts`**, yang memetakan
+   tiap tujuan sidebar ke nama halamannya. Ujinya gagal sampai `/operasional/arsip-dokumen`
+   ditambahkan — jaring pengaman yang bekerja sebagaimana mestinya.
+3. **Unggah berkas dan tombol "Buka" tidak dapat diperagakan di mesin ini.** `.env` lokal tidak
+   memuat kredensial R2 (`R2_ACCOUNT_ID` dan kawan-kawan), sehingga `storagePut` melempar galat.
+   Baris `operational_documents` untuk peragaan karena itu disisipkan lewat SQL sebagai pengganti
+   unggahan, dan **seluruh alur di hilirnya** — pembuatan dokumen, penggantian versi, penonaktifan,
+   worklist, riwayat versi — dijalankan lewat penulis yang sesungguhnya. Dicatat sebagai risiko
+   residual, bukan disamarkan.
 
 ---
 
