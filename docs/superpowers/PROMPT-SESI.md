@@ -3,6 +3,11 @@
 Satu tugas per sesi. Salin blok yang sesuai apa adanya ke sesi Claude Code yang baru — blok-blok ini
 sengaja tidak menuntut konteks percakapan sebelumnya.
 
+Sejak 9 September 2026 sebuah hook `SessionStart` sudah menyuntikkan daftar tugas yang belum
+tercentang pada awal tiap sesi, jadi blok di bawah tidak lagi perlu disalin dari sesi sebelumnya —
+lihat `docs/superpowers/SETUP-PERKAKAS.md`. Untuk menutup sesi dan memperbarui berkas ini, pakai
+skill `serah-terima`.
+
 **Cara memilih blok:**
 
 1. Buka `docs/superpowers/ROADMAP-SISA-PEKERJAAN.md`, lihat **Status Pengerjaan**.
