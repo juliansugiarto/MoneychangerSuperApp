@@ -138,7 +138,9 @@ dipakai rumusnya; Aspek Kelembagaan tidak dibangun; seluruh klasifikasi risiko b
 dan kode tanpa baris dibaca RENDAH; dimensi `COUNTRY` tanpa daftar FATF/PBB; `PPSPM_3C` tidak dapat
 membedakan UMKM; `TPPU_4A` dan `TPPU_4B` selalu sama karena hanya ada satu provinsi gerai;
 `pnpm audit --prod --audit-level=high` masih **9 temuan** (6 sedang, 3 tinggi) — **jangan menyebut
-audit bersih**; migrasi `0051`–`0055` **belum diterapkan ke produksi**; dan zona waktu server masih
+audit bersih**; migrasi **`0034`–`0055` belum diterapkan ke produksi** — jurnal produksi berisi 34
+baris (`0000`–`0033`) sementara `drizzle/` berisi 56 berkas, jadi yang tertunda **dua puluh dua**,
+bukan lima seperti tercatat di sini sampai 9 September 2026; dan zona waktu server masih
 memakai bawaan `Asia/Jakarta`, bukan `company_profile.timezone`.
 
 ### Risiko residual paket sebelumnya yang masih terbuka
@@ -369,66 +371,29 @@ lalu centang barisnya di bagian Status Pengerjaan.
 Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 ```
 
-### Paket K2 — Ganti nama PPPSM menjadi PPPSPM (sesi rancangan dulu) — **PEKERJAAN BERIKUTNYA**
+### Paket K2 — Ganti nama PPPSM menjadi `DPPSPM` (4 tugas) — **PEKERJAAN BERIKUTNYA**
 
-Fakta yang sudah ditelusuri 9 September 2026, **tidak perlu dicari ulang**:
+**Sesi rancangan SELESAI 9 September 2026.** Spec `specs/2026-09-09-ganti-nama-dppspm-design.md`,
+rencana `plans/2026-09-09-ganti-nama-dppspm.md`.
 
-- **112 kemunculan pada 14 berkas** di luar `drizzle/meta`: `server/operations.ts`,
-  `server/routers.ts`, `server/sanctionsWatchlistImport.ts`, `shared/sanctionsNameMatch.ts`,
-  `shared/iraKpmrCatalogue.ts`, `client/src/components/WatchlistCheck.tsx`,
-  `client/src/pages/CustomerList.tsx`, `Customers.tsx`, `SanctionsWatchlist.tsx`, ditambah lima
-  berkas uji. Angka ~10 berkas / ~50 titik panggil pada ROADMAP ditulis 4 September dan **sudah
-  ketinggalan**.
-- Yang menyentuh basis data ada dua: kolom `customers.dttotPpsdmMatch` dan `dttotPpsdmNotes`
-  (`drizzle/schema.ts:155-156`), serta **nilai enum** `"PPPSM"` pada
-  `sanctions_watchlist_entries.listType` (`drizzle/schema.ts:477`).
-- **Basis data lokal kosong untuk keduanya**: nol baris `sanctions_watchlist_entries`, nol nasabah
-  ber-`dttotPpsdmMatch`. Karena itu peragaan lokal **tidak akan membuktikan migrasi datanya**;
-  produksi harus diperiksa (baca-saja) sebelum memutuskan bentuk migrasinya.
-- **Satu kemunculan `PPPSM` TIDAK BOLEH diganti:** teks pertanyaan `KPMR_P4_3` pada
-  `shared/iraKpmrCatalogue.ts:291` adalah kutipan **apa adanya** dari template BI, yang di dalamnya
-  memang tertulis `PPPSM`. Menggantinya berarti memalsukan kutipan.
+Tiga hal yang berubah dari perkiraan sebelumnya — **jangan diturunkan ulang**:
+
+- **Sasarannya `DPPSPM`, bukan `PPPSPM`.** Templat BI memasangkan *"DTTOT dan DPPSPM"*
+  (`shared/iraKpmrCatalogue.ts:183`) dan nilai saudaranya sudah `DTTOT`; keduanya sebuah *Daftar*.
+  `PPPSPM` menamai program pencegahannya dan sudah dipakai dengan benar di 25 tempat.
+- **Produksi menyimpan 239 baris `listType = 'PPPSM'`** (`DPRK` 155, `IR` 84) di samping 531 baris
+  `DTTOT` — diperiksa baca-saja 9 September 2026. Ini **bukan** perubahan kosmetik: redefinisi enum
+  satu langkah hasil `drizzle-kit` menyunting ke-239 baris itu menjadi `''` tanpa suara. Sebaliknya,
+  **nol** baris memakai `dttotPpsdmMatch`, dan kolom itu **sengaja tidak diganti nama**.
+- **Basis data lokal kosong untuk keduanya**, karena itu Tugas 1 mengisinya lebih dulu dengan data
+  sintetis berbentuk sama sebelum migrasinya dijalankan.
 
 ```
-Baca docs/superpowers/ROADMAP-SISA-PEKERJAAN.md bagian "Paket K2", lalu baca juga bagian
-"Aturan kerja yang berlaku untuk seluruh paket" pada dokumen yang sama. Baca juga bagian
-"Sesi berikutnya — keadaan per 9 September 2026" pada docs/superpowers/PROMPT-SESI.md,
-termasuk daftar "Yang tidak perlu ditemukan ulang" dan fakta Paket K2 yang sudah ditelusuri
-di sana — 112 kemunculan pada 14 berkas, dua sentuhan basis data, basis data lokal yang kosong
-untuk keduanya, dan satu kutipan template BI yang tidak boleh diganti.
-
-Rancang paket ini. Telusuri kodenya sungguhan lebih dulu; rujukan berkas:baris pada ROADMAP
-ditulis 4 September 2026 dan sebagian sudah bergeser.
-
-TANYAKAN kepada saya sebelum menulis rancangan, dan jangan menebak satu pun:
-1. Kolom `dttotPpsdmMatch`/`dttotPpsdmNotes` diganti nama, atau dibiarkan dan hanya lapisan
-   tampilannya yang diperbaiki?
-2. Nilai enum "PPPSM" pada sanctions_watchlist_entries.listType diganti menjadi "PPPSPM" beserta
-   migrasi datanya, atau kedua nilai dipertahankan sementara?
-3. Apakah produksi sudah punya baris berisi nilai-nilai itu? Bila belum bisa dipastikan, katakan
-   apa yang perlu saya periksa.
-
-Ini menyentuh dua kolom MySQL dan satu nilai enum yang SUDAH ADA ISINYA, jadi rencananya wajib
-memuat langkah backup dan rollback tertulis meski hasil akhirnya hanya kosmetik. Rencananya juga
-wajib menyebut bagaimana perubahan ini diperagakan padahal basis data lokal kosong untuk kedua
-sentuhan itu — peragaan yang berhenti pada tabel kosong belum membuktikan apa pun.
-
-Hasilkan dua berkas:
-
-1. docs/superpowers/specs/2026-XX-XX-ganti-nama-pppspm-design.md
-   Masalah, yang sudah diputuskan pengguna, rancangan, yang sengaja tidak dikerjakan, risiko
-   residual. Ikuti bentuk docs/superpowers/specs/2026-09-09-individual-risk-assessment-design.md.
-
-2. docs/superpowers/plans/2026-XX-XX-ganti-nama-pppspm.md
-   Rencana bertugas dengan bagian "Status Pengerjaan" di atas, tabel berkas, lalu tiap tugas
-   berisi langkah bernomor dengan checkbox, potongan kode konkret, perintah verifikasi, dan
-   perintah commit. Satu tugas = satu commit yang berdiri sendiri beserta ujinya sendiri.
-   Ikuti bentuk docs/superpowers/plans/2026-09-09-individual-risk-assessment-j2-penilaian.md.
-
-Setelah kedua berkas jadi, perbarui Status Pengerjaan pada ROADMAP: ganti baris "Sesi rancangan"
-Paket K2 menjadi daftar tugas hasil rancanganmu, dan tambahkan rujukan ke berkas rencananya.
-
-JANGAN menulis kode aplikasi pada sesi ini. Commit dokumentasinya saja, lalu berhenti dan laporkan.
+Baca docs/superpowers/plans/2026-09-09-ganti-nama-dppspm.md dan spec yang dirujuknya. Kerjakan
+Tugas <N> saja, satu commit, beserta ujinya. Patuhi bagian "Global Constraints" pada rencana itu —
+terutama: tiga ejaan yang BENAR dan tidak boleh disentuh (PPSPM, PPPSPM, DPPSPM), dua kemunculan
+PPPSM yang tidak boleh diganti (kutipan templat BI dan riwayat migrasi), dan larangan menerapkan
+migrasi ke produksi.
 ```
 
 ### Paket K3 — Nota terhadap SE BI 18/41/DKSP

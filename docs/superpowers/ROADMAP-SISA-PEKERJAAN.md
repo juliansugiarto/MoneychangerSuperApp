@@ -187,8 +187,21 @@ MEDIUM 3 bulan, LOW 12 bulan**; tindak lanjut **worklist Controller yang hanya m
 - [x] Tugas 9 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi — **SELESAI 9 September 2026.**
       **Paket J selesai seluruhnya (J1 tujuh tugas, J2 sembilan tugas).**
 
-### Paket K2 — Ganti nama PPPSM menjadi PPPSPM
-- [ ] Sesi rancangan — tulis spec dan rencana bertugas *(perlu sesi rancangan)*
+### Paket K2 — Ganti nama PPPSM menjadi `DPPSPM`
+
+**Rencana rinci sudah ada:** `plans/2026-09-09-ganti-nama-dppspm.md` ·
+spec `specs/2026-09-09-ganti-nama-dppspm-design.md` (dirancang 9 September 2026).
+
+**Sasarannya berubah saat perancangan: `DPPSPM`, bukan `PPPSPM`** — templat BI sendiri memasangkan
+*"DTTOT dan DPPSPM"* (`shared/iraKpmrCatalogue.ts:183`), dan nilai saudaranya di kolom yang sama
+sudah `DTTOT`, sama-sama sebuah *Daftar*. Lihat spec bagian Masalah 2.
+
+- [ ] Tugas 1 — Peragaan dasar: isi kedua basis data lokal dan catat jumlah baris sebelum migrasi
+- [ ] Tugas 2 — Migrasi `0056` dan seluruh tipe enum, satu commit atomik
+- [ ] Tugas 3 — Sapuan prosa, pesan validasi, dan uji penjaga
+- [ ] Tugas 4 — Dokumentasi, rollback tertulis, dan antrean migrasi produksi
+
+Urutannya mengikat seluruhnya. **Tepat satu tugas migrasi: Tugas 2.**
 
 ### Paket K3 — Pembandingan nota terhadap SE BI 18/41/DKSP
 - [ ] **Menunggu pengguna:** naskah SE BI 18/41/DKSP belum ada di proyek
@@ -707,27 +720,45 @@ Template BI aslinya dibaca 9 September 2026 dan mengubah empat hal:
 
 ---
 
-# Paket K2 — Ganti nama PPPSM menjadi PPPSPM
+# Paket K2 — Ganti nama PPPSM menjadi `DPPSPM`
+
+**Rencana rinci sudah ada:** `plans/2026-09-09-ganti-nama-dppspm.md`
 
 ## Masalah
 
 Penamaannya salah **dan tidak konsisten dengan dirinya sendiri**: skema menulis `PPPSM`, sebagian
-teks UI dan pesan validasi menulis `PPSPM`. Yang benar merujuk Pendanaan Proliferasi Senjata
-Pemusnah Massal.
+teks UI dan pesan validasi menulis `PPSPM`.
+
+Yang benar adalah **`DPPSPM` — Daftar Pendanaan Proliferasi Senjata Pemusnah Massal**, bukan
+`PPPSPM` seperti tertulis pada dokumen ini sejak 4 September. Dua alasannya: templat BI sendiri
+memasangkannya dengan DTTOT (*"penanganan DTTOT dan DPPSPM"*, dikutip apa adanya pada
+`shared/iraKpmrCatalogue.ts:183`), dan nilai saudaranya di kolom yang sama sudah `DTTOT` — keduanya
+sebuah *Daftar*, bukan sebuah program. `PPPSPM` tidak salah sebagai akronim; ia menamai program
+pencegahannya, dan sudah dipakai dengan benar untuk itu di 25 tempat.
 
 ## Ukurannya
 
-Bukan sekadar ganti nama pengenal:
-- `customers.dttotPpsdmMatch` dan `customers.dttotPpsdmNotes` (`drizzle/schema.ts:128-129`) adalah
-  **kolom MySQL yang sudah termigrasi**.
-- `listType` pada tabel watchlist menyimpan **nilai enum** `"PPPSM"` — data yang sudah tersimpan,
-  jadi perlu redefinisi enum **dan** migrasi data.
-- ~10 berkas, ~50 titik panggil: `server/operations.ts`, `server/routers.ts`,
-  `server/sanctionsWatchlistImport.ts`, `shared/sanctionsNameMatch.ts`,
-  `client/src/pages/CustomerList.tsx`, `Customers.tsx`, `SanctionsWatchlist.tsx`, plus ujinya.
+**Angka di bawah menggantikan taksiran 4 September** (*"~10 berkas, ~50 titik panggil"*), yang sudah
+ketinggalan. Ditelusuri ulang 9 September 2026:
 
-Karena menyentuh kolom dan nilai enum yang sudah ada isinya, ini **perubahan berisiko** yang perlu
-rencana rollback tertulis meski hasil akhirnya hanya kosmetik.
+- `PPPSM` — **49 kemunculan pada 10 berkas.** Salah; sasaran paket ini.
+- `Ppsdm` (`dttotPpsdmMatch`/`Notes` dan pemanggilnya) — **74 pada 10 berkas.** Juga salah (PPSDM
+  adalah akronim kepegawaian), tetapi **sengaja dibiarkan** — keputusan pengguna, karena **nol**
+  baris memakainya di produksi maupun lokal.
+- `PPSPM` (±90), `PPPSPM` (25), dan `DPPSPM` (5) semuanya **benar** untuk hal yang mereka namai dan
+  **tidak boleh disentuh**. `PPSPM_1A`…`PPSPM_4A` adalah kunci basis data pada `ira_inherent_values`.
+- **15 kemunculan `"DTTOT/PPSPM"`** pada pesan validasi bertabrakan dengan `PPPSM` pada label UI —
+  ketidakkonsistenan yang terlihat pengguna, ikut ditutup Tugas 3.
+
+Sentuhan basis datanya satu, dan **bukan kosmetik**: produksi menyimpan **239 baris**
+`listType = 'PPPSM'` (`DPRK` 155, `IR` 84) di samping 531 baris `DTTOT`, diperiksa baca-saja
+9 September 2026. Redefinisi enum satu langkah hasil `drizzle-kit` menyunting ke-239 baris itu
+menjadi string kosong `''` tanpa melanggar batasan apa pun — karena itu migrasinya **ditulis tangan
+tiga pernyataan** dan rencana rollbacknya tertulis.
+
+**Temuan sampingan yang lebih besar dari paketnya:** jurnal migrasi produksi berisi **34 baris**
+(`0000`–`0033`) sementara `drizzle/` berisi 56 berkas. Yang tertunda bukan lima migrasi seperti
+tercatat di `PROMPT-SESI.md`, melainkan **dua puluh dua** (`0034`–`0055`).
 
 ---
 
