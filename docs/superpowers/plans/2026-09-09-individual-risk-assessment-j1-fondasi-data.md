@@ -27,7 +27,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 3 — Penulis klasifikasi risiko beserta gerbang peran dan auditnya
 - [x] Tugas 4 — Borang nasabah: jenis nasabah, bentuk badan hukum, kategori pekerjaan
 - [x] Tugas 5 — Jalur distribusi pada bon
-- [ ] Tugas 6 — Pembaca agregat Form C1
+- [x] Tugas 6 — Pembaca agregat Form C1
 - [ ] Tugas 7 — Halaman Klasifikasi Risiko dan Ambang
 
 Urutannya mengikat: **1 dan 2 sebelum segalanya**; 3 sebelum 7; 4 dan 5 sebelum 6.
@@ -357,7 +357,7 @@ Create `server/transactionChannel.test.ts`
   distribusi, komposisi kategori pekerjaan, komposisi bentuk badan hukum, jumlah PEP, nominal
   transaksi nasabah bernegara FATF/sanksi PBB, beserta **jumlah nasabah yang belum berkategori**.
 
-- [ ] **Step 1: Tulis uji yang gagal lebih dulu.** Lima di antaranya wajib:
+- [x] **Step 1: Tulis uji yang gagal lebih dulu.** Lima di antaranya wajib:
 
 ```ts
 describe("agregat Form C1", () => {
@@ -375,19 +375,19 @@ describe("agregat Form C1", () => {
       `exchange_transaction_lines.rupiahAmount`, sementara **jumlah bon** dari bonnya. Ini kekeliruan
       yang sama yang sudah pernah terjadi pada `foldMonthlyActivity` Paket H — lihat komentarnya.
 
-- [ ] **Step 2: Pisahkan lipatan murni dari querynya**, persis seperti Paket H memisahkan
+- [x] **Step 2: Pisahkan lipatan murni dari querynya**, persis seperti Paket H memisahkan
       `foldMonthlyActivity` dari `readMonthlyCustomerActivity`. Yang murni diuji tanpa basis data;
       yang menyentuh basis data diuji dengan palsu yang **menyaring `where` dan menerapkan
       `orderBy`**.
 
-- [ ] **Step 3: Jangan menulis pembaca bulanan kedua.** Bila tugas ini mulai menghitung aktivitas
+- [x] **Step 3: Jangan menulis pembaca bulanan kedua.** Bila tugas ini mulai menghitung aktivitas
       **per nasabah per bulan**, itu pertanyaan Paket H dan jawabannya sudah ada di
       `server/customerProfileMonitoring.ts` — pakai yang itu. Yang dibangun di sini adalah komposisi
       **seluruh lembaga selama satu periode**, pertanyaan yang berbeda.
 
-- [ ] **Step 4:** Prosedur tRPC `ira.dataForm` dengan gerbang CONTROLLER.
+- [x] **Step 4:** Prosedur tRPC `ira.dataForm` dengan gerbang CONTROLLER.
 
-- [ ] **Step 5:** Perintah mutu, lalu commit `"Pembaca agregat Form C1"`.
+- [x] **Step 5:** Perintah mutu, lalu commit `"Pembaca agregat Form C1"`.
 
 ---
 

@@ -138,6 +138,8 @@ import { OPERATIONAL_TIMEZONE_VALUES } from "../shared/regulatoryActionQueue";
 import { simulateArchiveReadiness, simulateClosing, simulateExchange, simulateRateShock } from "./simulation";
 import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedure, router, staffProcedure } from "./_core/trpc";
 import { classifyRisk, iraClassificationDenial, listClassifications } from "./iraRiskClassification";
+import { readIraDataForm } from "./iraDataForm";
+import { operationalMonthWindow } from "./customerProfileMonitoring";
 import { IRA_CUSTOMER_TYPE_VALUES, IRA_DISTRIBUTION_CHANNEL_VALUES, IRA_LEGAL_FORM_VALUES, IRA_OCCUPATION_CATEGORY_VALUES } from "../shared/iraVocabulary";
 import { iraRiskDimensions, iraRiskLevels, iraRiskTypes } from "../drizzle/schema";
 import { createInternalSession, hashPassword, internalSessionMaxAge, validateUsername, verifyInternalCredentials, verifyPassword } from "./internalAuth";
@@ -512,6 +514,35 @@ export const appRouter = router({
    * Hanya mencatat: prosedurnya membaca, dan tidak ada satu pun di sini yang mengubah data nasabah,
    * status transaksi, maupun mengirim laporan ke regulator.
    */
+  /**
+   * Agregat Form C1. Controller ke atas, gerbangnya sama dengan klasifikasi risiko: keduanya
+   * bagian dari penilaian risiko yang sama, dan dua gerbang berbeda untuk satu layar hanya akan
+   * membuat setengahnya kosong tanpa penjelasan.
+   */
+  ira: router({
+    dataForm: controllerProcedure
+      .input(z.object({
+        /** Batas periode penilaian. Bila kosong, dipakai bulan operasional yang memuat `asOf`. */
+        periodStart: z.coerce.date().optional(),
+        periodEnd: z.coerce.date().optional(),
+        asOf: z.coerce.date().optional(),
+      }).default({}).superRefine((value, ctx) => {
+        if (Boolean(value.periodStart) !== Boolean(value.periodEnd)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Isi kedua batas periode, atau kosongkan keduanya." });
+        }
+        if (value.periodStart && value.periodEnd && value.periodStart >= value.periodEnd) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Awal periode harus mendahului akhir periode.", path: ["periodEnd"] });
+        }
+      }))
+      .query(({ input, ctx }) => {
+        const denial = iraClassificationDenial(ctx.user);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        // Jendela bawaannya memakai helper Paket H, bukan helper keempat yang ditulis ulang di sini.
+        const { start, end } = operationalMonthWindow(input.asOf ?? new Date());
+        return readIraDataForm(input.periodStart ?? start, input.periodEnd ?? end);
+      }),
+  }),
+
   /**
    * Klasifikasi risiko inheren IRA. Controller ke atas, ditegakkan dua kali dengan sengaja:
    * `controllerProcedure` sebagai gerbang jalur, dan `iraClassificationDenial` sebagai gerbang yang
