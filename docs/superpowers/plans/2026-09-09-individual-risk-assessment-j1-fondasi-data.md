@@ -28,7 +28,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 4 — Borang nasabah: jenis nasabah, bentuk badan hukum, kategori pekerjaan
 - [x] Tugas 5 — Jalur distribusi pada bon
 - [x] Tugas 6 — Pembaca agregat Form C1
-- [ ] Tugas 7 — Halaman Klasifikasi Risiko dan Ambang
+- [x] Tugas 7 — Halaman Klasifikasi Risiko dan Ambang
 
 Urutannya mengikat: **1 dan 2 sebelum segalanya**; 3 sebelum 7; 4 dan 5 sebelum 6.
 
@@ -396,30 +396,30 @@ describe("agregat Form C1", () => {
 **Files:** Create `client/src/pages/KlasifikasiRisiko.tsx`; Modify `client/src/App.tsx`,
 `shared/backOfficeNavigation.ts`, `server/backOfficeNavigation.test.ts`
 
-- [ ] **Step 1:** Daftarkan rute `/kepatuhan/klasifikasi-risiko` (`minimumRole: "CONTROLLER"`) pada
+- [x] **Step 1:** Daftarkan rute `/kepatuhan/klasifikasi-risiko` (`minimumRole: "CONTROLLER"`) pada
       `shared/backOfficeNavigation.ts` **dan** pada `server/backOfficeNavigation.test.ts`. Ujinya
       gagal sampai keduanya ada.
 
-- [ ] **Step 2:** Halamannya: satu tab per dimensi, tiap baris memuat kode, label, dan tiga pilihan
+- [x] **Step 2:** Halamannya: satu tab per dimensi, tiap baris memuat kode, label, dan tiga pilihan
       tingkat (TPPU/TPPT/PPSPM), plus `sourceNote` wajib. Kode yang belum diklasifikasikan
       **ditampilkan lebih dulu** beserta hitungannya — itu pekerjaan yang menunggu, bukan
       keadaan sah.
 
-- [ ] **Step 3:** Bagian ambang pita: 33 parameter, tiap parameter lima pita, dengan tombol
+- [x] **Step 3:** Bagian ambang pita: 33 parameter, tiap parameter lima pita, dengan tombol
       "kembalikan ke nilai template". Menampilkan kapan terakhir disunting dan oleh siapa.
 
-- [ ] **Step 4:** Keadaan loading, kosong, dan **error** ketiganya dilihat di layar. Keadaan error
+- [x] **Step 4:** Keadaan loading, kosong, dan **error** ketiganya dilihat di layar. Keadaan error
       halaman Pemantauan Profil Paket H belum pernah dilihat sungguhan dan itu tercatat sebagai
       risiko residual — jangan mengulanginya di sini.
 
-- [ ] **Step 5: Peragakan di basis data lokal:** klasifikasikan USD (TPPU TINGGI, TPPT TINGGI,
+- [x] **Step 5: Peragakan di basis data lokal:** klasifikasikan USD (TPPU TINGGI, TPPT TINGGI,
       PPSPM TINGGI) dan SGD (TPPU TINGGI, TPPT MENENGAH, PPSPM TINGGI), lalu tunjukkan hasilnya di
       layar. Verifikasi visual yang berhenti pada halaman kosong belum membuktikan apa pun.
 
-- [ ] **Step 6:** Perbarui `docs/SKEMA-DATABASE-PROJECT.md` (lima kolom dan dua tabel baru) dan
+- [x] **Step 6:** Perbarui `docs/SKEMA-DATABASE-PROJECT.md` (lima kolom dan dua tabel baru) dan
       `docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md` (ruas borang nasabah dan bon yang berubah).
 
-- [ ] **Step 7:** Perintah mutu, lalu commit `"Halaman klasifikasi risiko dan ambang IRA"`.
+- [x] **Step 7:** Perintah mutu, lalu commit `"Halaman klasifikasi risiko dan ambang IRA"`.
 
 ## Penutup J1
 

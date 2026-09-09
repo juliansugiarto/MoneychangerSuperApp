@@ -137,11 +137,12 @@ import {
 import { OPERATIONAL_TIMEZONE_VALUES } from "../shared/regulatoryActionQueue";
 import { simulateArchiveReadiness, simulateClosing, simulateExchange, simulateRateShock } from "./simulation";
 import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedure, router, staffProcedure } from "./_core/trpc";
-import { classifyRisk, iraClassificationDenial, listClassifications } from "./iraRiskClassification";
+import { classifyRisk, iraClassificationDenial, listClassifications, listParameterThresholds, resetParameterThresholds, setParameterThresholds } from "./iraRiskClassification";
 import { readIraDataForm } from "./iraDataForm";
 import { operationalMonthWindow } from "./customerProfileMonitoring";
 import { IRA_CUSTOMER_TYPE_VALUES, IRA_DISTRIBUTION_CHANNEL_VALUES, IRA_LEGAL_FORM_VALUES, IRA_OCCUPATION_CATEGORY_VALUES } from "../shared/iraVocabulary";
 import { iraRiskDimensions, iraRiskLevels, iraRiskTypes } from "../drizzle/schema";
+import { IRA_PARAMETER_CODES } from "../shared/iraParameters";
 import { createInternalSession, hashPassword, internalSessionMaxAge, validateUsername, verifyInternalCredentials, verifyPassword } from "./internalAuth";
 import { createInternalUser, getInternalUserById, listInternalUsers, updateInternalUserPassword, updateInternalUserRole, updateInternalUserStatus } from "./db";
 import type { TrpcContext } from "./_core/context";
@@ -568,6 +569,29 @@ export const appRouter = router({
         const denial = iraClassificationDenial(ctx.user);
         if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
         return classifyRisk(input, ctx.user);
+      }),
+    thresholds: controllerProcedure.query(({ ctx }) => {
+      const denial = iraClassificationDenial(ctx.user);
+      if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+      return listParameterThresholds();
+    }),
+    setThresholds: controllerProcedure
+      .input(z.object({
+        parameterCode: z.enum(IRA_PARAMETER_CODES as [string, ...string[]]),
+        /** Lima batas atas urut pita 1..5; yang terakhir wajib null (tak berbatas atas). */
+        upperBoundPercent: z.array(z.string().trim().min(1).nullable()).length(5),
+      }))
+      .mutation(({ input, ctx }) => {
+        const denial = iraClassificationDenial(ctx.user);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        return setParameterThresholds(input, ctx.user);
+      }),
+    resetThresholds: controllerProcedure
+      .input(z.object({ parameterCode: z.enum(IRA_PARAMETER_CODES as [string, ...string[]]) }))
+      .mutation(({ input, ctx }) => {
+        const denial = iraClassificationDenial(ctx.user);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        return resetParameterThresholds(input.parameterCode, ctx.user);
       }),
   }),
 

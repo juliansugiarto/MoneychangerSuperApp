@@ -102,6 +102,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 
 1. Cari nasabah di menu **Daftar Nasabah** (ketik nama atau NIK/nomor identitas, hasil langsung tersaring) sebelum membuat data baru untuk menghindari duplikasi.
 2. Bila belum ada, tambahkan melalui **Nasabah Baru**. Nomor CIF terisi otomatis mengikuti nomor terakhir (boleh diganti manual). Tandai "Berlaku seumur hidup" untuk identitas eKTP. Dokumen KTP dapat diunggah dalam bentuk JPG/PNG/WEBP/PDF. Gunakan kolom yang tersedia, bukan catatan bebas, untuk informasi identitas. Sejak persiapan pelaporan goAML, kolom **jenis kelamin**, **kewarganegaraan** (kode negara 2 huruf, mis. `ID`), serta **alamat terstruktur** (jenis alamat, negara, kota — provinsi/kecamatan/kode pos opsional) menjadi **wajib** untuk nasabah baru; **NPWP** opsional (isi bila nasabah memilikinya). Profil nasabah lama yang belum memiliki data ini tetap bisa dipakai, tapi sebaiknya dilengkapi lewat **Edit** sebelum dipakai untuk pelaporan.
+2a. Isi bagian **Kategori menurut Bank Indonesia**. Pilih **jenis nasabah** lebih dulu: untuk **Perorangan** muncul **kategori pekerjaan** (23 kategori tertutup Form C1), untuk **Badan usaha** muncul **bentuk badan hukum** (11 bentuk). Kategori ini **berdampingan** dengan kolom **Pekerjaan** di atasnya, tidak menggantikannya — kwitansi dan pelaporan goAML tetap mencetak kata-kata sebagaimana tertulis pada identitas. Kategori pekerjaan **boleh dikosongkan** bila belum jelas; nasabah yang belum berkategori muncul dengan penanda **"Kategori BI belum diisi"** di Daftar Nasabah dan ikut dilaporkan sebagai jumlah nasabah belum berkategori pada agregat Form C1. Jangan menebak kategori dari tulisan bebas di kolom Pekerjaan — kategori yang dikarang membuat komposisi profesi yang dilaporkan ke BI menjadi salah. Berbeda dari deklarasi aktivitas (§6.3), kategori yang **tidak diubah tidak akan terhapus** saat profil disunting untuk alasan lain.
 3. Isi kolom **Beneficial Owner** bila nasabah bertindak atas nama pihak lain (mis. supir yang disuruh atasannya bertransaksi) — sistem akan membuat atau menautkan profil terpisah untuk pemilik manfaat sebenarnya.
 4. Isi kolom **status PEP** (bukan PEP / nasabah adalah PEP / nasabah berhubungan dengan PEP) beserta keterangannya bila relevan.
 5. Bila nama nasabah cocok dengan **Daftar DTTOT/PPSPM**, centang kolom tersebut dan isi catatan pencocokan. Profil otomatis berstatus RESTRICTED dan risiko TINGGI, dan wajib dilaporkan sebagai LTKM ke PPATK **secara manual** sesuai prosedur resmi — aplikasi ini tidak mengirim laporan otomatis ke regulator mana pun. Gunakan tombol **"Cek sekarang di DTTOT/PPPSM"** di bawah kolom ini (atau halaman **Cek Watchlist DTTOT/PPPSM**, §5.10) untuk membantu pencarian nama secara otomatis sebelum mencentang — ini murni **alat bantu penyaringan**; keputusan mencentang dan mengisi catatan tetap manual oleh petugas.
@@ -120,6 +121,7 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 6. Tambah baris mata uang lagi bila nasabah menukar lebih dari satu mata uang sekaligus.
 6a. Bila cara bayar **Tunai**, isi juga **rincian pecahan Rupiah** yang diterima/dibayarkan (wajib, total harus sama dengan nilai Rupiah transaksi) — ini sisi Rupiah dari bon, terpisah dari rincian pecahan valuta asing di langkah 5. Transfer bank/lainnya tidak memerlukan ini karena tidak ada uang fisik yang berpindah. Untuk transaksi **BELI**, tombol **Auto-isi dari stok** mengisi rincian ini otomatis dari pecahan Rupiah yang benar-benar tersedia di kas; bila komposisi belum pas (mis. kas hanya berisi pecahan besar), sistem menawarkan **Tukar Pecahan** senilai sama persis (mis. 1×100.000 → 1×50.000+2×20.000+2×5.000, tidak ada nilai yang hilang) — konfirmasi untuk mencatatnya, lalu rincian terisi otomatis.
 6b. Bila cara bayar **Transfer bank**, pilih **rekening perusahaan** yang menerima/mengirim transfer tsb (wajib) — daftar rekening dikelola Controller ke atas di tab Kas Awal. Saldo rekening bergerak otomatis saat bon diselesaikan, arah sama seperti kas (BELI: uang keluar dari rekening; JUAL: uang masuk ke rekening). Isi juga **rekening lawan transaksi** (nama bank, nomor rekening, atas nama) — untuk BELI ini rekening tujuan (milik nasabah), untuk JUAL ini rekening pengirim; **bukan** dipilih dari daftar rekening kita sendiri. Atas nama rekening ini seharusnya sama dengan nama nasabah; bila berbeda, sistem mewajibkan keterangan alasan yang otomatis tercetak di kwitansi.
+6c. Pilih **jalur distribusi** — bagaimana bon ini dilayani: **Kantor/gerai** (bawaan, terpilih lebih dulu), **Layanan delivery**, atau **Online/merchant**. Biarkan apa adanya bila nasabah datang ke gerai. Kolom ini menjadi sumber parameter jalur distribusi pada penilaian risiko (§6.4); ia **tidak** memengaruhi kas, stok, maupun rincian pecahan.
 7. Bila transaksi dilakukan oleh **pihak kuasa/wakil** (termasuk pemilik manfaat/BO), pilih nasabah tersebut dari pencarian nasabah terdaftar — bukan mengetik nama/identitas bebas. Bila BO nasabah utama sudah terdaftar sebagai nasabah, sistem otomatis menyarankan nasabah tersebut untuk dikonfirmasi. Bila pihak kuasa/wakil belum terdaftar, daftarkan dulu sebagai nasabah (data KYC lengkap) sebelum melanjutkan bon.
 8. **Transaksi Mencurigakan (TKM)**: centang bila operator menilai transaksi/nasabah mencurigakan — daftar indikator (perilaku nasabah, profil transaksi, indikator khusus KUPVA BB) akan muncul untuk dipilih; minimal satu indikator wajib dicentang. Data ini **internal saja** — tidak pernah tercetak di kwitansi maupun ikut ekspor CSV (larangan *tipping-off*), hanya tampil sebagai lencana **TKM** di Daftar Transaksi untuk staf/supervisor. Menandai TKM otomatis memaksa transaksi masuk alur review Supervisor.
 9. **Dokumen underlying**: wajib begitu transaksi mencapai/melebihi setara USD 10.000 (dihitung sistem dari kurs referensi BI, bukan pilihan staf) — sistem otomatis mewajibkannya walau kotak centang tidak dicentang manual. Wajib diisi **alasan** transaksi memerlukan underlying, dan diunggah **ketiga dokumen**: Formulir Underlying, Surat Pernyataan, dan Invoice — bon tidak bisa dikirim sebelum ketiganya tersimpan.
@@ -427,6 +429,36 @@ Selama ini angka laporan keuangan **diketik ulang** ke berkas Excel BI. Pengetik
 **Setiap ekspor menuliskan snapshot** bersumber **"Buku besar"** untuk tahun itu, sehingga paket regulator (§7) dapat dibuat tanpa mengimpor kembali berkas yang baru saja dihasilkan sendiri. Mengekspor dua kali dengan angka yang sama **tidak** menambah snapshot kedua; kalau angkanya berubah, snapshot barunya tersimpan sehingga riwayatnya utuh.
 
 **Berkasnya dapat diimpor kembali.** Impor snapshot (§7) sekarang mengenali dua tata letak: form resmi seperti ini, dan berkas ber-kolom *Record No* yang selama ini dipakai. Pos dikenali lewat **judul kelompok dan label**-nya. Kalau seseorang mengubah label sebuah pos, pos itu dilaporkan sebagai **tidak dikenal beserta labelnya** — bukan diabaikan diam-diam.
+
+
+### 6.4 Klasifikasi Risiko dan Ambang Pita — Controller
+
+Buka **Pengawasan › Klasifikasi Risiko**. Halaman ini **tidak menilai apa pun** — ia menyimpan
+keputusan manusia beserta rujukannya, yang kemudian dipakai penilaian risiko individual (IRA).
+
+**Klasifikasi risiko inheren.** Lima dimensi dalam bentuk tab: mata uang, kategori pekerjaan,
+bentuk badan hukum, negara, dan provinsi. Klik satu baris untuk menetapkan tingkatnya pada
+**TPPU**, **TPPT**, dan **PPSPM** sekaligus. Ketiganya boleh berbeda — USD dapat berisiko Tinggi
+untuk TPPU dan Menengah untuk TPPT, dan itu memang yang dinilai SRA. **Alasan atau rujukan SRA
+wajib diisi**; klasifikasi tanpa rujukan adalah angka tanpa asal, dan pemeriksa menanyakan
+dasarnya. Nilai lama dan nilai baru tercatat pada jejak audit.
+
+Dimensi **Negara** tidak punya daftar tertutup: ketikkan kode ISO dua huruf (mis. `IR`) pada kotak
+di atas tabel lalu tekan **Klasifikasikan**. Negara ditambahkan mengikuti daftar FATF dan sanksi
+PBB yang berlaku, bukan didaftarkan seluruhnya di muka.
+
+**Kode yang belum diklasifikasikan ditampilkan lebih dulu** beserta hitungannya. Perhatikan
+hitungan itu: kode tanpa klasifikasi **dibaca penilaian sebagai Rendah**, dan bacaan itu hanya sah
+bila seseorang benar-benar memutuskannya — bukan karena barisnya belum sempat diisi.
+
+**Ambang pita parameter.** 33 parameter Form A1, masing-masing lima pita. **Skalanya terbalik**:
+pita terendah (0–20%) bernilai **5 = Rendah**, pita teratas (81–100%) bernilai **1 = Tinggi**. Pita
+teratas selalu tanpa batas atas. Ubah angkanya lalu klik di luar kotak untuk menyimpan; tombol
+**Template** mengembalikan satu parameter ke nilai bawaan template BI. Kolom *Terakhir* menunjukkan
+"bawaan template" bila parameter itu belum pernah disunting, atau waktu penyuntingan terakhir bila
+sudah. Ambang boleh disunting karena BI mengubah pitanya tanpa memberi tahu siapa pun; setiap
+perubahan tercatat pada jejak audit, sebab ambang yang bergeser mengubah nilai setiap parameter
+sesudahnya.
 
 
 ## 7. Pelaporan Regulator Internal

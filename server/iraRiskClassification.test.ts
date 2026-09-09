@@ -1,12 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import * as db from "./db";
 import * as operations from "./operations";
+import { IRA_DEFAULT_BAND_UPPER_BOUNDS } from "../shared/iraParameters";
 import {
+  bandValidationError,
   classificationKey,
   classificationLevel,
   classifyRisk,
   iraClassificationDenial,
+  listParameterThresholds,
   readClassifications,
+  setParameterThresholds,
 } from "./iraRiskClassification";
 
 /**
@@ -193,5 +197,62 @@ describe("klasifikasi risiko — pembaca", () => {
     expect(classificationLevel(peta, "CURRENCY", "USD", "TPPT")).toBe("MENENGAH");
     // Mata uang yang sama, jenis risiko ketiga yang belum diklasifikasikan: RENDAH, bukan TINGGI.
     expect(classificationLevel(peta, "CURRENCY", "USD", "PPSPM")).toBe("RENDAH");
+  });
+});
+
+describe("ambang pita parameter", () => {
+  it("menerima susunan template", () => {
+    expect(bandValidationError([...IRA_DEFAULT_BAND_UPPER_BOUNDS])).toBeNull();
+  });
+
+  it("menolak pita yang tidak menaik", () => {
+    // Persentase 35 akan jatuh ke dua pita sekaligus, dan penilaian yang menemukan dua pita akan
+    // memakai yang pertama tanpa ada yang menyadarinya.
+    expect(bandValidationError(["40.00", "30.00", "60.00", "80.00", null])).toMatch(/lebih besar/i);
+  });
+
+  it("menuntut pita teratas tanpa batas atas", () => {
+    expect(bandValidationError(["20.00", "40.00", "60.00", "80.00", "100.00"])).toMatch(/tanpa batas atas/i);
+  });
+
+  it("menolak batas di luar 0..100 persen", () => {
+    expect(bandValidationError(["20.00", "40.00", "60.00", "180.00", null])).toMatch(/0 dan 100/i);
+  });
+
+  it("menolak jumlah pita yang bukan lima", () => {
+    expect(bandValidationError(["20.00", null])).toMatch(/tepat 5 pita/i);
+  });
+
+  it("parameter yang belum pernah disunting terbaca sebagai bawaan template, bukan kosong", async () => {
+    mockDb({ ira_parameter_thresholds: [] });
+    const semua = await listParameterThresholds();
+
+    expect(semua).toHaveLength(33);
+    expect(semua[0].isTemplateDefault).toBe(true);
+    expect(semua[0].upperBoundPercent).toEqual(IRA_DEFAULT_BAND_UPPER_BOUNDS);
+    // Ambang yang hilang di layar terbaca sebagai pekerjaan yang belum selesai; ambang bawaan
+    // terbaca sebagai keadaan sah. Keduanya harus dapat dibedakan.
+    expect(semua[0].updatedByUserId).toBeNull();
+  });
+
+  it("menyimpan lima baris pita dan mencatat nilai lamanya", async () => {
+    const { inserted, audit } = mockDb({ ira_parameter_thresholds: [] });
+    await setParameterThresholds({ parameterCode: "TPPU_1A", upperBoundPercent: ["10.00", "25.00", "50.00", "75.00", null] }, actor);
+
+    expect(inserted).toHaveLength(5);
+    expect(inserted.map((row) => row.values.bandIndex)).toEqual([1, 2, 3, 4, 5]);
+    expect(inserted[4].values.upperBoundPercent).toBeNull();
+    expect(inserted[0].upsert?.upperBoundPercent).toBe("10.00");
+
+    const entry = audit.mock.calls[0][0];
+    expect(entry.entityType).toBe("ira_parameter_threshold");
+    expect(entry.entityId).toBe("TPPU_1A");
+    expect(entry.beforeState).toMatchObject({ isTemplateDefault: true });
+  });
+
+  it("menolak parameter yang tidak ada pada lembar A1", async () => {
+    mockDb({ ira_parameter_thresholds: [] });
+    await expect(setParameterThresholds({ parameterCode: "TPPU_9Z", upperBoundPercent: [...IRA_DEFAULT_BAND_UPPER_BOUNDS] }, actor))
+      .rejects.toThrow(/tidak dikenal/i);
   });
 });
