@@ -25,7 +25,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 8 — Daftar catatan CALK dan panduannya di `shared/financialNotes.ts`
 - [x] Tugas 9 — Catatan bangkitan dari buku besar
 - [x] Tugas 10 — Penyimpanan teks naratif dan prosedurnya
-- [ ] Tugas 11 — Halaman Laporan Keuangan dan navigasinya
+- [x] Tugas 11 — Halaman Laporan Keuangan dan navigasinya
 - [x] Tugas 12 — Skenario menyeluruh, peragaan end-to-end, dan dokumentasi
 
 **Tugas 1 dan 2 digabung menjadi satu commit** (7 September 2026). Menambah nilai enum pada

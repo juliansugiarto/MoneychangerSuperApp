@@ -23,7 +23,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 - [x] Tugas 1 — Peragaan dasar: isi kedua basis data lokal dan catat jumlah baris sebelum migrasi — **SELESAI 9 September 2026**
 - [x] Tugas 2 — Migrasi `0056` dan seluruh tipe enum, satu commit atomik — **SELESAI 9 September 2026**
 - [x] Tugas 3 — Sapuan prosa, pesan validasi, dan uji penjaga — **SELESAI 9 September 2026**
-- [ ] Tugas 4 — Dokumentasi, rollback tertulis, dan catatan antrean migrasi produksi
+- [x] Tugas 4 — Dokumentasi, rollback tertulis, dan catatan antrean migrasi produksi — **SELESAI 9 September 2026**
 
 Urutannya **mengikat seluruhnya**: 1 sebelum 2 (tanpa data, migrasinya tidak membuktikan apa pun),
 2 sebelum 3 (penjaganya akan gagal selama nilai enumnya belum berganti), 4 terakhir.
