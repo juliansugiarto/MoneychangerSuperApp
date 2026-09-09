@@ -7,7 +7,8 @@ import {
   type IraRiskType,
 } from "../drizzle/schema";
 import { isRoleAllowed, type BackOfficeRole } from "../shared/backOfficeNavigation";
-import { IRA_BAND_INDEXES, IRA_DEFAULT_BAND_UPPER_BOUNDS, IRA_PARAMETERS, IRA_PARAMETER_CODES } from "../shared/iraParameters";
+import { bandDefinition, catalogueEntry, type IraBandType } from "../shared/iraParameterCatalogue";
+import { IRA_BAND_INDEXES, IRA_PARAMETERS, IRA_PARAMETER_CODES } from "../shared/iraParameters";
 import { databaseOrThrow, writeAudit } from "./operations";
 
 /**
@@ -161,13 +162,36 @@ export function classificationLevel(
 
 export type ParameterBands = {
   parameterCode: string;
-  /** Lima batas atas dalam persen, urut pita 1..5; yang terakhir `null` (tak berbatas atas). */
-  upperBoundPercent: (string | null)[];
+  /** Jenis pita parameternya; menentukan bawaan templatnya dan apakah pitanya berupa persen sama sekali. */
+  bandType: IraBandType;
+  /** Label kelima pita persis template, mis. `0-20%` atau `Tidak ada`. */
+  bandLabels: readonly string[];
+  /**
+   * Lima batas atas dalam persen, urut pita 1..5; yang terakhir `null` (tak berbatas atas).
+   *
+   * **`null` seluruhnya bila parameternya tidak berpita persentase** — kehadiran, tingkat risiko,
+   * dan gradasi kepemilikan dijawab dengan pilihan, dan menyodorkan lima kotak persen untuknya
+   * hanya mengundang angka yang tidak dipakai siapa pun.
+   */
+  upperBoundPercent: (string | null)[] | null;
   updatedByUserId: number | null;
   updatedAt: Date | null;
   /** Belum pernah disunting — nilainya masih bawaan template, bukan tersimpan di basis data. */
   isTemplateDefault: boolean;
 };
+
+/**
+ * Bawaan template satu parameter, **menurut jenis pitanya**.
+ *
+ * Sampai 9 September 2026 seluruh 33 parameter memakai satu bawaan yang sama (`20/40/60/80`),
+ * padahal templatnya memakai tiga bentuk persentase yang berbeda. Akibatnya halaman Ambang
+ * menampilkan angka yang bukan angka yang dipakai menghitung — persis jenis kekeliruan yang tetap
+ * rapi di layar dan tetap salah. Bawaannya sekarang datang dari katalog, satu tempat.
+ */
+export function defaultBandBounds(parameterCode: string): (string | null)[] | null {
+  const bounds = bandDefinition(catalogueEntry(parameterCode).bandType).defaultUpperBounds;
+  return bounds ? [...bounds] : null;
+}
 
 /**
  * Memeriksa satu susunan pita. Murni, sehingga aturannya punya uji tanpa basis data.
@@ -179,12 +203,15 @@ export type ParameterBands = {
 export function bandValidationError(bounds: (string | null)[]): string | null {
   if (bounds.length !== IRA_BAND_INDEXES.length) return `Wajib tepat ${IRA_BAND_INDEXES.length} pita.`;
   if (bounds.at(-1) !== null) return "Pita teratas wajib tanpa batas atas (kosong).";
-  let previous = 0;
+  let previous: number | null = null;
   for (const bound of bounds.slice(0, -1)) {
     if (bound === null) return "Hanya pita teratas yang boleh tanpa batas atas.";
     const value = Number(bound);
-    if (!Number.isFinite(value) || value <= 0 || value > 100) return "Batas atas pita harus antara 0 dan 100 persen.";
-    if (value <= previous) return "Batas atas tiap pita harus lebih besar daripada pita sebelumnya.";
+    // Nol **sah** sebagai batas pita pertama: pita sempit templatnya berbunyi "Tidak ada" lalu
+    // ">0-1%", sehingga batas 0 adalah cara menuliskan "tepat nol". Sampai 9 September 2026 nol
+    // ditolak di sini, dan itulah yang memaksa seluruh parameter memakai pita lebar.
+    if (!Number.isFinite(value) || value < 0 || value > 100) return "Batas atas pita harus antara 0 dan 100 persen.";
+    if (previous !== null && value <= previous) return "Batas atas tiap pita harus lebih besar daripada pita sebelumnya.";
     previous = value;
   }
   return null;
@@ -211,16 +238,28 @@ export async function listParameterThresholds(): Promise<ParameterBands[]> {
   }
 
   return IRA_PARAMETERS.map((parameter) => {
+    const entry = catalogueEntry(parameter.code);
+    const labels = bandDefinition(entry.bandType).bandLabels;
     const bucket = stored.get(parameter.code);
     if (!bucket || bucket.length !== IRA_BAND_INDEXES.length) {
       // Belum disunting: bawaan template, dan itu dinyatakan lewat `isTemplateDefault` alih-alih
       // dikirim sebagai baris kosong yang di layar tampak seperti ambang yang hilang.
-      return { parameterCode: parameter.code, upperBoundPercent: [...IRA_DEFAULT_BAND_UPPER_BOUNDS], updatedByUserId: null, updatedAt: null, isTemplateDefault: true };
+      return {
+        parameterCode: parameter.code,
+        bandType: entry.bandType,
+        bandLabels: labels,
+        upperBoundPercent: defaultBandBounds(parameter.code),
+        updatedByUserId: null,
+        updatedAt: null,
+        isTemplateDefault: true,
+      };
     }
     const sorted = [...bucket].sort((left, right) => left.bandIndex - right.bandIndex);
     const latest = sorted.reduce((newest, row) => (row.updatedAt > newest.updatedAt ? row : newest), sorted[0]);
     return {
       parameterCode: parameter.code,
+      bandType: entry.bandType,
+      bandLabels: labels,
       upperBoundPercent: sorted.map((row) => row.upperBoundPercent),
       updatedByUserId: latest.updatedByUserId,
       updatedAt: latest.updatedAt,
@@ -241,6 +280,11 @@ export async function setParameterThresholds(
   actor: ClassificationActor,
 ) {
   if (!IRA_PARAMETER_CODES.includes(input.parameterCode)) throw new Error(`Parameter tidak dikenal: ${input.parameterCode}`);
+  // Parameter berpilihan tidak punya ambang persen sama sekali; menyimpan lima angka untuknya
+  // berarti menyimpan angka yang tidak pernah dibaca penghitung mana pun.
+  if (!defaultBandBounds(input.parameterCode)) {
+    throw new Error(`Parameter ${input.parameterCode} dijawab dengan pilihan, bukan persentase, sehingga tidak berambang.`);
+  }
   const invalid = bandValidationError(input.upperBoundPercent);
   if (invalid) throw new Error(invalid);
 
@@ -266,5 +310,7 @@ export async function setParameterThresholds(
 
 /** Mengembalikan satu parameter ke pita template, tercatat seperti penyuntingan biasa. */
 export async function resetParameterThresholds(parameterCode: string, actor: ClassificationActor) {
-  await setParameterThresholds({ parameterCode, upperBoundPercent: [...IRA_DEFAULT_BAND_UPPER_BOUNDS] }, actor);
+  const bounds = defaultBandBounds(parameterCode);
+  if (!bounds) throw new Error(`Parameter ${parameterCode} dijawab dengan pilihan, bukan persentase, sehingga tidak berambang.`);
+  await setParameterThresholds({ parameterCode, upperBoundPercent: bounds }, actor);
 }

@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { IRA_DEFAULT_BAND_UPPER_BOUNDS, IRA_PARAMETERS } from "@shared/iraParameters";
+import { IRA_PARAMETERS } from "@shared/iraParameters";
 import {
+  IRA_DISTRIBUTION_CHANNEL_LABELS,
   IRA_LEGAL_FORM_LABELS,
   IRA_OCCUPATION_CATEGORY_LABELS,
   IRA_PROVINCE_LABELS,
@@ -33,6 +34,7 @@ const DIMENSIONS = [
   { key: "LEGAL_FORM", label: "Bentuk badan hukum", hint: "Kosakata tertutup Form C1." },
   { key: "COUNTRY", label: "Negara", hint: "Kode ISO dua huruf; ditambahkan mengikuti daftar FATF dan sanksi PBB." },
   { key: "PROVINCE", label: "Provinsi", hint: "34 provinsi sebagaimana tertulis pada template." },
+  { key: "DISTRIBUTION_CHANNEL", label: "Jalur distribusi", hint: "Tingkat risiko tiap jalur menurut SRA; empat parameter Jalur Distribusi memakainya." },
 ] as const;
 
 type Dimension = (typeof DIMENSIONS)[number]["key"];
@@ -52,6 +54,16 @@ const formatDateTime = (value: string | Date | null | undefined) =>
   value ? new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value)) : "—";
 
 type ClassificationRow = { dimension: string; code: string; riskType: string; level: string; sourceNote: string; updatedAt: string | Date };
+
+type ThresholdRow = {
+  parameterCode: string;
+  bandType: string;
+  bandLabels: readonly string[];
+  /** `null` bila parameternya dijawab dengan pilihan, bukan persentase. */
+  upperBoundPercent: (string | null)[] | null;
+  updatedAt: string | Date | null;
+  isTemplateDefault: boolean;
+};
 
 export default function KlasifikasiRisiko() {
   const utils = trpc.useUtils();
@@ -87,6 +99,7 @@ export default function KlasifikasiRisiko() {
     if (key === "OCCUPATION") return Object.entries(IRA_OCCUPATION_CATEGORY_LABELS).map(([code, label]) => ({ code, label }));
     if (key === "LEGAL_FORM") return Object.entries(IRA_LEGAL_FORM_LABELS).map(([code, label]) => ({ code, label }));
     if (key === "PROVINCE") return Object.entries(IRA_PROVINCE_LABELS).map(([code, label]) => ({ code, label }));
+    if (key === "DISTRIBUTION_CHANNEL") return Object.entries(IRA_DISTRIBUTION_CHANNEL_LABELS).map(([code, label]) => ({ code, label }));
     return [...new Set(rows.filter((row) => row.dimension === "COUNTRY").map((row) => row.code))].map((code) => ({ code, label: code }));
   };
 
@@ -246,8 +259,9 @@ export default function KlasifikasiRisiko() {
                 </thead>
                 <tbody className="divide-y divide-[#edf0f5]">
                   {IRA_PARAMETERS.map((parameter) => {
-                    const row = (thresholds.data ?? []).find((entry: { parameterCode: string }) => entry.parameterCode === parameter.code);
-                    const bounds = row?.upperBoundPercent ?? IRA_DEFAULT_BAND_UPPER_BOUNDS;
+                    const row = (thresholds.data ?? []).find((entry: ThresholdRow) => entry.parameterCode === parameter.code);
+                    const bounds = row?.upperBoundPercent ?? null;
+                    const labels = row?.bandLabels ?? [];
                     return (
                       <tr key={parameter.code} className="align-top">
                         <td className="px-3 py-3">
@@ -255,7 +269,14 @@ export default function KlasifikasiRisiko() {
                           <p className="text-xs text-[#475569]">{parameter.label}</p>
                           <Badge variant="outline" className="mt-1 border-[#dce6f0] bg-[#f7fafd] text-[10px] text-[#4a6a8f]">{parameter.source === "HITUNG" ? "dihitung" : "dinyatakan penilai"}</Badge>
                         </td>
-                        {[0, 1, 2, 3].map((index) => (
+                        {/* Parameter berpilihan tidak berambang persen sama sekali: yang ditampilkan
+                            adalah kriteria templatnya, bukan lima kotak yang tidak dibaca siapa pun. */}
+                        {!bounds ? (
+                          <td className="px-3 py-3 text-xs text-[#475569]" colSpan={5}>
+                            <span className="text-[#94a7bb]">Dijawab dengan pilihan, bukan persentase — </span>
+                            {labels.filter((label) => label !== "-").join(" · ")}
+                          </td>
+                        ) : [0, 1, 2, 3].map((index) => (
                           <td key={index} className="px-3 py-3">
                             <Input
                               // `key` memuat nilainya supaya ruas ini dipasang ulang ketika ambang
@@ -273,9 +294,10 @@ export default function KlasifikasiRisiko() {
                                 setThresholds.mutate({ parameterCode: parameter.code, upperBoundPercent: next as (string | null)[] });
                               }}
                             />
+                            <p className="mt-1 text-[10px] text-[#94a7bb]">{labels[index] ?? ""}</p>
                           </td>
                         ))}
-                        <td className="px-3 py-3 text-xs text-[#94a7bb]">tanpa batas</td>
+                        {bounds ? <td className="px-3 py-3 text-xs text-[#94a7bb]">{labels[4] ?? "tanpa batas"}</td> : null}
                         <td className="px-3 py-3 text-xs whitespace-nowrap text-[#475569]">
                           {row?.isTemplateDefault ? <span className="text-[#94a7bb]">bawaan template</span> : formatDateTime(row?.updatedAt)}
                         </td>

@@ -1742,7 +1742,22 @@ export type CompanyDocumentCategory = CompanyDocument["category"];
  * uang (`USD`), kategori pekerjaan dan bentuk badan hukum dari `shared/iraVocabulary.ts`, ISO
  * alpha-2 untuk negara, dan kode provinsi kosakata yang sama.
  */
-export const iraRiskDimensions = ["CURRENCY", "OCCUPATION", "LEGAL_FORM", "COUNTRY", "PROVINCE"] as const;
+export const iraRiskDimensions = [
+  "CURRENCY",
+  "OCCUPATION",
+  "LEGAL_FORM",
+  "COUNTRY",
+  "PROVINCE",
+  /**
+   * Jalur distribusi — ditambahkan 9 September 2026 (keputusan pengguna, J2 Tugas 5).
+   *
+   * Empat parameter Jalur Distribusi (`TPPU_2A/2B`, `TPPT_2A/2B`) menuntut tingkat risiko tiap
+   * jalur, dan sebelum ini tidak ada satu pun penulisnya: aplikasi harus menyimpulkan sendiri
+   * bahwa "online lebih berisiko daripada gerai", padahal yang menentukan adalah SRA. Sekarang
+   * Controller menyatakannya beserta rujukannya, persis seperti mata uang dan provinsi.
+   */
+  "DISTRIBUTION_CHANNEL",
+] as const;
 
 /** Jenis risiko yang dinilai terpisah — satu kode dapat berlainan tingkat pada ketiganya. */
 export const iraRiskTypes = ["TPPU", "TPPT", "PPSPM"] as const;

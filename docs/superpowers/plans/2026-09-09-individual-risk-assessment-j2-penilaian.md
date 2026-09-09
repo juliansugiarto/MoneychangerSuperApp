@@ -322,6 +322,29 @@ describe("aritmetika IRA", () => {
 
 **Files:** Create `server/iraInherentScoring.ts`, `server/iraInherentScoring.test.ts`
 
+> **Tiga keputusan pengguna 9 September 2026, ditanyakan sebelum menulis penghitungnya** karena
+> ketiganya mengubah kode dan tidak satu pun dapat ditebak dari rencana ini:
+>
+> 1. **Risiko jalur distribusi dinyatakan Controller**, bukan disimpulkan aplikasi.
+>    `ira_risk_classifications` mendapat dimensi keenam `DISTRIBUTION_CHANNEL` lewat migrasi
+>    **`0055_keen_crystal.sql`** — satu `ALTER TABLE ... MODIFY` yang hanya **menambah** nilai enum,
+>    sehingga ketujuh baris yang sudah ada tetap sah.
+>    **Rollback `0055`:** kosongkan dulu baris berdimensi jalur
+>    (`DELETE FROM ira_risk_classifications WHERE dimension='DISTRIBUTION_CHANNEL';`), lalu
+>    `ALTER TABLE ira_risk_classifications MODIFY COLUMN dimension enum('CURRENCY','OCCUPATION','LEGAL_FORM','COUNTRY','PROVINCE') NOT NULL;`
+>    dan hapus baris `__drizzle_migrations` untuk `0055`. Selama masih ada baris berdimensi jalur,
+>    `MODIFY` akan gagal — itu disengaja, bukan halangan yang perlu dipaksa.
+> 2. **`readIraDataForm` diperluas** dengan komposisi kewarganegaraan *nasabah*
+>    (`highRiskCountryCustomers`, `nationalityDenominator`, `customersWithoutNationality`).
+>    `PPSPM_3A` bertanya tentang komposisi pengguna jasa; menjawabnya dengan angka transaksi akan
+>    menggeser persentasenya sebanyak nasabah yang bertransaksi berulang.
+> 3. **Ambang bawaan diperbaiki sekarang, bukan ditunda.** Bawaannya kini per jenis pita
+>    (`defaultBandBounds`), `bandValidationError` menerima batas **0** (pita sempit templatnya
+>    berbunyi "Tidak ada"), parameter berpilihan **tidak punya ambang sama sekali** dan menolak
+>    disimpan, dan halaman Ambang menampilkan kriteria templatnya alih-alih lima kotak yang tidak
+>    dibaca penghitung mana pun. Sebelum ini seluruh 33 parameter memakai `20/40/60/80`, sehingga
+>    layar menampilkan angka yang bukan angka yang dipakai menghitung.
+
 - [ ] **Step 1: Uji lebih dulu:** agregat Form C1 palsu ditambah klasifikasi palsu menghasilkan
       nilai parameter yang diharapkan; parameter `DINYATAKAN` **tidak** dihitung di sini melainkan
       dibiarkan kosong; mata uang tanpa klasifikasi diperlakukan `RENDAH` dan **tidak** ikut

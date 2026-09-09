@@ -53,6 +53,8 @@ export type IraCustomerRow = {
   entityLegalForm: IraLegalForm | null;
   occupationCategory: IraOccupationCategory | null;
   pepStatus: "NONE" | "SELF" | "RELATED";
+  /** Kewarganegaraan, ISO alpha-2. Dipakai parameter PPSPM yang bertanya tentang **nasabahnya**. */
+  nationality: string | null;
 };
 
 const NOL = "0.00";
@@ -150,6 +152,19 @@ export type IraCustomerComposition = {
   occupationCategories: { code: IraOccupationCategory; customerCount: number; sharePercent: string }[];
   legalForms: { code: IraLegalForm; customerCount: number; sharePercent: string }[];
   pepCustomerCount: number;
+  /** Belum diisi kewarganegaraannya — penyebut persentase negara berisiko mengecualikannya. */
+  customersWithoutNationality: number;
+  /** Penyebut persentase negara berisiko: nasabah yang kewarganegaraannya diketahui. */
+  nationalityDenominator: number;
+  /**
+   * Nasabah **bukan badan usaha** yang berkewarganegaraan negara berisiko TINGGI menurut
+   * klasifikasi `COUNTRY`, per jenis risiko.
+   *
+   * Berbeda dari `highRiskCountry`, yang menghitung **transaksinya**. Parameter `PPSPM_3A`
+   * bertanya tentang komposisi *pengguna jasa*, bukan komposisi transaksi, dan menjawabnya dengan
+   * angka transaksi akan menggeser persentasenya sebanyak nasabah yang bertransaksi berulang.
+   */
+  highRiskCountryCustomers: { riskType: IraRiskType; customerCount: number; sharePercent: string }[];
 };
 
 /**
@@ -160,11 +175,15 @@ export type IraCustomerComposition = {
  * persentase sebanding banyaknya nasabah yang belum ditanyai — angka yang tampak wajar padahal
  * salah, dan tidak ada satu pun di layar yang menunjukkan sebabnya.
  */
-export function foldCustomerComposition(rows: IraCustomerRow[]): IraCustomerComposition {
+export function foldCustomerComposition(
+  rows: IraCustomerRow[],
+  countryLevels: ReadonlyMap<string, IraRiskLevel> = new Map(),
+): IraCustomerComposition {
   const berkategori = rows.filter((row) => row.occupationCategory !== null);
   const badanUsaha = rows.filter((row) => row.customerType === "BADAN_USAHA");
   const berbentuk = badanUsaha.filter((row) => row.entityLegalForm !== null);
 
+  const berkewarganegaraan = rows.filter((row) => Boolean(row.nationality?.trim()));
   const occupationDenominator = new Decimal(berkategori.length);
   const legalFormDenominator = new Decimal(berbentuk.length);
 
@@ -184,6 +203,23 @@ export function foldCustomerComposition(rows: IraCustomerRow[]): IraCustomerComp
       return { code, customerCount: count, sharePercent: share(new Decimal(count), legalFormDenominator) };
     }),
     pepCustomerCount: rows.filter((row) => row.pepStatus !== "NONE").length,
+    customersWithoutNationality: rows.filter((row) => !row.nationality?.trim()).length,
+    nationalityDenominator: berkewarganegaraan.length,
+    highRiskCountryCustomers: iraRiskTypes.map((riskType) => {
+      // Nasabah yang belum berkategori ikut dihitung sebagai bukan badan usaha, sama seperti
+      // `customersWithoutOccupationCategory`: nasabah lama yang belum ditanyai jenisnya hampir
+      // selalu perorangan, dan mengeluarkannya justru menyembunyikan risiko yang ditanyakan.
+      const matching = berkewarganegaraan.filter(
+        (row) =>
+          row.customerType !== "BADAN_USAHA" &&
+          countryLevels.get(classificationKey("COUNTRY", row.nationality!.trim().toUpperCase(), riskType)) === "TINGGI",
+      );
+      return {
+        riskType,
+        customerCount: matching.length,
+        sharePercent: share(new Decimal(matching.length), new Decimal(berkewarganegaraan.length)),
+      };
+    }),
   };
 }
 
@@ -251,6 +287,7 @@ export async function readIraDataForm(periodStart: Date, periodEnd: Date): Promi
       entityLegalForm: customers.entityLegalForm,
       occupationCategory: customers.occupationCategory,
       pepStatus: customers.pepStatus,
+      nationality: customers.nationality,
     })
     .from(customers)
     .where(and(eq(customers.isDemo, false), eq(customers.isHistorical, false)));
@@ -271,7 +308,7 @@ export async function readIraDataForm(periodStart: Date, periodEnd: Date): Promi
     periodStart,
     periodEnd,
     ...foldTransactionComposition(rows, countryLevels),
-    ...foldCustomerComposition(people as IraCustomerRow[]),
+    ...foldCustomerComposition(people as IraCustomerRow[], countryLevels),
   };
 }
 

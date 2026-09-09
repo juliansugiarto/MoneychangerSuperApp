@@ -386,6 +386,13 @@
       "when": 1788945384141,
       "tag": "0054_silent_jackal",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "5",
+      "when": 1788945946290,
+      "tag": "0055_keen_crystal",
+      "breakpoints": true
     }
   ]
 }

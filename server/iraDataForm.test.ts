@@ -226,6 +226,34 @@ describe("agregat Form C1 — pembacaan basis data", () => {
     expect(hasil.totalRupiah).toBe("10000000.00");
   });
 
+  it("menghitung nasabah berkewarganegaraan negara berisiko atas nasabah, bukan atas transaksinya", async () => {
+    mockDb({
+      exchange_transactions: [],
+      customers: [
+        { id: 1, customerType: "INDIVIDU", entityLegalForm: null, occupationCategory: "WIRAUSAHA", pepStatus: "NONE", nationality: "KP", isDemo: false, isHistorical: false },
+        { id: 2, customerType: null, entityLegalForm: null, occupationCategory: null, pepStatus: "NONE", nationality: "kp", isDemo: false, isHistorical: false },
+        { id: 3, customerType: "INDIVIDU", entityLegalForm: null, occupationCategory: "WIRAUSAHA", pepStatus: "NONE", nationality: "ID", isDemo: false, isHistorical: false },
+        { id: 4, customerType: "BADAN_USAHA", entityLegalForm: "PT", occupationCategory: null, pepStatus: "NONE", nationality: "KP", isDemo: false, isHistorical: false },
+        { id: 5, customerType: "INDIVIDU", entityLegalForm: null, occupationCategory: "WIRAUSAHA", pepStatus: "NONE", nationality: null, isDemo: false, isHistorical: false },
+      ],
+      ira_risk_classifications: [
+        { dimension: "COUNTRY", code: "KP", riskType: "PPSPM", level: "TINGGI" },
+      ],
+    });
+
+    const hasil = await readIraDataForm(periodStart, periodEnd);
+
+    // Penyebutnya nasabah berkewarganegaraan (4), bukan seluruh nasabah (5).
+    expect(hasil.nationalityDenominator).toBe(4);
+    expect(hasil.customersWithoutNationality).toBe(1);
+    const ppspm = hasil.highRiskCountryCustomers.find((row) => row.riskType === "PPSPM")!;
+    // Nasabah 1 dan 2 ikut (yang belum berkategori dibaca bukan badan usaha); nasabah 4 badan usaha, tidak ikut.
+    expect(ppspm.customerCount).toBe(2);
+    expect(ppspm.sharePercent).toBe("50.00");
+    // Jenis risiko yang kodenya tidak diklasifikasikan tetap muncul dengan nol, bukan hilang.
+    expect(hasil.highRiskCountryCustomers.find((row) => row.riskType === "TPPU")!.customerCount).toBe(0);
+  });
+
   it("mengembalikan batas periode yang diminta apa adanya", async () => {
     mockDb({ exchange_transactions: [], customers: [], ira_risk_classifications: [] });
     const hasil = await readIraDataForm(periodStart, periodEnd);

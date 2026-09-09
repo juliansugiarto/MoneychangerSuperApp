@@ -5,6 +5,7 @@ import { IRA_DEFAULT_BAND_UPPER_BOUNDS } from "../shared/iraParameters";
 import {
   bandValidationError,
   classificationKey,
+  defaultBandBounds,
   classificationLevel,
   classifyRisk,
   iraClassificationDenial,
@@ -254,5 +255,39 @@ describe("ambang pita parameter", () => {
     mockDb({ ira_parameter_thresholds: [] });
     await expect(setParameterThresholds({ parameterCode: "TPPU_9Z", upperBoundPercent: [...IRA_DEFAULT_BAND_UPPER_BOUNDS] }, actor))
       .rejects.toThrow(/tidak dikenal/i);
+  });
+
+  it("bawaannya mengikuti jenis pita parameternya, bukan satu bawaan untuk semuanya", () => {
+    expect(defaultBandBounds("TPPU_1A")).toEqual([...IRA_DEFAULT_BAND_UPPER_BOUNDS]);
+    expect(defaultBandBounds("TPPU_3A")).toEqual(["0.00", "1.00", "2.00", "3.00", null]);
+    expect(defaultBandBounds("TPPU_3B")).toEqual(["2.00", "4.00", "5.00", "6.00", null]);
+    // Berpilihan, bukan persentase: tidak punya ambang sama sekali.
+    expect(defaultBandBounds("TPPU_2C")).toBeNull();
+    expect(defaultBandBounds("TPPU_4A")).toBeNull();
+    expect(defaultBandBounds("STRUKTURAL_1A")).toBeNull();
+  });
+
+  it("nol sah sebagai batas pita pertama — pita sempit templatnya berbunyi \"Tidak ada\"", () => {
+    expect(bandValidationError(["0.00", "1.00", "2.00", "3.00", null])).toBeNull();
+    expect(bandValidationError(["0.00", "0.00", "2.00", "3.00", null])).toMatch(/lebih besar/i);
+    expect(bandValidationError(["-1.00", "1.00", "2.00", "3.00", null])).toMatch(/antara 0 dan 100/i);
+  });
+
+  it("menolak menyimpan maupun mengembalikan ambang parameter berpilihan", async () => {
+    mockDb({ ira_parameter_thresholds: [] });
+    await expect(setParameterThresholds({ parameterCode: "TPPU_4A", upperBoundPercent: ["1.00", "2.00", "3.00", "4.00", null] }, actor))
+      .rejects.toThrow(/pilihan/i);
+  });
+
+  it("daftar ambang membawa jenis pita dan label templatnya", async () => {
+    mockDb({ ira_parameter_thresholds: [] });
+    const rows = await listParameterThresholds();
+    const sempit = rows.find((row) => row.parameterCode === "TPPU_3A")!;
+    expect(sempit.bandType).toBe("PERSENTASE_SEMPIT");
+    expect(sempit.bandLabels[0]).toBe("Tidak ada");
+    expect(sempit.upperBoundPercent).toEqual(["0.00", "1.00", "2.00", "3.00", null]);
+    const pilihan = rows.find((row) => row.parameterCode === "TPPU_4A")!;
+    expect(pilihan.upperBoundPercent).toBeNull();
+    expect(pilihan.bandLabels).toEqual(["Rendah", "-", "Menengah", "-", "Tinggi"]);
   });
 });
