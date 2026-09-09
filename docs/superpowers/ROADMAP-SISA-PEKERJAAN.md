@@ -149,17 +149,19 @@ MEDIUM 3 bulan, LOW 12 bulan**; tindak lanjut **worklist Controller yang hanya m
       `plans/2026-09-09-individual-risk-assessment-j2-penilaian.md` *(9 September 2026)*
 
 **J1 — Fondasi data risiko inheren** (migrasi `0053`)
-- [ ] Tugas 1 — Kosakata tertutup BI sebagai konstanta murni
-- [ ] Tugas 2 — Migrasi: tiga kolom nasabah/bon/profil dan dua tabel klasifikasi
-- [ ] Tugas 3 — Penulis klasifikasi risiko beserta gerbang peran dan auditnya
-- [ ] Tugas 4 — Borang nasabah: jenis nasabah, bentuk badan hukum, kategori pekerjaan
-- [ ] Tugas 5 — Jalur distribusi pada bon
-- [ ] Tugas 6 — Pembaca agregat Form C1
-- [ ] Tugas 7 — Halaman Klasifikasi Risiko dan Ambang
+- [x] Tugas 1 — Kosakata tertutup BI sebagai konstanta murni
+- [x] Tugas 2 — Migrasi: tiga kolom nasabah/bon/profil dan dua tabel klasifikasi
+- [x] Tugas 3 — Penulis klasifikasi risiko beserta gerbang peran dan auditnya
+- [x] Tugas 4 — Borang nasabah: jenis nasabah, bentuk badan hukum, kategori pekerjaan
+- [x] Tugas 5 — Jalur distribusi pada bon
+- [x] Tugas 6 — Pembaca agregat Form C1
+- [x] Tugas 7 — Halaman Klasifikasi Risiko dan Ambang — **SELESAI 9 September 2026**
 
 **J2 — Penilaian, kuesioner, dan persetujuan** (migrasi `0054`, sesudah J1 selesai)
 - [ ] Tugas 1 — Aritmetika penilaian, murni dan teruji
-- [ ] Tugas 2 — Katalog 33 parameter risiko inheren
+- [ ] Tugas 2 — Katalog 33 parameter risiko inheren — *sebagian sudah ada:* `shared/iraParameters.ts`
+      (kode, label, kelompok, sumber hitung/nyatakan, pita bawaan, `scoreFromBand`) dibangun pada J1
+      Tugas 7 karena halaman ambang menuntutnya. Yang tersisa: bobot tiap parameter dan kelompoknya.
 - [ ] Tugas 3 — Katalog 31 pertanyaan KPMR
 - [ ] Tugas 4 — Migrasi: empat tabel penilaian
 - [ ] Tugas 5 — Penghitung sisi inheren dari agregat dan klasifikasi
