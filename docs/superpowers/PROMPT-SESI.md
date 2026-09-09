@@ -65,14 +65,16 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 9 September 2026
+## Sesi berikutnya — keadaan per 9 September 2026 (sesudah Paket J selesai)
 
-Paket K1, B, D, C, E, F1, F2, **G**, **H**, **I**, dan **J1 sudah selesai** dan diperagakan
-end-to-end. **Pekerjaan berikutnya adalah Tugas 1 Paket J2** — bloknya di bawah.
+Paket K1, B, D, C, E, F1, F2, **G**, **H**, **I**, dan **J (J1 + J2) sudah selesai** dan
+diperagakan end-to-end. **Pekerjaan berikutnya adalah sesi rancangan Paket K2** — bloknya di bawah.
+Paket K3 tetap **menunggu naskah SE BI 18/41/DKSP** dari pengguna dan tidak boleh dimulai tanpa
+naskah atau daftar field wajibnya.
 
-Baseline uji yang benar-benar dijalankan 9 September 2026 sesudah Paket J1:
-`Test Files 144 passed (144)`, `Tests 1194 passed | 2 skipped (1196)`. `tsc --noEmit` bersih,
-`vite build` sukses. Migrasi terakhir adalah **`0053`**; J2 menghasilkan `0054`.
+Baseline uji yang benar-benar dijalankan 9 September 2026 sesudah Paket J2:
+`Test Files 151 passed (151)`, `Tests 1298 passed | 2 skipped (1300)`. `tsc --noEmit` bersih,
+`vite build` sukses. Migrasi terakhir adalah **`0055`**.
 
 **Satu uji diketahui flaky dan bukan bagian paket mana pun:** `server/tenantIsolation.live.test.ts`
 > *"setiap ikatan hanya melihat database miliknya sendiri"*. Bila gagal sendirian di bawah beban,
@@ -80,160 +82,95 @@ jalankan ulang berkas itu saja.
 
 ### Yang tidak perlu ditemukan ulang
 
-- **Jangan menulis helper jendela waktu yang keempat.** Batas hari dan bulan operasional memakai
-  `startOfOperationalDay`/`startOfOperationalMonth` pada `shared/regulatoryActionQueue.ts`.
-- **Kolom `datetime` menyimpan jam UTC, kolom `date` tidak.** Drizzle menserialisasi `datetime`
-  sebagai string UTC sendiri, sementara kolom `date` diformat mysql2 memakai zona proses.
-  Dibuktikan round-trip 8 September 2026. Membandingkan `transactionAt` terhadap instan absolut
-  sudah benar apa adanya — jangan "memperbaikinya" seperti batas kolom `date`. Saat menulis fixture
-  SQL untuk kolom `datetime`, tulis UTC, bukan WIB.
+- **Jangan menulis helper jendela waktu yang keempat.** Batas hari, bulan, dan **tahun** operasional
+  memakai `startOfOperationalDay`/`startOfOperationalMonth` pada `shared/regulatoryActionQueue.ts`.
+  Batas tahun didapat dengan memanggil `startOfOperationalMonth` pada sebuah tanggal di bulan Januari
+  tahun berikutnya — begitulah `getIraAssessmentDue` melakukannya, dan itu cukup.
+- **Kolom `datetime` menyimpan jam UTC, kolom `date` tidak.** Membandingkan `transactionAt` terhadap
+  instan absolut sudah benar apa adanya. Saat menulis fixture SQL untuk kolom `datetime`, tulis UTC.
+- **Nilai kolom `date` dibaca dengan penggetah LOKAL, "hari ini" dengan zona operasional.** Pakai
+  `archiveDateKey` untuk nilai kolom dan `operationalDateKey` untuk "hari ini". Jangan menyaring
+  kolom `date` lewat SQL dengan `Date` tengah malam UTC.
 - **Status bon yang dihitung sebagai aktivitas nasabah ada satu daftar:**
-  `ACCUMULATED_TRANSACTION_STATUSES` pada `drizzle/schema.ts`. Jangan menyalinnya. Daftar
-  pengecualian LKU pada `operations.ts` berbeda isi dan berbeda arti — jangan digabung.
-- **Borang penyuntingan nasabah wajib mengirimkan ketiga kolom deklarasi profil**
-  (`declaredMonthlyValueIdr`, `declaredMonthlyCount`, `declaredCurrencies`). Yang tidak dikirim akan
-  **dikosongkan**; itu disengaja, dan sudah pernah menjadi bug yang tertangkap hanya karena borangnya
-  dibuka sungguhan di browser.
-- **Nilai kolom `date` dibaca dengan penggetah LOKAL, "hari ini" dengan zona operasional.** Driver
-  membangun nilai kolom `date` sebagai tengah malam waktu lokal proses, sehingga
-  `toISOString().slice(0, 10)` atasnya memundurkan tanggalnya satu hari di WIB. Pakai
-  `archiveDateKey` (`shared/companyDocumentArchive.ts`) untuk nilai kolom, dan `operationalDateKey`
-  (`shared/regulatoryActionQueue.ts`) untuk "hari ini". **Jangan menyaring kolom `date` lewat SQL
-  dengan `Date` tengah malam UTC** — itu menjatuhkan baris tepat pada batasnya.
-- **Gerbang peran pada rute Express dipisahkan menjadi fungsi `*Denial` yang dapat diuji.** Dua
-  preseden: `financialFormExportDenial` (`server/financialFormExport.ts:413`) dan
-  `operationalDocumentUploadDenial` (`server/documentOperations.ts`). Otorisasi yang hanya hidup di
-  dalam handler tidak pernah dibuktikan uji mana pun.
-- **Basis data palsu pada uji wajib ikut menyaring `where` dan menerapkan `orderBy`.** Palsu yang
-  mengabaikan keduanya membuat uji lulus karena kebetulan atau gagal karena kekeliruan palsunya
-  sendiri. **Salin dari `server/iraDataForm.test.ts`**, bukan dari
-  `server/companyDocumentArchive.test.ts` — versi lama itu punya lubang yang baru ketahuan
-  9 September 2026 (lihat butir berikutnya). Dua jebakannya:
-  1. `StringChunk` pemisah pada klausa Drizzle juga punya `value` (berupa array) dan harus
-     disisihkan agar tidak merebut giliran `Param` yang sesungguhnya.
-  2. **`inArray` menaruh nilainya sebagai larik `Param` telanjang** di antara chunk klausanya, bukan
-     sebagai satu `Param` bernilai larik. Penelusur yang hanya menuruni `queryChunks` melewatkannya
-     seluruhnya, sehingga penyaringan status **diam-diam tidak berlaku** dan bon `CANCELLED` ikut
-     terhitung. Penelusurnya wajib ikut menuruni larik.
-- **`server/companyDocumentArchive.test.ts` masih memakai penelusur lama yang buta terhadap
-  `inArray`.** Tidak berbahaya hari ini karena berkas itu tidak memakai klausa `inArray`, tetapi
-  jangan menyalinnya lagi, dan bila menyentuhnya, perbaiki sekalian.
-- **Rute baru wajib didaftarkan pada `server/backOfficeNavigation.test.ts`**, yang memetakan tiap
-  tujuan sidebar ke nama halamannya. Ujinya gagal sampai rutenya ditambahkan.
-- **Dialog wajib memakai `max-h-[85vh] overflow-y-auto`.** Tanpa itu, borang yang lebih tinggi
-  daripada viewport menyembunyikan tombol tindakannya dan yang menggulir justru halaman di
-  belakangnya — cacat yang tidak pernah muncul pada uji maupun `tsc`.
-- **Bercabanglah pada `isPending`, bukan `isLoading`, untuk keadaan memuat React Query.** Di sela
-  percobaan ulang, `isLoading` bernilai `false` sementara `data` masih kosong, sehingga halaman
-  jatuh ke cabang "berhasil" dan menampilkan daftar kosong seolah-olah memang tidak ada isinya.
-  Pada halaman Klasifikasi Risiko kekeliruan itu berarti seluruh kode tampil "belum
-  diklasifikasikan", yang dibaca penilaian sebagai **RENDAH**. Tertangkap 9 September 2026 hanya
-  karena keadaan error dipaksa terjadi sungguhan, bukan lewat tinjauan kode.
-- **Kolom kategori nasabah berkontrak KEBALIKAN dari kolom deklarasi profil.** Pada
-  `customerType`/`entityLegalForm`/`occupationCategory`, ruas yang **tidak dikirim dibiarkan** dan
-  hanya `null` yang dikirim sengaja yang mengosongkan (`resolveCustomerCategories`,
-  `server/operations.ts`). Itu disengaja: nasabah yang disunting karena berganti nomor telepon tidak
-  boleh kehilangan kategorinya. Kedua borang tetap selalu mengirim ketiganya, jadi dari layar
-  perilakunya seragam.
-- **Kode tanpa baris klasifikasi dibaca sebagai `RENDAH`**, ditetapkan satu kali di
-  `classificationLevel` (`server/iraRiskClassification.ts`). Jangan mengulang bawaan itu di
-  pemanggil — pemanggil yang lupa akan mendapat `undefined` dan mendiamkan kodenya keluar dari
-  penyebut.
-- **Kosakata dan parameter IRA sudah ada dan jangan diturunkan ulang:** `shared/iraVocabulary.ts`
-  (23 kategori pekerjaan, 11 bentuk badan hukum, 3 jalur distribusi, 34 provinsi, 2 jenis nasabah —
-  seluruhnya berkode **garis bawah**) dan `shared/iraParameters.ts` (33 parameter beserta kelompok,
-  sumber hitung/nyatakan, pita bawaan `20/40/60/80/null`, dan `scoreFromBand` yang menuliskan skala
-  terbaliknya). **Tugas 2 J2 karena itu sudah sebagian jadi** — yang tersisa adalah bobot tiap
-  parameter dan kelompoknya.
-- **`/kepatuhan/` adalah bagian yang disengaja, bukan rute nyasar.** `/kepatuhan/klasifikasi-risiko`
-  sudah hidup; J2 menambahkan `/kepatuhan/ira`, `/kepatuhan/ira/:id`, dan `/kepatuhan/ira/:id/kpmr`
-  di bawahnya.
-- **Berkas dokumen dan berkas impor punya dua batas yang BERBEDA.** Jalur dokumen
-  (`server/documentOperations.ts`): **8 MB**, MIME saja, **tanpa** pemeriksaan signature. Jalur
-  impor XLS/XLSX (`server/financialImport.ts`, `server/sanctionsWatchlistImport.ts`): **5 MB** plus
-  `assertSpreadsheetSignature`. Jangan mencampurnya, dan jangan melonggarkan salah satunya.
+  `ACCUMULATED_TRANSACTION_STATUSES` pada `drizzle/schema.ts`. Jangan menyalinnya.
+- **Borang penyuntingan nasabah wajib mengirimkan ketiga kolom deklarasi profil**; yang tidak
+  dikirim akan dikosongkan. Sebaliknya, kolom kategori nasabah (`customerType`/`entityLegalForm`/
+  `occupationCategory`) **dibiarkan** bila tidak dikirim — hanya `null` yang sengaja dikirim yang
+  mengosongkan.
+- **Gerbang peran pada rute dipisahkan menjadi fungsi `*Denial` yang dapat diuji.** Preseden
+  terbaru: `iraEditDenial`/`iraApprovalDenial` (`server/iraAssessment.ts`), yang **menerima status
+  dokumennya sebagai masukan** — penguncian adalah bagian dari otorisasi, dan penulisnya
+  menegakkannya sekali lagi supaya pemanggil non-tRPC ikut terkena.
+- **Basis data palsu pada uji wajib ikut menyaring `where` dan menerapkan `orderBy`.** Salin dari
+  `server/iraDataForm.test.ts` atau `server/iraScenario.test.ts`, **bukan** dari
+  `server/companyDocumentArchive.test.ts` — versi lama itu buta terhadap `inArray`. Dua jebakannya:
+  `StringChunk` pemisah juga punya `value`, dan `inArray` menaruh nilainya sebagai **larik `Param`
+  telanjang**, sehingga penelusurnya wajib ikut menuruni larik.
+- **Basis data palsu yang menyimpan rujukan objek akan berbohong tentang kolom `json`.** MySQL
+  menserialisasi `json` saat menulis; palsunya harus menyalin nilai yang ditulis
+  (`structuredClone`), sebagaimana `server/iraScenario.test.ts`. Tanpa itu, snapshot yang dibekukan
+  ikut berubah ketika baris sumbernya diubah — dan ujinya lulus untuk alasan yang salah.
+- **Rute baru wajib didaftarkan pada `server/backOfficeNavigation.test.ts`** bila ia menjadi tujuan
+  sidebar. Rute **berparameter** (mis. `/kepatuhan/ira/:id`) bukan tujuan sidebar dan tidak masuk
+  peta itu.
+- **Dialog wajib memakai `max-h-[85vh] overflow-y-auto`.**
+- **Bercabanglah pada `isPending`, bukan `isLoading`.** Ditambah temuan 9 September 2026:
+  `QueryClient` aplikasi ini memakai bawaan, dan percobaan ulangnya dapat berstatus
+  `fetchStatus: "paused"` sehingga halaman **bertahan di keadaan memuat** alih-alih menampilkan
+  galat. Untuk melihat cabang error di layar, tahan percobaan ulang sekali (`retry: 0`) lalu
+  kembalikan.
+- **Jangan menjalankan `prettier` pada berkas proyek ini.** Repo ini tidak berformat prettier
+  (44 berkas `shared/` gagal `--check`, tanpa konfigurasi); `--write` justru membuat berkas baru
+  berbeda gaya dari tetangganya.
+- **Kosakata dan katalog IRA sudah lengkap dan jangan diturunkan ulang:** `shared/iraVocabulary.ts`,
+  `shared/iraParameters.ts`, `shared/iraParameterCatalogue.ts` (bobot, enam jenis pita, teks
+  kriteria), `shared/iraKpmrCatalogue.ts` (31 pertanyaan, keberlakuan KUPVA BB, kaitan temuan),
+  `shared/individualRiskAssessment.ts` dan `shared/iraAssessmentTotals.ts` (seluruh aritmetikanya).
+- **Berkas dokumen dan berkas impor punya dua batas yang BERBEDA.** Dokumen
+  (`server/documentOperations.ts`): **8 MB**, MIME saja. Impor XLS/XLSX: **5 MB** plus
+  `assertSpreadsheetSignature`. Jangan mencampurnya.
 
-### Risiko residual Paket J1 yang masih terbuka
+### Risiko residual Paket J2 yang masih terbuka
 
-1. **Ambang pita punya penulis, bobot parameter belum.** `ira_parameter_thresholds` sudah diisi
-   lewat halaman, tetapi bobot tiap parameter dan kelompoknya belum ada di mana pun — itu J2
-   Tugas 1–2, dan tanpa itu tidak ada nilai akhir yang dapat dihitung.
-2. **Peringkat SRA tidak di-seed.** Tabel klasifikasi kosong saat dipasang; Controller mengisinya
-   sendiri beserta rujukannya. Ditetapkan pengguna 9 September 2026. Konsekuensinya, pada pemasangan
-   baru **seluruh** kode terbaca RENDAH sampai seseorang mengisinya, dan halaman menampilkan
-   hitungan yang belum diklasifikasikan sebagai pekerjaan yang menunggu.
-3. **Dimensi `COUNTRY` tidak punya kosakata tertutup.** Kode ISO dua huruf diketik petugas; tidak
-   ada daftar FATF maupun sanksi PBB yang tertanam, dan aplikasi tidak menariknya dari mana pun.
-4. **Borang bon belum pernah disimpan sungguhan lewat browser dengan jalur distribusi terpilih.**
-   Ruasnya dilihat di layar dan nilainya dibuktikan tersimpan lewat `createTransaction` langsung;
-   yang belum terbukti secara visual adalah bahwa borang mengirim pilihan kasir sampai ke server.
-5. **Provinsi gerai sudah punya penulis** (ruas *Provinsi gerai* pada Profil Perusahaan, ditambahkan
-   9 September 2026 sesudah J1 ditutup — kolomnya sempat terbit tanpa satu pun penulis, dan tidak
-   ada tugas di J1 maupun J2 yang menugaskannya). Kontraknya sama seperti zona waktu: ruas yang
-   tidak dikirim **dibiarkan**, hanya `null` yang dikirim sengaja yang mengosongkan.
+Sembilan butir, tertulis lengkap di akhir
+`plans/2026-09-09-individual-risk-assessment-j2-penilaian.md`. Ringkasnya: bobot pilar KPMR tidak
+dipakai rumusnya; Aspek Kelembagaan tidak dibangun; seluruh klasifikasi risiko bergantung manusia
+dan kode tanpa baris dibaca RENDAH; dimensi `COUNTRY` tanpa daftar FATF/PBB; `PPSPM_3C` tidak dapat
+membedakan UMKM; `TPPU_4A` dan `TPPU_4B` selalu sama karena hanya ada satu provinsi gerai;
+`pnpm audit --prod --audit-level=high` masih **9 temuan** (6 sedang, 3 tinggi) — **jangan menyebut
+audit bersih**; migrasi `0051`–`0055` **belum diterapkan ke produksi**; dan zona waktu server masih
+memakai bawaan `Asia/Jakarta`, bukan `company_profile.timezone`.
 
-### Risiko residual Paket I yang masih terbuka
+### Risiko residual paket sebelumnya yang masih terbuka
 
-1. **Unggah berkas dan tombol "Buka" belum pernah dijalankan sungguhan.** `.env` lokal tidak memuat
-   kredensial R2, sehingga `storagePut` melempar galat di mesin ini. Baris `operational_documents`
-   untuk peragaan disisipkan lewat SQL; seluruh alur di hilirnya sudah dijalankan lewat penulis yang
-   sesungguhnya, tetapi kedua ujung jalur berkasnya masih belum terbukti di lingkungan mana pun.
-2. **`deleteCompanyDocument` lama masih `DELETE` sungguhan tanpa audit**
-   (`server/documentOperations.ts`). Ia melayani halaman Profil Perusahaan dan sengaja tidak
-   disentuh Paket I.
-3. **Jalur unggah dokumen tidak memeriksa signature** untuk PDF/JPG/PNG/WEBP — MIME saja. Keadaan
-   yang sudah berlaku sebelum Paket I; menutupnya menyentuh unggahan KTP, underlying, dan struk,
-   jadi pantas menjadi paketnya sendiri.
-4. **Sertifikat izin pada Profil Perusahaan tidak mendapat peringatan masa berlaku** — akibat
-   keputusan pengguna bahwa dokumen Profil Perusahaan tetap di tempatnya.
-5. **Zona waktu server memakai bawaan `Asia/Jakarta`, bukan `company_profile.timezone`.** Tidak ada
-   satu pun pemanggil di server yang membaca kolom itu. Tenant yang menyetel WITA atau WIT mendapat
-   batas hari WIB di seluruh aplikasi — satu perbaikan menyeluruh, bukan tambalan di satu modul.
-6. **`employee_certifications.documentId` dan `employee_pic_assignments.documentId` tetap selalu
-   kosong** — tidak ada `ownerType` pegawai dan tidak ada layar yang mengunggahnya. Pekerjaan yang
-   belum selesai pada jalur Kepegawaian, bukan keadaan sah.
-
-### Risiko residual Paket H yang masih terbuka
-
-1. Mata uang tak terdeklarasi **tidak** dinilai di jalur kasir — hanya nilai dan frekuensi. Ia
-   terlihat di worklist pemantauan.
-2. Ambang penyimpangan berlaku atas akumulasi **sebulan**, sehingga sesudah seorang nasabah
-   melewatinya, transaksi berikutnya pada bulan itu ikut masuk review sampai bulan berganti.
-3. Keadaan **error** halaman Pemantauan Profil belum pernah dilihat di layar.
-4. `pnpm audit --prod --audit-level=high` masih melaporkan **9 temuan** (6 sedang, 3 tinggi):
-   residual `xlsx`/SheetJS ditambah `mysql2 <3.22.0`. **Jangan menyebut audit bersih.**
+- **Paket I:** unggah berkas dan tombol "Buka" belum pernah dijalankan sungguhan (`.env` lokal tanpa
+  kredensial R2); `deleteCompanyDocument` lama masih `DELETE` sungguhan tanpa audit; jalur unggah
+  dokumen tidak memeriksa signature; sertifikat izin pada Profil Perusahaan tanpa peringatan masa
+  berlaku; `employee_certifications.documentId` dan `employee_pic_assignments.documentId` tetap
+  selalu kosong.
+- **Paket H:** mata uang tak terdeklarasi tidak dinilai di jalur kasir; ambang penyimpangan berlaku
+  atas akumulasi sebulan; keadaan error halaman Pemantauan Profil belum pernah dilihat di layar.
+- **Paket J1:** borang bon belum pernah disimpan sungguhan lewat browser dengan jalur distribusi
+  terpilih.
 
 ### Keadaan basis data lokal
 
-`moneychanger` memuat data peragaan paket E, F1, F2, G, H, dan I. **Jangan membersihkannya.**
+`moneychanger` memuat data peragaan paket E, F1, F2, G, H, I, J1, dan J2. **Jangan
+membersihkannya.**
 
-Data Paket H: dua nasabah (`CIF-000001` berdeklarasi Rp 25.000.000 / 4 / USD+SGD, `CIF-000002`
-tanpa deklarasi), bon `FX-UJI-T4-*` dan `UJI-T8-0001`, serta satu baris `customer_profile_reviews`.
+Data Paket J2 (9 September 2026), **jangan dibersihkan**:
 
-Data Paket I: enam dokumen arsip pada `company_documents` (satu berversi dua, satu nonaktif), tujuh
-baris `operational_documents` ber-`ownerType` `COMPANY_ARCHIVE`, dan satu pegawai
-**"Sari Kepatuhan"** pada `employees` — pegawai itu satu-satunya baris `employees` di basis data
-lokal, jadi Paket J yang menyentuh SDM akan menemukannya.
+- `ira_assessments` — tiga penilaian: **#1** periode 1 Jan – 31 Des 2026 berstatus **DISETUJUI** dan
+  terkunci (inheren 4,3160 · Rendah ke Menengah; KPMR 4,0000 · Satisfactory; akhir 4), **#2**
+  periode 2025 berstatus DRAFT (memperagakan keterlambatan tahunan pada Status Kesiapan), dan **#3**
+  penilaian pengganti #1 berstatus DRAFT.
+- `ira_inherent_values` — 33 baris untuk penilaian #1; `ira_kpmr_answers` — 31 baris, satu di
+  antaranya N/A.
+- `ira_risk_classifications` masih tujuh baris dari J1; belum ada satu pun baris berdimensi
+  `DISTRIBUTION_CHANNEL`, sehingga keempat parameter Jalur Distribusi terbaca RENDAH.
 
-Data Paket J1 (9 September 2026), **jangan dibersihkan**:
-
-- `customers` — `CIF-000001` kini `INDIVIDU` / `WIRAUSAHA` (teks bebas `occupation` tetap
-  "Wiraswasta"), `CIF-000002` sengaja **tanpa kategori** sebagai contoh nasabah lama, dan
-  `CIF-000003` **PT Tekstil Nusantara Jaya** `BADAN_USAHA` / `PT`.
-- `exchange_transactions` — satu bon `LAYANAN_DELIVERY` (`FX-20260909075051-9QHSP-`, status DRAFT,
-  Rp 4.800.000); sisanya `KANTOR`.
-- `ira_risk_classifications` — tujuh baris: USD (TPPU/TPPT/PPSPM semuanya TINGGI), SGD (TINGGI /
-  MENENGAH / TINGGI), dan `COUNTRY ID` TPPU RENDAH.
-- `ira_parameter_thresholds` — satu parameter tersimpan (`TPPU_1A`, sudah dikembalikan ke nilai
-  template lewat tombolnya).
-- `company_profile.province` = `JAWA_BARAT`.
-- **Satu kurs uji** `operational_rates` ACTIVE untuk USD (16.000/16.200) bercatatan "Kurs uji lokal
-  Paket J1 Tugas 5 — bukan kurs operasional nyata". Tanpa itu tidak ada bon yang dapat dibuat;
-  basis data lokal sebelumnya tidak punya satu pun kurs aktif.
-
-**Membuat data uji pada basis data lokal diizinkan pada tahap mana pun tanpa bertanya lebih dulu**
-(ditetapkan pengguna 8 September 2026, tercatat di `CLAUDE.md`). Produksi tetap tidak boleh
-disentuh — **migrasi `0051`, `0052`, dan `0053` belum diterapkan ke produksi.**
+**Membuat data uji pada basis data lokal diizinkan pada tahap mana pun tanpa bertanya lebih dulu.**
+Produksi tetap tidak boleh disentuh.
 
 ---
 
@@ -392,7 +329,7 @@ tujuh tugasnya sudah dikerjakan dan diperagakan end-to-end: enam jenis dokumen p
 riwayat versi penuh dengan versi lama tetap dapat dibuka, penghapusan yang sesungguhnya
 penonaktifan beserta alasannya, dan worklist masa berlaku dengan peringatan 30 hari. Migrasi `0052`.
 
-### Paket J — Individual Risk Assessment (16 tugas, dua rencana)
+### Paket J — Individual Risk Assessment (16 tugas, dua rencana) — **SELESAI 9 September 2026**
 
 Sesi rancangannya selesai 9 September 2026 sesudah membaca template BI aslinya. Spec
 `specs/2026-09-09-individual-risk-assessment-design.md`; dua rencana, **dikerjakan berurutan** —
@@ -432,14 +369,66 @@ lalu centang barisnya di bagian Status Pengerjaan.
 Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 ```
 
-### Paket K2 — Ganti nama PPPSM menjadi PPPSPM (sesi rancangan dulu)
+### Paket K2 — Ganti nama PPPSM menjadi PPPSPM (sesi rancangan dulu) — **PEKERJAAN BERIKUTNYA**
 
-Pakai **Prompt A** dengan `<PAKET>` = `K2` dan `<NAMA-BERKAS>` = `ganti-nama-pppspm`.
-Tambahkan baris ini di akhir prompt:
+Fakta yang sudah ditelusuri 9 September 2026, **tidak perlu dicari ulang**:
+
+- **112 kemunculan pada 14 berkas** di luar `drizzle/meta`: `server/operations.ts`,
+  `server/routers.ts`, `server/sanctionsWatchlistImport.ts`, `shared/sanctionsNameMatch.ts`,
+  `shared/iraKpmrCatalogue.ts`, `client/src/components/WatchlistCheck.tsx`,
+  `client/src/pages/CustomerList.tsx`, `Customers.tsx`, `SanctionsWatchlist.tsx`, ditambah lima
+  berkas uji. Angka ~10 berkas / ~50 titik panggil pada ROADMAP ditulis 4 September dan **sudah
+  ketinggalan**.
+- Yang menyentuh basis data ada dua: kolom `customers.dttotPpsdmMatch` dan `dttotPpsdmNotes`
+  (`drizzle/schema.ts:155-156`), serta **nilai enum** `"PPPSM"` pada
+  `sanctions_watchlist_entries.listType` (`drizzle/schema.ts:477`).
+- **Basis data lokal kosong untuk keduanya**: nol baris `sanctions_watchlist_entries`, nol nasabah
+  ber-`dttotPpsdmMatch`. Karena itu peragaan lokal **tidak akan membuktikan migrasi datanya**;
+  produksi harus diperiksa (baca-saja) sebelum memutuskan bentuk migrasinya.
+- **Satu kemunculan `PPPSM` TIDAK BOLEH diganti:** teks pertanyaan `KPMR_P4_3` pada
+  `shared/iraKpmrCatalogue.ts:291` adalah kutipan **apa adanya** dari template BI, yang di dalamnya
+  memang tertulis `PPPSM`. Menggantinya berarti memalsukan kutipan.
 
 ```
+Baca docs/superpowers/ROADMAP-SISA-PEKERJAAN.md bagian "Paket K2", lalu baca juga bagian
+"Aturan kerja yang berlaku untuk seluruh paket" pada dokumen yang sama. Baca juga bagian
+"Sesi berikutnya — keadaan per 9 September 2026" pada docs/superpowers/PROMPT-SESI.md,
+termasuk daftar "Yang tidak perlu ditemukan ulang" dan fakta Paket K2 yang sudah ditelusuri
+di sana — 112 kemunculan pada 14 berkas, dua sentuhan basis data, basis data lokal yang kosong
+untuk keduanya, dan satu kutipan template BI yang tidak boleh diganti.
+
+Rancang paket ini. Telusuri kodenya sungguhan lebih dulu; rujukan berkas:baris pada ROADMAP
+ditulis 4 September 2026 dan sebagian sudah bergeser.
+
+TANYAKAN kepada saya sebelum menulis rancangan, dan jangan menebak satu pun:
+1. Kolom `dttotPpsdmMatch`/`dttotPpsdmNotes` diganti nama, atau dibiarkan dan hanya lapisan
+   tampilannya yang diperbaiki?
+2. Nilai enum "PPPSM" pada sanctions_watchlist_entries.listType diganti menjadi "PPPSPM" beserta
+   migrasi datanya, atau kedua nilai dipertahankan sementara?
+3. Apakah produksi sudah punya baris berisi nilai-nilai itu? Bila belum bisa dipastikan, katakan
+   apa yang perlu saya periksa.
+
 Ini menyentuh dua kolom MySQL dan satu nilai enum yang SUDAH ADA ISINYA, jadi rencananya wajib
-memuat langkah backup dan rollback tertulis meski hasil akhirnya hanya kosmetik.
+memuat langkah backup dan rollback tertulis meski hasil akhirnya hanya kosmetik. Rencananya juga
+wajib menyebut bagaimana perubahan ini diperagakan padahal basis data lokal kosong untuk kedua
+sentuhan itu — peragaan yang berhenti pada tabel kosong belum membuktikan apa pun.
+
+Hasilkan dua berkas:
+
+1. docs/superpowers/specs/2026-XX-XX-ganti-nama-pppspm-design.md
+   Masalah, yang sudah diputuskan pengguna, rancangan, yang sengaja tidak dikerjakan, risiko
+   residual. Ikuti bentuk docs/superpowers/specs/2026-09-09-individual-risk-assessment-design.md.
+
+2. docs/superpowers/plans/2026-XX-XX-ganti-nama-pppspm.md
+   Rencana bertugas dengan bagian "Status Pengerjaan" di atas, tabel berkas, lalu tiap tugas
+   berisi langkah bernomor dengan checkbox, potongan kode konkret, perintah verifikasi, dan
+   perintah commit. Satu tugas = satu commit yang berdiri sendiri beserta ujinya sendiri.
+   Ikuti bentuk docs/superpowers/plans/2026-09-09-individual-risk-assessment-j2-penilaian.md.
+
+Setelah kedua berkas jadi, perbarui Status Pengerjaan pada ROADMAP: ganti baris "Sesi rancangan"
+Paket K2 menjadi daftar tugas hasil rancanganmu, dan tambahkan rujukan ke berkas rencananya.
+
+JANGAN menulis kode aplikasi pada sesi ini. Commit dokumentasinya saja, lalu berhenti dan laporkan.
 ```
 
 ### Paket K3 — Nota terhadap SE BI 18/41/DKSP
