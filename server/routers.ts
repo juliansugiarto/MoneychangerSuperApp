@@ -110,6 +110,7 @@ import {
   deactivateCompanyProfileDocument,
   purgeCompanyProfileDocument,
 } from "./companyProfileDocuments";
+import { customerRetentionStatement, documentRetentionOverview } from "./documentRetentionQueries";
 import { companyDocumentCategories, expenseCategories } from "../drizzle/schema";
 import { candidateDecisions, competencyTracks, employmentStatuses, jobLevels, picRoles, screeningResults } from "../drizzle/schema";
 import { journalSourceTypes } from "../drizzle/schema";
@@ -833,6 +834,14 @@ export const appRouter = router({
         return purgeCompanyProfileDocument(input, ctx.user);
       }),
     forCompanyDeactivated: controllerProcedure.query(() => listDeactivatedCompanyDocuments()),
+    /**
+     * Pernyataan retensi Pasal 48 ayat (4) untuk satu nasabah, dan ringkasannya. Hanya membaca:
+     * yang lewat tenggat tidak dihapus dan tidak diusulkan dihapus.
+     */
+    retentionStatement: controllerProcedure
+      .input(z.object({ customerId: z.number().int().positive() }))
+      .query(({ input }) => customerRetentionStatement(input.customerId)),
+    retentionOverview: controllerProcedure.query(() => documentRetentionOverview()),
   }),
 
   sdm: router({

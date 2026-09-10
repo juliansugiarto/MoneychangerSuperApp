@@ -20,7 +20,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 3 — Penulis `relationshipEndedAt` pada `updateCustomer`
 - [x] Tugas 4 — `server/companyProfileDocuments.ts` menggantikan `deleteCompanyDocument`
 - [x] Tugas 5 — Uji penjaga: dokumen nasabah dan transaksi tidak punya jalur hapus
-- [ ] Tugas 6 — Pembacaan retensi (`documentRetentionQueries.ts` + tRPC)
+- [x] Tugas 6 — Pembacaan retensi (`documentRetentionQueries.ts` + tRPC)
 - [ ] Tugas 7 — Layar Profil Perusahaan: nonaktifkan dan hapus permanen
 - [ ] Tugas 8 — Halaman Penatausahaan Dokumen
 - [ ] Tugas 9 — Peragaan end-to-end dan dokumentasi
@@ -686,7 +686,7 @@ git commit -m "Uji penjaga: dokumen nasabah dan transaksi tidak punya jalur hapu
 - Consumes: aturan dari tugas 2, kolom dari tugas 1 dan 3
 - Produces: `customerRetentionStatement`, `documentRetentionOverview`, dan prosedur `documents.retentionStatement` / `documents.retentionOverview`. Dipakai tugas 8.
 
-- [ ] **Step 1: Tulis `customerRetentionStatement`**
+- [x] **Step 1: Tulis `customerRetentionStatement`**
 
 Menjawab Pasal 48 ayat (4) untuk satu nasabah dalam satu panggilan. Bacaannya:
 
@@ -706,7 +706,7 @@ Kembalikan juga baris korespondensi **apa adanya**, bukan angka nol:
     },
 ```
 
-- [ ] **Step 2: Tulis `documentRetentionOverview`**
+- [x] **Step 2: Tulis `documentRetentionOverview`**
 
 ```ts
 export async function documentRetentionOverview({ asOf = new Date() }: { asOf?: Date } = {}) {
@@ -718,7 +718,7 @@ export async function documentRetentionOverview({ asOf = new Date() }: { asOf?: 
 }
 ```
 
-- [ ] **Step 3: Daftarkan prosedurnya**
+- [x] **Step 3: Daftarkan prosedurnya**
 
 ```ts
     retentionStatement: controllerProcedure
@@ -727,7 +727,7 @@ export async function documentRetentionOverview({ asOf = new Date() }: { asOf?: 
     retentionOverview: controllerProcedure.query(() => documentRetentionOverview()),
 ```
 
-- [ ] **Step 4: Tulis ujinya**
+- [x] **Step 4: Tulis ujinya**
 
 `server/documentRetentionQueries.test.ts`, `getDb` dipalsukan:
 
@@ -736,7 +736,7 @@ export async function documentRetentionOverview({ asOf = new Date() }: { asOf?: 
 3. Nasabah tanpa dokumen sama sekali → daftar kosong, **bukan** galat, dan baris korespondensinya tetap muncul dengan `tersedia: false`.
 4. `documentRetentionOverview` menghitung yang lewat tenggat dengan `asOf` yang disuntikkan, bukan `new Date()` di dalam.
 
-- [ ] **Step 5: Jalankan uji dan tipe**
+- [x] **Step 5: Jalankan uji dan tipe**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -744,7 +744,7 @@ export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
 ./node_modules/.bin/tsc --noEmit
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add server/documentRetentionQueries.ts server/documentRetentionQueries.test.ts server/routers.ts
