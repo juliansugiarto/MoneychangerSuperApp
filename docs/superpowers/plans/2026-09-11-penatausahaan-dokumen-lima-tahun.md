@@ -21,7 +21,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 4 — `server/companyProfileDocuments.ts` menggantikan `deleteCompanyDocument`
 - [x] Tugas 5 — Uji penjaga: dokumen nasabah dan transaksi tidak punya jalur hapus
 - [x] Tugas 6 — Pembacaan retensi (`documentRetentionQueries.ts` + tRPC)
-- [ ] Tugas 7 — Layar Profil Perusahaan: nonaktifkan dan hapus permanen
+- [x] Tugas 7 — Layar Profil Perusahaan: nonaktifkan dan hapus permanen
 - [ ] Tugas 8 — Halaman Penatausahaan Dokumen
 - [ ] Tugas 9 — Peragaan end-to-end dan dokumentasi
 
@@ -762,12 +762,12 @@ git commit -m "Pernyataan retensi per nasabah dan ringkasan penatausahaan"
 - Consumes: `documents.deactivateCompany`, `documents.purgeCompany`, `documents.forCompanyDeactivated` dari tugas 4
 - Produces: —
 
-- [ ] **Step 1: Ganti mutasinya**
+- [x] **Step 1: Ganti mutasinya**
 
 Buang `deleteDocument` (`:105`). Gantikan dengan dua mutasi, masing-masing meng-invalidate
 `documents.forCompany` **dan** `documents.forCompanyDeactivated`.
 
-- [ ] **Step 2: Ganti kedua ikon tong sampah**
+- [x] **Step 2: Ganti kedua ikon tong sampah**
 
 Pada `:177` (sertifikat) dan `:185` (lampiran), ganti tombol tong sampah yang memanggil
 `mutate` langsung menjadi dua tombol yang membuka dialog. **Tidak ada tindakan destruktif tanpa
@@ -781,13 +781,20 @@ dialog** — keadaan hari ini, yang menghapus dari satu klik ikon, adalah bagian
 Fokus keyboard mengikuti komponen `Dialog` yang sudah dipakai halaman lain; jangan menulis dialog
 sendiri.
 
-- [ ] **Step 3: Tambah bagian dokumen nonaktif**
+- [x] **Step 3: Tambah bagian dokumen nonaktif**
 
 Satu `Card` di bawah daftar lampiran: nama berkas, tanggal nonaktif, alasan, dan siapa yang
 menonaktifkan. Empty state: *"Belum ada dokumen yang dinonaktifkan."* Bagian ini hanya dirender
 bagi CONTROLLER ke atas.
 
-- [ ] **Step 4: Verifikasi visual**
+- [x] **Step 4: Verifikasi visual**
+
+> **Catatan pelaksanaan 11 September 2026:** butir 2, 3, dan 4 dibuktikan di layar sebagai SHAREHOLDER
+> (sesi peramban yang sudah masuk). Butir 1 — tampilan CONTROLLER — **belum** ditangkap di layar karena
+> peragaan tidak mengetik kata sandi akun uji; perilakunya dijaga `companyProfileDocuments.authorization.test.ts`,
+> gerbang di penulis, dan `scripts/peragaanPaketM.mts tolak-controller` terhadap baris `test-controller` asli.
+> Unggah lewat layar gagal karena kredensial R2 tidak ada di mesin lokal (preseden Paket I); baris
+> `operational_documents` peragaan disisipkan lewat SQL, seluruh alur di hilirnya lewat layar.
 
 Jalankan server dev, buka `/operasional/profil-perusahaan` sebagai CONTROLLER lalu sebagai
 SHAREHOLDER. Buktikan:
@@ -801,7 +808,7 @@ Tugas 9 yang menyiapkan datanya bila belum ada dokumen `COMPANY` sama sekali —
 memuat **nol** baris `ownerType = "COMPANY"`. Bila demikian, unggah satu berkas uji lebih dulu
 lewat layarnya sendiri.
 
-- [ ] **Step 5: Build dan commit**
+- [x] **Step 5: Build dan commit**
 
 ```bash
 ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build

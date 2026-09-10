@@ -1,22 +1,42 @@
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { isRoleAllowed, type BackOfficeRole } from "@shared/backOfficeNavigation";
 import { DEFAULT_OPERATIONAL_TIMEZONE, OPERATIONAL_TIMEZONES } from "@shared/regulatoryActionQueue";
 import { IRA_PROVINCE_LABELS } from "@shared/iraVocabulary";
-import { Building2, FileImage, Paperclip, ShieldCheck, Upload } from "lucide-react";
+import { Archive, Building2, EyeOff, FileImage, Paperclip, ShieldCheck, Trash2, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const fileToBase64 = (file: File) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
 
+/** Minimal lima karakter, sama dengan batas prosedurnya. */
+const MIN_REASON_LENGTH = 5;
+
+const formatDateTime = (value: string | Date | null | undefined) =>
+  value ? new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value)) : "—";
+
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  COMPANY_LOGO: "Logo",
+  LICENSE_CERTIFICATE: "Sertifikat izin usaha",
+  LICENSE_ATTACHMENT: "Lampiran izin",
+};
+
+type DocumentAction = { mode: "deactivate" | "purge"; documentId: number; fileName: string };
+
 const emptyForm = { legalEntityName: "", tradingName: "", licenseNumber: "", kupvaCode: "", npwp: "", nib: "", biReporterCode: "", sipesatIdPjk: "", goamlRentityId: "", goamlReportingUserCode: "", address: "", phone: "", email: "", website: "", timezone: "Asia/Jakarta", province: "" };
 
 export default function CompanyProfile() {
   const utils = trpc.useUtils();
+  const { user } = useAuth();
   const { data: profile, isLoading } = trpc.companyProfile.get.useQuery();
   const { data: documents } = trpc.documents.forCompany.useQuery();
   const [form, setForm] = useState(emptyForm);
@@ -107,6 +127,53 @@ export default function CompanyProfile() {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
+  // Gerbang di layar hanya menyembunyikan tombol; penulisnya di server yang menegakkan perannya.
+  const role = user?.role as BackOfficeRole | undefined;
+  const canDeactivate = Boolean(role && isRoleAllowed(role, "CONTROLLER"));
+  const canPurge = role === "SHAREHOLDER";
+  const deactivatedDocuments = trpc.documents.forCompanyDeactivated.useQuery(undefined, { enabled: canDeactivate });
+
+  const [action, setAction] = useState<DocumentAction | null>(null);
+  const [reason, setReason] = useState("");
+  const closeAction = () => { setAction(null); setReason(""); };
+  const refreshDocuments = () => {
+    utils.documents.forCompany.invalidate();
+    utils.documents.forCompanyDeactivated.invalidate();
+  };
+
+  const deactivate = trpc.documents.deactivateCompany.useMutation({
+    onSuccess: () => { toast.success("Dokumen dinonaktifkan. Barisnya tetap tersimpan beserta alasannya."); closeAction(); refreshDocuments(); },
+    onError: (error) => toast.error(error.message),
+  });
+  const purge = trpc.documents.purgeCompany.useMutation({
+    onSuccess: () => { toast.success("Dokumen dihapus permanen. Jejaknya tercatat di log audit."); closeAction(); refreshDocuments(); },
+    onError: (error) => toast.error(error.message),
+  });
+  const pending = deactivate.isPending || purge.isPending;
+  const reasonValid = reason.trim().length >= MIN_REASON_LENGTH;
+
+  const submitAction = () => {
+    if (!action || !reasonValid) return;
+    const payload = { documentId: action.documentId, reason: reason.trim() };
+    if (action.mode === "deactivate") deactivate.mutate(payload);
+    else purge.mutate(payload);
+  };
+
+  const documentActions = (doc: { id: number; originalFileName: string }) => (
+    <>
+      {canDeactivate ? (
+        <Button type="button" size="sm" variant="ghost" className="text-[#7a6626]" onClick={() => setAction({ mode: "deactivate", documentId: doc.id, fileName: doc.originalFileName })}>
+          <EyeOff className="mr-1 size-3.5" />Nonaktifkan
+        </Button>
+      ) : null}
+      {canPurge ? (
+        <Button type="button" size="sm" variant="ghost" className="text-rose-600" onClick={() => setAction({ mode: "purge", documentId: doc.id, fileName: doc.originalFileName })}>
+          <Trash2 className="mr-1 size-3.5" />Hapus permanen
+        </Button>
+      ) : null}
+    </>
+  );
+
   if (isLoading) return <p className="text-sm text-[#475569]">Memuat profil perusahaan…</p>;
 
   return <div className="mx-auto max-w-4xl space-y-6">
@@ -169,7 +236,7 @@ export default function CompanyProfile() {
     <Card className="border-[#dce6f0]">
       <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Sertifikat izin usaha</CardTitle><CardDescription>Scan/foto sertifikat izin KUPVA BB.</CardDescription></CardHeader>
       <CardContent className="space-y-3">
-        {licenseCertificates.length ? <div className="space-y-2">{licenseCertificates.map((doc) => <div key={doc.id} className="flex items-center justify-between rounded-lg bg-[#f6fafc] px-3 py-2 text-sm"><span className="text-[#18395f]">{doc.originalFileName}</span><div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => viewDocument(doc.id)}>Lihat</Button></div></div>)}</div> : <p className="text-sm text-[#475569]">Belum ada sertifikat diunggah.</p>}
+        {licenseCertificates.length ? <div className="space-y-2">{licenseCertificates.map((doc) => <div key={doc.id} className="flex items-center justify-between rounded-lg bg-[#f6fafc] px-3 py-2 text-sm"><span className="text-[#18395f]">{doc.originalFileName}</span><div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => viewDocument(doc.id)}>Lihat</Button>{documentActions(doc)}</div></div>)}</div> : <p className="text-sm text-[#475569]">Belum ada sertifikat diunggah.</p>}
         <Input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={uploadingLicense} onChange={(e) => handleLicenseUpload(e.target.files?.[0] ?? null)} />
       </CardContent>
     </Card>
@@ -177,10 +244,81 @@ export default function CompanyProfile() {
     <Card className="border-[#dce6f0]">
       <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Lampiran izin lainnya</CardTitle><CardDescription>Dokumen pendukung izin usaha — bisa lebih dari satu file.</CardDescription></CardHeader>
       <CardContent className="space-y-3">
-        {attachments.length ? <div className="space-y-2">{attachments.map((doc) => <div key={doc.id} className="flex items-center justify-between rounded-lg bg-[#f6fafc] px-3 py-2 text-sm"><span className="flex items-center gap-1.5 text-[#18395f]"><Paperclip className="size-3.5" />{doc.originalFileName}</span><div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => viewDocument(doc.id)}>Lihat</Button></div></div>)}</div> : <p className="text-sm text-[#475569]">Belum ada lampiran diunggah.</p>}
+        {attachments.length ? <div className="space-y-2">{attachments.map((doc) => <div key={doc.id} className="flex items-center justify-between rounded-lg bg-[#f6fafc] px-3 py-2 text-sm"><span className="flex items-center gap-1.5 text-[#18395f]"><Paperclip className="size-3.5" />{doc.originalFileName}</span><div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => viewDocument(doc.id)}>Lihat</Button>{documentActions(doc)}</div></div>)}</div> : <p className="text-sm text-[#475569]">Belum ada lampiran diunggah.</p>}
         <Input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={uploadingAttachment} onChange={(e) => { handleAttachmentUpload(e.target.files?.[0] ?? null); e.target.value = ""; }} />
         <p className="flex items-center gap-1 text-[11px] text-[#475569]"><Upload className="size-3" />Unggah satu per satu — file akan langsung tercatat dalam daftar di atas.</p>
       </CardContent>
     </Card>
+
+    {canDeactivate ? (
+      <Card className="border-[#dce6f0]">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 font-display text-lg text-[#18395f]"><Archive className="size-4" />Dokumen nonaktif</CardTitle>
+          <CardDescription>Dokumen yang dinonaktifkan tidak lagi tampil di atas, tetapi barisnya tetap tersimpan beserta alasan dan pelakunya.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {deactivatedDocuments.isLoading ? (
+            <div className="space-y-2"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>
+          ) : deactivatedDocuments.isError ? (
+            <div className="rounded-xl border border-[#f0d6d6] bg-[#fdf6f6] p-4">
+              <p className="text-sm text-[#9a4b4b]">Daftar dokumen nonaktif tidak dapat dimuat: {deactivatedDocuments.error.message}</p>
+              <Button className="mt-3" variant="outline" onClick={() => deactivatedDocuments.refetch()}>Coba lagi</Button>
+            </div>
+          ) : !deactivatedDocuments.data?.length ? (
+            <p className="text-sm text-[#475569]">Belum ada dokumen yang dinonaktifkan.</p>
+          ) : (
+            <ul className="space-y-2">
+              {deactivatedDocuments.data.map((doc) => (
+                <li key={doc.id} className="rounded-lg bg-[#f6fafc] px-3 py-2 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[#18395f]">{doc.originalFileName} <span className="text-xs text-[#718398]">· {DOCUMENT_TYPE_LABELS[doc.documentType] ?? doc.documentType}</span></span>
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" variant="outline" onClick={() => viewDocument(doc.id)}>Lihat</Button>
+                      {canPurge ? (
+                        <Button type="button" size="sm" variant="ghost" className="text-rose-600" onClick={() => setAction({ mode: "purge", documentId: doc.id, fileName: doc.originalFileName })}>
+                          <Trash2 className="mr-1 size-3.5" />Hapus permanen
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                  <p className="mt-1 text-xs text-[#475569]">
+                    Dinonaktifkan {formatDateTime(doc.deactivatedAt)} oleh {doc.deactivatedByName ?? `pengguna #${doc.deactivatedByUserId}`} — {doc.deactivationReason}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    ) : null}
+
+    <Dialog open={Boolean(action)} onOpenChange={(open) => { if (!open && !pending) closeAction(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{action?.mode === "purge" ? "Hapus permanen dokumen" : "Nonaktifkan dokumen"} — {action?.fileName}</DialogTitle>
+          <DialogDescription>
+            {action?.mode === "purge"
+              ? "Baris metadatanya lenyap dan tidak dapat dikembalikan. Berkasnya sendiri tetap tertinggal di penyimpanan. Hanya untuk berkas salah unggah — misalnya yang memuat data pribadi pihak lain."
+              : "Dokumen tidak lagi tampil di daftar aktif, tetapi barisnya tetap tersimpan dan dapat dilihat di bagian Dokumen nonaktif. Tidak ada yang dihapus."}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1.5">
+          <Label htmlFor="document-action-reason" className="text-xs font-semibold text-[#476278]">Alasan<span className="ml-1 text-rose-500">*</span></Label>
+          <Textarea id="document-action-reason" value={reason} rows={3} onChange={(event) => setReason(event.target.value)} placeholder={action?.mode === "purge" ? "Mengapa baris ini harus lenyap, bukan cukup dinonaktifkan." : "Mengapa dokumen ini tidak berlaku lagi."} />
+          <p className="text-xs text-[#94a7bb]">Wajib, minimal {MIN_REASON_LENGTH} karakter. Alasan ini tersimpan di log audit.</p>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" disabled={pending} onClick={closeAction}>Batal</Button>
+          <Button
+            type="button"
+            disabled={!reasonValid || pending}
+            onClick={submitAction}
+            className={action?.mode === "purge" ? "bg-rose-600 text-white hover:bg-rose-700" : "bg-[#183f70] text-white hover:bg-[#12345d]"}
+          >
+            {pending ? "Memproses…" : action?.mode === "purge" ? "Hapus permanen" : "Nonaktifkan"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>;
 }
