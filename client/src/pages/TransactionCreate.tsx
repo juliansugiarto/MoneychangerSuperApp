@@ -11,7 +11,8 @@ import { formatPlainAmount } from "@/lib/money";
 import { trpc } from "@/lib/trpc";
 import { IRA_DISTRIBUTION_CHANNEL_LABELS, type IraDistributionChannel } from "@shared/iraVocabulary";
 import { SUSPICIOUS_TRANSACTION_INDICATOR_CATEGORIES } from "@shared/suspiciousTransactionIndicators";
-import { ArrowLeftRight, Banknote, CircleDollarSign, FileText, Plus, Printer, Search, Sparkles, Trash2, Upload, UserPlus } from "lucide-react";
+import { customerHighRiskDenial } from "@shared/customerHighRisk";
+import { ArrowLeftRight, Banknote, CircleDollarSign, FileText, Plus, Printer, Search, ShieldAlert, Sparkles, Trash2, Upload, UserPlus } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -99,6 +100,17 @@ export default function TransactionCreate() {
     finally { sessionStorage.removeItem("iv:transactionCustomer"); }
   }, []);
   useEffect(() => { if (linkedBeneficialOwner && !representativeCustomer) { setRepresentativeCustomer(linkedBeneficialOwner); setRepSearch(linkedBeneficialOwner.fullName); } }, [linkedBeneficialOwner, representativeCustomer]);
+
+  /**
+   * Gerbang nasabah berisiko tinggi, dinyatakan di layar memakai fungsi yang sama persis dengan
+   * yang menolak bonnya di server. Peringatan lebih dulu, supaya petugas tidak mengisi bon panjang
+   * untuk kemudian ditolak; penolakan sebenarnya tetap terjadi di `createTransaction`.
+   */
+  const denialFor = (person: Customer | null, label?: string) =>
+    person?.riskLevel ? customerHighRiskDenial({ riskLevel: person.riskLevel, highRiskDecision: person.highRiskDecision ?? "BELUM" }, label) : null;
+  const customerDenial = denialFor(customer);
+  const representativeDenial = customerActingAs === "REPRESENTATIVE" ? denialFor(representativeCustomer, "Nasabah pihak kuasa/wakil") : null;
+  const highRiskDenial = customerDenial ?? representativeDenial;
   useEffect(() => { if (customerActingAs === "SELF") { setRepresentativeCustomer(null); setRepSearch(""); } }, [customerActingAs]);
 
   const updateLine = (index: number, patch: Partial<LineDraft>) => setLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
@@ -263,6 +275,7 @@ export default function TransactionCreate() {
       if (counterpartyNameMismatch && counterpartyNameMismatchReason.trim().length < 5) return toast.error("Isi alasan perbedaan nama rekening (minimal 5 karakter).");
     }
     if (customerActingAs === "REPRESENTATIVE" && !representativeCustomer) return toast.error("Pilih nasabah terdaftar sebagai pihak kuasa/wakil.");
+    if (highRiskDenial) return toast.error(highRiskDenial);
     if (underlyingRequired) {
       if (!underlyingReference.trim()) return toast.error("Isi referensi dokumen underlying.");
       if (!underlyingFormFile || !underlyingStatementFile || !underlyingInvoiceFile) return toast.error("Lampirkan ketiga dokumen underlying: Formulir Underlying, Surat Pernyataan, dan Invoice.");
@@ -325,6 +338,10 @@ export default function TransactionCreate() {
                 : <div className="p-3 text-sm text-slate-600"><p>Nasabah belum ditemukan.</p><Button className="mt-2" type="button" size="sm" variant="outline" onClick={() => setLocation("/operasional/nasabah?returnTo=/operasional/transaksi")}><UserPlus className="mr-1 size-3" />Buat profil KYC baru</Button></div>}
             </div> : null}
             {customer ? <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">Dipilih: {customer.fullName} · {customer.cifNumber}</p> : null}
+            {highRiskDenial ? <p className="mt-2 flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-900">
+              <ShieldAlert className="mt-0.5 size-4 shrink-0" />
+              <span><b>Bon tidak dapat dibuat.</b> {highRiskDenial} Keputusannya dicatat pada profil nasabah (menu Nasabah), dan hanya Pemegang Saham yang dapat menjatuhkannya.</span>
+            </p> : null}
           </div>
         </CardContent>
       </Card>

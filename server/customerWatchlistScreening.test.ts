@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import * as db from "./db";
 import { screenCustomer, summarizeScreeningMatches, SCREENING_SUMMARY_MAX_LENGTH } from "./customerWatchlistScreening";
+import { isScreeningStale } from "../shared/customerHighRisk";
 
 /**
  * Penulis penyaringan nasabah terhadap DTTOT/DPPSPM.
@@ -393,5 +394,53 @@ describe("penyaringan ulang massal saat daftar diimpor", () => {
     expect(hasil.recordCount).toBe(1);
     expect(inserted.some((row) => row.table === "sanctions_watchlist_entries")).toBe(true);
     expect(inserted.filter((row) => row.table === "audit_logs").map((row) => row.values.action)).toContain("CUSTOMER_RESCREENING_FAILED");
+  });
+});
+
+/**
+ * Penanda daftar usang — yang membedakan panel riwayat dari hiasan.
+ */
+describe("isScreeningStale", () => {
+  const kemarin = new Date("2026-09-08T04:00:00Z");
+  const hariIni = new Date("2026-09-09T04:00:00Z");
+
+  it("penyaringan terhadap daftar yang sudah tersusul dinyatakan usang", () => {
+    expect(isScreeningStale(kemarin, hariIni)).toBe(true);
+  });
+
+  it("penyaringan terhadap daftar terbaru tidak usang", () => {
+    expect(isScreeningStale(hariIni, hariIni)).toBe(false);
+  });
+
+  it("belum ada daftar sama sekali berarti tidak ada yang dapat usang", () => {
+    expect(isScreeningStale(null, null)).toBe(false);
+    expect(isScreeningStale(kemarin, null)).toBe(false);
+  });
+
+  it("disaring sebelum daftar mana pun dimuat, lalu daftarnya masuk: usang", () => {
+    expect(isScreeningStale(null, hariIni)).toBe(true);
+  });
+});
+
+describe("rescreenCustomerNow", () => {
+  it("menulis baris bertrigger MANUAL atas nama petugas yang memintanya", async () => {
+    const { inserted } = mockDb({
+      sanctions_watchlist_entries: [entriDaftar()],
+      customers: [{ id: 7, fullName: "ABDUL RAHMAN SALEH", isDemo: false, isHistorical: false }],
+    });
+    const { rescreenCustomerNow } = await import("./customerWatchlistScreening");
+
+    await rescreenCustomerNow(7, 5);
+
+    const baris = inserted.find((row) => row.table === penyaringan)!;
+    expect(baris.values).toMatchObject({ customerId: 7, trigger: "MANUAL", screenedByUserId: 5, matchCount: 1 });
+  });
+
+  it("nasabah yang tidak ada menolak dengan jelas, bukan menulis baris kosong", async () => {
+    const { inserted } = mockDb({ sanctions_watchlist_entries: [], customers: [] });
+    const { rescreenCustomerNow } = await import("./customerWatchlistScreening");
+
+    await expect(rescreenCustomerNow(99, 5)).rejects.toThrow(/tidak ditemukan/);
+    expect(inserted).toHaveLength(0);
   });
 });

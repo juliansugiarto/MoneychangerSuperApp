@@ -1,5 +1,6 @@
-import { and, eq } from "drizzle-orm";
-import { customers, customerWatchlistScreenings, sanctionsWatchlistEntries } from "../drizzle/schema";
+import { and, desc, eq } from "drizzle-orm";
+import { customers, customerWatchlistScreenings, sanctionsWatchlistEntries, users } from "../drizzle/schema";
+import { isScreeningStale } from "../shared/customerHighRisk";
 import { findBestNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
 import { getDb } from "./db";
 
@@ -211,4 +212,62 @@ export async function rescreenAllCustomers(): Promise<{ customerCount: number; l
   }
 
   return { customerCount: rows.length, listSnapshotAt };
+}
+
+/** Riwayat yang ditampilkan pada profil nasabah; secukupnya untuk dibaca, bukan seluruh umur nasabah. */
+const SCREENING_HISTORY_LIMIT = 25;
+
+/**
+ * Riwayat penyaringan satu nasabah beserta jawaban atas pertanyaan yang sebenarnya: apakah
+ * penyaringan terakhirnya masih berlaku terhadap daftar yang dipegang hari ini.
+ *
+ * Keusangan dihitung di server, bukan di layar: bila layar yang menghitungnya, layar kedua yang
+ * kelak menampilkan hal yang sama akan menghitungnya sedikit berbeda.
+ */
+export async function listCustomerScreenings(customerId: number) {
+  const db = await databaseOrThrow();
+  const rows = await db.select({
+    id: customerWatchlistScreenings.id,
+    screenedAt: customerWatchlistScreenings.screenedAt,
+    trigger: customerWatchlistScreenings.trigger,
+    matchCount: customerWatchlistScreenings.matchCount,
+    summary: customerWatchlistScreenings.summary,
+    listSnapshotAt: customerWatchlistScreenings.listSnapshotAt,
+    screenedByUserId: customerWatchlistScreenings.screenedByUserId,
+    screenedByName: users.name,
+  })
+    .from(customerWatchlistScreenings)
+    .leftJoin(users, eq(users.id, customerWatchlistScreenings.screenedByUserId))
+    .where(eq(customerWatchlistScreenings.customerId, customerId))
+    .orderBy(desc(customerWatchlistScreenings.screenedAt))
+    .limit(SCREENING_HISTORY_LIMIT);
+
+  const entries = await db.select({ importedAt: sanctionsWatchlistEntries.importedAt }).from(sanctionsWatchlistEntries);
+  const latestImportAt = latestImportedAt(entries);
+  const latest = rows[0] ?? null;
+
+  return {
+    screenings: rows,
+    latestImportAt,
+    lastScreenedAt: latest?.screenedAt ?? null,
+    // Nasabah yang belum pernah disaring sama sekali bukan "usang" melainkan "belum pernah";
+    // layarnya membedakan keduanya karena tindakan yang dituntut memang berbeda.
+    isStale: latest ? isScreeningStale(latest.listSnapshotAt, latestImportAt) : false,
+    neverScreened: rows.length === 0,
+  };
+}
+
+/**
+ * Penyaringan ulang atas permintaan petugas — satu-satunya penulis pemicu `MANUAL`.
+ *
+ * Inilah jalan keluar dari peringatan "daftar usang" pada profil nasabah: tanpa ini, satu-satunya
+ * cara menyaring ulang seorang nasabah adalah menyunting profilnya, dan menyunting data KYC hanya
+ * demi memicu penyaringan adalah jejak audit yang menyesatkan.
+ */
+export async function rescreenCustomerNow(customerId: number, actorUserId: number) {
+  const db = await databaseOrThrow();
+  const [row] = await db.select({ id: customers.id, fullName: customers.fullName }).from(customers)
+    .where(and(eq(customers.id, customerId), eq(customers.isDemo, false), eq(customers.isHistorical, false))).limit(1);
+  if (!row) throw new Error("Nasabah tidak ditemukan.");
+  return screenCustomer({ customerId: row.id, fullName: row.fullName, trigger: "MANUAL", screenedByUserId: actorUserId });
 }

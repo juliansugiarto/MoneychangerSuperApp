@@ -21,7 +21,7 @@ tiga pemanggil; satu fungsi penolakan murni yang ditegakkan di penulis transaksi
 - [x] Tugas 2 — Penulis penyaringan beserta pemanggil saat nasabah dibuat dan diubah — **SELESAI 9 September 2026**
 - [x] Tugas 3 — Penyaringan ulang massal saat daftar diimpor — **SELESAI 9 September 2026**
 - [x] Tugas 4 — Gerbang persetujuan: fungsi penolakan murni dan penegakannya pada bon — **SELESAI 9 September 2026**
-- [ ] Tugas 5 — Halaman: riwayat penyaringan, peringatan daftar usang, kendali setujui/tolak
+- [x] Tugas 5 — Halaman: riwayat penyaringan, peringatan daftar usang, kendali setujui/tolak — **SELESAI 10 September 2026**
 - [ ] Tugas 6 — Peragaan end-to-end dan dokumentasi
 
 Urutannya mengikat: 1 sebelum semuanya; 2 sebelum 3; 4 berdiri sendiri sesudah 1; 5 sesudah 3 dan 4;
@@ -246,21 +246,21 @@ describe("decideHighRisk", () => {
 **Files:** Modify `client/src/pages/CustomerList.tsx`, `client/src/pages/TransactionCreate.tsx`,
 `server/routers.ts`.
 
-- [ ] **Step 1:** Panel riwayat penyaringan pada detail nasabah: waktu, pemicu, oleh siapa
+- [x] **Step 1:** Panel riwayat penyaringan pada detail nasabah: waktu, pemicu, oleh siapa
       (atau "otomatis"), banyaknya kemungkinan kecocokan. Keadaan kosong berbunyi jelas —
       *"Belum pernah disaring"* — bukan tabel kosong tanpa keterangan.
 
-- [ ] **Step 2:** **Peringatan daftar usang** bila `listSnapshotAt` penyaringan terakhir lebih tua
+- [x] **Step 2:** **Peringatan daftar usang** bila `listSnapshotAt` penyaringan terakhir lebih tua
       daripada `importedAt` terbaru. Inilah yang membedakan panel ini dari hiasan.
 
-- [ ] **Step 3:** Kendali setujui/tolak, **hanya tampil bagi SHAREHOLDER** dan hanya bila
+- [x] **Step 3:** Kendali setujui/tolak, **hanya tampil bagi SHAREHOLDER** dan hanya bila
       `riskLevel = HIGH`. Wajib beralasan tertulis. Teks tombolnya menyebut akibatnya:
       *"Setujui — nasabah dapat bertransaksi"* dan *"Tolak — hentikan hubungan usaha"*.
 
-- [ ] **Step 4:** Borang transaksi menampilkan alasan penolakan apa adanya beserta jalan keluarnya,
+- [x] **Step 4:** Borang transaksi menampilkan alasan penolakan apa adanya beserta jalan keluarnya,
       bukan galat generik.
 
-- [ ] **Step 5:** Perintah mutu, commit `"Halaman riwayat penyaringan dan keputusan risiko tinggi"`.
+- [x] **Step 5:** Perintah mutu, commit `"Halaman riwayat penyaringan dan keputusan risiko tinggi"`.
 
 ---
 

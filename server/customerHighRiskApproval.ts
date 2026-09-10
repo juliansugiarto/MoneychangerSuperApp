@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { auditLogs, customers } from "../drizzle/schema";
 import { isRoleAllowed, type BackOfficeRole } from "../shared/backOfficeNavigation";
+import { customerHighRiskDenial, isScreeningStale, type CustomerRiskLevel, type HighRiskDecision, type HighRiskGateCustomer } from "../shared/customerHighRisk";
 import { getDb } from "./db";
 
 /**
@@ -18,32 +19,16 @@ import { getDb } from "./db";
  *    `iraApprovalDenial`. Gerbang peran di router menjaga layar; penulisnya yang menjaga data.
  */
 
-export type HighRiskDecision = "BELUM" | "DISETUJUI" | "DITOLAK";
-export type CustomerRiskLevel = "LOW" | "MEDIUM" | "HIGH";
-
 type GateUser = { role: string; mustChangePassword: boolean };
 type Denial = { status: 403; message: string } | null;
 
-/** Bentuk minimal yang dibutuhkan gerbang: tingkat risiko dan keputusannya, bukan seluruh nasabah. */
-export type HighRiskGateCustomer = { riskLevel: CustomerRiskLevel; highRiskDecision: HighRiskDecision };
-
 /**
- * Alasan penolakan bon bagi satu nasabah, atau `null` bila ia boleh dipakai.
- *
- * `label` menyebut pihak mana yang tertahan — nasabah transaksi atau pihak kuasa/wakilnya —
- * supaya petugas tidak perlu menebak profil mana yang harus diurus.
- *
- * `DITOLAK` dan `BELUM` sengaja berbunyi berbeda: menyuruh menunggu keputusan yang justru sudah
- * dijatuhkan akan membuat petugas menunggu sesuatu yang tidak akan datang.
+ * Aturan penolakannya sendiri tinggal di `shared/customerHighRisk.ts` supaya layar transaksi dan
+ * penulisnya memakai kalimat yang sama persis; diteruskan di sini karena berkas inilah yang
+ * disebut rencana paket ini sebagai rumah gerbang tersebut.
  */
-export function customerHighRiskDenial(customer: HighRiskGateCustomer, label = "Nasabah"): string | null {
-  if (customer.riskLevel !== "HIGH") return null;
-  if (customer.highRiskDecision === "DISETUJUI") return null;
-  if (customer.highRiskDecision === "DITOLAK") {
-    return `${label} berisiko tinggi ini ditolak Pemegang Saham (SHAREHOLDER); hubungan usahanya dihentikan dan bon baru tidak dapat dibuat atas namanya.`;
-  }
-  return `${label} berisiko tinggi ini belum diputuskan Pemegang Saham (SHAREHOLDER). Mintakan keputusan persetujuan pada profil nasabahnya sebelum membuat bon.`;
-}
+export { customerHighRiskDenial, isScreeningStale };
+export type { CustomerRiskLevel, HighRiskDecision, HighRiskGateCustomer };
 
 /** Gerbang keputusan. **Hanya SHAREHOLDER** — Controller sekalipun tidak. */
 export function highRiskDecisionDenial(user: GateUser): Denial {

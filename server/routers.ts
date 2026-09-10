@@ -137,6 +137,7 @@ import {
 import { OPERATIONAL_TIMEZONE_VALUES } from "../shared/regulatoryActionQueue";
 import { simulateArchiveReadiness, simulateClosing, simulateExchange, simulateRateShock } from "./simulation";
 import { decideHighRisk, highRiskDecisionDenial } from "./customerHighRiskApproval";
+import { listCustomerScreenings, rescreenCustomerNow } from "./customerWatchlistScreening";
 import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedure, router, shareholderProcedure, staffProcedure } from "./_core/trpc";
 import { classifyRisk, iraClassificationDenial, listClassifications, listParameterThresholds, resetParameterThresholds, setParameterThresholds } from "./iraRiskClassification";
 import {
@@ -766,6 +767,19 @@ export const appRouter = router({
     create: staffProcedure.input(customerInput).mutation(({ input, ctx }) => createCustomer(input, ctx.user.id)),
     update: staffProcedure.input(customerUpdateInput).mutation(({ input, ctx }) => updateCustomer(input, ctx.user)),
     import: controllerProcedure.input(z.object({ rows: z.array(customerInput).min(1).max(300) })).mutation(({ input, ctx }) => importCustomers(input.rows, ctx.user.id)),
+
+    /**
+     * Menyaring ulang satu nasabah atas permintaan petugas — jalan keluar dari peringatan daftar
+     * usang. Tidak mengubah data nasabah apa pun; yang bertambah hanya satu baris riwayat.
+     */
+    rescreen: staffProcedure
+      .input(z.object({ customerId: z.number().int().positive() }))
+      .mutation(({ input, ctx }) => rescreenCustomerNow(input.customerId, ctx.user.id)),
+
+    /** Riwayat penyaringan DTTOT/DPPSPM satu nasabah beserta penanda daftar usang. */
+    screenings: staffProcedure
+      .input(z.object({ customerId: z.number().int().positive() }))
+      .query(({ input }) => listCustomerScreenings(input.customerId)),
 
     /**
      * Keputusan Manajemen Senior atas nasabah berisiko tinggi — Pasal 32 ayat (5) dan (6) PBI

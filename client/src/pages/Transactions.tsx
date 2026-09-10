@@ -3,7 +3,8 @@ import { toast } from "sonner";
 
 /** Shared bon/kwitansi helpers used by both TransactionCreate.tsx (the form) and TransactionList.tsx (the archive). Kept in this file — not renamed — so existing tests that read Transactions.tsx source text for "printBon"/"window.print()" keep working. */
 
-export type Customer = { id: number; fullName: string; cifNumber: string; phoneNumber?: string | null; identityType: string; identityNumber: string; address?: string | null; occupation?: string | null; sourceOfFunds?: string | null; transactionPurpose: string | null; hasBeneficialOwner?: boolean; beneficialOwnerCustomerId?: number | null };
+/** `riskLevel`/`highRiskDecision` ikut dibawa agar borang transaksi dapat memperingatkan gerbang risiko tinggi sebelum bonnya diisi penuh. */
+export type Customer = { id: number; fullName: string; cifNumber: string; phoneNumber?: string | null; identityType: string; identityNumber: string; address?: string | null; occupation?: string | null; sourceOfFunds?: string | null; transactionPurpose: string | null; hasBeneficialOwner?: boolean; beneficialOwnerCustomerId?: number | null ; riskLevel?: "LOW" | "MEDIUM" | "HIGH"; highRiskDecision?: "BELUM" | "DISETUJUI" | "DITOLAK" };
 export type DenominationRow = { value: string; quantity: string };
 /**
  * One row of the printed kwitansi's table. `denominationValue` and `quantity` carry the pecahan and

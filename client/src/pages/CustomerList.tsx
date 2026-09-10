@@ -7,15 +7,24 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { WatchlistCheckButton } from "@/components/WatchlistCheck";
 import { trpc } from "@/lib/trpc";
 import { IRA_LEGAL_FORM_LABELS, IRA_OCCUPATION_CATEGORY_LABELS } from "@shared/iraVocabulary";
-import { Download, IdCard, Pencil, Search, UserPlus, UsersRound } from "lucide-react";
+import { Download, IdCard, Pencil, RefreshCw, Search, ShieldAlert, ShieldCheck, UserPlus, UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
 type CustomerRow = { id: number; identityExpiryDate: string | Date | null; dateOfBirth: string | Date | null; fullName: string; phoneNumber: string | null; identityType: "KTP" | "PASSPORT" | "OTHER"; identityNumber: string; placeOfBirth: string | null; address: string; addressType: "RUMAH" | "KANTOR" | "DOMISILI" | "LAINNYA" | null; addressCountry: string | null; addressProvince: string | null; addressCity: string | null; addressDistrict: string | null; addressPostalCode: string | null; nationality: string | null; npwp: string | null; gender: "MALE" | "FEMALE" | null; occupation: string | null; sourceOfFunds: string | null; transactionPurpose: string | null; profileStatus: "ACTIVE" | "RESTRICTED" | "INACTIVE"; riskLevel: "LOW" | "MEDIUM" | "HIGH"; riskNotes: string | null; pepStatus: "NONE" | "SELF" | "RELATED"; pepDetails: string | null; dttotPpsdmMatch: boolean; dttotPpsdmNotes: string | null; declaredMonthlyValueIdr: string | null; declaredMonthlyCount: number | null; declaredCurrencies: string[] | null; customerType: "INDIVIDU" | "BADAN_USAHA" | null; entityLegalForm: string | null; occupationCategory: string | null };
+/** Bentuk minimal yang dibutuhkan panel penyaringan — bukan seluruh baris nasabah. */
+type CustomerDetail = {
+  id: number;
+  riskLevel: "LOW" | "MEDIUM" | "HIGH";
+  highRiskDecision?: "BELUM" | "DISETUJUI" | "DITOLAK" | null;
+  highRiskDecidedAt?: string | Date | null;
+  highRiskDecisionNotes?: string | null;
+};
 const toDateInputValue = (value: string | Date | null | undefined) => (value ? new Date(value).toISOString().slice(0, 10) : "");
 /**
  * Nasabah yang kategori Form C1-nya belum lengkap: belum dinyatakan jenisnya, badan usaha tanpa
@@ -57,6 +66,19 @@ function formatDate(value: string | Date | null | undefined) {
   if (!value) return "—";
   return new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
 }
+
+/** Jam operasional adalah WIB; server berjalan UTC, jadi zonanya dinyatakan, tidak diwariskan dari peramban. */
+function formatDateTimeWib(value: string | Date | null | undefined) {
+  if (!value) return "—";
+  return `${new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(value))} WIB`;
+}
+
+const SCREENING_TRIGGER_LABELS: Record<string, string> = {
+  NASABAH_DIBUAT: "Nasabah dibuat",
+  NASABAH_DIUBAH: "Nasabah diubah",
+  DAFTAR_DIIMPOR: "Daftar sanksi diimpor",
+  MANUAL: "Diminta petugas",
+};
 
 function riskBadgeClass(riskLevel: string) {
   if (riskLevel === "HIGH") return "bg-rose-100 text-rose-700 hover:bg-rose-100";
@@ -352,6 +374,8 @@ export default function CustomerList() {
               <DetailField label="Cocok DTTOT/DPPSPM" value={selectedCustomer.dttotPpsdmMatch ? "Ya" : "Tidak"} />
               {selectedCustomer.dttotPpsdmNotes ? <DetailField label="Catatan DTTOT/DPPSPM" value={selectedCustomer.dttotPpsdmNotes} full /> : null}
             </div>}
+
+            <CustomerScreeningPanel customer={selectedCustomer} onDecided={(updated) => setSelectedCustomer(updated as never)} />
           </> : null}
         </DialogContent>
       </Dialog>
@@ -368,6 +392,110 @@ export default function CustomerList() {
       </Dialog>
     </div>
   );
+}
+
+/**
+ * Riwayat penyaringan DTTOT/DPPSPM satu nasabah, peringatan daftar usang, dan kendali keputusan
+ * risiko tinggi.
+ *
+ * Tiga keadaan sengaja dibedakan, karena tindakan yang dituntut memang berbeda: **belum pernah
+ * disaring** (tidak ada barisnya sama sekali), **disaring terhadap daftar lama** (peringatan usang
+ * beserta tombol menyaring ulang), dan **sudah mutakhir**. Tabel kosong tanpa keterangan tidak
+ * mengatakan mana di antara ketiganya yang sedang terjadi.
+ */
+function CustomerScreeningPanel({ customer, onDecided }: { customer: CustomerDetail; onDecided: (updated: unknown) => void }) {
+  const { user } = useAuth();
+  const utils = trpc.useUtils();
+  const [notes, setNotes] = useState("");
+  const screenings = trpc.customers.screenings.useQuery({ customerId: customer.id }, { enabled: Boolean(user) });
+
+  const rescreen = trpc.customers.rescreen.useMutation({
+    onSuccess: () => { toast.success("Nasabah disaring ulang terhadap daftar terbaru."); utils.customers.screenings.invalidate({ customerId: customer.id }); },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const decide = trpc.customers.decideHighRisk.useMutation({
+    onSuccess: (updated) => {
+      toast.success("Keputusan nasabah berisiko tinggi tersimpan.");
+      setNotes("");
+      onDecided(updated);
+      utils.customers.list.invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const submitDecision = (decision: "DISETUJUI" | "DITOLAK") => {
+    if (notes.trim().length < 5) return toast.error("Alasan keputusan wajib diisi (minimal 5 karakter).");
+    decide.mutate({ customerId: customer.id, decision, notes: notes.trim() });
+  };
+
+  const data = screenings.data;
+  const isShareholder = user?.role === "SHAREHOLDER";
+  const decision = customer.highRiskDecision ?? "BELUM";
+
+  return <div className="space-y-3 rounded-xl border border-[#dce6f0] bg-[#fbfdff] p-4">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <p className="font-display text-sm font-bold text-[#18395f]">Riwayat penyaringan DTTOT/DPPSPM</p>
+      <Button type="button" size="sm" variant="outline" className="border-2 border-[#183f70] text-[#183f70] hover:bg-[#eef4fb]"
+        disabled={rescreen.isPending} onClick={() => rescreen.mutate({ customerId: customer.id })}>
+        <RefreshCw className={`mr-1.5 size-3.5 ${rescreen.isPending ? "animate-spin" : ""}`} />{rescreen.isPending ? "Menyaring…" : "Saring ulang sekarang"}
+      </Button>
+    </div>
+
+    {customer.riskLevel === "HIGH" ? <div className={`rounded-lg border p-3 text-xs ${decision === "DISETUJUI" ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-rose-200 bg-rose-50 text-rose-900"}`}>
+      <p className="flex items-center gap-1.5 font-bold">
+        {decision === "DISETUJUI" ? <ShieldCheck className="size-4" /> : <ShieldAlert className="size-4" />}
+        {decision === "DISETUJUI" ? "Disetujui Pemegang Saham — nasabah dapat bertransaksi"
+          : decision === "DITOLAK" ? "Ditolak Pemegang Saham — hubungan usaha dihentikan"
+          : "Belum diputuskan Pemegang Saham — bon baru akan ditolak"}
+      </p>
+      {customer.highRiskDecidedAt ? <p className="mt-1">Diputuskan {formatDateTimeWib(customer.highRiskDecidedAt)}{customer.highRiskDecisionNotes ? ` · ${customer.highRiskDecisionNotes}` : ""}</p> : null}
+
+      {isShareholder ? <div className="mt-3 space-y-2">
+        <Label className="text-[11px]" htmlFor="high-risk-notes">Alasan keputusan (wajib, tersimpan pada jejak audit)</Label>
+        <Textarea id="high-risk-notes" className="bg-white" rows={2} value={notes} onChange={(event) => setNotes(event.target.value)}
+          placeholder="Contoh: sumber dana terverifikasi dari dokumen usaha; kunjungan lapangan 9 September 2026." />
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" className="bg-[#3d7139] text-white hover:bg-[#345f31]" disabled={decide.isPending}
+            onClick={() => submitDecision("DISETUJUI")}>{decide.isPending ? "Menyimpan…" : "Setujui — nasabah dapat bertransaksi"}</Button>
+          <Button type="button" size="sm" variant="outline" className="border-2 border-rose-600 text-rose-700 hover:bg-rose-50" disabled={decide.isPending}
+            onClick={() => submitDecision("DITOLAK")}>{decide.isPending ? "Menyimpan…" : "Tolak — hentikan hubungan usaha"}</Button>
+        </div>
+      </div> : <p className="mt-2 text-[11px]">Hanya Pemegang Saham yang dapat memutuskan.</p>}
+    </div> : null}
+
+    {screenings.isLoading ? <p className="text-xs text-[#68758c]">Memuat riwayat penyaringan…</p> : null}
+    {screenings.isError ? <p className="text-xs text-rose-700">Riwayat penyaringan gagal dimuat. Muat ulang halaman untuk mencoba lagi.</p> : null}
+
+    {data ? <>
+      {data.isStale ? <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        <b>Daftar sanksi sudah lebih baru daripada penyaringan terakhirnya.</b> Penyaringan terakhir memakai daftar {formatDateTimeWib(data.screenings[0]?.listSnapshotAt)}, sedangkan daftar terbaru diimpor {formatDateTimeWib(data.latestImportAt)}. Tekan “Saring ulang sekarang”.
+      </p> : null}
+
+      {data.neverScreened ? <p className="rounded-lg border border-[#dce6f0] bg-white px-3 py-3 text-xs text-[#475569]">
+        <b>Belum pernah disaring.</b> Nasabah ini belum punya satu pun jejak penyaringan terhadap DTTOT/DPPSPM. Tekan “Saring ulang sekarang” untuk membuatnya.
+      </p> : <div className="overflow-x-auto rounded-lg border border-[#e2eaf2] bg-white">
+        <table className="w-full min-w-[520px] text-left text-xs">
+          <thead className="bg-[#f4f8fc] text-[11px] uppercase tracking-wide text-[#68758c]">
+            <tr><th className="px-3 py-2">Waktu</th><th className="px-3 py-2">Pemicu</th><th className="px-3 py-2">Oleh</th><th className="px-3 py-2">Kemungkinan cocok</th><th className="px-3 py-2">Daftar</th></tr>
+          </thead>
+          <tbody>
+            {data.screenings.map((row) => <tr key={row.id} className="border-t border-[#eef3f8]">
+              <td className="px-3 py-2 text-[#18395f]">{formatDateTimeWib(row.screenedAt)}</td>
+              <td className="px-3 py-2">{SCREENING_TRIGGER_LABELS[row.trigger] ?? row.trigger}</td>
+              <td className="px-3 py-2">{row.screenedByUserId ? (row.screenedByName ?? `#${row.screenedByUserId}`) : "Otomatis (sistem)"}</td>
+              <td className="px-3 py-2">
+                {row.matchCount === 0 ? <span className="text-[#3d7139]">Nihil</span> : <span className="font-semibold text-rose-700">{row.matchCount}</span>}
+                {row.summary ? <span className="block text-[11px] text-[#68758c]">{row.summary}</span> : null}
+              </td>
+              <td className="px-3 py-2 text-[#68758c]">{row.listSnapshotAt ? formatDateTimeWib(row.listSnapshotAt) : "Belum ada daftar"}</td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>}
+      <p className="text-[11px] text-[#68758c]">Kemungkinan cocok bukan keputusan: kotak centang “Cocok DTTOT/DPPSPM” tetap diisi manusia beserta catatannya.</p>
+    </> : null}
+  </div>;
 }
 
 function DetailField({ label, value, full = false }: { label: string; value: string; full?: boolean }) {

@@ -699,6 +699,9 @@ export async function searchCustomers(query: string, limit = 20) {
       sourceOfFunds: customers.sourceOfFunds,
       profileStatus: customers.profileStatus,
       riskLevel: customers.riskLevel,
+      // Ikut dibawa supaya borang transaksi dapat memperingatkan sebelum bonnya diisi penuh,
+      // bukan sesudah servernya menolak.
+      highRiskDecision: customers.highRiskDecision,
       transactionPurpose: customers.transactionPurpose,
       hasBeneficialOwner: customers.hasBeneficialOwner,
       beneficialOwnerCustomerId: customers.beneficialOwnerCustomerId,
