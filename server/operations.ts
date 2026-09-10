@@ -53,6 +53,7 @@ import { isKnownGoAmlReportIndicator } from "../shared/goAmlReportIndicators";
 import { decodeSanctionsWatchlistUpload, parseSanctionsWatchlistWorkbook, cleanSanctionsWatchlistFileName } from "./sanctionsWatchlistImport";
 import { matchWatchlistEntries, rescreenAllCustomers, screenCustomer, type SanctionsWatchlistMatch, type ScreeningTrigger } from "./customerWatchlistScreening";
 import { customerHighRiskDenial, highRiskResetValues } from "./customerHighRiskApproval";
+import { relationshipEndValues } from "../shared/documentRetention";
 import { parseWatchlistNameList, scoreNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
 import { compareDenominationCounts, type DenominationVarianceRow } from "../shared/denominationVariance";
 
@@ -1019,6 +1020,9 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
     // Persetujuan lama tidak boleh diam-diam menaungi risiko tinggi yang timbul karena alasan baru:
     // perpindahan MENJADI HIGH menyetel keputusannya kembali ke BELUM. HIGH → HIGH tidak.
     ...(highRiskResetValues(existing.riskLevel, input.riskLevel) ?? {}),
+    // Jam Pasal 48 ayat (1) huruf a angka 1: hanya PERPINDAHAN status yang berarti, bukan setiap
+    // penyuntingan. Bentuknya sengaja sama persis dengan highRiskResetValues di atas.
+    ...(relationshipEndValues(existing.profileStatus, input.profileStatus, new Date()) ?? {}),
   };
 
   await db.update(customers).set(nextValues).where(eq(customers.id, input.customerId));
@@ -1030,6 +1034,7 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
       addressType: existing.addressType, addressCountry: existing.addressCountry, addressProvince: existing.addressProvince, addressCity: existing.addressCity,
       addressDistrict: existing.addressDistrict, addressPostalCode: existing.addressPostalCode, nationality: existing.nationality, npwp: existing.npwp, gender: existing.gender,
       occupation: existing.occupation, sourceOfFunds: existing.sourceOfFunds, transactionPurpose: existing.transactionPurpose, profileStatus: existing.profileStatus,
+      relationshipEndedAt: existing.relationshipEndedAt,
       riskLevel: existing.riskLevel, riskNotes: existing.riskNotes, pepStatus: existing.pepStatus, pepDetails: existing.pepDetails,
       dttotPpsdmMatch: existing.dttotPpsdmMatch, dttotPpsdmNotes: existing.dttotPpsdmNotes,
       highRiskDecision: existing.highRiskDecision,

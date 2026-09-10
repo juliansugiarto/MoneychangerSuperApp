@@ -17,7 +17,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 
 - [x] Tugas 1 — Migrasi kolom nonaktif dan `relationshipEndedAt` (0058)
 - [x] Tugas 2 — `shared/documentRetention.ts` (aturan retensi murni)
-- [ ] Tugas 3 — Penulis `relationshipEndedAt` pada `updateCustomer`
+- [x] Tugas 3 — Penulis `relationshipEndedAt` pada `updateCustomer`
 - [ ] Tugas 4 — `server/companyProfileDocuments.ts` menggantikan `deleteCompanyDocument`
 - [ ] Tugas 5 — Uji penjaga: dokumen nasabah dan transaksi tidak punya jalur hapus
 - [ ] Tugas 6 — Pembacaan retensi (`documentRetentionQueries.ts` + tRPC)
@@ -354,7 +354,7 @@ git commit -m "Aturan retensi dokumen Pasal 48 sebagai fungsi murni"
 - Consumes: `relationshipEndValues` dari tugas 2
 - Produces: kolom `customers.relationshipEndedAt` yang benar-benar terisi. Dipakai tugas 6 dan 8.
 
-- [ ] **Step 1: Sisipkan penulisnya ke `nextValues`**
+- [x] **Step 1: Sisipkan penulisnya ke `nextValues`**
 
 Di `server/operations.ts`, pada objek `nextValues` di dalam `updateCustomer`, tepat sesudah baris
 `...(highRiskResetValues(existing.riskLevel, input.riskLevel) ?? {}),`:
@@ -371,13 +371,13 @@ Tambahkan impornya di kepala berkas:
 import { relationshipEndValues } from "../shared/documentRetention";
 ```
 
-- [ ] **Step 2: Pastikan kolomnya ikut terekam pada audit**
+- [x] **Step 2: Pastikan kolomnya ikut terekam pada audit**
 
 Pada `beforeState` di `writeAudit` panggilan `CUSTOMER_UPDATED`, tambahkan
 `relationshipEndedAt: existing.relationshipEndedAt,` di sebelah `profileStatus`. `afterState` sudah
 memakai `nextValues` utuh, jadi ia ikut dengan sendirinya.
 
-- [ ] **Step 3: Tulis ujinya**
+- [x] **Step 3: Tulis ujinya**
 
 `server/customerRelationshipEnd.test.ts`, dengan `getDb` dipalsukan mengikuti bentuk
 `server/customerHighRiskApproval.test.ts` yang sudah ada. Yang dijaga:
@@ -389,14 +389,14 @@ memakai `nextValues` utuh, jadi ia ikut dengan sendirinya.
    `set()` — bukan sekadar tidak mengubahnya.
 5. `ACTIVE → ACTIVE` juga tidak menyertakannya.
 
-- [ ] **Step 4: Jalankan uji berkas ini dan tetangganya**
+- [x] **Step 4: Jalankan uji berkas ini dan tetangganya**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
 ./node_modules/.bin/vitest run server/customerRelationshipEnd.test.ts server/customerHighRiskApproval.test.ts
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/operations.ts server/customerRelationshipEnd.test.ts
