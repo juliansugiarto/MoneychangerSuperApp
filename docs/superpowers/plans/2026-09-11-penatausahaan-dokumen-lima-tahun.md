@@ -16,7 +16,7 @@ Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas 
 berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 
 - [x] Tugas 1 — Migrasi kolom nonaktif dan `relationshipEndedAt` (0058)
-- [ ] Tugas 2 — `shared/documentRetention.ts` (aturan retensi murni)
+- [x] Tugas 2 — `shared/documentRetention.ts` (aturan retensi murni)
 - [ ] Tugas 3 — Penulis `relationshipEndedAt` pada `updateCustomer`
 - [ ] Tugas 4 — `server/companyProfileDocuments.ts` menggantikan `deleteCompanyDocument`
 - [ ] Tugas 5 — Uji penjaga: dokumen nasabah dan transaksi tidak punya jalur hapus
@@ -172,7 +172,7 @@ git commit -m "Kolom nonaktif dokumen dan penanda berakhirnya hubungan usaha (mi
 - Consumes: `startOfOperationalMonth` dari `shared/regulatoryActionQueue.ts`
 - Produces: `customerDocumentRetention`, `transactionDocumentRetention`, `companyProfileDocumentRetention`, `relationshipEndValues`, tipe `RetentionVerdict`. Dipakai tugas 3, 6, 8.
 
-- [ ] **Step 1: Tulis berkas aturannya**
+- [x] **Step 1: Tulis berkas aturannya**
 
 Berkas ini **tidak boleh** mengimpor apa pun dari `server/` maupun `drizzle/`. Ia murni.
 
@@ -211,7 +211,7 @@ function addYears(value: Date, years: number) {
 }
 ```
 
-- [ ] **Step 2: Tulis `customerDocumentRetention`**
+- [x] **Step 2: Tulis `customerDocumentRetention`**
 
 Kaidahnya: selama `profileStatus` belum `INACTIVE`, hubungan usaha **masih berjalan** dan tidak ada
 tenggat. Sesudahnya, jam berdetak dari instan **paling akhir** di antara tiga pemicu Pasal 48.
@@ -253,7 +253,13 @@ export function customerDocumentRetention(facts: CustomerRetentionFacts): Retent
 Indonesia siap tampil. Jangan menaruh kalimatnya di komponen React — layar dan uji harus memakai
 kalimat yang sama persis.
 
-- [ ] **Step 3: Tulis `transactionDocumentRetention`**
+- [x] **Step 3: Tulis `transactionDocumentRetention`**
+
+> **Penyimpangan dari potongan kode di bawah (disengaja):** tahun buku dibaca lewat
+> `operationalDateKey(transactionAt, timeZone)`, bukan `transactionAt.getUTCFullYear()`. Bon pukul
+> 00:00–06:59 WIB tanggal 1 Januari masih 31 Desember UTC; potongan aslinya memasukkannya ke tahun
+> buku sebelumnya dan memajukan tenggatnya setahun. Dikunci uji "bon pukul 00:30 WIB tanggal
+> 1 Januari masuk tahun buku yang baru".
 
 ```ts
 /**
@@ -281,7 +287,7 @@ export function transactionDocumentRetention(
 }
 ```
 
-- [ ] **Step 4: Tulis `companyProfileDocumentRetention` dan `relationshipEndValues`**
+- [x] **Step 4: Tulis `companyProfileDocumentRetention` dan `relationshipEndValues`**
 
 ```ts
 export function companyProfileDocumentRetention(createdAt: Date): RetentionVerdict {
@@ -309,7 +315,7 @@ export function relationshipEndValues(
 }
 ```
 
-- [ ] **Step 5: Tulis ujinya**
+- [x] **Step 5: Tulis ujinya**
 
 `shared/documentRetention.test.ts` harus menutup, minimal:
 
@@ -322,14 +328,14 @@ export function relationshipEndValues(
 7. Nasabah tanpa tenggat + transaksi lama → `transactionDocumentRetention` mengembalikan putusan tanpa tenggat.
 8. `relationshipEndValues` untuk enam pasang perpindahan status, termasuk `INACTIVE → INACTIVE` yang harus mengembalikan `null`.
 
-- [ ] **Step 6: Jalankan uji berkas ini saja**
+- [x] **Step 6: Jalankan uji berkas ini saja**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
 ./node_modules/.bin/vitest run shared/documentRetention.test.ts
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add shared/documentRetention.ts shared/documentRetention.test.ts

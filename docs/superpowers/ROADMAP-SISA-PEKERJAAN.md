@@ -290,7 +290,7 @@ menjadi penyimpangan pola dan disiplin audit. Sebaliknya, penjelasan ayat (1) hu
 usaha" memunculkan pekerjaan Pasal 48 yang sungguhan dan belum pernah dicatat di mana pun.
 
 - [x] Tugas 1 — Migrasi `0058`: kolom nonaktif dokumen dan `customers.relationshipEndedAt`
-- [ ] Tugas 2 — `shared/documentRetention.ts`: aturan retensi Pasal 48 sebagai fungsi murni
+- [x] Tugas 2 — `shared/documentRetention.ts`: aturan retensi Pasal 48 sebagai fungsi murni
 - [ ] Tugas 3 — Penulis `relationshipEndedAt` pada `updateCustomer`
 - [ ] Tugas 4 — `server/companyProfileDocuments.ts` menggantikan `deleteCompanyDocument`
 - [ ] Tugas 5 — Uji penjaga: dokumen nasabah dan transaksi tidak punya jalur hapus
