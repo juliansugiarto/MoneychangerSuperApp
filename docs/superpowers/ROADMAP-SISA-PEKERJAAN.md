@@ -256,9 +256,11 @@ BI sudah selesai.
    menampilkan "Dibuat 11 Sep 2026" untuk nasabah yang dibuat 10 September. Benar di produksi
    (server UTC), salah di pengembangan. Perbaikan menyeluruhnya di luar lingkup paket ini.
 6. Tidak ada yang memaksa penyaringan ulang selain impor berikutnya dan tombol manual.
-7. Penjelasan pasal demi pasal PBI 10/2024 untuk Pasal 32 dan 47 belum dibaca.
-8. Temuan 3 (pemblokiran serta merta dan percobaan transaksi) dan Temuan 4 (`deleteCompanyDocument`)
-   tetap terbuka.
+7. ~~Penjelasan pasal demi pasal PBI 10/2024 untuk Pasal 32 dan 47 belum dibaca.~~ **Dibaca
+   11 September 2026** bersama Pasal 9 dan 48 (sesi rancangan Paket M); tidak satu pun mengubah
+   Temuan 1 dan 2.
+8. Temuan 3 (pemblokiran serta merta dan percobaan transaksi) tetap terbuka. Temuan 4
+   (`deleteCompanyDocument`) sudah dirancang sebagai **Paket M**, dengan premis yang dikoreksi.
 
 ---
 
@@ -269,6 +271,49 @@ BI sudah selesai.
       wajib. **Lima sudah terpenuhi**, dua kurang (arah pembayaran huruf d dan e).
 - [x] Arah pembayaran dicetak harfiah pada kedua sisinya; penjaga `server/notaSeBi1842.test.ts`.
       Spec `specs/2026-09-09-nota-terhadap-se-bi-1842-design.md`.
+
+---
+
+### Paket M — Penatausahaan dokumen dan penghentian penghapusan sungguhan — **DIRANCANG 11 September 2026**
+
+**Rencana rinci sudah ada:** `plans/2026-09-11-penatausahaan-dokumen-lima-tahun.md` ·
+spec `specs/2026-09-11-penatausahaan-dokumen-lima-tahun-design.md`.
+Menutup Temuan 4 pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md` — **dengan premis yang sudah
+diperbaiki.**
+
+**Premis Temuan 4 keliru dan sudah dikoreksi.** Batang tubuh dan penjelasan Pasal 48 dibaca
+11 September 2026. Pasal 48 berpagar pada CDD dan hanya mengikat **data Pengguna Jasa** serta
+**Transaksi keuangan Pengguna Jasa**; `deleteCompanyDocument` hanya menyentuh `ownerType =
+"COMPANY"` (logo dan berkas izin usaha), yang **bukan** dokumen Pasal 48. Temuan 4 turun derajat
+menjadi penyimpangan pola dan disiplin audit. Sebaliknya, penjelasan ayat (1) huruf b —
+*"jangka waktu dengan masa retensi yang terlama"* — dan ketiadaan penanda "berakhirnya hubungan
+usaha" memunculkan pekerjaan Pasal 48 yang sungguhan dan belum pernah dicatat di mana pun.
+
+- [ ] Tugas 1 — Migrasi `0058`: kolom nonaktif dokumen dan `customers.relationshipEndedAt`
+- [ ] Tugas 2 — `shared/documentRetention.ts`: aturan retensi Pasal 48 sebagai fungsi murni
+- [ ] Tugas 3 — Penulis `relationshipEndedAt` pada `updateCustomer`
+- [ ] Tugas 4 — `server/companyProfileDocuments.ts` menggantikan `deleteCompanyDocument`
+- [ ] Tugas 5 — Uji penjaga: dokumen nasabah dan transaksi tidak punya jalur hapus
+- [ ] Tugas 6 — Pembacaan retensi dan prosedur tRPC-nya
+- [ ] Tugas 7 — Layar Profil Perusahaan: nonaktifkan berdialog, hapus permanen hanya Pemegang Saham
+- [ ] Tugas 8 — Halaman Penatausahaan Dokumen
+- [ ] Tugas 9 — Peragaan end-to-end dan dokumentasi
+
+**Empat keputusan pengguna 11 September 2026** yang mengikat rancangan ini:
+
+1. Cakupannya **keduanya** — jalur hapus dan pembuktian retensi Pasal 48.
+2. Dokumen `COMPANY` **dinonaktifkan** sebagai jalur normal; penghapusan permanen tetap ada tetapi
+   **hanya SHAREHOLDER**, untuk berkas salah unggah yang memuat data pribadi pihak lain. Alasan
+   tertulis dan audit wajib pada kedua jalur.
+3. Jam retensi dokumen perusahaan dihitung **sejak diunggah** — aturan rumah, bukan Pasal 48, dan
+   layarnya wajib mengatakan begitu.
+4. Berkas yatim yang sudah terlanjur ada **dibiarkan**; `server/storage.ts` sengaja tetap tidak
+   punya penghapus objek. Paket ini hanya mencegah yatim baru.
+
+**Yang sengaja tidak dikerjakan:** korespondensi dengan Pengguna Jasa (Pasal 48 ayat (2) huruf d)
+tidak punya penulis data — `consumer_complaints` berkunci pada nomor identitas pelapor, bukan pada
+nasabah — dan **tidak** dibangun sebagai baris yang selalu kosong. Ia dinyatakan apa adanya di layar
+sebagai tidak ditatausahakan di aplikasi ini.
 
 ---
 
