@@ -77,7 +77,80 @@ K3, dan **L**. Dua belas temuan pemeriksaan BI 2026 sudah tertutup, dan Temuan 1
 `specs/2026-09-09-pbi-10-2024-temuan-awal.md` (PBI No. 10 Tahun 2024) ikut tertutup oleh Paket L.
 
 **Tidak ada paket yang sedang berjalan.** Pekerjaan berikutnya belum dipilih — lihat
-`### Pekerjaan yang sudah teridentifikasi tetapi belum dirancang` di bawah, dan risiko residual
+`### Paket M — Penatausahaan dokumen 5 tahun (Temuan 4) — **BELUM DIRANCANG, prompt siap tempel**
+
+Dipilih pengguna 10 September 2026 sebagai paket berikutnya. **Sesi rancangan lebih dulu** — belum
+ada spec maupun rencana, jadi sesi berikutnya tidak menulis kode aplikasi.
+
+**Yang sudah ditelusuri 10 September 2026, jangan ditelusuri ulang:**
+
+- `deleteCompanyDocument` (`server/documentOperations.ts:153`) melakukan `DELETE` sungguhan atas
+  baris `operational_documents` ber-`ownerType = "COMPANY"`, **tanpa audit, tanpa alasan tertulis,
+  dan tanpa menghapus objeknya di penyimpanan** — berkasnya menjadi yatim, barisnya lenyap.
+- Satu pemanggil saja: `documents.deleteCompany` (`server/routers.ts:810`, `controllerProcedure`),
+  dipakai `client/src/pages/CompanyProfile.tsx:105`.
+- **Arsip dokumen perusahaan Paket I sudah benar dan jangan diubah**: `company_documents` memakai
+  `deactivatedAt`/`deactivatedByUserId`/`deactivationReason` — dinonaktifkan, bukan dihapus
+  (keputusan pengguna 8 September 2026), dan `company_document_versions` tidak pernah menghapus
+  versi lama. **Jalur lama inilah yang menyimpang dari pola itu, bukan sebaliknya** — polanya sudah
+  ada, tinggal diikuti.
+- Basis data lokal memuat **nol** baris `ownerType = "COMPANY"` (tujuh baris `COMPANY_ARCHIVE`),
+  jadi peragaan end-to-end menuntut pembuatan data uji lokal lebih dulu.
+
+**Pertanyaan kebijakan yang WAJIB ditanyakan kepada pengguna, jangan ditebak:**
+
+1. Apakah dokumen `ownerType = "COMPANY"` boleh dinonaktifkan saja seperti arsip Paket I, ataukah
+   ada keadaan yang benar-benar menuntut penghapusan (mis. berkas salah unggah berisi data pribadi
+   pihak lain)?
+2. Bila penghapusan sungguhan tetap diperlukan, siapa yang boleh dan apa syaratnya — dan bagaimana
+   membedakannya dari dokumen yang terikat kewajiban lima tahun Pasal 48?
+3. Lima tahun dihitung sejak apa untuk dokumen perusahaan? Pasal 48 menyebut "sejak berakhirnya
+   hubungan usaha", yang tidak berlaku langsung bagi dokumen internal.
+4. Berkas yatim yang sudah terlanjur ada di penyimpanan: dibiarkan, didata, atau dibersihkan?
+
+```
+Baca docs/superpowers/specs/2026-09-09-pbi-10-2024-temuan-awal.md — seluruhnya, tetapi Temuan 4
+("Penatausahaan dokumen 5 tahun bertemu penghapusan sungguhan") yang akan dirancang. Baca juga
+bagian "Aturan kerja yang berlaku untuk seluruh paket" pada
+docs/superpowers/ROADMAP-SISA-PEKERJAAN.md, dan blok "Paket M" pada
+docs/superpowers/PROMPT-SESI.md yang memuat hasil penelusuran 10 September 2026.
+
+LANGKAH PERTAMA, sebelum merancang apa pun: baca penjelasan pasal demi pasal PBI No. 10 Tahun 2024
+untuk Pasal 48 (dan Pasal 9, 32, 47 sekalian, karena keempatnya sudah lama tertunda). Penjelasan
+sering menyempitkan bunyi pasalnya. Bila penjelasan Pasal 48 mengubah premis Temuan 4, KATAKAN
+sebelum melanjutkan — jangan merancang di atas premis yang sudah kedaluwarsa. Bila naskah
+penjelasannya tidak tersedia, katakan itu apa adanya dan lanjutkan dengan menyebut premisnya belum
+terverifikasi.
+
+Telusuri kodenya sungguhan. Rujukan berkas:baris pada blok Paket M ditulis 10 September 2026 dan
+mungkin sudah bergeser.
+
+Tanyakan kepada saya keempat pertanyaan kebijakan pada blok Paket M. Itu keputusan kepatuhan dan
+operasional, bukan keputusan teknis — jangan ditebak, dan jangan diturunkan sendiri dari pola
+Paket I meski polanya memang sudah ada.
+
+Hasilkan dua berkas:
+
+1. docs/superpowers/specs/2026-XX-XX-penatausahaan-dokumen-lima-tahun-design.md
+   Masalah, yang sudah diputuskan pengguna, rancangan, yang sengaja tidak dikerjakan, risiko
+   residual. Ikuti bentuk docs/superpowers/specs/2026-09-04-penjurnalan-kas-design.md.
+
+2. docs/superpowers/plans/2026-XX-XX-penatausahaan-dokumen-lima-tahun.md
+   Rencana bertugas: "Status Pengerjaan" di atas, tabel berkas, lalu tiap tugas berisi langkah
+   bernomor berkotak-centang, potongan kode konkret, perintah verifikasi, dan perintah commit.
+   Satu tugas = satu commit yang berdiri sendiri beserta ujinya. Bila butuh migrasi, TEPAT SATU
+   tugas migrasi dan ia yang pertama. Ikuti bentuk
+   docs/superpowers/plans/2026-09-04-penjurnalan-kas.md.
+
+Sesudah kedua berkas jadi, tambahkan bagian "Paket M" pada ROADMAP-SISA-PEKERJAAN.md berisi daftar
+tugas hasil rancanganmu beserta rujukan ke berkas rencananya.
+
+JANGAN menulis kode aplikasi pada sesi ini. Commit dokumentasinya saja, lalu berhenti dan laporkan.
+```
+
+---
+
+### Pekerjaan yang sudah teridentifikasi tetapi belum dirancang` di bawah, dan risiko residual
 Paket L pada `ROADMAP-SISA-PEKERJAAN.md`.
 
 Baseline uji yang benar-benar dijalankan 10 September 2026 sesudah Paket L Tugas 6:
@@ -537,7 +610,8 @@ Urut sesuai usul pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`:
 
 1. **Temuan 4 — `deleteCompanyDocument` masih `DELETE` sungguhan tanpa audit**, sementara Pasal 48
    PBI 10/2024 menuntut penatausahaan paling singkat **5 tahun**. Sudah tercatat sebagai risiko
-   residual Paket I; derajatnya naik dari kerapian menjadi kewajiban.
+   residual Paket I; derajatnya naik dari kerapian menjadi kewajiban. **DIPILIH pengguna
+   10 September 2026 sebagai Paket M — prompt sesi rancangannya sudah siap di blok "Paket M".**
 2. **Temuan 3 — pemblokiran serta merta dan pencatatan percobaan transaksi** (Pasal 47 ayat 1
    huruf d). **Menunggu keputusan pengguna**, dan menuntut penulis data yang belum ada sama sekali.
 3. **Temuan 7 — penginian berkala klasifikasi risiko** (Pasal 9 ayat 6) — menaikkan risiko residual
