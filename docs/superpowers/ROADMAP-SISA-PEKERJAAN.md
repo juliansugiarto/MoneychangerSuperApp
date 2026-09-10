@@ -218,7 +218,7 @@ Urutannya mengikat seluruhnya. **Tepat satu tugas migrasi: Tugas 2** (`0056`).
 6. `pnpm audit --prod --audit-level=high` masih **9 temuan** (6 sedang, 3 tinggi). Paket ini tidak
    menambah dependensi dan tidak memperbaikinya. **Jangan menyebut audit bersih.**
 
-### Paket L — Jejak penyaringan nasabah dan persetujuan nasabah berisiko tinggi — **SEDANG BERJALAN**
+### Paket L — Jejak penyaringan nasabah dan persetujuan nasabah berisiko tinggi — **SELESAI 10 September 2026**
 
 **Rencana rinci sudah ada:** `plans/2026-09-09-penyaringan-nasabah-dan-persetujuan-risiko-tinggi.md` ·
 spec `specs/2026-09-09-penyaringan-nasabah-dan-persetujuan-risiko-tinggi-design.md`.
@@ -228,14 +228,37 @@ Menutup Temuan 1 dan 2 pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md` (PBI N
 disetujui SHAREHOLDER tidak dapat dipakai pada bon baru. Keputusan sadar pengguna 9 September 2026.
 
 - [x] Tugas 1 — Migrasi `0057`: tabel riwayat penyaringan dan empat kolom keputusan — **SELESAI 9 September 2026**
-- [ ] Tugas 2 — Penulis penyaringan beserta pemanggil saat nasabah dibuat dan diubah
-- [ ] Tugas 3 — Penyaringan ulang massal saat daftar diimpor
-- [ ] Tugas 4 — Gerbang persetujuan: fungsi penolakan murni dan penegakannya pada bon
-- [ ] Tugas 5 — Halaman: riwayat penyaringan, peringatan daftar usang, kendali setujui/tolak
-- [ ] Tugas 6 — Peragaan end-to-end dan dokumentasi
+- [x] Tugas 2 — Penulis penyaringan beserta pemanggil saat nasabah dibuat dan diubah — **SELESAI 10 September 2026**
+- [x] Tugas 3 — Penyaringan ulang massal saat daftar diimpor — **SELESAI 10 September 2026**
+- [x] Tugas 4 — Gerbang persetujuan: fungsi penolakan murni dan penegakannya pada bon — **SELESAI 10 September 2026**
+- [x] Tugas 5 — Halaman: riwayat penyaringan, peringatan daftar usang, kendali setujui/tolak — **SELESAI 10 September 2026**
+- [x] Tugas 6 — Peragaan end-to-end dan dokumentasi — **SELESAI 10 September 2026**
 
 **Tenggat pelaporan Pasal 60 dikeluarkan dari lingkup** atas keputusan pengguna — negosiasi dengan
 BI sudah selesai.
+
+**Risiko residual sesudah Paket L:**
+
+1. Nasabah berisiko tinggi tidak dapat bertransaksi bila Pemegang Saham tidak dapat dihubungi.
+   Tidak ada jalur darurat, dan itu disengaja.
+2. Penyaringan ulang massal menulis satu baris per nasabah setiap impor, di dalam permintaan HTTP
+   impor itu sendiri. Pada puluhan ribu nasabah ia harus menjadi pekerjaan latar.
+3. Pencocokan tetap fuzzy berambang 0,6. Paket ini menambah jejak, bukan ketepatan — peragaan
+   10 September 2026 menghasilkan **12 kemungkinan cocok** untuk satu nama karena seluruh data
+   peragaan berawalan "Contoh Peragaan".
+4. **Peringatan daftar usang belum pernah terlihat di layar.** Ia hanya dapat muncul bila
+   penyaringan ulang sesudah impor tidak menjangkau seorang nasabah — yaitu sesudah kegagalan yang
+   tercatat `CUSTOMER_RESCREENING_FAILED`. Aturannya diuji sebagai fungsi murni; cabang tampilannya
+   baru diperiksa lewat pemeriksaan tipe dan build.
+5. **`DEFAULT CURRENT_TIMESTAMP` menyimpan jam dinding mesin, bukan instan UTC.** `screenedAt`
+   sudah ditulis penulisnya sendiri, tetapi `audit_logs.createdAt`, `customers.createdAt`, dan
+   seluruh kolom `defaultNow()` lain **belum** — pada mesin pengembangan WIB, Daftar Nasabah
+   menampilkan "Dibuat 11 Sep 2026" untuk nasabah yang dibuat 10 September. Benar di produksi
+   (server UTC), salah di pengembangan. Perbaikan menyeluruhnya di luar lingkup paket ini.
+6. Tidak ada yang memaksa penyaringan ulang selain impor berikutnya dan tombol manual.
+7. Penjelasan pasal demi pasal PBI 10/2024 untuk Pasal 32 dan 47 belum dibaca.
+8. Temuan 3 (pemblokiran serta merta dan percobaan transaksi) dan Temuan 4 (`deleteCompanyDocument`)
+   tetap terbuka.
 
 ---
 

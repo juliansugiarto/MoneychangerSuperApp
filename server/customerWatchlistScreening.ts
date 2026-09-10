@@ -165,6 +165,12 @@ export async function screenCustomer(input: {
   };
 
   await db.insert(customerWatchlistScreenings).values({
+    // Waktunya ditetapkan di sini, bukan diserahkan kepada `DEFAULT CURRENT_TIMESTAMP`. MySQL
+    // mengisi bawaan itu dari jam sesi basis data — pada mesin pengembangan WIB ia menyimpan jam
+    // dinding setempat, sedangkan `listSnapshotAt` ditulis dari JS sebagai instan UTC. Dua
+    // kesepakatan waktu di dalam satu baris membuat panel riwayat memperlihatkan penyaringan yang
+    // seolah terjadi tujuh jam di masa depan.
+    screenedAt: new Date(),
     customerId: result.customerId,
     screenedByUserId: input.screenedByUserId,
     trigger: result.trigger,
@@ -194,10 +200,13 @@ export async function rescreenAllCustomers(): Promise<{ customerCount: number; l
   const liveCustomers = await db.select({ id: customers.id, fullName: customers.fullName })
     .from(customers).where(and(eq(customers.isDemo, false), eq(customers.isHistorical, false)));
 
+  // Satu waktu untuk seluruh baris impor ini: mereka memang satu peristiwa.
+  const screenedAt = new Date();
   const rows = liveCustomers.map((customer) => {
     const fullName = customer.fullName?.trim() ?? "";
     const matches = fullName.length < MIN_SCREENABLE_NAME_LENGTH ? [] : matchWatchlistEntries(fullName, entries);
     return {
+      screenedAt,
       customerId: customer.id,
       screenedByUserId: null,
       trigger: "DAFTAR_DIIMPOR" as const,

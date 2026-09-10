@@ -433,7 +433,7 @@ function CustomerScreeningPanel({ customer, onDecided }: { customer: CustomerDet
   const isShareholder = user?.role === "SHAREHOLDER";
   const decision = customer.highRiskDecision ?? "BELUM";
 
-  return <div className="space-y-3 rounded-xl border border-[#dce6f0] bg-[#fbfdff] p-4">
+  return <div className="min-w-0 space-y-3 rounded-xl border border-[#dce6f0] bg-[#fbfdff] p-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <p className="font-display text-sm font-bold text-[#18395f]">Riwayat penyaringan DTTOT/DPPSPM</p>
       <Button type="button" size="sm" variant="outline" className="border-2 border-[#183f70] text-[#183f70] hover:bg-[#eef4fb]"

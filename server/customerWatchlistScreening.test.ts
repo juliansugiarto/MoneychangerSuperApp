@@ -444,3 +444,43 @@ describe("rescreenCustomerNow", () => {
     expect(inserted).toHaveLength(0);
   });
 });
+
+/**
+ * Waktu penyaringan ditulis penulisnya sendiri, bukan `DEFAULT CURRENT_TIMESTAMP` basis data.
+ *
+ * MySQL mengisi bawaan itu dari jam sesi basis datanya; pada mesin WIB ia menyimpan jam dinding
+ * setempat, sedangkan `listSnapshotAt` ditulis dari JS sebagai instan UTC. Kekeliruan itu terlihat
+ * pada peragaan 10 September 2026: panel riwayat memperlihatkan penyaringan tujuh jam di masa depan.
+ */
+describe("waktu penyaringan", () => {
+  it("screenedAt ditulis penulisnya, sekesepakatan dengan listSnapshotAt", async () => {
+    const importedAt = new Date("2026-09-10T16:24:20Z");
+    const { inserted } = mockDb({ sanctions_watchlist_entries: [entriDaftar({ importedAt })] });
+
+    const sebelum = Date.now();
+    await screenCustomer({ customerId: 7, fullName: "BUDI SANTOSO WIJAYA", trigger: "NASABAH_DIBUAT", screenedByUserId: 3 });
+
+    const nilai = inserted.find((row) => row.table === penyaringan)!.values;
+    expect(nilai.screenedAt).toBeInstanceOf(Date);
+    expect((nilai.screenedAt as Date).getTime()).toBeGreaterThanOrEqual(sebelum);
+    expect((nilai.listSnapshotAt as Date).toISOString()).toBe(importedAt.toISOString());
+  });
+
+  it("seluruh baris penyaringan ulang massal memakai satu waktu yang sama", async () => {
+    const { inserted } = mockDb({
+      sanctions_watchlist_entries: [entriDaftar()],
+      customers: [
+        { id: 1, fullName: "Nasabah Satu", isDemo: false, isHistorical: false },
+        { id: 2, fullName: "Nasabah Dua", isDemo: false, isHistorical: false },
+      ],
+    });
+    const { rescreenAllCustomers } = await import("./customerWatchlistScreening");
+
+    await rescreenAllCustomers();
+
+    // Basis data palsu mencatat satu panggilan `values` berisi larik; ambil barisnya apa adanya.
+    const baris = inserted.filter((row) => row.table === penyaringan);
+    const waktu = baris.flatMap((row) => (Array.isArray(row.values) ? row.values : [row.values])).map((row: any) => (row.screenedAt as Date).getTime());
+    expect(new Set(waktu).size).toBe(1);
+  });
+});

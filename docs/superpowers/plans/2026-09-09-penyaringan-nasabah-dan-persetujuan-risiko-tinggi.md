@@ -22,7 +22,7 @@ tiga pemanggil; satu fungsi penolakan murni yang ditegakkan di penulis transaksi
 - [x] Tugas 3 — Penyaringan ulang massal saat daftar diimpor — **SELESAI 9 September 2026**
 - [x] Tugas 4 — Gerbang persetujuan: fungsi penolakan murni dan penegakannya pada bon — **SELESAI 9 September 2026**
 - [x] Tugas 5 — Halaman: riwayat penyaringan, peringatan daftar usang, kendali setujui/tolak — **SELESAI 10 September 2026**
-- [ ] Tugas 6 — Peragaan end-to-end dan dokumentasi
+- [x] Tugas 6 — Peragaan end-to-end dan dokumentasi — **SELESAI 10 September 2026**
 
 Urutannya mengikat: 1 sebelum semuanya; 2 sebelum 3; 4 berdiri sendiri sesudah 1; 5 sesudah 3 dan 4;
 6 terakhir. **Tepat satu tugas migrasi: Tugas 1.**
@@ -266,14 +266,14 @@ describe("decideHighRisk", () => {
 
 ### Task 6: Peragaan end-to-end dan dokumentasi
 
-- [ ] **Step 1:** Peragakan di basis data lokal, **di layar**, seluruh rantainya:
+- [x] **Step 1:** Peragakan di basis data lokal, **di layar**, seluruh rantainya:
       buat nasabah → baris penyaringan otomatis muncul → impor ulang daftar → baris kedua muncul
       dengan `listSnapshotAt` baru → naikkan `riskLevel` ke `HIGH` → bon **ditolak** → SHAREHOLDER
       menyetujui → bon **berhasil**. Peragaan yang berhenti sebelum penolakan belum membuktikan apa
       pun.
-- [ ] **Step 2:** Perbarui `BUKU-PANDUAN-PENGGUNAAN-A-Z.md` dan `SKEMA-DATABASE-PROJECT.md`.
-- [ ] **Step 3:** Centang Status Pengerjaan di sini dan pada ROADMAP; salin risiko residual.
-- [ ] **Step 4:** Perintah mutu, commit `"Peragaan dan dokumentasi Paket L"`.
+- [x] **Step 2:** Perbarui `BUKU-PANDUAN-PENGGUNAAN-A-Z.md` dan `SKEMA-DATABASE-PROJECT.md`.
+- [x] **Step 3:** Centang Status Pengerjaan di sini dan pada ROADMAP; salin risiko residual.
+- [x] **Step 4:** Perintah mutu, commit `"Peragaan dan dokumentasi Paket L"`.
 
 ---
 
