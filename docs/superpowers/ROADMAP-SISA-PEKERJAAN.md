@@ -293,7 +293,7 @@ usaha" memunculkan pekerjaan Pasal 48 yang sungguhan dan belum pernah dicatat di
 - [x] Tugas 2 — `shared/documentRetention.ts`: aturan retensi Pasal 48 sebagai fungsi murni
 - [x] Tugas 3 — Penulis `relationshipEndedAt` pada `updateCustomer`
 - [x] Tugas 4 — `server/companyProfileDocuments.ts` menggantikan `deleteCompanyDocument`
-- [ ] Tugas 5 — Uji penjaga: dokumen nasabah dan transaksi tidak punya jalur hapus
+- [x] Tugas 5 — Uji penjaga: dokumen nasabah dan transaksi tidak punya jalur hapus
 - [ ] Tugas 6 — Pembacaan retensi dan prosedur tRPC-nya
 - [ ] Tugas 7 — Layar Profil Perusahaan: nonaktifkan berdialog, hapus permanen hanya Pemegang Saham
 - [ ] Tugas 8 — Halaman Penatausahaan Dokumen

@@ -19,7 +19,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 2 — `shared/documentRetention.ts` (aturan retensi murni)
 - [x] Tugas 3 — Penulis `relationshipEndedAt` pada `updateCustomer`
 - [x] Tugas 4 — `server/companyProfileDocuments.ts` menggantikan `deleteCompanyDocument`
-- [ ] Tugas 5 — Uji penjaga: dokumen nasabah dan transaksi tidak punya jalur hapus
+- [x] Tugas 5 — Uji penjaga: dokumen nasabah dan transaksi tidak punya jalur hapus
 - [ ] Tugas 6 — Pembacaan retensi (`documentRetentionQueries.ts` + tRPC)
 - [ ] Tugas 7 — Layar Profil Perusahaan: nonaktifkan dan hapus permanen
 - [ ] Tugas 8 — Halaman Penatausahaan Dokumen
@@ -632,7 +632,7 @@ git commit -m "Nonaktifkan dokumen profil perusahaan; hapus permanen hanya untuk
 Inilah uji yang benar-benar mengunci sisi Pasal 48. Tanpa ia, paket berikutnya dapat menambahkan
 jalur hapus baru tanpa ada yang mengeluh.
 
-- [ ] **Step 1: Tulis penjaganya**
+- [x] **Step 1: Tulis penjaganya**
 
 ```ts
 import { readdirSync, readFileSync } from "node:fs";
@@ -656,7 +656,7 @@ describe("penjaga penatausahaan dokumen", () => {
 });
 ```
 
-- [ ] **Step 2: Buktikan penjaganya benar-benar menangkap**
+- [x] **Step 2: Buktikan penjaganya benar-benar menangkap**
 
 Sisipkan sementara `db.delete(operationalDocuments)` ke `server/documentOperations.ts`, jalankan
 ujinya, pastikan ia **gagal**, lalu kembalikan berkasnya. Penjaga yang tidak pernah dibuktikan
@@ -667,7 +667,7 @@ menangkap adalah penjaga yang belum tentu menangkap.
 git diff --stat   # harus kosong sesudah dikembalikan
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add server/documentRetentionGuard.test.ts
