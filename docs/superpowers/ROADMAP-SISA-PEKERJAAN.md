@@ -289,7 +289,7 @@ menjadi penyimpangan pola dan disiplin audit. Sebaliknya, penjelasan ayat (1) hu
 *"jangka waktu dengan masa retensi yang terlama"* — dan ketiadaan penanda "berakhirnya hubungan
 usaha" memunculkan pekerjaan Pasal 48 yang sungguhan dan belum pernah dicatat di mana pun.
 
-- [ ] Tugas 1 — Migrasi `0058`: kolom nonaktif dokumen dan `customers.relationshipEndedAt`
+- [x] Tugas 1 — Migrasi `0058`: kolom nonaktif dokumen dan `customers.relationshipEndedAt`
 - [ ] Tugas 2 — `shared/documentRetention.ts`: aturan retensi Pasal 48 sebagai fungsi murni
 - [ ] Tugas 3 — Penulis `relationshipEndedAt` pada `updateCustomer`
 - [ ] Tugas 4 — `server/companyProfileDocuments.ts` menggantikan `deleteCompanyDocument`

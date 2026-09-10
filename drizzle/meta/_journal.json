@@ -407,6 +407,13 @@
       "when": 1788971407035,
       "tag": "0057_dashing_morph",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "5",
+      "when": 1789060369125,
+      "tag": "0058_brief_proteus",
+      "breakpoints": true
     }
   ]
 }

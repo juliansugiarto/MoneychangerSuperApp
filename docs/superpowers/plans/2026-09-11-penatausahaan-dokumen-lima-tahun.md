@@ -15,7 +15,7 @@
 Dikerjakan satu tugas per sesi. **Centang barisnya di sini setelah commit tugas itu**, supaya sesi
 berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 
-- [ ] Tugas 1 — Migrasi kolom nonaktif dan `relationshipEndedAt` (0058)
+- [x] Tugas 1 — Migrasi kolom nonaktif dan `relationshipEndedAt` (0058)
 - [ ] Tugas 2 — `shared/documentRetention.ts` (aturan retensi murni)
 - [ ] Tugas 3 — Penulis `relationshipEndedAt` pada `updateCustomer`
 - [ ] Tugas 4 — `server/companyProfileDocuments.ts` menggantikan `deleteCompanyDocument`
@@ -83,7 +83,7 @@ Tugas 5 boleh dikerjakan kapan saja sesudah 4.
 - Consumes: —
 - Produces: `operationalDocuments.deactivatedAt` / `.deactivatedByUserId` / `.deactivationReason`, `customers.relationshipEndedAt`. Dipakai tugas 2–8.
 
-- [ ] **Step 1: Tambah tiga kolom nonaktif pada `operationalDocuments`**
+- [x] **Step 1: Tambah tiga kolom nonaktif pada `operationalDocuments`**
 
 Di `drizzle/schema.ts`, sisipkan tepat sebelum `createdAt` pada `operationalDocuments`:
 
@@ -102,7 +102,7 @@ Di `drizzle/schema.ts`, sisipkan tepat sebelum `createdAt` pada `operationalDocu
 Pastikan `datetime` sudah ada pada impor `drizzle-orm/mysql-core` di berkas ini (sudah dipakai
 `companyDocuments`, jadi seharusnya ada).
 
-- [ ] **Step 2: Tambah `relationshipEndedAt` pada `customers`**
+- [x] **Step 2: Tambah `relationshipEndedAt` pada `customers`**
 
 Sisipkan tepat sesudah baris `profileStatus`:
 
@@ -117,14 +117,14 @@ Sisipkan tepat sesudah baris `profileStatus`:
   relationshipEndedAt: datetime("relationshipEndedAt"),
 ```
 
-- [ ] **Step 3: Hasilkan migrasi**
+- [x] **Step 3: Hasilkan migrasi**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
 ./node_modules/.bin/drizzle-kit generate
 ```
 
-- [ ] **Step 4: Baca SQL yang dihasilkan sebelum menerapkannya**
+- [x] **Step 4: Baca SQL yang dihasilkan sebelum menerapkannya**
 
 ```bash
 cat drizzle/0058_*.sql
@@ -134,27 +134,27 @@ Harapan: hanya `ALTER TABLE ... ADD ...` untuk empat kolom itu. **Bila ada `DROP
 `TRUNCATE`, atau tabel di luar `operational_documents` dan `customers`, berhenti dan laporkan** —
 migrasi ini harus murni aditif.
 
-- [ ] **Step 5: Terapkan ke dua basis data lokal**
+- [x] **Step 5: Terapkan ke dua basis data lokal**
 
 ```bash
 export TENANT_REGISTRY="ibukota=mysql://root@127.0.0.1:3306/moneychanger;abcvalas=mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 node scripts/tenant.mjs migrate-all
 ```
 
-- [ ] **Step 6: Buktikan kolomnya benar-benar ada**
+- [x] **Step 6: Buktikan kolomnya benar-benar ada**
 
 ```bash
 mysql -uroot -h127.0.0.1 moneychanger -e "SHOW COLUMNS FROM operational_documents LIKE 'deactivated%'; SHOW COLUMNS FROM customers LIKE 'relationshipEndedAt';"
 ```
 Harapan: tiga baris + satu baris, seluruhnya `YES` pada kolom `Null`.
 
-- [ ] **Step 7: Pastikan tipe masih bersih**
+- [x] **Step 7: Pastikan tipe masih bersih**
 
 ```bash
 ./node_modules/.bin/tsc --noEmit
 ```
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add drizzle/schema.ts drizzle/0058_*.sql drizzle/meta

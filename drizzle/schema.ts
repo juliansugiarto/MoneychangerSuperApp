@@ -173,6 +173,14 @@ export const customers = mysqlTable("customers", {
   highRiskDecidedAt: datetime("highRiskDecidedAt"),
   highRiskDecisionNotes: text("highRiskDecisionNotes"),
   profileStatus: mysqlEnum("profileStatus", ["ACTIVE", "RESTRICTED", "INACTIVE"]).default("ACTIVE").notNull(),
+  /**
+   * Kapan hubungan usaha berakhir — jam Pasal 48 ayat (1) huruf a angka 1 PBI 10/2024.
+   *
+   * Diisi saat `profileStatus` BERPINDAH menjadi `INACTIVE`, dikosongkan saat berpindah keluar
+   * darinya. Diturunkan dari `updatedAt` berarti menebak: `updatedAt` bergerak pada setiap
+   * penyuntingan apa pun, termasuk yang tidak menyentuh status.
+   */
+  relationshipEndedAt: datetime("relationshipEndedAt"),
   riskLevel: mysqlEnum("riskLevel", ["LOW", "MEDIUM", "HIGH"]).default("LOW").notNull(),
   riskNotes: text("riskNotes"),
   /**
@@ -393,6 +401,15 @@ export const operationalDocuments = mysqlTable("operational_documents", {
   documentReference: varchar("documentReference", { length: 160 }),
   notes: text("notes"),
   uploadedByUserId: int("uploadedByUserId").notNull(),
+  /**
+   * Dinonaktifkan, bukan dihapus — pola yang sama dengan `companyDocuments` (keputusan pengguna
+   * 8 September 2026). **Hanya berlaku bagi `ownerType = "COMPANY"`**: dokumen nasabah dan
+   * transaksi tidak punya jalur nonaktif maupun hapus sama sekali, karena Pasal 48 PBI 10/2024
+   * mewajibkan penatausahaannya.
+   */
+  deactivatedAt: datetime("deactivatedAt"),
+  deactivatedByUserId: int("deactivatedByUserId"),
+  deactivationReason: text("deactivationReason"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("operational_documents_storage_key_uq").on(table.storageKey),
