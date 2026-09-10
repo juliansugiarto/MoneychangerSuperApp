@@ -70,23 +70,32 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 9 September 2026 (sesudah Paket L Tugas 1)
+## Sesi berikutnya — keadaan per 10 September 2026 (sesudah Paket L SELESAI)
 
 **Seluruh paket peta jalan asli sudah selesai:** K1, B, D, C, E, F1, F2, G, H, I, J (J1+J2), K2,
-dan K3. Dua belas temuan pemeriksaan BI 2026 sudah tertutup.
+K3, dan **L**. Dua belas temuan pemeriksaan BI 2026 sudah tertutup, dan Temuan 1 dan 2 pada
+`specs/2026-09-09-pbi-10-2024-temuan-awal.md` (PBI No. 10 Tahun 2024) ikut tertutup oleh Paket L.
 
-**Paket L sedang berjalan. Tugas 1 selesai; pekerjaan berikutnya adalah Tugas 2.** Paket ini lahir
-dari pembacaan **PBI No. 10 Tahun 2024** — peraturan APU/PPT/PPPSPM yang berlaku dan yang belum
-pernah dibaca proyek ini sampai 9 September 2026.
+**Tidak ada paket yang sedang berjalan.** Pekerjaan berikutnya belum dipilih — lihat
+`### Pekerjaan yang sudah teridentifikasi tetapi belum dirancang` di bawah, dan risiko residual
+Paket L pada `ROADMAP-SISA-PEKERJAAN.md`.
 
-Baseline uji yang benar-benar dijalankan 9 September 2026 sesudah Paket L Tugas 1:
-`Test Files 153 passed (153)`, `Tests 1313 passed | 2 skipped (1315)`. `tsc --noEmit` bersih,
-`vite build` sukses. **Angkanya sama dengan sesudah K3, dan itu benar** — Tugas 1 hanya menambah
-skema, ujinya baru datang bersama penulis pada Tugas 2.
+Baseline uji yang benar-benar dijalankan 10 September 2026 sesudah Paket L Tugas 6:
+`Test Files 155 passed (155)`, `Tests 1357 passed | 2 skipped (1359)`. `tsc --noEmit` bersih,
+`vite build` sukses (hanya peringatan ukuran chunk yang sudah lama ada). Paket L menambah **44 uji**
+di atas baseline K3 (`1313 passed`). **`pnpm audit` TIDAK dijalankan** pada sesi ini — Paket L tidak
+menyentuh dependensi, dan sembilan temuan lama tetap berlaku. **Jangan menyebut audit bersih.**
 
-Migrasi terakhir adalah **`0057`** (`0057_dashing_morph.sql`), sudah diterapkan ke dua basis data
-lokal; jurnal keduanya **58**. Paket L tidak menambah migrasi lagi — Tugas 1 adalah satu-satunya
-tugas migrasi pada paket ini.
+**Uji wajib dijalankan dengan `.env` termuat.** Tanpa itu
+`server/internalAuth.developmentAccounts.test.ts` gagal sendirian dengan *"Database tidak
+tersedia"* — kegagalan lingkungan, bukan regresi:
+```bash
+export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
+export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
+```
+
+Migrasi terakhir tetap **`0057`** (`0057_dashing_morph.sql`), sudah diterapkan ke dua basis data
+lokal; jurnal keduanya **58**. Paket L tidak menambah migrasi sesudah Tugas 1.
 
 **Satu uji diketahui flaky dan bukan bagian paket mana pun:** `server/tenantIsolation.live.test.ts`
 > *"setiap ikatan hanya melihat database miliknya sendiri"*. Bila gagal sendirian di bawah beban,
@@ -145,6 +154,19 @@ jalankan ulang berkas itu saja.
   riwayat commit**, lalu perbaiki dokumennya. Sebuah hook `SessionStart`
   (`~/.claude/hooks/next-task.sh`, lihat `SETUP-PERKAKAS.md`) kini menyapu seluruh rencana pada
   awal tiap sesi, jadi ketertinggalan seperti ini muncul sendiri tanpa dicari.
+- **`DEFAULT CURRENT_TIMESTAMP` menyimpan jam dinding mesin, bukan instan UTC.** Ditemukan
+  10 September 2026 lewat peragaan Paket L, tidak oleh satu uji pun: satu baris berisi `screenedAt`
+  (bawaan MySQL) **23:24 WIB** dan `listSnapshotAt` (ditulis dari JS) **16:24 UTC** — instan yang
+  sama, dua kesepakatan berbeda. Dibaca kembali sebagai UTC, layar memperlihatkan peristiwa **tujuh
+  jam di masa depan**. `customer_watchlist_screenings.screenedAt` sudah diperbaiki dengan menulis
+  waktunya dari penulisnya. **`audit_logs.createdAt`, `customers.createdAt`, dan seluruh kolom
+  `defaultNow()` lain BELUM** — Daftar Nasabah hari ini menampilkan "Dibuat 11 Sep 2026" untuk
+  nasabah yang dibuat 10 September. Benar di produksi (server UTC), salah di pengembangan. Penulis
+  baru: **tulis waktunya sendiri**, jangan mengandalkan bawaan kolom.
+- **`DialogContent` adalah `grid`, jadi anaknya ber-`min-width: auto`.** Panel apa pun yang memuat
+  tabel ber-`min-w-[...]` akan **melebarkan dialognya** dan memotong isi di tepi kanan — tombolnya
+  ikut terpotong dan tidak dapat dibaca. Obatnya `min-w-0` pada pembungkus panel. Ini tidak
+  tertangkap `tsc` maupun `vite build`; hanya terlihat di layar (Paket L Tugas 6).
 - **Berkas dokumen dan berkas impor punya dua batas yang BERBEDA.** Dokumen
   (`server/documentOperations.ts`): **8 MB**, MIME saja. Impor XLS/XLSX: **5 MB** plus
   `assertSpreadsheetSignature`. Jangan mencampurnya.
@@ -444,58 +466,68 @@ padahal tanggal adalah field wajib huruf b dan proyek ini sudah punya zona opera
 
 ---
 
-### Paket L — Jejak penyaringan nasabah dan persetujuan risiko tinggi (6 tugas) — **SEDANG BERJALAN**
+### Paket L — Jejak penyaringan nasabah dan persetujuan risiko tinggi (6 tugas) — **SELESAI 10 September 2026**
 
-**Tugas 1 selesai 9 September 2026. Berikutnya Tugas 2.**
-Spec `specs/2026-09-09-penyaringan-nasabah-dan-persetujuan-risiko-tinggi-design.md`,
-rencana `plans/2026-09-09-penyaringan-nasabah-dan-persetujuan-risiko-tinggi.md`.
+Enam tugas, lima commit: `4c44b22` (migrasi `0057`), `a4beb78` (penulis penyaringan), `bffedbe`
+(penyaringan ulang massal), `ea78bf2` (gerbang persetujuan), `acd7a94` (halaman), `b2c3a90`
+(peragaan dan dokumentasi). Menutup Temuan 1 dan 2 pada
+`specs/2026-09-09-pbi-10-2024-temuan-awal.md`.
 
-Menutup Temuan 1 dan 2 pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`.
+**Yang sekarang berdiri:**
 
-**Yang sudah berdiri sesudah Tugas 1** (commit `4c44b22`, migrasi `0057`):
+- `customer_watchlist_screenings` — satu baris per penyaringan, tidak pernah disunting. Penulis
+  tunggalnya `server/customerWatchlistScreening.ts`. Empat pemicu, semuanya sudah ada penulisnya:
+  `NASABAH_DIBUAT`/`NASABAH_DIUBAH` (dari `createCustomer`/`updateCustomer`; profil pemilik manfaat
+  yang baru dibuat ikut disaring), `DAFTAR_DIIMPOR` (seluruh nasabah aktif, sesudah impor daftar,
+  **di luar transaksi impornya**), dan `MANUAL` (tombol "Saring ulang sekarang" pada profil nasabah).
+- Pencocokan nama kini **satu fungsi murni**, `matchWatchlistEntries` — dipakai kotak pencarian
+  manual maupun penyaringan otomatis. Pemotongan 25 hasil milik kotak pencarian saja, sehingga
+  `matchCount` pada jejak adalah jumlah sebenarnya.
+- Gerbang risiko tinggi: `customerHighRiskDenial` murni di **`shared/customerHighRisk.ts`** —
+  dipakai borang transaksi untuk memperingatkan *dan* `createTransaction` untuk menolak, dengan
+  kalimat yang sama persis. Berlaku atas nasabah transaksi **dan** pihak kuasa/wakilnya.
+- `decideHighRisk` (SHAREHOLDER saja, wajib beralasan, hanya atas nasabah `HIGH`), dan aturan setel
+  ulang ke `BELUM` **hanya** bila `riskLevel` berpindah **menjadi** `HIGH`.
+- Panel riwayat pada profil nasabah membedakan tiga keadaan: belum pernah disaring, daftar usang,
+  mutakhir. Sudah diverifikasi di layar 10 September 2026 sebagai Pemegang Saham.
+- Peragaan menyeluruhnya dapat diulang: `./node_modules/.bin/tsx scripts/peragaanPaketL.mts`
+  (basis data lokal saja).
 
-- Tabel `customer_watchlist_screenings` — satu baris per penyaringan, tidak pernah disunting,
-  berindeks `(customerId, screenedAt)`. **Belum ada satu baris pun**; penulisnya Tugas 2.
-- Empat kolom keputusan pada `customers`: `highRiskDecision` (bawaan `BELUM`),
-  `highRiskDecidedByUserId`, `highRiskDecidedAt`, `highRiskDecisionNotes`. **Belum ada kode yang
-  membacanya**; gerbang penolakannya Tugas 4. Ketiga nasabah lokal berstatus `BELUM`.
-- SQL-nya murni penambahan dan sudah dibaca: satu `CREATE TABLE`, empat `ADD COLUMN`, satu
-  `CREATE INDEX`. Tidak ada `MODIFY`/`DROP`.
-- **`docs/SKEMA-DATABASE-PROJECT.md` BELUM memuat tabel dan keempat kolom baru ini.** Rencananya
-  menaruh pekerjaan dokumentasi pada Tugas 6, jadi ketertinggalan ini disengaja dan berumur
-  pendek — tetapi selama Tugas 6 belum dikerjakan, skema di dokumen itu tidak lengkap.
-
-**Yang harus diketahui sebelum menyentuhnya:**
+**Yang tidak boleh diturunkan ulang:**
 
 - **Paket ini menambahkan tindakan MEMBLOKIR untuk pertama kalinya.** Nasabah `riskLevel = HIGH`
   yang belum disetujui SHAREHOLDER tidak dapat dipakai pada bon baru. Seluruh aplikasi lain sengaja
   hanya mencatat dan memperingatkan; `director_acknowledgements` bahkan menyatakan dirinya *tidak
   boleh* memblokir. **Ini keputusan sadar pengguna, bukan kekeliruan — jangan "diperbaiki".**
-- **Aman diterapkan:** produksi memuat satu nasabah berstatus `LOW` (diperiksa baca-saja
-  9 September 2026), jadi tidak ada yang terblokir pada hari penerapannya.
-- **`dttotPpsdmMatch` tidak pernah diisi otomatis**, meski penyaringannya kini otomatis. Mesin
-  mencatat kemungkinan; manusia memutuskan. Ada ujinya sendiri.
+- **`dttotPpsdmMatch` tidak pernah diisi otomatis**, meski penyaringannya otomatis. Mesin mencatat
+  kemungkinan; manusia memutuskan. Ada ujinya sendiri.
 - **Baris penyaringan ditulis MESKI nihil.** Baris nihil itulah buktinya. "Simpan hanya bila ada
   temuan" adalah optimasi yang justru menghapus yang dicari pemeriksa.
+- **Kegagalan penyaringan tidak pernah menggagalkan penyimpanan nasabah**, dan penyaringan ulang
+  yang gagal tidak membatalkan daftar yang sudah diimpor. Keduanya dicatat ke `audit_logs`
+  (`CUSTOMER_SCREENING_FAILED`, `CUSTOMER_RESCREENING_FAILED`).
 - **Tenggat pelaporan Pasal 60 DI LUAR LINGKUP** atas keputusan pengguna 9 September 2026 —
   negosiasi dengan BI sudah selesai. Jangan membangun antrean tenggat, dan jangan membangun kalender
   hari kerja untuk itu.
 
-```
-Baca docs/superpowers/plans/2026-09-09-penyaringan-nasabah-dan-persetujuan-risiko-tinggi.md
-beserta spec yang dirujuknya, lalu bagian "Aturan kerja yang berlaku untuk seluruh paket" pada
-docs/superpowers/ROADMAP-SISA-PEKERJAAN.md.
+**Risiko residual yang jujur harus disebut** (lengkapnya delapan butir di
+`ROADMAP-SISA-PEKERJAAN.md`):
 
-Kerjakan Tugas <N> saja (Tugas 1 sudah selesai — berikutnya <N> = 2), satu commit yang berdiri
-sendiri beserta ujinya. Patuhi "Global Constraints" pada rencana itu — terutama: migrasi hanya
-ke dua basis data lokal dan tidak pernah ke produksi; otorisasi ditegakkan di penulis, bukan
-hanya router; dttotPpsdmMatch tidak pernah diisi otomatis; dan baris penyaringan ditulis meski
-nihil.
+1. **Peringatan daftar usang belum pernah terlihat di layar.** Ia hanya muncul bila penyaringan
+   ulang sesudah impor tidak menjangkau seorang nasabah — yaitu sesudah kegagalan yang tercatat.
+   Aturannya diuji sebagai fungsi murni; cabang tampilannya baru lewat pemeriksaan tipe dan build.
+2. Penyaringan ulang massal berjalan **di dalam permintaan HTTP impor**. Pada puluhan ribu nasabah
+   ia harus menjadi pekerjaan latar.
+3. Ambang fuzzy 0,6 tidak berubah. Peragaan menghasilkan **12 kemungkinan cocok** untuk satu nama
+   karena seluruh data peragaan berawalan "Contoh Peragaan".
+4. Nasabah berisiko tinggi tidak dapat bertransaksi bila Pemegang Saham tidak dapat dihubungi.
+   Tidak ada jalur darurat, dan itu disengaja.
+5. Kolom `defaultNow()` selain `screenedAt` masih menyimpan jam dinding mesin — lihat
+   `### Yang tidak perlu ditemukan ulang`.
 
-Jangan menurunkan ulang tiga keputusan pengguna yang tertulis di rencana itu. Bila menemukan
-keadaan yang berbeda dari yang tertulis, percayai kodenya, katakan apa yang berbeda, lalu
-perbarui dokumennya sambil lewat.
-```
+**Data uji lokal yang ditinggalkan sengaja** (jangan dibersihkan): CIF-000004, CIF-000005
+(disetujui, tiga baris riwayat), CIF-000006 (`HIGH`/`BELUM`, dipakai memperagakan bon tertahan),
+dan bon `L-*`.
 
 ---
 
@@ -514,6 +546,10 @@ Urut sesuai usul pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`:
 5. **Penjelasan pasal demi pasal PBI 10/2024 belum dibaca** untuk Pasal 9, 32, 47, dan 48.
    Penjelasan sering menyempitkan bunyi pasalnya; **baca sebelum temuan mana pun menjadi rencana.**
 6. **BAB VI dan BAB IX–XI PBI 10/2024 belum dibaca terhadap kode.**
+7. **Kolom `defaultNow()` menyimpan jam dinding mesin basis data** (ditemukan 10 September 2026).
+   Benar di produksi yang berjalan UTC, salah di pengembangan WIB — dan salah pada mesin produksi
+   mana pun yang kelak tidak ber-zona UTC. Pekerjaan menyeluruhnya: menulis waktu dari penulis pada
+   seluruh tabel, bukan dari bawaan kolom. Belum dirancang.
 
 **Antrean migrasi produksi kini 24** (`0034`–`0057`). Menerapkannya pekerjaan tersendiri yang belum
 direncanakan, dan tidak boleh dimulai tanpa permintaan eksplisit.
