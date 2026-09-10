@@ -22,7 +22,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 5 — Uji penjaga: dokumen nasabah dan transaksi tidak punya jalur hapus
 - [x] Tugas 6 — Pembacaan retensi (`documentRetentionQueries.ts` + tRPC)
 - [x] Tugas 7 — Layar Profil Perusahaan: nonaktifkan dan hapus permanen
-- [ ] Tugas 8 — Halaman Penatausahaan Dokumen
+- [x] Tugas 8 — Halaman Penatausahaan Dokumen
 - [ ] Tugas 9 — Peragaan end-to-end dan dokumentasi
 
 Urutannya mengikat: 1 sebelum semuanya; 2 sebelum 3, 6, dan 8; 4 sebelum 7; 6 sebelum 8.
@@ -828,7 +828,7 @@ git commit -m "Layar profil perusahaan: nonaktifkan berdialog, hapus permanen ha
 - Consumes: `documents.retentionOverview`, `documents.retentionStatement` dari tugas 6
 - Produces: rute `/kepatuhan/penatausahaan-dokumen`
 
-- [ ] **Step 1: Tulis halamannya**
+- [x] **Step 1: Tulis halamannya**
 
 Dua bagian:
 
@@ -842,7 +842,7 @@ Dua bagian:
 Baris korespondensi ditampilkan sebagai keterangan *tidak ditatausahakan di aplikasi ini* —
 **bukan** angka nol. Loading, empty, dan error state wajib ada ketiganya.
 
-- [ ] **Step 2: Daftarkan rutenya**
+- [x] **Step 2: Daftarkan rutenya**
 
 `client/src/App.tsx`, mengikuti bentuk `PemantauanProfil` (`:31` dan `:106`):
 
@@ -858,13 +858,18 @@ const PenatausahaanDokumen = lazy(() => import("./pages/PenatausahaanDokumen"));
       { label: "Penatausahaan Dokumen", path: "/kepatuhan/penatausahaan-dokumen", minimumRole: "CONTROLLER" },
 ```
 
-- [ ] **Step 3: Verifikasi visual**
+- [x] **Step 3: Verifikasi visual**
+
+> **Catatan pelaksanaan 11 September 2026:** pencarian transaksi (`customers.search`) hanya memuat nasabah
+> ACTIVE, jadi pemilih nasabah memakai `customers.list` agar nasabah tidak aktif dapat ditemukan.
+> `server/backOfficeNavigation.test.ts` diperbarui dengan rute baru. Layar ditangkap untuk nasabah uji
+> CIF-000001 sebelum dan sesudah ditandai tidak aktif.
 
 Buka halamannya. **Halaman kosong belum membuktikan apa pun** — bila tidak ada nasabah `INACTIVE`
 sama sekali di basis data lokal, tugas 9 yang menyiapkannya; kerjakan tugas 9 lebih dulu bila
 perlu, lalu kembali dan tangkap layarnya.
 
-- [ ] **Step 4: Build dan commit**
+- [x] **Step 4: Build dan commit**
 
 ```bash
 ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build

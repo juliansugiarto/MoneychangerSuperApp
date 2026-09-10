@@ -296,7 +296,7 @@ usaha" memunculkan pekerjaan Pasal 48 yang sungguhan dan belum pernah dicatat di
 - [x] Tugas 5 — Uji penjaga: dokumen nasabah dan transaksi tidak punya jalur hapus
 - [x] Tugas 6 — Pembacaan retensi dan prosedur tRPC-nya
 - [x] Tugas 7 — Layar Profil Perusahaan: nonaktifkan berdialog, hapus permanen hanya Pemegang Saham
-- [ ] Tugas 8 — Halaman Penatausahaan Dokumen
+- [x] Tugas 8 — Halaman Penatausahaan Dokumen
 - [ ] Tugas 9 — Peragaan end-to-end dan dokumentasi
 
 **Empat keputusan pengguna 11 September 2026** yang mengikat rancangan ini:

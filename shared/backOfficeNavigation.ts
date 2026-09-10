@@ -76,6 +76,7 @@ export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
     { label: "Status Kesiapan", path: "/operasional/kesiapan", minimumRole: "CONTROLLER" },
     { label: "Untuk Diketahui Direksi", path: "/operasional/pengawasan-direksi", minimumRole: "CONTROLLER" },
     { label: "Arsip Dokumen", path: "/operasional/arsip-dokumen", minimumRole: "CONTROLLER" },
+    { label: "Penatausahaan Dokumen", path: "/kepatuhan/penatausahaan-dokumen", minimumRole: "CONTROLLER" },
     { label: "Klasifikasi Risiko", path: "/kepatuhan/klasifikasi-risiko", minimumRole: "CONTROLLER" },
     // ADMIN yang mengisi penilaian dan SHAREHOLDER yang menyetujuinya; keduanya harus melihat
     // barisnya. Halaman detailnya berparameter dan karena itu tidak menjadi tujuan sidebar.
