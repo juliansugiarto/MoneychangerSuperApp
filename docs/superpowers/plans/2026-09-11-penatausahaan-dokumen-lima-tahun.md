@@ -18,7 +18,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 1 — Migrasi kolom nonaktif dan `relationshipEndedAt` (0058)
 - [x] Tugas 2 — `shared/documentRetention.ts` (aturan retensi murni)
 - [x] Tugas 3 — Penulis `relationshipEndedAt` pada `updateCustomer`
-- [ ] Tugas 4 — `server/companyProfileDocuments.ts` menggantikan `deleteCompanyDocument`
+- [x] Tugas 4 — `server/companyProfileDocuments.ts` menggantikan `deleteCompanyDocument`
 - [ ] Tugas 5 — Uji penjaga: dokumen nasabah dan transaksi tidak punya jalur hapus
 - [ ] Tugas 6 — Pembacaan retensi (`documentRetentionQueries.ts` + tRPC)
 - [ ] Tugas 7 — Layar Profil Perusahaan: nonaktifkan dan hapus permanen
@@ -415,7 +415,7 @@ git commit -m "Catat kapan hubungan usaha berakhir saat nasabah dinonaktifkan"
 - Consumes: `writeAudit` (`server/operations.ts:146`), `isRoleAllowed` (`shared/backOfficeNavigation.ts`)
 - Produces: `companyProfileDocumentDeactivationDenial`, `companyProfileDocumentPurgeDenial`, `deactivateCompanyProfileDocument`, `purgeCompanyProfileDocument`. Dipakai tugas 7.
 
-- [ ] **Step 1: Tulis kedua gerbangnya**
+- [x] **Step 1: Tulis kedua gerbangnya**
 
 Bentuknya meniru `server/customerHighRiskApproval.ts:34` baris demi baris.
 
@@ -446,7 +446,7 @@ export function companyProfileDocumentPurgeDenial(user: GateUser): Denial {
 }
 ```
 
-- [ ] **Step 2: Tulis penjaga bersama yang dipakai kedua fungsi**
+- [x] **Step 2: Tulis penjaga bersama yang dipakai kedua fungsi**
 
 ```ts
 async function loadPurgeableDocument(db: Db, documentId: number) {
@@ -464,7 +464,7 @@ async function loadPurgeableDocument(db: Db, documentId: number) {
 }
 ```
 
-- [ ] **Step 3: Tulis `deactivateCompanyProfileDocument`**
+- [x] **Step 3: Tulis `deactivateCompanyProfileDocument`**
 
 Bentuknya meniru `deactivateCompanyDocument` (`server/companyDocumentArchive.ts:221`).
 
@@ -497,7 +497,7 @@ export async function deactivateCompanyProfileDocument(
 }
 ```
 
-- [ ] **Step 4: Tulis `purgeCompanyProfileDocument`**
+- [x] **Step 4: Tulis `purgeCompanyProfileDocument`**
 
 Auditnya ditulis **sebelum** `DELETE`, dan memuat metadata lengkap berkasnya — sesudah barisnya
 lenyap, `audit_logs` adalah satu-satunya tempat jejaknya bisa hidup.
@@ -533,7 +533,7 @@ export async function purgeCompanyProfileDocument(
 }
 ```
 
-- [ ] **Step 5: Buang `deleteCompanyDocument` dan saring daftarnya**
+- [x] **Step 5: Buang `deleteCompanyDocument` dan saring daftarnya**
 
 Di `server/documentOperations.ts`: hapus fungsi `deleteCompanyDocument` seluruhnya, lalu ubah
 `listCompanyDocuments` menjadi menyaring yang aktif dan tambahkan saudaranya:
@@ -557,7 +557,7 @@ export async function listDeactivatedCompanyDocuments() {
 
 Tambahkan `isNull`, `isNotNull` pada impor `drizzle-orm`.
 
-- [ ] **Step 6: Ganti prosedur tRPC**
+- [x] **Step 6: Ganti prosedur tRPC**
 
 Di `server/routers.ts`, buang baris `deleteCompany` (`:810`) dan gantikan dengan tiga prosedur.
 Gerbangnya dipanggil **di dalam** prosedurnya juga, bukan hanya diandalkan dari `*Procedure` —
@@ -576,7 +576,7 @@ preseden Paket J2 dan L: gerbang peran di router menjaga layar, penulisnya yang 
 Sesuaikan bentuk `ctx.user` dengan yang benar-benar dipakai prosedur lain di berkas itu — baca
 `decideHighRisk` (`server/routers.ts:791`) sebagai contoh yang paling dekat.
 
-- [ ] **Step 7: Tulis uji perilakunya**
+- [x] **Step 7: Tulis uji perilakunya**
 
 `server/companyProfileDocuments.test.ts`, `getDb` dipalsukan:
 
@@ -587,7 +587,7 @@ Sesuaikan bentuk `ctx.user` dengan yang benar-benar dipakai prosedur lain di ber
 5. Nonaktif berhasil → `set()` memuat ketiga kolomnya dan satu baris audit `COMPANY_PROFILE_DOCUMENT_DEACTIVATED` tertulis.
 6. Purge berhasil → audit ditulis **sebelum** `delete`, `beforeState` memuat `storageKey`, dan `metadata.storageObjectRetained` bernilai `true`.
 
-- [ ] **Step 8: Tulis uji otorisasinya**
+- [x] **Step 8: Tulis uji otorisasinya**
 
 `server/companyProfileDocuments.authorization.test.ts` — tabel peran murni atas kedua gerbang:
 
@@ -599,7 +599,7 @@ Sesuaikan bentuk `ctx.user` dengan yang benar-benar dipakai prosedur lain di ber
 | SHAREHOLDER | false | **boleh** | **boleh** |
 | SHAREHOLDER | true | ditolak | ditolak |
 
-- [ ] **Step 9: Jalankan seluruh uji**
+- [x] **Step 9: Jalankan seluruh uji**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -611,7 +611,7 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 Uji lama yang menyebut `deleteCompanyDocument` akan gagal dan **itu disengaja** — perbarui atau
 buang uji itu, dan sebutkan perubahan jumlahnya pada laporan.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add server/companyProfileDocuments.ts server/companyProfileDocuments.test.ts server/companyProfileDocuments.authorization.test.ts server/documentOperations.ts server/routers.ts

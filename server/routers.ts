@@ -103,7 +103,13 @@ import {
 } from "./operations";
 import { listCustomerProfileMonitoring, listCustomerProfileReviews, recordCustomerProfileReview } from "./customerProfileMonitoring";
 import { addCompanyDocumentVersion, companyArchiveWorklist, createCompanyDocument, deactivateCompanyDocument, listCompanyArchiveDocuments, listCompanyArchiveVersions } from "./companyDocumentArchive";
-import { deleteCompanyDocument, getOperationalDocumentDownloadUrl, listCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
+import { getOperationalDocumentDownloadUrl, listCompanyDocuments, listDeactivatedCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
+import {
+  companyProfileDocumentDeactivationDenial,
+  companyProfileDocumentPurgeDenial,
+  deactivateCompanyProfileDocument,
+  purgeCompanyProfileDocument,
+} from "./companyProfileDocuments";
 import { companyDocumentCategories, expenseCategories } from "../drizzle/schema";
 import { candidateDecisions, competencyTracks, employmentStatuses, jobLevels, picRoles, screeningResults } from "../drizzle/schema";
 import { journalSourceTypes } from "../drizzle/schema";
@@ -807,7 +813,26 @@ export const appRouter = router({
     forCompany: staffProcedure.query(() => listCompanyDocuments()),
     forExpense: staffProcedure.input(z.object({ expenseId: z.number().int().positive() })).query(({ input }) => listExpenseDocuments(input.expenseId)),
     downloadUrl: staffProcedure.input(z.object({ documentId: z.number().int().positive() })).query(({ input }) => getOperationalDocumentDownloadUrl(input.documentId)),
-    deleteCompany: controllerProcedure.input(z.object({ documentId: z.number().int().positive() })).mutation(({ input }) => deleteCompanyDocument(input.documentId)),
+    /**
+     * Dokumen profil perusahaan dinonaktifkan, bukan dihapus. Gerbangnya diperiksa di sini agar
+     * layarnya berpesan benar, dan sekali lagi di dalam penulisnya agar datanya tetap terjaga.
+     */
+    deactivateCompany: controllerProcedure
+      .input(z.object({ documentId: z.number().int().positive(), reason: z.string().trim().min(5).max(2000) }))
+      .mutation(({ input, ctx }) => {
+        const denial = companyProfileDocumentDeactivationDenial(ctx.user);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        return deactivateCompanyProfileDocument(input, ctx.user);
+      }),
+    /** Hapus permanen — hanya Pemegang Saham, untuk berkas salah unggah. */
+    purgeCompany: shareholderProcedure
+      .input(z.object({ documentId: z.number().int().positive(), reason: z.string().trim().min(5).max(2000) }))
+      .mutation(({ input, ctx }) => {
+        const denial = companyProfileDocumentPurgeDenial(ctx.user);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        return purgeCompanyProfileDocument(input, ctx.user);
+      }),
+    forCompanyDeactivated: controllerProcedure.query(() => listDeactivatedCompanyDocuments()),
   }),
 
   sdm: router({

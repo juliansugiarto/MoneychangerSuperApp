@@ -7,7 +7,7 @@ import { trpc } from "@/lib/trpc";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEFAULT_OPERATIONAL_TIMEZONE, OPERATIONAL_TIMEZONES } from "@shared/regulatoryActionQueue";
 import { IRA_PROVINCE_LABELS } from "@shared/iraVocabulary";
-import { Building2, FileImage, Paperclip, ShieldCheck, Trash2, Upload } from "lucide-react";
+import { Building2, FileImage, Paperclip, ShieldCheck, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -102,11 +102,6 @@ export default function CompanyProfile() {
     }
   };
 
-  const deleteDocument = trpc.documents.deleteCompany.useMutation({
-    onSuccess: () => { toast.success("Dokumen dihapus."); utils.documents.forCompany.invalidate(); },
-    onError: (error) => toast.error(error.message),
-  });
-
   const viewDocument = async (documentId: number) => {
     const url = await utils.documents.downloadUrl.fetch({ documentId });
     window.open(url, "_blank", "noopener,noreferrer");
@@ -174,7 +169,7 @@ export default function CompanyProfile() {
     <Card className="border-[#dce6f0]">
       <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Sertifikat izin usaha</CardTitle><CardDescription>Scan/foto sertifikat izin KUPVA BB.</CardDescription></CardHeader>
       <CardContent className="space-y-3">
-        {licenseCertificates.length ? <div className="space-y-2">{licenseCertificates.map((doc) => <div key={doc.id} className="flex items-center justify-between rounded-lg bg-[#f6fafc] px-3 py-2 text-sm"><span className="text-[#18395f]">{doc.originalFileName}</span><div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => viewDocument(doc.id)}>Lihat</Button><Button type="button" size="sm" variant="ghost" className="text-rose-600" onClick={() => deleteDocument.mutate({ documentId: doc.id })}><Trash2 className="size-4" /></Button></div></div>)}</div> : <p className="text-sm text-[#475569]">Belum ada sertifikat diunggah.</p>}
+        {licenseCertificates.length ? <div className="space-y-2">{licenseCertificates.map((doc) => <div key={doc.id} className="flex items-center justify-between rounded-lg bg-[#f6fafc] px-3 py-2 text-sm"><span className="text-[#18395f]">{doc.originalFileName}</span><div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => viewDocument(doc.id)}>Lihat</Button></div></div>)}</div> : <p className="text-sm text-[#475569]">Belum ada sertifikat diunggah.</p>}
         <Input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={uploadingLicense} onChange={(e) => handleLicenseUpload(e.target.files?.[0] ?? null)} />
       </CardContent>
     </Card>
@@ -182,7 +177,7 @@ export default function CompanyProfile() {
     <Card className="border-[#dce6f0]">
       <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Lampiran izin lainnya</CardTitle><CardDescription>Dokumen pendukung izin usaha — bisa lebih dari satu file.</CardDescription></CardHeader>
       <CardContent className="space-y-3">
-        {attachments.length ? <div className="space-y-2">{attachments.map((doc) => <div key={doc.id} className="flex items-center justify-between rounded-lg bg-[#f6fafc] px-3 py-2 text-sm"><span className="flex items-center gap-1.5 text-[#18395f]"><Paperclip className="size-3.5" />{doc.originalFileName}</span><div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => viewDocument(doc.id)}>Lihat</Button><Button type="button" size="sm" variant="ghost" className="text-rose-600" onClick={() => deleteDocument.mutate({ documentId: doc.id })}><Trash2 className="size-4" /></Button></div></div>)}</div> : <p className="text-sm text-[#475569]">Belum ada lampiran diunggah.</p>}
+        {attachments.length ? <div className="space-y-2">{attachments.map((doc) => <div key={doc.id} className="flex items-center justify-between rounded-lg bg-[#f6fafc] px-3 py-2 text-sm"><span className="flex items-center gap-1.5 text-[#18395f]"><Paperclip className="size-3.5" />{doc.originalFileName}</span><div className="flex gap-2"><Button type="button" size="sm" variant="outline" onClick={() => viewDocument(doc.id)}>Lihat</Button></div></div>)}</div> : <p className="text-sm text-[#475569]">Belum ada lampiran diunggah.</p>}
         <Input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={uploadingAttachment} onChange={(e) => { handleAttachmentUpload(e.target.files?.[0] ?? null); e.target.value = ""; }} />
         <p className="flex items-center gap-1 text-[11px] text-[#475569]"><Upload className="size-3" />Unggah satu per satu — file akan langsung tercatat dalam daftar di atas.</p>
       </CardContent>

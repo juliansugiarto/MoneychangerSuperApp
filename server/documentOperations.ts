@@ -1,5 +1,5 @@
-import { and, desc, eq } from "drizzle-orm";
-import { customers, exchangeTransactions, operationalDocuments, operationalExpenses } from "../drizzle/schema";
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { customers, exchangeTransactions, operationalDocuments, operationalExpenses, users } from "../drizzle/schema";
 import { isRoleAllowed, type BackOfficeRole } from "../shared/backOfficeNavigation";
 import { getDb } from "./db";
 import { storageGetSignedUrl, storagePut } from "./storage";
@@ -145,16 +145,35 @@ export async function listExpenseDocuments(expenseId: number) {
   return db.select().from(operationalDocuments).where(eq(operationalDocuments.expenseId, expenseId)).orderBy(desc(operationalDocuments.createdAt));
 }
 
+/**
+ * Dokumen profil perusahaan yang masih aktif. Penonaktifan dan hapus permanen tinggal di
+ * `server/companyProfileDocuments.ts` — tidak ada lagi penghapus di berkas ini.
+ */
 export async function listCompanyDocuments() {
   const db = await databaseOrThrow();
-  return db.select().from(operationalDocuments).where(eq(operationalDocuments.ownerType, "COMPANY")).orderBy(desc(operationalDocuments.createdAt));
+  return db.select().from(operationalDocuments)
+    .where(and(eq(operationalDocuments.ownerType, "COMPANY"), isNull(operationalDocuments.deactivatedAt)))
+    .orderBy(desc(operationalDocuments.createdAt));
 }
 
-export async function deleteCompanyDocument(documentId: number) {
+/** Dokumen yang sudah dinonaktifkan, beserta alasan dan pelakunya. Arsip yang lenyap dari layar sama saja dengan yang dihapus. */
+export async function listDeactivatedCompanyDocuments() {
   const db = await databaseOrThrow();
-  const document = (await db.select().from(operationalDocuments).where(and(eq(operationalDocuments.id, documentId), eq(operationalDocuments.ownerType, "COMPANY"))).limit(1))[0];
-  if (!document) throw new Error("Dokumen tidak ditemukan.");
-  await db.delete(operationalDocuments).where(eq(operationalDocuments.id, documentId));
+  return db.select({
+    id: operationalDocuments.id,
+    documentType: operationalDocuments.documentType,
+    originalFileName: operationalDocuments.originalFileName,
+    documentReference: operationalDocuments.documentReference,
+    createdAt: operationalDocuments.createdAt,
+    deactivatedAt: operationalDocuments.deactivatedAt,
+    deactivationReason: operationalDocuments.deactivationReason,
+    deactivatedByUserId: operationalDocuments.deactivatedByUserId,
+    deactivatedByName: users.name,
+  })
+    .from(operationalDocuments)
+    .leftJoin(users, eq(users.id, operationalDocuments.deactivatedByUserId))
+    .where(and(eq(operationalDocuments.ownerType, "COMPANY"), isNotNull(operationalDocuments.deactivatedAt)))
+    .orderBy(desc(operationalDocuments.deactivatedAt));
 }
 
 export async function getOperationalDocumentDownloadUrl(documentId: number) {
