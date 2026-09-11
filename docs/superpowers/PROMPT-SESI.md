@@ -70,58 +70,27 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 11 September 2026 (sesudah sesi rancangan Paket M)
+## Sesi berikutnya — keadaan per 11 September 2026 (sesudah Paket M)
 
 **Seluruh paket peta jalan asli sudah selesai:** K1, B, D, C, E, F1, F2, G, H, I, J (J1+J2), K2,
-K3, dan **L**. Dua belas temuan pemeriksaan BI 2026 sudah tertutup, dan Temuan 1 dan 2 pada
-`specs/2026-09-09-pbi-10-2024-temuan-awal.md` (PBI No. 10 Tahun 2024) ikut tertutup oleh Paket L.
+K3, L, dan **M**. Dua belas temuan pemeriksaan BI 2026 sudah tertutup; pada
+`specs/2026-09-09-pbi-10-2024-temuan-awal.md` (PBI No. 10 Tahun 2024) Temuan 1 dan 2 tertutup oleh
+Paket L, dan **Temuan 4 tertutup oleh Paket M** dengan premis yang sudah dikoreksi.
 
-**Paket M sedang berjalan.** Sesi rancangannya selesai 11 September 2026 (`1559a86`) dan
-menghasilkan spec serta rencana bertugas; **belum ada satu tugas pun yang dikerjakan.** Lihat juga
-`### Pekerjaan yang sudah teridentifikasi tetapi belum dirancang` di bawah, dan risiko residual
-Paket L pada `ROADMAP-SISA-PEKERJAAN.md`.
+**Tidak ada paket yang sedang berjalan dan tidak ada rencana yang siap dieksekusi.** Pekerjaan
+berikutnya dipilih dari `### Pekerjaan yang sudah teridentifikasi tetapi belum dirancang` di bawah —
+**tanyakan pengguna dulu**; Temuan 3 menunggu keputusannya. Paket yang dipilih dimulai dengan
+**Prompt A** (sesi rancangan), bukan dengan kode. Risiko residual Paket M ada di bloknya sendiri di
+bawah.
 
-### Paket M — Penatausahaan dokumen (Temuan 4) — **SUDAH DIRANCANG, mulai dari Tugas 1**
-
-Spec: `specs/2026-09-11-penatausahaan-dokumen-lima-tahun-design.md` ·
-Rencana: `plans/2026-09-11-penatausahaan-dokumen-lima-tahun.md` · sembilan tugas.
-
-**Premis Temuan 4 sudah dikoreksi pada sesi rancangan — jangan menelusurinya ulang.** Batang tubuh
-dan penjelasan Pasal 48 PBI 10/2024 sudah dibaca dari `PBI_102024.pdf` milik pengguna. Pasal 48
-berpagar pada CDD dan hanya mengikat data Pengguna Jasa serta Transaksi keuangannya;
-`deleteCompanyDocument` hanya menyentuh `ownerType = "COMPANY"` (logo dan berkas izin), yang bukan
-dokumen Pasal 48. Penjelasan ayat (1) huruf b menetapkan *"masa retensi yang terlama"* sebagai
-kaidahnya. Penjelasan Pasal 9, 32, dan 47 juga sudah dibaca; tidak satu pun mengubah Temuan 1, 2,
-5, atau 7.
-
-**Empat keputusan pengguna 11 September 2026 sudah diambil dan tertulis di spec** — jangan
-menanyakannya lagi: cakupan keduanya (jalur hapus + retensi Pasal 48); dokumen `COMPANY`
-dinonaktifkan, hapus permanen hanya SHAREHOLDER; jam retensi dokumen perusahaan sejak diunggah;
-berkas yatim lama dibiarkan dan `server/storage.ts` sengaja tetap tanpa penghapus objek.
-
-Urutan tugas mengikat: 1 sebelum semuanya; 2 sebelum 3, 6, dan 8; 4 sebelum 7; 6 sebelum 8.
-Tugas 5 boleh kapan saja sesudah 4.
-
-**Prompt untuk sesi berikutnya (Tugas 1 — migrasi `0058`):**
-
-```
-Baca docs/superpowers/plans/2026-09-11-penatausahaan-dokumen-lima-tahun.md.
-Kerjakan HANYA Tugas 1, ikuti langkahnya berurutan.
-Centang setiap langkah di berkas rencana setelah selesai,
-lalu centang barisnya di bagian Status Pengerjaan pada rencana itu
-dan pada docs/superpowers/ROADMAP-SISA-PEKERJAAN.md bagian Paket M.
-Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
-```
-
-Untuk tugas berikutnya, ganti angkanya saja. Tugas 9 menuntut peragaan end-to-end di basis data
-lokal — data ujinya boleh dibuat tanpa meminta izin lebih dulu, dan data uji paket sebelumnya
-jangan dibersihkan.
-
-Baseline uji yang benar-benar dijalankan 10 September 2026 sesudah Paket L Tugas 6:
-`Test Files 155 passed (155)`, `Tests 1357 passed | 2 skipped (1359)`. `tsc --noEmit` bersih,
-`vite build` sukses (hanya peringatan ukuran chunk yang sudah lama ada). Paket L menambah **44 uji**
-di atas baseline K3 (`1313 passed`). **`pnpm audit` TIDAK dijalankan** pada sesi ini — Paket L tidak
-menyentuh dependensi, dan sembilan temuan lama tetap berlaku. **Jangan menyebut audit bersih.**
+Baseline uji yang benar-benar dijalankan 11 September 2026 sesudah Paket M Tugas 9:
+`Test Files 161 passed (161)`, `Tests 1428 passed | 2 skipped (1430)`. `tsc --noEmit` bersih,
+`vite build` sukses (hanya peringatan ukuran chunk yang sudah lama ada). Paket M menambah **71 uji**
+di atas baseline L (`1357 passed`): 25 aturan retensi, 9 penulis `relationshipEndedAt`, 25 nonaktif
+dan hapus permanen (17 perilaku + 8 otorisasi), 3 penjaga, 9 pembacaan retensi. Tidak ada uji lama
+yang dibuang; `server/backOfficeNavigation.test.ts` hanya mendapat satu rute baru. **`pnpm audit`
+TIDAK dijalankan** pada sesi ini — Paket M tidak menyentuh dependensi, dan sembilan temuan lama tetap
+berlaku. **Jangan menyebut audit bersih.**
 
 **Uji wajib dijalankan dengan `.env` termuat.** Tanpa itu
 `server/internalAuth.developmentAccounts.test.ts` gagal sendirian dengan *"Database tidak
@@ -131,8 +100,9 @@ export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
 export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 ```
 
-Migrasi terakhir tetap **`0057`** (`0057_dashing_morph.sql`), sudah diterapkan ke dua basis data
-lokal; jurnal keduanya **58**. Paket L tidak menambah migrasi sesudah Tugas 1.
+Migrasi terakhir **`0058`** (`0058_brief_proteus.sql`, Paket M Tugas 1 — empat kolom aditif
+nullable), sudah diterapkan ke dua basis data lokal lewat `node scripts/tenant.mjs migrate-all`;
+jurnal keduanya **59**. Belum diterapkan ke produksi.
 
 **Satu uji diketahui flaky dan bukan bagian paket mana pun:** `server/tenantIsolation.live.test.ts`
 > *"setiap ikatan hanya melihat database miliknya sendiri"*. Bila gagal sendirian di bawah beban,
@@ -207,6 +177,24 @@ jalankan ulang berkas itu saja.
 - **Berkas dokumen dan berkas impor punya dua batas yang BERBEDA.** Dokumen
   (`server/documentOperations.ts`): **8 MB**, MIME saja. Impor XLS/XLSX: **5 MB** plus
   `assertSpreadsheetSignature`. Jangan mencampurnya.
+- **`customers.search` hanya memuat nasabah `ACTIVE`** — ia milik borang transaksi. Pemilih nasabah
+  yang harus menemukan nasabah **tidak aktif** (mis. halaman Penatausahaan Dokumen) memakai
+  `customers.list` dan menyaring di klien. Ditemukan Paket M Tugas 8.
+- **Unggah dokumen lewat layar SELALU gagal di mesin lokal** (*"Storage config missing: set
+  R2_ACCOUNT_ID…"*) — `.env` lokal tanpa kredensial R2, dan itu disengaja. Jangan mencoba
+  memperbaikinya dan jangan membuat kredensial. Untuk peragaan, sisipkan baris `operational_documents`
+  lewat SQL sebagai pengganti unggahan (preseden Paket I dan M), lalu jalankan seluruh alur di
+  hilirnya lewat layar dan penulis sesungguhnya.
+- **`echo ===` di zsh memutus perintah berikutnya** (`=` di awal kata adalah ekspansi perintah zsh:
+  *"== not found"*). Pakai `echo "---"` sebagai pemisah keluaran.
+- **Klik pada tab peramban yang tidak aktif tidak mendarat.** Tombol yang di-*find* dan diklik lewat
+  `ref` pada tab latar tampak ter-hover, tetapi dialognya tidak terbuka. Kerjakan satu tab sampai
+  selesai, jangan dua tab bersamaan — mengetik di satu tab sementara tab lain diklik juga berisiko
+  salah sasaran.
+- **Peragaan tidak mengetik kata sandi akun uji.** Peramban biasanya sudah masuk sebagai
+  *Development Shareholder*. Bukti perilaku peran lain (mis. Controller ditolak) diambil dengan
+  memanggil penulis sesungguhnya memakai baris `users` asli — pola `scripts/peragaanPaketM.mts
+  tolak-controller`; tampilan layar peran lain butuh pengguna yang masuk sendiri.
 
 ### Risiko residual Paket J2 yang masih terbuka
 
@@ -216,16 +204,15 @@ dipakai rumusnya; Aspek Kelembagaan tidak dibangun; seluruh klasifikasi risiko b
 dan kode tanpa baris dibaca RENDAH; dimensi `COUNTRY` tanpa daftar FATF/PBB; `PPSPM_3C` tidak dapat
 membedakan UMKM; `TPPU_4A` dan `TPPU_4B` selalu sama karena hanya ada satu provinsi gerai;
 `pnpm audit --prod --audit-level=high` masih **9 temuan** (6 sedang, 3 tinggi) — **jangan menyebut
-audit bersih**; migrasi **`0034`–`0057` belum diterapkan ke produksi** — jurnal produksi berisi 34
-baris (`0000`–`0033`) sementara `drizzle/` kini berisi **58** berkas (`0000`–`0057`), jadi yang
-tertunda **dua puluh empat**, bukan lima seperti tercatat di sini sampai 9 September 2026; dan
+audit bersih**; migrasi **`0034`–`0058` belum diterapkan ke produksi** — jurnal produksi berisi 34
+baris (`0000`–`0033`, diukur 10 September 2026; **tidak diukur ulang** 11 September) sementara
+`drizzle/` kini berisi **59** berkas (`0000`–`0058`), jadi yang tertunda **dua puluh lima**; dan
 zona waktu server masih memakai bawaan `Asia/Jakarta`, bukan `company_profile.timezone`.
 
 ### Risiko residual paket sebelumnya yang masih terbuka
 
 - **Paket I:** unggah berkas dan tombol "Buka" belum pernah dijalankan sungguhan (`.env` lokal tanpa
-  kredensial R2); `deleteCompanyDocument` lama masih `DELETE` sungguhan tanpa audit; jalur unggah
-  dokumen tidak memeriksa signature; sertifikat izin pada Profil Perusahaan tanpa peringatan masa
+  kredensial R2); jalur unggah dokumen tidak memeriksa signature; sertifikat izin pada Profil Perusahaan tanpa peringatan masa
   berlaku; `employee_certifications.documentId` dan `employee_pic_assignments.documentId` tetap
   selalu kosong.
 - **Paket H:** mata uang tak terdeklarasi tidak dinilai di jalur kasir; ambang penyimpangan berlaku
@@ -248,6 +235,17 @@ Data Paket J2 (9 September 2026), **jangan dibersihkan**:
   antaranya N/A.
 - `ira_risk_classifications` masih tujuh baris dari J1; belum ada satu pun baris berdimensi
   `DISTRIBUTION_CHANNEL`, sehingga keempat parameter Jalur Distribusi terbaca RENDAH.
+
+Data Paket M (11 September 2026), **jangan dibersihkan**:
+
+- `operational_documents` id **8–12**, seluruhnya ber-`notes` *"Data uji peragaan Paket M"* dan
+  disisipkan lewat SQL (R2 tidak ada): **8** sertifikat izin `COMPANY` aktif, **9** lampiran izin
+  `COMPANY` **nonaktif** (lewat layar), **11** `KTP_PHOTO` nasabah 8, **12** `UNDERLYING_INVOICE` bon
+  20 (`FX-UJI-T4-0006`). Id **10** sudah **dihapus permanen** lewat layar — barisnya memang tidak ada.
+- Nasabah **8 / CIF-000001** dinonaktifkan lalu diaktifkan kembali lewat layar; kini `ACTIVE` dengan
+  `relationshipEndedAt` `NULL`.
+- `audit_logs` **#193–#196**: dua `CUSTOMER_UPDATED` (perpindahan status), satu
+  `COMPANY_PROFILE_DOCUMENT_DEACTIVATED`, satu `COMPANY_PROFILE_DOCUMENT_PURGED`.
 
 **Membuat data uji pada basis data lokal diizinkan pada tahap mana pun tanpa bertanya lebih dulu.**
 Produksi tetap tidak boleh disentuh.
@@ -568,28 +566,89 @@ dan bon `L-*`.
 
 ---
 
+### Paket M — Penatausahaan dokumen dan penghentian penghapusan sungguhan (9 tugas) — **SELESAI 11 September 2026**
+
+Spec `specs/2026-09-11-penatausahaan-dokumen-lima-tahun-design.md` · rencana
+`plans/2026-09-11-penatausahaan-dokumen-lima-tahun.md`. Sembilan commit: `afe5109` (migrasi `0058`),
+`ffa7ab6` (aturan retensi), `533fbac` (penulis `relationshipEndedAt`), `5c42208` (nonaktif/purge),
+`c44228a` (penjaga), `19e2a87` (pembacaan retensi), `697b073` (layar Profil Perusahaan), `f562410`
+(halaman), `dc1e909` (peragaan dan dokumentasi). Menutup Temuan 4.
+
+**Yang sekarang berdiri:**
+
+- `shared/documentRetention.ts` — aturan Pasal 48 murni: nasabah 5 tahun sejak yang **terakhir** di
+  antara berakhirnya hubungan usaha, transaksi COMPLETED terakhir, dan ketidaksesuaian profil;
+  dokumen/bon transaksi 10 tahun sejak **akhir tahun buku**, kalah oleh tenggat nasabah yang lebih
+  jauh; dokumen profil perusahaan aturan rumah 5 tahun sejak diunggah (**bukan** Pasal 48).
+- `customers.relationshipEndedAt` ditulis `updateCustomer` lewat `relationshipEndValues`, pola
+  `highRiskResetValues`: hanya pada perpindahan status.
+- `server/companyProfileDocuments.ts` menggantikan `deleteCompanyDocument`: nonaktif (CONTROLLER+,
+  alasan wajib) dan hapus permanen (SHAREHOLDER saja; audit berisi metadata lengkap ditulis
+  **sebelum** `DELETE`; objek penyimpanannya dibiarkan). Gerbang di router **dan** di penulis.
+- `server/documentRetentionGuard.test.ts` — satu-satunya `delete(operationalDocuments)` yang boleh
+  ada di `server/`. **Dibuktikan menangkap** dengan sisipan sementara.
+- `server/documentRetentionQueries.ts` + `documents.retentionStatement`/`retentionOverview`
+  (CONTROLLER+), dan halaman `/kepatuhan/penatausahaan-dokumen` (sidebar Pengawasan).
+- Peragaan dapat diulang sebagian: `./node_modules/.bin/tsx scripts/peragaanPaketM.mts
+  pernyataan <customerId> | tolak-controller <documentId> | audit` (basis data lokal saja).
+
+**Yang tidak boleh diturunkan ulang:**
+
+- **Premis Temuan 4 sudah dikoreksi** — Pasal 48 hanya mengikat data Pengguna Jasa dan
+  transaksinya; logo dan izin usaha bukan dokumen Pasal 48. Penjelasan Pasal 9, 32, 47, dan 48 sudah
+  dibaca dari `PBI_102024.pdf` milik pengguna.
+- **Empat keputusan pengguna 11 September 2026** (tertulis di spec): cakupan jalur hapus + retensi;
+  `COMPANY` dinonaktifkan dan hapus permanen hanya SHAREHOLDER; jam dokumen perusahaan sejak
+  diunggah; berkas yatim dibiarkan — `server/storage.ts` **sengaja** tanpa penghapus objek.
+- **Yang lewat tenggat TIDAK dihapus dan tidak diusulkan dihapus** — Pasal 48 batas paling singkat,
+  ayat (6) membolehkan lebih lama. Jangan menambah tombol "bersihkan".
+- **Tahun buku dibaca di zona operasional** (`operationalDateKey`), bukan `getUTCFullYear()` seperti
+  potongan rencana aslinya — bon 00:00–06:59 WIB tanggal 1 Januari semula jatuh ke tahun sebelumnya.
+- **`INACTIVE` tanpa `relationshipEndedAt` diperlakukan belum berdetak**, bukan ditebak dari
+  `updatedAt`. Tenggat yang terlalu cepat adalah satu-satunya kekeliruan yang tidak boleh terjadi.
+- **Korespondensi ditulis "tidak ditatausahakan di aplikasi ini"**, bukan angka nol.
+
+**Risiko residual yang jujur harus disebut:**
+
+1. **Tampilan CONTROLLER di Profil Perusahaan belum pernah dilihat di layar** (tombol *Hapus
+   permanen* seharusnya tidak ada). Dijaga uji otorisasi, gerbang penulis, dan skrip peragaan
+   terhadap baris `test-controller` asli — tetapi layarnya belum.
+2. **Unggah dokumen dan tombol "Lihat" belum pernah dijalankan sungguhan** di lingkungan mana pun
+   (warisan Paket I; R2 lokal tidak ada).
+3. **Nasabah yang sudah `INACTIVE` sebelum migrasi `0058` tidak punya jam retensi** sampai diaktifkan
+   dan dinonaktifkan kembali. Tidak ada pengisian mundur; itu keputusan yang belum diambil.
+4. Nasabah baru dengan KTP → bon selesai tidak diperagakan dari nol; peragaan memakai CIF-000001
+   yang sudah bertransaksi, dan dokumen underlying lewat SQL.
+5. `documentRetentionOverview` membaca seluruh transaksi COMPLETED milik nasabah tidak aktif ke memori
+   untuk mencari yang terakhir. Wajar untuk skala satu gerai; perlu agregasi SQL bila datanya besar.
+6. Migrasi `0058` menambah antrean produksi menjadi **25**.
+
+---
+
 ### Pekerjaan yang sudah teridentifikasi tetapi belum dirancang
 
 Urut sesuai usul pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`:
 
-1. **Temuan 4 — `deleteCompanyDocument` masih `DELETE` sungguhan tanpa audit**, sementara Pasal 48
-   PBI 10/2024 menuntut penatausahaan paling singkat **5 tahun**. Sudah tercatat sebagai risiko
-   residual Paket I; derajatnya naik dari kerapian menjadi kewajiban. **DIPILIH pengguna
-   10 September 2026 sebagai Paket M — prompt sesi rancangannya sudah siap di blok "Paket M".**
+1. ~~**Temuan 4 — `deleteCompanyDocument`**~~ — **SELESAI 11 September 2026 sebagai Paket M.**
 2. **Temuan 3 — pemblokiran serta merta dan pencatatan percobaan transaksi** (Pasal 47 ayat 1
    huruf d). **Menunggu keputusan pengguna**, dan menuntut penulis data yang belum ada sama sekali.
 3. **Temuan 7 — penginian berkala klasifikasi risiko** (Pasal 9 ayat 6) — menaikkan risiko residual
    Paket J2 nomor 3 menjadi kewajiban.
 4. **Tanggal nota memakai zona waktu peramban** (risiko residual Paket K3).
-5. **Penjelasan pasal demi pasal PBI 10/2024 belum dibaca** untuk Pasal 9, 32, 47, dan 48.
-   Penjelasan sering menyempitkan bunyi pasalnya; **baca sebelum temuan mana pun menjadi rencana.**
+5. **Penjelasan Pasal 9, 32, 47, dan 48 PBI 10/2024 sudah dibaca** (sesi rancangan Paket M,
+   11 September 2026); tidak satu pun mengubah Temuan 1, 2, 5, atau 7. Penjelasan pasal lain belum
+   dibaca — **baca penjelasannya sebelum temuan mana pun menjadi rencana.**
 6. **BAB VI dan BAB IX–XI PBI 10/2024 belum dibaca terhadap kode.**
 7. **Kolom `defaultNow()` menyimpan jam dinding mesin basis data** (ditemukan 10 September 2026).
    Benar di produksi yang berjalan UTC, salah di pengembangan WIB — dan salah pada mesin produksi
    mana pun yang kelak tidak ber-zona UTC. Pekerjaan menyeluruhnya: menulis waktu dari penulis pada
    seluruh tabel, bukan dari bawaan kolom. Belum dirancang.
+8. **Pengisian mundur `customers.relationshipEndedAt`** bagi nasabah yang sudah `INACTIVE` sebelum
+   migrasi `0058` (ditemukan Paket M). Sampai itu diputuskan, nasabah tersebut tanpa jam retensi dan
+   tampil pada kartu *Tidak aktif tanpa tanggal berakhir*. **Butuh keputusan pengguna**: tanggal
+   mana yang sah dipakai — menebak dari `updatedAt` sudah ditolak.
 
-**Antrean migrasi produksi kini 24** (`0034`–`0057`). Menerapkannya pekerjaan tersendiri yang belum
+**Antrean migrasi produksi kini 25** (`0034`–`0058`). Menerapkannya pekerjaan tersendiri yang belum
 direncanakan, dan tidak boleh dimulai tanpa permintaan eksplisit.
 
 ---
