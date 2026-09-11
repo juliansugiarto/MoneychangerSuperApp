@@ -23,7 +23,7 @@ berikutnya tahu harus mulai dari mana tanpa membaca seluruh riwayat.
 - [x] Tugas 6 — Pembacaan retensi (`documentRetentionQueries.ts` + tRPC)
 - [x] Tugas 7 — Layar Profil Perusahaan: nonaktifkan dan hapus permanen
 - [x] Tugas 8 — Halaman Penatausahaan Dokumen
-- [ ] Tugas 9 — Peragaan end-to-end dan dokumentasi
+- [x] Tugas 9 — Peragaan end-to-end dan dokumentasi
 
 Urutannya mengikat: 1 sebelum semuanya; 2 sebelum 3, 6, dan 8; 4 sebelum 7; 6 sebelum 8.
 Tugas 5 boleh dikerjakan kapan saja sesudah 4.
@@ -888,7 +888,7 @@ git commit -m "Halaman penatausahaan dokumen untuk pemeriksa"
 - Consumes: seluruh tugas sebelumnya
 - Produces: bukti bahwa paketnya berjalan sungguhan
 
-- [ ] **Step 1: Siapkan data uji lokal**
+- [x] **Step 1: Siapkan data uji lokal**
 
 Diizinkan tanpa meminta izin lebih dulu pada `moneychanger` dan `mc_t_abcvalas`. **Jangan**
 membersihkan data uji paket sebelumnya.
@@ -897,7 +897,20 @@ Yang dibutuhkan: satu nasabah uji yang pernah bertransaksi lalu ditandai `INACTI
 sendiri (bukan `UPDATE` langsung — yang diuji justru penulisnya), dan dua dokumen profil perusahaan
 yang diunggah lewat layarnya sendiri.
 
-- [ ] **Step 2: Telusuri skenario nyata dari ujung ke ujung**
+- [x] **Step 2: Telusuri skenario nyata dari ujung ke ujung**
+
+> **Catatan pelaksanaan 11 September 2026.** Unggah lewat layar gagal di mesin ini (*Storage config
+> missing* — kredensial R2 tidak ada), sehingga lima baris `operational_documents` peragaan (id 8–12: tiga
+> `COMPANY`, satu `KTP_PHOTO` nasabah 8, satu `UNDERLYING_INVOICE` bon 20) disisipkan lewat SQL, preseden
+> Paket I. Seluruh alur di hilirnya lewat layar dan penulis sesungguhnya, memakai nasabah uji CIF-000001
+> (sudah bertransaksi) alih-alih nasabah baru. Hasil: (1) aktif → tanpa tenggat; (2) Nonaktif →
+> `relationshipEndedAt` 2026-09-10 17:51:06 UTC, audit #193, basis `TRANSAKSI_TERAKHIR` sampai
+> 1 Okt 2031, invoice bon `TAHUN_BUKU_TRANSAKSI` sampai 1 Jan 2037; (3) diaktifkan kembali → `NULL`,
+> audit #194; (4) dokumen 9 dinonaktifkan dengan alasan, audit #195, pindah ke bagian nonaktif, klik tanpa
+> alasan tidak terkirim; (5) dokumen 10 dihapus permanen, audit #196 memuat `storageKey` dan
+> `storageObjectRetained: true`, barisnya lenyap; (6) `scripts/peragaanPaketM.mts tolak-controller 10`
+> dengan baris `test-controller` asli → ditolak *"Hanya Pemegang Saham…"*, baris tetap ada, tanpa audit.
+> Butir 6 tidak lewat layar karena peragaan tidak mengetik kata sandi akun uji.
 
 1. Nasabah baru → unggah KTP → transaksi selesai → halaman Penatausahaan menunjukkan
    *hubungan usaha masih berjalan*, tanpa tenggat.
@@ -916,18 +929,18 @@ Buktikan langkah 4 dan 5 dari basis data, bukan dari layar saja:
 mysql -uroot -h127.0.0.1 moneychanger -e "SELECT action, entityId, reason, JSON_EXTRACT(metadata,'\$.storageObjectRetained') FROM audit_logs WHERE action LIKE 'COMPANY_PROFILE_DOCUMENT%' ORDER BY id DESC LIMIT 5;"
 ```
 
-- [ ] **Step 3: Perbarui panduan A–Z**
+- [x] **Step 3: Perbarui panduan A–Z**
 
 Tambahkan bagian penatausahaan dokumen: apa arti nonaktif, siapa yang boleh menghapus permanen dan
 mengapa hanya dia, apa arti "ditahan sampai" pada halaman baru, dan kalimat tegas bahwa aplikasi ini
 **tidak** menghapus dokumen nasabah maupun transaksi.
 
-- [ ] **Step 4: Perbarui skema database**
+- [x] **Step 4: Perbarui skema database**
 
 Empat kolom baru pada `docs/SKEMA-DATABASE-PROJECT.md`, beserta alasan `relationshipEndedAt` tidak
 diturunkan dari `updatedAt`.
 
-- [ ] **Step 5: Perintah mutu penuh, dan baca keluarannya**
+- [x] **Step 5: Perintah mutu penuh, dan baca keluarannya**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -940,7 +953,7 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 Sebutkan angka uji yang **benar-benar dilihat**, dan jelaskan selisihnya terhadap baseline
 `1357 passed | 2 skipped`. Jangan menyebut `pnpm audit` bersih.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md docs/SKEMA-DATABASE-PROJECT.md

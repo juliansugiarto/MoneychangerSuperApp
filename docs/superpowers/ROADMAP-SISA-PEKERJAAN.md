@@ -274,7 +274,7 @@ BI sudah selesai.
 
 ---
 
-### Paket M — Penatausahaan dokumen dan penghentian penghapusan sungguhan — **DIRANCANG 11 September 2026**
+### Paket M — Penatausahaan dokumen dan penghentian penghapusan sungguhan — **SELESAI 11 September 2026**
 
 **Rencana rinci sudah ada:** `plans/2026-09-11-penatausahaan-dokumen-lima-tahun.md` ·
 spec `specs/2026-09-11-penatausahaan-dokumen-lima-tahun-design.md`.
@@ -297,7 +297,7 @@ usaha" memunculkan pekerjaan Pasal 48 yang sungguhan dan belum pernah dicatat di
 - [x] Tugas 6 — Pembacaan retensi dan prosedur tRPC-nya
 - [x] Tugas 7 — Layar Profil Perusahaan: nonaktifkan berdialog, hapus permanen hanya Pemegang Saham
 - [x] Tugas 8 — Halaman Penatausahaan Dokumen
-- [ ] Tugas 9 — Peragaan end-to-end dan dokumentasi
+- [x] Tugas 9 — Peragaan end-to-end dan dokumentasi
 
 **Empat keputusan pengguna 11 September 2026** yang mengikat rancangan ini:
 

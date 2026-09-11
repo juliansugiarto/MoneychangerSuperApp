@@ -191,6 +191,10 @@ Alasannya: kas awal **pertama** untuk sebuah mata uang tidak dijurnal — kalau 
 2. **Sandi pelapor BI (SINTA)** bersifat sensitif — hanya untuk referensi internal, tidak pernah ditampilkan di kwitansi maupun layar publik manapun.
 3. Unggah **logo** (JPG/PNG/WEBP, maksimal 8 MB) — tampil otomatis di kwitansi cetak begitu tersimpan.
 4. Unggah **sertifikat izin usaha** (scan/foto) dan **lampiran izin lainnya** (bisa lebih dari satu file) untuk arsip digital perusahaan.
+   - Dokumen yang tidak berlaku lagi **dinonaktifkan, bukan dihapus**: tombol **Nonaktifkan** (Controller ke atas) membuka dialog dengan **alasan wajib** (minimal lima karakter). Dokumennya pindah ke kartu **Dokumen nonaktif** di bawah halaman, beserta tanggal, siapa yang menonaktifkan, dan alasannya — barisnya tetap tersimpan dan tercatat di log audit.
+   - **Hapus permanen** hanya tersedia bagi **Pemegang Saham**, dan hanya untuk berkas salah unggah — misalnya yang memuat data pribadi pihak lain. Baris metadatanya lenyap dan tidak dapat dikembalikan; **berkasnya sendiri tetap tertinggal di penyimpanan**. Sebelum barisnya dihapus, log audit mencatat metadata lengkapnya (nama berkas, `storageKey`, ukuran, pengunggah, alasan).
+   - Logo yang sedang dipakai tidak dapat dinonaktifkan maupun dihapus; ganti logonya lebih dulu.
+   - Tidak ada lagi tombol tong sampah satu klik. Kedua tindakan selalu lewat dialog.
 5. Nama moneychanger, alamat, dan telepon di sini otomatis dipakai di kwitansi cetak (menggantikan header baku bila sudah diisi).
 
 ### 5.9 Pencatatan Pengeluaran — Staff ke atas
@@ -655,6 +659,54 @@ tidak dapat.
 Mengunggah, mengganti versi, menonaktifkan, dan **membacanya** — seluruhnya **Controller ke atas**.
 Staff dan Admin tidak dapat membuka halaman ini maupun memanggil prosedurnya: arsip memuat
 surat-menyurat regulator dan notulen rapat, yang merupakan bacaan pengawasan dan bukan bacaan kasir.
+
+## 7B. Penatausahaan Dokumen — Controller ke atas
+
+Buka **Pengawasan → Penatausahaan Dokumen**. Halaman ini menjawab pertanyaan pemeriksa tentang
+**Pasal 48 PBI 10/2024**: berapa lama dokumen dan catatan nasabah wajib ditatausahakan, dihitung dari
+data yang benar-benar tercatat. Halaman ini **hanya membaca**.
+
+**Aplikasi ini tidak menghapus dokumen nasabah maupun transaksi — tidak ada tombol untuk itu, di
+halaman mana pun.** Satu-satunya penghapusan dokumen yang ada adalah hapus permanen dokumen profil
+perusahaan oleh Pemegang Saham (§5.8), karena logo dan izin usaha bukan data Pengguna Jasa.
+
+### Ringkasan
+
+Empat kartu, masing-masing dengan dasar hukumnya di bawah angkanya:
+
+- **Hubungan usaha berjalan** — nasabah Aktif atau Dibatasi. Jam lima tahun belum berdetak.
+- **Hubungan usaha berakhir** — nasabah Nonaktif, beserta berapa yang **tenggatnya sudah lewat**.
+  Yang lewat tenggat **tidak dihapus dan tidak diusulkan dihapus**: Pasal 48 menetapkan batas
+  *paling singkat*, dan ayat (6) membolehkan penatausahaan lebih lama.
+- **Tidak aktif tanpa tanggal berakhir** — nasabah yang dinonaktifkan sebelum tanggal berakhirnya
+  hubungan usaha mulai dicatat (11 September 2026). Jamnya diperlakukan **belum berdetak**, bukan
+  ditebak dari tanggal penyuntingan terakhir — tenggat yang terlalu cepat adalah kekeliruan yang tidak
+  boleh terjadi.
+- **Dokumen profil perusahaan** — aturan rumah lima tahun sejak diunggah, **bukan** kewajiban Pasal 48.
+
+### Pernyataan per nasabah
+
+Cari nasabah dengan nama atau CIF — **termasuk yang tidak aktif**. Pernyataannya memuat:
+
+- **Data nasabah ditahan sampai** — lima tahun sejak peristiwa **paling akhir** di antara berakhirnya
+  hubungan usaha, transaksi selesai terakhir, dan ketidaksesuaian profil terakhir (penjelasan
+  Pasal 48 ayat (1) huruf b: masa retensi yang **terlama**). Selama hubungan usaha masih berjalan,
+  kolomnya bertuliskan *Tanpa batas — hubungan usaha masih berjalan*.
+- **Dokumen** (foto identitas dan dokumen underlying) dan **Catatan transaksi (bon)**, masing-masing
+  dengan *Dasar retensi* dan *Ditahan sampai*. Dokumen dan bon transaksi ditahan sepuluh tahun sejak
+  **akhir tahun buku** transaksinya (UU Dokumen Perusahaan, dirujuk Pasal 48 ayat (1) huruf b) — kecuali
+  tenggat nasabahnya lebih jauh, maka yang lebih jauh itulah yang berlaku. Tahun buku dibaca pada zona
+  waktu operasional perusahaan (§5.8), jadi bon pukul 00.30 tanggal 1 Januari masuk tahun buku yang baru.
+- **Catatan yang ikut ditatausahakan** — jumlah penyaringan daftar pantau dan peninjauan profil.
+- **Korespondensi** — ditulis apa adanya: *tidak ditatausahakan di aplikasi ini*. Pengaduan konsumen
+  berkunci pada nomor identitas pelapor, bukan pada nasabah. Ini bukan angka nol.
+
+### Kapan tanggal berakhirnya hubungan usaha tercatat
+
+Tanggalnya diisi **saat status nasabah berpindah menjadi Nonaktif** lewat **Edit** di Daftar Nasabah
+(§5.3), dan dikosongkan kembali bila nasabah diaktifkan lagi. Menyunting nasabah yang sudah Nonaktif
+tanpa mengubah statusnya **tidak** memundurkan tanggalnya. Perubahannya tercatat di log audit
+`CUSTOMER_UPDATED`, sebelum dan sesudahnya.
 
 ## 8. Keluhan Nasabah
 
