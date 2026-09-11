@@ -49,8 +49,25 @@ else
   DB_HOST=$(node -e "console.log(new URL(process.env.DATABASE_URL).hostname)")
   DB_PORT=$(node -e "const u=new URL(process.env.DATABASE_URL); console.log(u.port || 3306)")
   DB_NAME=$(node -e "console.log(new URL(process.env.DATABASE_URL).pathname.replace(/^\//,''))")
-  MYSQL_PWD="$DB_PASS" mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" "$DB_NAME" | gzip > "$BACKUP_FILE"
-  echo "[deploy] Backup written to $BACKUP_FILE"
+  # --single-transaction: snapshot yang konsisten tanpa mengunci tabel InnoDB selama dump.
+  # --set-gtid-purged=OFF: tanpa ini, dump dari server ber-GTID menolak dipulihkan (ERROR 3546).
+  MYSQL_PWD="$DB_PASS" mysqldump --single-transaction --set-gtid-purged=OFF --routines --triggers \
+    -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" "$DB_NAME" | gzip > "$BACKUP_FILE"
+  # Cadangan kosong atau rusak lebih berbahaya daripada tidak ada cadangan: ia memberi rasa aman palsu
+  # tepat sebelum migrasi yang tidak dapat dibatalkan.
+  gzip -t "$BACKUP_FILE"
+  if ! gzip -dc "$BACKUP_FILE" | grep -q "CREATE TABLE"; then
+    # Basis data yang memang kosong (mulai dari nol) sah menghasilkan dump tanpa tabel. Yang tidak
+    # sah adalah basis data bertabel yang dump-nya kosong — itu tanda mysqldump gagal diam-diam.
+    TABLE_COUNT=$(MYSQL_PWD="$DB_PASS" mysql -N -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" \
+      -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '$DB_NAME'")
+    if [ "$TABLE_COUNT" != "0" ]; then
+      echo "[deploy] Backup $BACKUP_FILE tidak memuat CREATE TABLE padahal $DB_NAME berisi $TABLE_COUNT tabel. Aborting before migrations." >&2
+      exit 1
+    fi
+    echo "[deploy] $DB_NAME kosong (0 tabel) — dump tanpa tabel memang diharapkan."
+  fi
+  echo "[deploy] Backup written to $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
 fi
 
 log "Step 2/6: git pull origin main"
