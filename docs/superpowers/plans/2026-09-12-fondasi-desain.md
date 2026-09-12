@@ -18,7 +18,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 2 — `shared/accentColor.ts`: kontras dan aksen perusahaan
 - [x] Tugas 3 — Token desain, kepadatan, dan penjaga warna mentah
 - [x] Tugas 4 — Navigasi dikelompokkan per tugas
-- [ ] Tugas 5 — Pola: kepala halaman, keadaan, ubin angka
+- [x] Tugas 5 — Pola: kepala halaman, keadaan, ubin angka
 - [ ] Tugas 6 — Pola: tabel, daftar + detail, formulir, alur bertahap, laporan
 - [ ] Tugas 7 — Shell aplikasi baru
 - [ ] Tugas 8 — Palet perintah ⌘K dan pintasan konter
@@ -952,7 +952,7 @@ git commit -m "Pola halaman: kepala halaman, keadaan memuat/kosong/galat, ubin a
   - `type Step = { id: string; title: string }`; `StepFlow({ steps: Step[]; currentIndex: number; onStepChange: (index: number) => void; canAdvance?: boolean; nextLabel?: string; backLabel?: string; children: ReactNode })`
   - `ReportLayout({ filters?: ReactNode; summary?: ReactNode; table: ReactNode; onExport?: () => void; exportLabel?: string })`
 
-- [ ] **Step 1: Tulis ujinya**
+- [x] **Step 1: Tulis ujinya**
 
 `client/src/components/patterns/patternsLayout.test.tsx`:
 
@@ -1053,12 +1053,12 @@ describe("FormSection dan ReportLayout", () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan dan pastikan gagal**
+- [x] **Step 2: Jalankan dan pastikan gagal**
 
 Run: `./node_modules/.bin/vitest run client/src/components/patterns/patternsLayout.test.tsx`
 Expected: FAIL — `./DataTable` belum ada.
 
-- [ ] **Step 3: Tulis kelima komponen**
+- [x] **Step 3: Tulis kelima komponen**
 
 `client/src/components/patterns/DataTable.tsx`:
 
@@ -1261,7 +1261,7 @@ export function ReportLayout({ filters, summary, table, onExport, exportLabel = 
 }
 ```
 
-- [ ] **Step 4: Daftarkan ke fondasi**
+- [x] **Step 4: Daftarkan ke fondasi**
 
 Tambahkan ke `FOUNDATION_FILES`:
 
@@ -1273,12 +1273,12 @@ Tambahkan ke `FOUNDATION_FILES`:
   "client/src/components/patterns/ReportLayout.tsx",
 ```
 
-- [ ] **Step 5: Jalankan uji pola dan penjaga**
+- [x] **Step 5: Jalankan uji pola dan penjaga**
 
 Run: `./node_modules/.bin/vitest run client/src/components/patterns/patternsLayout.test.tsx client/src/designFoundation.guard.test.ts`
 Expected: seluruhnya PASS. Bila `getByRole("region", { name: "2. Data identitas" })` tidak menemukan bagian, pastikan `aria-labelledby` menunjuk `id` judulnya — `<section>` hanya menjadi *region* bila berlabel.
 
-- [ ] **Step 6: Perintah mutu dan commit**
+- [x] **Step 6: Perintah mutu dan commit**
 
 ```bash
 ./node_modules/.bin/vitest run
