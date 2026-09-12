@@ -7,4 +7,7 @@
  */
 export const FOUNDATION_FILES: readonly string[] = [
   "client/src/lib/brandAccent.ts",
+  "client/src/components/patterns/PageHeader.tsx",
+  "client/src/components/patterns/PageStates.tsx",
+  "client/src/components/patterns/StatTile.tsx",
 ];

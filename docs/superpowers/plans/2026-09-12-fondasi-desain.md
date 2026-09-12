@@ -17,7 +17,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 1 — Uji komponen klien: jsdom + Testing Library
 - [x] Tugas 2 — `shared/accentColor.ts`: kontras dan aksen perusahaan
 - [x] Tugas 3 — Token desain, kepadatan, dan penjaga warna mentah
-- [ ] Tugas 4 — Navigasi dikelompokkan per tugas
+- [x] Tugas 4 — Navigasi dikelompokkan per tugas
 - [ ] Tugas 5 — Pola: kepala halaman, keadaan, ubin angka
 - [ ] Tugas 6 — Pola: tabel, daftar + detail, formulir, alur bertahap, laporan
 - [ ] Tugas 7 — Shell aplikasi baru
@@ -740,7 +740,7 @@ git commit -m "Navigasi dikelompokkan per tugas: delapan kelompok, seluruh rute 
   - `ErrorState({ what: string; nextStep: string; onRetry?: () => void })` — `role="alert"`
   - `StatTile({ label: string; value: string; hint?: string; onOpen?: () => void })` — tombol bila `onOpen` ada
 
-- [ ] **Step 1: Tulis ujinya**
+- [x] **Step 1: Tulis ujinya**
 
 `client/src/components/patterns/patternsBasic.test.tsx`:
 
@@ -807,12 +807,12 @@ describe("StatTile", () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan dan pastikan gagal**
+- [x] **Step 2: Jalankan dan pastikan gagal**
 
 Run: `./node_modules/.bin/vitest run client/src/components/patterns/patternsBasic.test.tsx`
 Expected: FAIL — `./PageHeader` belum ada.
 
-- [ ] **Step 3: Tulis ketiga komponen**
+- [x] **Step 3: Tulis ketiga komponen**
 
 `client/src/components/patterns/PageHeader.tsx`:
 
@@ -910,7 +910,7 @@ export function StatTile({ label, value, hint, onOpen }: { label: string; value:
 }
 ```
 
-- [ ] **Step 4: Daftarkan ke fondasi**
+- [x] **Step 4: Daftarkan ke fondasi**
 
 Tambahkan ke `FOUNDATION_FILES` di `client/src/designFoundation.ts`:
 
@@ -920,12 +920,12 @@ Tambahkan ke `FOUNDATION_FILES` di `client/src/designFoundation.ts`:
   "client/src/components/patterns/StatTile.tsx",
 ```
 
-- [ ] **Step 5: Jalankan uji pola dan penjaga**
+- [x] **Step 5: Jalankan uji pola dan penjaga**
 
 Run: `./node_modules/.bin/vitest run client/src/components/patterns/patternsBasic.test.tsx client/src/designFoundation.guard.test.ts`
 Expected: seluruhnya PASS.
 
-- [ ] **Step 6: Perintah mutu dan commit**
+- [x] **Step 6: Perintah mutu dan commit**
 
 ```bash
 ./node_modules/.bin/vitest run
