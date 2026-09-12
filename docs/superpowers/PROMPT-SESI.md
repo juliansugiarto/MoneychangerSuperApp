@@ -70,18 +70,46 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 11 September 2026 (sesudah Paket M)
+## Sesi berikutnya — keadaan per 12 September 2026 (sesudah penerapan produksi dan rancangan Program Desain Ulang Antarmuka)
 
 **Seluruh paket peta jalan asli sudah selesai:** K1, B, D, C, E, F1, F2, G, H, I, J (J1+J2), K2,
 K3, L, dan **M**. Dua belas temuan pemeriksaan BI 2026 sudah tertutup; pada
 `specs/2026-09-09-pbi-10-2024-temuan-awal.md` (PBI No. 10 Tahun 2024) Temuan 1 dan 2 tertutup oleh
 Paket L, dan **Temuan 4 tertutup oleh Paket M** dengan premis yang sudah dikoreksi.
 
-**Tidak ada paket yang sedang berjalan dan tidak ada rencana yang siap dieksekusi.** Pekerjaan
-berikutnya dipilih dari `### Pekerjaan yang sudah teridentifikasi tetapi belum dirancang` di bawah —
-**tanyakan pengguna dulu**; Temuan 3 menunggu keputusannya. Paket yang dipilih dimulai dengan
-**Prompt A** (sesi rancangan), bukan dengan kode. Risiko residual Paket M ada di bloknya sendiri di
-bawah.
+**Pekerjaan berikutnya: Program Desain Ulang Antarmuka, sub-proyek 1 (Fondasi Desain), mulai dari
+Tugas 1.** Spec `specs/2026-09-12-desain-ulang-antarmuka-design.md` disetujui pengguna 12 September
+2026 (`5553988`, koreksi §2.4 di `015a618`); rencana bertugas `plans/2026-09-12-fondasi-desain.md`
+(12 tugas, `015a618`). **Seluruh keputusan pengguna tertulis di spec — jangan ditanyakan ulang:**
+produk mandiri lebih dulu (SOLVINC kelak sebagai cara masuk tambahan), halaman kurs publik yang dapat
+dikonfigurasi, 1280–1440px lebih dulu, bahasa sehari-hari dengan istilah BI sebagai label kecil, kode
+pemulihan sekali pakai, desain netral + aksen per perusahaan, penyampaian modul demi modul di tempat
+(pendekatan A), penjelasan AI pada IRA memakai kunci milik pembeli dan mati secara bawaan, Playwright
+sejak sub-proyek 1. Sub-proyek 2–9 masing-masing mendapat spec dan rencana sendiri pada awal sesinya.
+
+**Prompt untuk sesi berikutnya:**
+
+```
+Baca docs/superpowers/plans/2026-09-12-fondasi-desain.md dan spec yang dirujuknya.
+Kerjakan HANYA Tugas 1, ikuti langkahnya berurutan.
+Centang setiap langkah di berkas rencana setelah selesai,
+lalu centang barisnya di bagian Status Pengerjaan pada rencana itu.
+Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
+```
+
+Untuk tugas berikutnya, ganti angkanya saja. Baris *Sub-proyek 1* pada `ROADMAP-SISA-PEKERJAAN.md`
+baru dicentang di Tugas 12.
+
+**Produksi sudah diterapkan dan direset (11–12 September 2026).** Seluruh tabel produksi dihapus atas
+permintaan pengguna ("FRESHSTART"), lalu `deploy.sh` dijalankan manual: produksi kini `724de6b`,
+**59 migrasi** (diukur sesudah penerapan), `pm2` `online`, `https://ibukotavalasindo.online` menjawab
+200. Cadangan sebelum reset: `backups/sebelum-reset-20260911-125637.sql.gz` di server (36 tabel,
+*Dump completed*; **pemulihannya tidak dapat dibuktikan** — lihat jebakan di bawah). Pemegang Saham
+awal dibuat dari `INITIAL_SHAREHOLDER_*` dan pengguna sudah berhasil masuk. **Masih milik pengguna:**
+impor ulang daftar DTTOT/DPPSPM, mengisi ulang Profil Perusahaan, menghapus baris
+`INITIAL_SHAREHOLDER_PASSWORD` dari `.env` produksi, dan mencabut aturan izin
+`Bash(ssh -o BatchMode=yes -o ConnectTimeout=10 deploy@187.53.128.14:*)`. Temuan 3 tetap menunggu
+keputusan pengguna.
 
 Baseline uji yang benar-benar dijalankan 11 September 2026 sesudah Paket M Tugas 9:
 `Test Files 161 passed (161)`, `Tests 1428 passed | 2 skipped (1430)`. `tsc --noEmit` bersih,
@@ -91,6 +119,10 @@ dan hapus permanen (17 perilaku + 8 otorisasi), 3 penjaga, 9 pembacaan retensi. 
 yang dibuang; `server/backOfficeNavigation.test.ts` hanya mendapat satu rute baru. **`pnpm audit`
 TIDAK dijalankan** pada sesi ini — Paket M tidak menyentuh dependensi, dan sembilan temuan lama tetap
 berlaku. **Jangan menyebut audit bersih.**
+
+Sesi 12 September 2026 **tidak menjalankan ulang** uji: kode aplikasi tidak berubah; satu-satunya
+perubahan kode adalah `deploy.sh` (`724de6b`, flag `mysqldump` dan penjaga cadangan kosong), yang hanya
+diperiksa `bash -n` lalu terbukti dalam penerapan sungguhan.
 
 **Uji wajib dijalankan dengan `.env` termuat.** Tanpa itu
 `server/internalAuth.developmentAccounts.test.ts` gagal sendirian dengan *"Database tidak
@@ -102,7 +134,8 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 
 Migrasi terakhir **`0058`** (`0058_brief_proteus.sql`, Paket M Tugas 1 — empat kolom aditif
 nullable), sudah diterapkan ke dua basis data lokal lewat `node scripts/tenant.mjs migrate-all`;
-jurnal keduanya **59**. Belum diterapkan ke produksi.
+jurnal keduanya **59**. **Sudah diterapkan ke produksi** pada penerapan 12 September 2026 (jurnal
+produksi 59, diukur sesudah penerapan).
 
 **Satu uji diketahui flaky dan bukan bagian paket mana pun:** `server/tenantIsolation.live.test.ts`
 > *"setiap ikatan hanya melihat database miliknya sendiri"*. Bila gagal sendirian di bawah beban,
@@ -195,6 +228,23 @@ jalankan ulang berkas itu saja.
   *Development Shareholder*. Bukti perilaku peran lain (mis. Controller ditolak) diambil dengan
   memanggil penulis sesungguhnya memakai baris `users` asli — pola `scripts/peragaanPaketM.mts
   tolak-controller`; tampilan layar peran lain butuh pengguna yang masuk sendiri.
+- **Penerapan produksi dilakukan manual; push ke `main` TIDAK menerapkan apa pun.** GitHub Action-nya
+  gagal di langkah SSH sejak awal. Cara yang terbukti 12 September 2026: `ssh deploy@187.53.128.14`,
+  `cd /var/www/ibukotavalasindo && COREPACK_ENABLE_DOWNLOAD_PROMPT=0 nohup ./deploy.sh > backups/deploy-<cap-waktu>.log 2>&1 &`,
+  lalu ikuti lognya. `nohup` wajib — SSH yang putus di tengah migrasi tidak boleh membunuh prosesnya.
+  pm2 berjalan dari `/var/www/ibukotavalasindo` dengan nama `ibv-backoffice`, satu proses `fork`.
+- **Pengklasifikasi izin menolak perintah yang mengubah produksi** (menjalankan `deploy.sh`, `mysqldump`
+  dengan kredensial aplikasi) meski pengguna sudah setuju di percakapan; akses baca `claude_readonly`
+  tetap lolos. Yang membuka blokir hanya aturan izin eksplisit yang ditambahkan pengguna lewat
+  `/permissions`. Jangan mencoba mengakalinya; minta pengguna.
+- **Cadangan produksi tidak dapat dibuktikan dapat dipulihkan di server.** `appuser` hanya punya hak
+  pada `moneychanger.*` — tidak dapat membuat basis data coba. Memulihkan ke Mac lokal menyalin data
+  nasabah produksi dan tidak boleh. Bukti yang tersedia: `gzip -t`, jumlah `CREATE TABLE`, dan baris
+  penutup *Dump completed*. `deploy.sh` kini memakai `--single-transaction --set-gtid-purged=OFF` dan
+  berhenti bila dump tidak memuat tabel padahal basis datanya bertabel.
+- **Berkas rencana yang sangat panjang wajib ditulis bertahap** (tulis kepala + beberapa tugas, lalu
+  tambahkan sisanya per potongan). Menulisnya dalam satu keluaran pernah terpotong batas token keluaran
+  12 September 2026.
 
 ### Risiko residual Paket J2 yang masih terbuka
 
@@ -204,9 +254,8 @@ dipakai rumusnya; Aspek Kelembagaan tidak dibangun; seluruh klasifikasi risiko b
 dan kode tanpa baris dibaca RENDAH; dimensi `COUNTRY` tanpa daftar FATF/PBB; `PPSPM_3C` tidak dapat
 membedakan UMKM; `TPPU_4A` dan `TPPU_4B` selalu sama karena hanya ada satu provinsi gerai;
 `pnpm audit --prod --audit-level=high` masih **9 temuan** (6 sedang, 3 tinggi) — **jangan menyebut
-audit bersih**; migrasi **`0034`–`0058` belum diterapkan ke produksi** — jurnal produksi berisi 34
-baris (`0000`–`0033`, diukur 10 September 2026; **tidak diukur ulang** 11 September) sementara
-`drizzle/` kini berisi **59** berkas (`0000`–`0058`), jadi yang tertunda **dua puluh lima**; dan
+audit bersih**; migrasi **`0000`–`0058` sudah diterapkan ke produksi** pada 12 September 2026 atas
+basis data yang direset (jurnal produksi 59 = berkas 59); dan
 zona waktu server masih memakai bawaan `Asia/Jakarta`, bukan `company_profile.timezone`.
 
 ### Risiko residual paket sebelumnya yang masih terbuka
@@ -621,7 +670,7 @@ Spec `specs/2026-09-11-penatausahaan-dokumen-lima-tahun-design.md` · rencana
    yang sudah bertransaksi, dan dokumen underlying lewat SQL.
 5. `documentRetentionOverview` membaca seluruh transaksi COMPLETED milik nasabah tidak aktif ke memori
    untuk mencari yang terakhir. Wajar untuk skala satu gerai; perlu agregasi SQL bila datanya besar.
-6. Migrasi `0058` menambah antrean produksi menjadi **25**.
+6. Migrasi `0058` **sudah diterapkan ke produksi** pada penerapan 12 September 2026.
 
 ---
 
@@ -647,9 +696,15 @@ Urut sesuai usul pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`:
    migrasi `0058` (ditemukan Paket M). Sampai itu diputuskan, nasabah tersebut tanpa jam retensi dan
    tampil pada kartu *Tidak aktif tanpa tanggal berakhir*. **Butuh keputusan pengguna**: tanggal
    mana yang sah dipakai — menebak dari `updatedAt` sudah ditolak.
+9. **GitHub Action penerapan tidak pernah berhasil** — setiap run (`1be46a0`, `85aee5a`, `724de6b`)
+   gagal dalam hitungan detik di langkah *Deploy over SSH*, sebelum `deploy.sh` berjalan. Kemungkinan
+   rahasia `SSH_*`/`DEPLOY_PATH` pada environment `production` belum benar atau firewall menolak
+   GitHub. Log galatnya hanya terlihat oleh pemilik repo di tab Actions. Sampai diperbaiki, setiap
+   push ke `main` menghasilkan satu run gagal dan penerapan dilakukan manual.
 
-**Antrean migrasi produksi kini 25** (`0034`–`0058`). Menerapkannya pekerjaan tersendiri yang belum
-direncanakan, dan tidak boleh dimulai tanpa permintaan eksplisit.
+**Antrean migrasi produksi kosong** sejak penerapan 12 September 2026 (jurnal 59 = berkas 59).
+Migrasi berikutnya ikut penerapan manual `deploy.sh`, dan tetap tidak boleh diterapkan tanpa
+permintaan eksplisit pada giliran itu.
 
 ---
 
