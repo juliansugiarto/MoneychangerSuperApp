@@ -317,6 +317,30 @@ sebagai tidak ditatausahakan di aplikasi ini.
 
 ---
 
+### Program Desain Ulang Antarmuka — **DIRANCANG 12 September 2026, menunggu tinjauan spec**
+
+Spec: `specs/2026-09-12-desain-ulang-antarmuka-design.md`. Rencana bertugas sub-proyek 1 belum
+ditulis — ditulis sesudah pengguna meninjau spec. Setiap sub-proyek lain mendapat spec dan rencananya
+sendiri pada awal sesinya.
+
+Keputusan pengguna 12 September 2026 (lengkapnya di spec): produk mandiri lebih dulu; halaman kurs
+publik yang dapat dikonfigurasi; 1280–1440px lebih dulu; bahasa sehari-hari dengan istilah BI sebagai
+label kecil; kode pemulihan sekali pakai; desain netral + aksen per perusahaan; penyampaian modul demi
+modul di tempat; penjelasan AI pada IRA memakai kunci milik pembeli, mati secara bawaan; Playwright
+sejak sub-proyek 1.
+
+- [ ] Sub-proyek 1 — Fondasi desain (token, kepadatan, shell, ⌘K, enam pola, galeri, panduan bahasa, Playwright)
+- [ ] Sub-proyek 2 — Login, penyiapan awal, kode pemulihan, halaman kurs publik
+- [ ] Sub-proyek 3 — Penilaian risiko berbahasa manusia + penjelasan AI
+- [ ] Sub-proyek 4 — Kasir & transaksi
+- [ ] Sub-proyek 5 — Kas, stok & kurs
+- [ ] Sub-proyek 6 — Nasabah
+- [ ] Sub-proyek 7 — Laporan & keuangan
+- [ ] Sub-proyek 8 — Kepatuhan & arsip
+- [ ] Sub-proyek 9 — Harian & pengaturan
+
+---
+
 ## Urutan dan ketergantungan
 
 | Urut | Paket | Mengapa di posisi ini |
