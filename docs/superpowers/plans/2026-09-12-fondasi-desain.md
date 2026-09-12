@@ -14,7 +14,7 @@
 
 Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tugas itu.**
 
-- [ ] Tugas 1 — Uji komponen klien: jsdom + Testing Library
+- [x] Tugas 1 — Uji komponen klien: jsdom + Testing Library
 - [ ] Tugas 2 — `shared/accentColor.ts`: kontras dan aksen perusahaan
 - [ ] Tugas 3 — Token desain, kepadatan, dan penjaga warna mentah
 - [ ] Tugas 4 — Navigasi dikelompokkan per tugas
@@ -75,7 +75,7 @@ Urutan mengikat: 1 sebelum 3, 5, 6, 7, 8; 2 sebelum 3; 3 sebelum 5–9; 4 sebelu
 - Consumes: —
 - Produces: berkas `client/src/**/*.test.tsx` berjalan di jsdom dengan `@testing-library/react` dan `@testing-library/user-event`; berkas `*.test.ts` tetap di node.
 
-- [ ] **Step 1: Tulis uji asap yang gagal**
+- [x] **Step 1: Tulis uji asap yang gagal**
 
 `client/src/test/renderSmoke.test.tsx`:
 
@@ -96,18 +96,18 @@ describe("lingkungan uji komponen", () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan dan pastikan gagal**
+- [x] **Step 2: Jalankan dan pastikan gagal**
 
 Run: `./node_modules/.bin/vitest run client/src/test/renderSmoke.test.tsx`
 Expected: tidak ada berkas yang cocok (pola `include` belum memuat `.tsx`) atau `Cannot find package '@testing-library/react'`.
 
-- [ ] **Step 3: Pasang dependensi pengembangan**
+- [x] **Step 3: Pasang dependensi pengembangan**
 
 ```bash
 ./node_modules/.bin/pnpm add -D jsdom@^25 @testing-library/react@^16 @testing-library/dom@^10 @testing-library/user-event@^14
 ```
 
-- [ ] **Step 4: Atur Vitest**
+- [x] **Step 4: Atur Vitest**
 
 Ganti blok `test` pada `vitest.config.ts` dan tambahkan `esbuild` di atasnya:
 
@@ -157,12 +157,12 @@ if (typeof document !== "undefined") {
 }
 ```
 
-- [ ] **Step 5: Jalankan uji asap**
+- [x] **Step 5: Jalankan uji asap**
 
 Run: `./node_modules/.bin/vitest run client/src/test/renderSmoke.test.tsx`
 Expected: `Tests 2 passed (2)`.
 
-- [ ] **Step 6: Perintah mutu penuh dan audit**
+- [x] **Step 6: Perintah mutu penuh dan audit**
 
 ```bash
 ./node_modules/.bin/vitest run
@@ -172,7 +172,7 @@ Expected: `Tests 2 passed (2)`.
 ```
 Expected: `Test Files 162 passed (162)`, `Tests 1430 passed | 2 skipped (1432)` (+1 berkas, +2 uji). `tsc` dan build bersih. Audit: catat jumlah temuannya apa adanya — dependensi baru hanya `-D`, jadi `--prod` seharusnya tetap sembilan.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add vitest.config.ts package.json pnpm-lock.yaml client/src/test/setup.ts client/src/test/renderSmoke.test.tsx
@@ -190,7 +190,7 @@ git commit -m "Uji komponen klien: jsdom dan Testing Library"
 - Consumes: —
 - Produces: `PRODUCT_ACCENT = "#1D4ED8"`, `LIGHT_TEXT = "#FFFFFF"`, `DARK_TEXT = "#111827"`, `MIN_CONTRAST = 4.5`, `normalizeHexColor(value): string | null` (bentuk `#RRGGBB`), `contrastRatio(a: string, b: string): number | null`, `resolveAccent(candidate): AccentResolution` dengan `AccentResolution = { accent: string; contrast: string; ratio: number; usedFallback: boolean; reason: "INVALID" | "LOW_CONTRAST" | null }`.
 
-- [ ] **Step 1: Tulis ujinya**
+- [x] **Step 1: Tulis ujinya**
 
 `shared/accentColor.test.ts`:
 
@@ -270,12 +270,12 @@ describe("resolveAccent", () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan dan pastikan gagal**
+- [x] **Step 2: Jalankan dan pastikan gagal**
 
 Run: `./node_modules/.bin/vitest run shared/accentColor.test.ts`
 Expected: FAIL — `Failed to resolve import "./accentColor"`.
 
-- [ ] **Step 3: Tulis implementasinya**
+- [x] **Step 3: Tulis implementasinya**
 
 `shared/accentColor.ts`:
 
@@ -352,12 +352,12 @@ export function resolveAccent(candidate: string | null | undefined): AccentResol
 }
 ```
 
-- [ ] **Step 4: Jalankan uji berkas ini**
+- [x] **Step 4: Jalankan uji berkas ini**
 
 Run: `./node_modules/.bin/vitest run shared/accentColor.test.ts`
 Expected: seluruhnya PASS.
 
-- [ ] **Step 5: Perintah mutu dan commit**
+- [x] **Step 5: Perintah mutu dan commit**
 
 ```bash
 ./node_modules/.bin/vitest run
