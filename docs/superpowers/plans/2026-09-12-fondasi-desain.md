@@ -16,7 +16,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 
 - [x] Tugas 1 — Uji komponen klien: jsdom + Testing Library
 - [x] Tugas 2 — `shared/accentColor.ts`: kontras dan aksen perusahaan
-- [ ] Tugas 3 — Token desain, kepadatan, dan penjaga warna mentah
+- [x] Tugas 3 — Token desain, kepadatan, dan penjaga warna mentah
 - [ ] Tugas 4 — Navigasi dikelompokkan per tugas
 - [ ] Tugas 5 — Pola: kepala halaman, keadaan, ubin angka
 - [ ] Tugas 6 — Pola: tabel, daftar + detail, formulir, alur bertahap, laporan
@@ -610,7 +610,7 @@ git commit -m "Token desain, kepadatan 1280-1440px, dan penjaga warna mentah"
 - Consumes: —
 - Produces: delapan kelompok berurutan `["Hari ini", "Transaksi", "Uang & Kurs", "Nasabah", "Risiko", "Laporan", "Kepatuhan", "Pengaturan"]`. **Seluruh 36 path dan `minimumRole`-nya tidak berubah**; fungsi `visibleBackOfficeNavigation`, `visibleBackOfficeDestinations`, `isRoleAllowed`, `backOfficeDestinations` tidak berubah.
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 Tambahkan ke `describe("back-office navigation routes", …)` pada `server/backOfficeNavigation.test.ts`:
 
@@ -637,12 +637,12 @@ Tambahkan ke `describe("back-office navigation routes", …)` pada `server/backO
   });
 ```
 
-- [ ] **Step 2: Jalankan dan pastikan gagal**
+- [x] **Step 2: Jalankan dan pastikan gagal**
 
 Run: `./node_modules/.bin/vitest run server/backOfficeNavigation.test.ts`
 Expected: FAIL pada uji urutan kelompok (label masih "Ringkasan", "Transaksi & Nasabah", …). Uji "tidak ada tujuan yang hilang" sudah lulus — itu memang penjaga, bukan pendorong.
 
-- [ ] **Step 3: Ganti `backOfficeNavigationGroups`**
+- [x] **Step 3: Ganti `backOfficeNavigationGroups`**
 
 Ganti seluruh isi larik `backOfficeNavigationGroups` pada `shared/backOfficeNavigation.ts` dengan:
 
@@ -709,12 +709,12 @@ export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
 ];
 ```
 
-- [ ] **Step 4: Jalankan uji navigasi**
+- [x] **Step 4: Jalankan uji navigasi**
 
 Run: `./node_modules/.bin/vitest run server/backOfficeNavigation.test.ts`
 Expected: seluruhnya PASS, termasuk uji lama (`visibleToController` sama dengan `backOfficeDestinations`, anak "Uang Kas" bagi STAFF tetap tiga).
 
-- [ ] **Step 5: Perintah mutu dan commit**
+- [x] **Step 5: Perintah mutu dan commit**
 
 ```bash
 ./node_modules/.bin/vitest run

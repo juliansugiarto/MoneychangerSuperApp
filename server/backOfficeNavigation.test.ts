@@ -103,6 +103,27 @@ describe("back-office navigation routes", () => {
     ]);
   });
 
+  it("mengelompokkan menu per tugas, dalam urutan yang disepakati", () => {
+    expect(backOfficeNavigationGroups.map((group) => group.label)).toEqual([
+      "Hari ini", "Transaksi", "Uang & Kurs", "Nasabah", "Risiko", "Laporan", "Kepatuhan", "Pengaturan",
+    ]);
+  });
+
+  it("tidak ada tujuan yang hilang maupun bertambah saat dikelompokkan ulang", () => {
+    expect(backOfficeDestinations.map((item) => item.path).sort()).toEqual(Object.keys(pageByPath).sort());
+  });
+
+  it("menaruh halaman kepatuhan dan risiko di kelompoknya sendiri", () => {
+    const groupOf = (path: string) =>
+      backOfficeNavigationGroups.find((group) => group.items.some((item) => (item.children ?? [item]).some((leaf) => leaf.path === path)))?.label;
+    expect(groupOf("/kepatuhan/ira")).toBe("Risiko");
+    expect(groupOf("/kepatuhan/klasifikasi-risiko")).toBe("Risiko");
+    expect(groupOf("/operasional/pelaporan-regulator")).toBe("Kepatuhan");
+    expect(groupOf("/kepatuhan/penatausahaan-dokumen")).toBe("Kepatuhan");
+    expect(groupOf("/operasional/watchlist")).toBe("Nasabah");
+    expect(groupOf("/operasional/checklist")).toBe("Hari ini");
+  });
+
   it("maps every sidebar destination to its intended operational page", () => {
     for (const destination of backOfficeDestinations) {
       const page = pageByPath[destination.path];

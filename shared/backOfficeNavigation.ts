@@ -29,19 +29,16 @@ export const roleRank: Record<BackOfficeRole, number> = {
 };
 
 export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
-  { label: "Ringkasan", items: [
+  { label: "Hari ini", items: [
     { label: "Hari Ini", path: "/operasional", minimumRole: "STAFF" },
+    { label: "Buka & Tutup Outlet", path: "/operasional/checklist", minimumRole: "STAFF" },
+    { label: "Meja Konfirmasi", path: "/operasional/layanan", minimumRole: "STAFF" },
     { label: "Pantauan Harian", path: "/operasional/monitoring", minimumRole: "CONTROLLER" },
   ] },
-  { label: "Transaksi & Nasabah", items: [
+  { label: "Transaksi", items: [
     { label: "Buat Transaksi", path: "/operasional/transaksi", minimumRole: "STAFF" },
     { label: "Daftar Transaksi", path: "/operasional/transaksi/daftar", minimumRole: "STAFF" },
-    { label: "Nasabah", children: [
-      { label: "Nasabah Baru", path: "/operasional/nasabah", minimumRole: "STAFF" },
-      { label: "Daftar Nasabah", path: "/operasional/nasabah/daftar", minimumRole: "STAFF" },
-      { label: "Tambah dari Excel", path: "/operasional/impor-nasabah", minimumRole: "CONTROLLER" },
-      { label: "Pemantauan Profil", path: "/operasional/nasabah/pemantauan", minimumRole: "CONTROLLER" },
-    ] },
+    { label: "Catat Pengeluaran", path: "/operasional/pengeluaran", minimumRole: "STAFF" },
     { label: "Latihan (Tanpa Data Asli)", path: "/operasional/simulasi", minimumRole: "STAFF" },
   ] },
   { label: "Uang & Kurs", items: [
@@ -55,32 +52,35 @@ export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
       { label: "Kurs Hari Ini", path: "/operasional/kurs", minimumRole: "ADMIN" },
       { label: "Bandingkan Kurs", path: "/operasional/perbandingan-kurs", minimumRole: "ADMIN" },
     ] },
-    { label: "Catat Pengeluaran", path: "/operasional/pengeluaran", minimumRole: "STAFF" },
   ] },
-  { label: "Kegiatan Harian", items: [
-    { label: "Buka & Tutup Outlet", path: "/operasional/checklist", minimumRole: "STAFF" },
-    { label: "Meja Konfirmasi", path: "/operasional/layanan", minimumRole: "STAFF" },
-    { label: "Keluhan Nasabah", path: "/operasional/pengaduan", minimumRole: "STAFF" },
+  { label: "Nasabah", items: [
+    { label: "Nasabah Baru", path: "/operasional/nasabah", minimumRole: "STAFF" },
+    { label: "Daftar Nasabah", path: "/operasional/nasabah/daftar", minimumRole: "STAFF" },
     { label: "Cek Daftar DTTOT/DPPSPM", path: "/operasional/watchlist", minimumRole: "STAFF" },
+    { label: "Keluhan Nasabah", path: "/operasional/pengaduan", minimumRole: "STAFF" },
+    { label: "Tambah dari Excel", path: "/operasional/impor-nasabah", minimumRole: "CONTROLLER" },
+    { label: "Pemantauan Profil", path: "/operasional/nasabah/pemantauan", minimumRole: "CONTROLLER" },
   ] },
-  { label: "Laporan", items: [
-    { label: "Buku Besar", path: "/operasional/buku-besar", minimumRole: "CONTROLLER" },
-    { label: "Laporan Keuangan", path: "/operasional/laporan-keuangan", minimumRole: "CONTROLLER" },
-    { label: "Aset Tetap", path: "/operasional/aset-tetap", minimumRole: "CONTROLLER" },
-    { label: "Laporan Transaksi", path: "/operasional/laporan", minimumRole: "CONTROLLER" },
-    { label: "Laporan ke Regulator", path: "/operasional/pelaporan-regulator", minimumRole: "CONTROLLER" },
-    { label: "Riwayat Aktivitas", path: "/operasional/audit", minimumRole: "CONTROLLER" },
-  ] },
-  { label: "Pengawasan", items: [
-    { label: "Kepegawaian", path: "/operasional/kepegawaian", minimumRole: "CONTROLLER" },
-    { label: "Status Kesiapan", path: "/operasional/kesiapan", minimumRole: "CONTROLLER" },
-    { label: "Untuk Diketahui Direksi", path: "/operasional/pengawasan-direksi", minimumRole: "CONTROLLER" },
-    { label: "Arsip Dokumen", path: "/operasional/arsip-dokumen", minimumRole: "CONTROLLER" },
-    { label: "Penatausahaan Dokumen", path: "/kepatuhan/penatausahaan-dokumen", minimumRole: "CONTROLLER" },
+  { label: "Risiko", items: [
     { label: "Klasifikasi Risiko", path: "/kepatuhan/klasifikasi-risiko", minimumRole: "CONTROLLER" },
     // ADMIN yang mengisi penilaian dan SHAREHOLDER yang menyetujuinya; keduanya harus melihat
     // barisnya. Halaman detailnya berparameter dan karena itu tidak menjadi tujuan sidebar.
     { label: "Penilaian Risiko (IRA)", path: "/kepatuhan/ira", minimumRole: "ADMIN" },
+  ] },
+  { label: "Laporan", items: [
+    { label: "Laporan Transaksi", path: "/operasional/laporan", minimumRole: "CONTROLLER" },
+    { label: "Buku Besar", path: "/operasional/buku-besar", minimumRole: "CONTROLLER" },
+    { label: "Laporan Keuangan", path: "/operasional/laporan-keuangan", minimumRole: "CONTROLLER" },
+    { label: "Aset Tetap", path: "/operasional/aset-tetap", minimumRole: "CONTROLLER" },
+    { label: "Riwayat Aktivitas", path: "/operasional/audit", minimumRole: "CONTROLLER" },
+  ] },
+  { label: "Kepatuhan", items: [
+    { label: "Laporan ke Regulator", path: "/operasional/pelaporan-regulator", minimumRole: "CONTROLLER" },
+    { label: "Arsip Dokumen", path: "/operasional/arsip-dokumen", minimumRole: "CONTROLLER" },
+    { label: "Penatausahaan Dokumen", path: "/kepatuhan/penatausahaan-dokumen", minimumRole: "CONTROLLER" },
+    { label: "Untuk Diketahui Direksi", path: "/operasional/pengawasan-direksi", minimumRole: "CONTROLLER" },
+    { label: "Status Kesiapan", path: "/operasional/kesiapan", minimumRole: "CONTROLLER" },
+    { label: "Kepegawaian", path: "/operasional/kepegawaian", minimumRole: "CONTROLLER" },
   ] },
   { label: "Pengaturan", items: [
     { label: "Pengguna & Hak Akses", path: "/operasional/pengguna", minimumRole: "CONTROLLER" },
