@@ -40,6 +40,37 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  /* Fondasi desain — Program Desain Ulang, sub-proyek 1. Berkas di atas fondasi hanya memakai ini. */
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-brand: var(--brand);
+  --color-brand-contrast: var(--brand-contrast);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --spacing-control: var(--control-h);
+  --spacing-control-sm: var(--control-h-sm);
+  --spacing-row: var(--row-h);
+  --spacing-row-dense: var(--row-h-dense);
+  --spacing-header: var(--header-h);
+  --spacing-gutter: var(--gutter);
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.25rem;
+  --text-label: 0.75rem;
+  --text-label--line-height: 1rem;
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.75rem;
 }
 
 :root {
@@ -77,6 +108,31 @@
   --sidebar-border: oklch(0.34 0.05 259);
   --sidebar-ring: oklch(0.86 0.15 105);
   --radius: 0.9rem;
+  /* Fondasi desain: permukaan netral, satu aksen, status yang jelas, kepadatan 1280–1440px. */
+  --surface: oklch(0.985 0.003 250);
+  --surface-raised: oklch(1 0 0);
+  --surface-sunken: oklch(0.96 0.004 250);
+  --ink: oklch(0.23 0.02 256);
+  --ink-muted: oklch(0.45 0.02 256);
+  --ink-subtle: oklch(0.58 0.015 256);
+  --line: oklch(0.91 0.006 256);
+  --line-strong: oklch(0.82 0.01 256);
+  --brand: #1d4ed8;
+  --brand-contrast: #ffffff;
+  --success: oklch(0.5 0.12 150);
+  --success-soft: oklch(0.96 0.03 150);
+  --warning: oklch(0.55 0.13 65);
+  --warning-soft: oklch(0.97 0.04 85);
+  --danger: oklch(0.53 0.19 27);
+  --danger-soft: oklch(0.97 0.02 27);
+  --info: oklch(0.5 0.11 250);
+  --info-soft: oklch(0.96 0.02 250);
+  --control-h: 2.125rem;
+  --control-h-sm: 2rem;
+  --row-h: 2.25rem;
+  --row-h-dense: 2rem;
+  --header-h: 3rem;
+  --gutter: 1rem;
 }
 
 .dark {
@@ -96,6 +152,12 @@
   --input: oklch(1 0 0 / 15%);
 }
 
+@media (min-width: 1440px) {
+  :root {
+    --gutter: 1.25rem;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -108,6 +170,8 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
   }
 
   button:not(:disabled),

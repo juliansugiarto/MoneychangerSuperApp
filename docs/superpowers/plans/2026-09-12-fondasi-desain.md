@@ -15,7 +15,7 @@
 Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tugas itu.**
 
 - [x] Tugas 1 — Uji komponen klien: jsdom + Testing Library
-- [ ] Tugas 2 — `shared/accentColor.ts`: kontras dan aksen perusahaan
+- [x] Tugas 2 — `shared/accentColor.ts`: kontras dan aksen perusahaan
 - [ ] Tugas 3 — Token desain, kepadatan, dan penjaga warna mentah
 - [ ] Tugas 4 — Navigasi dikelompokkan per tugas
 - [ ] Tugas 5 — Pola: kepala halaman, keadaan, ubin angka
@@ -381,7 +381,7 @@ git commit -m "Aturan aksen perusahaan dengan penjaga kontras WCAG AA"
   - `applyBrandAccent(root: HTMLElement, candidate: string | null | undefined): AccentResolution`
   - `FOUNDATION_FILES: readonly string[]` — tugas berikutnya **menambahkan** berkasnya ke daftar ini.
 
-- [ ] **Step 1: Tulis uji penjaga dan uji aksen**
+- [x] **Step 1: Tulis uji penjaga dan uji aksen**
 
 `client/src/designFoundation.guard.test.ts`:
 
@@ -443,12 +443,12 @@ describe("applyBrandAccent", () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan dan pastikan gagal**
+- [x] **Step 2: Jalankan dan pastikan gagal**
 
 Run: `./node_modules/.bin/vitest run client/src/designFoundation.guard.test.ts client/src/lib/brandAccent.test.tsx`
 Expected: FAIL — `./designFoundation` dan `./brandAccent` belum ada.
 
-- [ ] **Step 3: Tulis `brandAccent.ts` dan daftar fondasi**
+- [x] **Step 3: Tulis `brandAccent.ts` dan daftar fondasi**
 
 `client/src/lib/brandAccent.ts`:
 
@@ -482,7 +482,7 @@ export const FOUNDATION_FILES: readonly string[] = [
 ];
 ```
 
-- [ ] **Step 4: Tambahkan token ke `client/src/index.css`**
+- [x] **Step 4: Tambahkan token ke `client/src/index.css`**
 
 Di dalam `@theme inline { … }`, sesudah baris `--color-sidebar-ring: var(--sidebar-ring);`, tambahkan:
 
@@ -571,12 +571,12 @@ Di `@layer base`, ubah aturan `body` menjadi:
   }
 ```
 
-- [ ] **Step 5: Jalankan kedua uji**
+- [x] **Step 5: Jalankan kedua uji**
 
 Run: `./node_modules/.bin/vitest run client/src/designFoundation.guard.test.ts client/src/lib/brandAccent.test.tsx`
 Expected: seluruhnya PASS.
 
-- [ ] **Step 6: Buktikan penjaganya menangkap**
+- [x] **Step 6: Buktikan penjaganya menangkap**
 
 Sisipkan sementara `// #FF0000` di akhir `client/src/lib/brandAccent.ts`, jalankan uji penjaga, pastikan **gagal** dengan `expected [ 'client/src/lib/brandAccent.ts' ] to deeply equal []`, lalu hapus sisipannya dan jalankan lagi sampai lulus.
 
@@ -585,7 +585,7 @@ Sisipkan sementara `// #FF0000` di akhir `client/src/lib/brandAccent.ts`, jalank
 git diff --stat -- client/src/lib/brandAccent.ts   # harus kosong sesudah dikembalikan (berkas baru: pastikan isinya sama dengan Step 3)
 ```
 
-- [ ] **Step 7: Perintah mutu, periksa tampilan lama, commit**
+- [x] **Step 7: Perintah mutu, periksa tampilan lama, commit**
 
 ```bash
 ./node_modules/.bin/vitest run
