@@ -153,9 +153,12 @@ layar berdampingan, bukan selera.
   Laporan · Kepatuhan · Pengaturan.* Pemetaan 45 rute lama ke kelompok baru ditulis di rencana
   sub-proyek 1; `shared/backOfficeNavigation.ts` tetap satu-satunya sumber menu dan
   `server/backOfficeNavigation.test.ts` tetap menjaganya.
-- **Palet perintah ⌘K / Ctrl+K:** membuka halaman mana pun yang diizinkan peran pengguna, dan
-  mencari rekaman lewat prosedur yang sudah ada (nomor bon, CIF/nama nasabah). Tidak ada prosedur
-  pencarian baru di sub-proyek 1.
+- **Palet perintah ⌘K / Ctrl+K:** membuka halaman mana pun yang diizinkan peran pengguna. Tidak ada
+  prosedur pencarian baru di sub-proyek 1.
+  **Pencarian rekaman (nomor bon, CIF/nama nasabah) ditunda ke sub-proyek 4 dan 6** — diperiksa
+  12 September 2026: `CustomerList.tsx` dan `TransactionList.tsx` tidak membaca parameter URL apa pun,
+  sehingga hasil pencarian dari palet tidak dapat membuka rekamannya. Kedua daftar itu dibangun ulang
+  di sub-proyek 4 dan 6, dan saat itulah palet mendapat hasil rekaman yang benar-benar dapat dibuka.
 - **Pintasan konter:** `N` bon baru, `/` cari, `Esc` batal. Tidak aktif ketika fokus ada di input.
 - **Merek pada shell** (logo dan nama) diambil dari Profil Perusahaan, bukan "IV / Ibukota Valasindo"
   yang ditulis mati.

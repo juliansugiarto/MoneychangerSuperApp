@@ -317,11 +317,11 @@ sebagai tidak ditatausahakan di aplikasi ini.
 
 ---
 
-### Program Desain Ulang Antarmuka — **DIRANCANG 12 September 2026, menunggu tinjauan spec**
+### Program Desain Ulang Antarmuka — **DIRANCANG 12 September 2026, sub-proyek 1 siap dieksekusi**
 
-Spec: `specs/2026-09-12-desain-ulang-antarmuka-design.md`. Rencana bertugas sub-proyek 1 belum
-ditulis — ditulis sesudah pengguna meninjau spec. Setiap sub-proyek lain mendapat spec dan rencananya
-sendiri pada awal sesinya.
+Spec: `specs/2026-09-12-desain-ulang-antarmuka-design.md` (disetujui pengguna 12 September 2026).
+Rencana bertugas sub-proyek 1: `plans/2026-09-12-fondasi-desain.md`. Setiap sub-proyek lain mendapat
+spec dan rencananya sendiri pada awal sesinya.
 
 Keputusan pengguna 12 September 2026 (lengkapnya di spec): produk mandiri lebih dulu; halaman kurs
 publik yang dapat dikonfigurasi; 1280–1440px lebih dulu; bahasa sehari-hari dengan istilah BI sebagai
