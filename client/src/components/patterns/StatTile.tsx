@@ -1,16 +1,32 @@
-export function StatTile({ label, value, hint, onOpen }: { label: string; value: string; hint?: string; onOpen?: () => void }) {
+import { FOCUS_RING } from "./tebal";
+
+const TONES = {
+  plain: "bg-surface-raised text-ink",
+  brand: "bg-brand text-brand-contrast",
+  second: "bg-second text-second-contrast",
+} as const;
+
+/** Ubin angka Konter Tebal: blok bergaris tinta dengan bayangan keras. `tone` memilih blok utama, kedua, atau polos. */
+export function StatTile({ label, value, hint, onOpen, tone = "plain" }: {
+  label: string;
+  value: string;
+  hint?: string;
+  onOpen?: () => void;
+  tone?: keyof typeof TONES;
+}) {
   const body = (
     <>
-      <p className="text-label text-ink-muted">{label}</p>
-      <p className="mt-1 text-title font-semibold tabular-nums text-ink">{value}</p>
-      {hint ? <p className="mt-1 text-label text-ink-subtle">{hint}</p> : null}
+      <p className="text-label font-bold uppercase tracking-wide opacity-80">{label}</p>
+      <p className="mt-1 font-heading text-2xl font-extrabold tabular-nums">{value}</p>
+      {hint ? <p className="mt-1 text-label font-semibold opacity-80">{hint}</p> : null}
     </>
   );
+  const frame = `rounded-[0.75rem] border-2 border-ink p-3 shadow-tile ${TONES[tone]}`;
   return onOpen ? (
-    <button type="button" onClick={onOpen} className="rounded-lg border border-line bg-surface-raised p-4 text-left hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand">
+    <button type="button" onClick={onOpen} className={`${frame} text-left transition-transform hover:-translate-x-px hover:-translate-y-px motion-reduce:transition-none ${FOCUS_RING}`}>
       {body}
     </button>
   ) : (
-    <div className="rounded-lg border border-line bg-surface-raised p-4">{body}</div>
+    <div className={frame}>{body}</div>
   );
 }

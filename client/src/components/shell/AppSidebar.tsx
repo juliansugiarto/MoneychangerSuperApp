@@ -10,7 +10,14 @@ import { useState } from "react";
 import { brandInitials } from "./brand";
 import { iconFor, parentIconFor } from "./navigationIcons";
 
-const activeItem = "data-[active=true]:bg-brand data-[active=true]:text-brand-contrast data-[active=true]:font-semibold";
+/** Butir aktif Konter Tebal: blok aksen bergaris tinta. Garis transparan pada keadaan biasa mencegah lompatan 2px. */
+const activeItem = "border-2 border-transparent data-[active=true]:border-ink data-[active=true]:bg-brand data-[active=true]:text-brand-contrast data-[active=true]:font-bold data-[active=true]:shadow-hard";
+
+/**
+ * Induk ditandai aktif bila memuat halaman aktif. Saat terbuka, anaknya sudah membawa blok aksen, jadi
+ * induk hanya menebal; pada rel ikon anaknya tidak dirender, sehingga induklah yang mendapat blok aksen.
+ */
+const parentItem = "border-2 border-transparent data-[active=true]:bg-transparent data-[active=true]:font-bold data-[active=true]:text-ink group-data-[collapsible=icon]:data-[active=true]:border-ink group-data-[collapsible=icon]:data-[active=true]:bg-brand group-data-[collapsible=icon]:data-[active=true]:text-brand-contrast group-data-[collapsible=icon]:data-[active=true]:shadow-hard";
 
 export function AppSidebar({ brand, role, userName, roleLabel, currentPath, onNavigate, onLogout }: {
   brand: string;
@@ -23,11 +30,11 @@ export function AppSidebar({ brand, role, userName, roleLabel, currentPath, onNa
 }) {
   const groups = visibleBackOfficeNavigation(role);
   return (
-    <Sidebar collapsible="icon" className="border-r border-line bg-surface-raised">
-      <SidebarHeader className="h-header justify-center border-b border-line px-2">
+    <Sidebar collapsible="icon" className="border-ink group-data-[side=left]:border-r-2">
+      <SidebarHeader className="h-header justify-center border-b-2 border-ink px-2">
         <button type="button" onClick={() => onNavigate("/operasional")} className="flex items-center gap-2 rounded-md px-1 text-left">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand text-label font-bold text-brand-contrast">{brandInitials(brand)}</span>
-          <span className="truncate text-body font-semibold text-ink group-data-[collapsible=icon]:hidden">{brand}</span>
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border-2 border-ink bg-brand font-heading text-label font-extrabold text-brand-contrast shadow-hard">{brandInitials(brand)}</span>
+          <span className="truncate font-heading text-body font-extrabold text-ink group-data-[collapsible=icon]:hidden">{brand}</span>
         </button>
       </SidebarHeader>
       <SidebarContent className="gap-0 py-2">
@@ -35,7 +42,7 @@ export function AppSidebar({ brand, role, userName, roleLabel, currentPath, onNa
             (1280×800, peran Shareholder) dan butirnya saling menimpa alih-alih bergulir. */}
         {groups.map((group) => (
           <SidebarGroup key={group.label} className="shrink-0 py-1">
-            <SidebarGroupLabel className="h-6 text-label text-ink-subtle">{group.label}</SidebarGroupLabel>
+            <SidebarGroupLabel className="h-6 text-label font-extrabold uppercase tracking-wider text-ink-subtle">{group.label}</SidebarGroupLabel>
             <SidebarMenu className="gap-0.5">
               {group.items.map((item) => item.children
                 ? <NavParent key={item.label} label={item.label} childItems={item.children} currentPath={currentPath} onNavigate={onNavigate} />
@@ -44,13 +51,13 @@ export function AppSidebar({ brand, role, userName, roleLabel, currentPath, onNa
           </SidebarGroup>
         ))}
       </SidebarContent>
-      <SidebarFooter className="border-t border-line p-2">
+      <SidebarFooter className="border-t-2 border-ink p-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton className="h-control">
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-sunken text-label font-semibold text-ink">{brandInitials(userName)}</span>
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-second text-label font-bold text-second-contrast">{brandInitials(userName)}</span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-body text-ink">{userName}</span>
+                <span className="block truncate text-body font-semibold text-ink">{userName}</span>
                 <span className="block truncate text-label text-ink-subtle">{roleLabel}</span>
               </span>
             </SidebarMenuButton>
@@ -92,14 +99,14 @@ function NavParent({ label, childItems, currentPath, onNavigate }: {
     <Collapsible open={open || holdsCurrentPage} onOpenChange={setOpen} className="group/collapsible" asChild>
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton tooltip={label} className="h-8 text-body text-ink-muted">
+          <SidebarMenuButton isActive={holdsCurrentPage} tooltip={label} className={`h-8 text-body text-ink-muted ${parentItem}`}>
             <Icon className="size-4" />
             <span>{label}</span>
             <ChevronRight className="ml-auto size-4 transition-transform group-data-[state=open]/collapsible:rotate-90 motion-reduce:transition-none" />
           </SidebarMenuButton>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <SidebarMenuSub className="mr-0 border-line">
+          <SidebarMenuSub className="mr-0 border-l-2 border-ink">
             {childItems.map((child) => {
               const isActive = currentPath === child.path;
               return (

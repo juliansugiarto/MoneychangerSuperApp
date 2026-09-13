@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useEffect, type ReactNode } from "react";
+import { OUTLINE_BUTTON } from "./tebal";
 
 /** Daftar dengan panel detail di samping (≥1280px) — memilih baris tidak meninggalkan daftarnya. */
 export function ListDetailLayout({ list, detail, detailTitle, onCloseDetail }: {
@@ -19,10 +20,10 @@ export function ListDetailLayout({ list, detail, detailTitle, onCloseDetail }: {
     <div className={detail ? "grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]" : ""}>
       <div className="min-w-0">{list}</div>
       {detail ? (
-        <aside aria-label={detailTitle ?? "Detail"} className="min-w-0 rounded-lg border border-line bg-surface-raised">
-          <div className="flex h-header items-center justify-between border-b border-line px-4">
-            <p className="text-body font-semibold text-ink">{detailTitle}</p>
-            <Button variant="ghost" size="sm" onClick={onCloseDetail}>Tutup</Button>
+        <aside aria-label={detailTitle ?? "Detail"} className="min-w-0 rounded-[0.75rem] border-2 border-ink bg-surface-raised shadow-tile">
+          <div className="flex h-header items-center justify-between border-b-2 border-ink px-4">
+            <p className="font-heading text-body font-extrabold text-ink">{detailTitle}</p>
+            <Button variant="outline" size="sm" className={`${OUTLINE_BUTTON} h-control-sm`} onClick={onCloseDetail}>Tutup</Button>
           </div>
           <div className="p-4">{detail}</div>
         </aside>

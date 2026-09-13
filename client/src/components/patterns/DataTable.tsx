@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 
 export type Column<Row> = { key: string; header: string; cell: (row: Row) => ReactNode; align?: "left" | "right" };
 
-/** Tabel padat: baris 36px (32px bila `dense`), dipilih dengan klik atau Enter, angka rata kanan. */
+/**
+ * Tabel padat: kepala tebal (blok tinta), baris tenang 36px (32px bila `dense`), dipilih dengan klik atau
+ * Enter, angka rata kanan.
+ */
 export function DataTable<Row>({ columns, rows, rowKey, onSelect, selectedKey = null, dense = false, caption }: {
   columns: Column<Row>[];
   rows: Row[];
@@ -13,13 +16,13 @@ export function DataTable<Row>({ columns, rows, rowKey, onSelect, selectedKey = 
   caption?: string;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-line bg-surface-raised">
+    <div className="overflow-x-auto rounded-[0.75rem] border-[1.5px] border-line-quiet bg-surface-raised">
       <table className="w-full text-body">
         {caption ? <caption className="sr-only">{caption}</caption> : null}
-        <thead className="bg-surface-sunken text-label text-ink-muted">
+        <thead className="bg-ink text-label text-paper">
           <tr>
             {columns.map((column) => (
-              <th key={column.key} scope="col" className={`h-row px-3 font-medium ${column.align === "right" ? "text-right" : "text-left"}`}>
+              <th key={column.key} scope="col" className={`h-row px-3 font-bold uppercase tracking-wide ${column.align === "right" ? "text-right" : "text-left"}`}>
                 {column.header}
               </th>
             ))}
@@ -36,7 +39,7 @@ export function DataTable<Row>({ columns, rows, rowKey, onSelect, selectedKey = 
                 tabIndex={onSelect ? 0 : undefined}
                 onClick={onSelect ? () => onSelect(row) : undefined}
                 onKeyDown={onSelect ? (event) => { if (event.key === "Enter") onSelect(row); } : undefined}
-                className={`border-t border-line ${dense ? "h-row-dense" : "h-row"} ${onSelect ? "cursor-pointer hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-brand" : ""} ${selected ? "bg-info-soft" : ""}`}
+                className={`border-t border-line ${dense ? "h-row-dense" : "h-row"} ${onSelect ? "cursor-pointer hover:bg-surface-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink" : ""} ${selected ? "bg-second/30 font-semibold" : ""}`}
               >
                 {columns.map((column) => (
                   <td key={column.key} className={`px-3 text-ink ${column.align === "right" ? "text-right tabular-nums" : ""}`}>
