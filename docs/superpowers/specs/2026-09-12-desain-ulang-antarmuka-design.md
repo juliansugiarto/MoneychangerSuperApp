@@ -69,6 +69,8 @@ Diambil 12 September 2026 pada sesi rancangan. **Jangan ditanyakan ulang.**
    server email. Kata sandi staf tetap direset pemilik di dalam aplikasi.
 6. **Merek:** desain produk yang **netral** (abu-abu tenang, satu aksen kuat, warna status yang jelas)
    ditambah **logo, nama, dan satu warna aksen per perusahaan** dari Profil Perusahaan.
+   **Diganti 13 September 2026** oleh `2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md`: gaya
+   Konter Tebal dengan enam palet siap pakai dan warna utama sendiri yang lolos penjaga kontras.
 7. **Penyampaian:** **modul demi modul di tempat** (pendekatan A). Rilis pertama: sistem desain + shell
    aplikasi (sub-proyek 1), lalu login + wizard penyiapan (sub-proyek 2). Sesudah itu satu modul utuh
    per sesi pada URL yang sama; modul yang belum dibangun ulang tetap tampil dengan layar lamanya di
@@ -85,16 +87,17 @@ Diambil 12 September 2026 pada sesi rancangan. **Jangan ditanyakan ulang.**
 | # | Sub-proyek | Isi | Bergantung pada |
 |---|---|---|---|
 | **1** | **Fondasi desain** | Panduan suara & bahasa; skala kepadatan; tipografi, token warna, aksen perusahaan; shell baru; enam pola halaman; galeri pola; Playwright | — |
+| **1B** | **Papan kurs** *(ditambahkan 13 September 2026)* | Papan kurs seluruh valuta, kurs per kelompok pecahan, aktivasi atomik, toleransi harga bon — lihat `2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md` Bagian B | 1 |
 | **2** | **Login, penyiapan awal, halaman publik** | Wizard penyiapan, kode pemulihan, pembatasan percobaan masuk, halaman login, ganti/pulihkan kata sandi, pengguna & peran, halaman kurs publik yang dapat dikonfigurasi; buang bootstrap `.env` dan sisa OAuth | 1 |
 | **3** | **Penilaian risiko berbahasa manusia** | Klasifikasi Risiko dan IRA sebagai alur terpandu; penjelasan AI | 1 |
 | **4** | **Kasir & transaksi** | Alur konter: bon baru, kedua kaki transaksi dengan rincian pecahan wajib, daftar transaksi | 1 |
-| **5** | **Kas, stok & kurs** | Kas awal, saldo, hitung fisik, penyesuaian brankas, kurs | 1, 4 |
+| **5** | **Kas & stok** | Kas awal, saldo, hitung fisik, penyesuaian brankas *(kurs pindah ke 1B, 13 September 2026)* | 1, 4 |
 | **6** | **Nasabah** | Pendaftaran, profil, riwayat penyaringan, pemantauan profil | 1 |
 | **7** | **Laporan & keuangan** | Buku besar, laporan keuangan, aset tetap, laporan transaksi | 1 |
 | **8** | **Kepatuhan & arsip** | Laporan regulator, arsip, penatausahaan dokumen, pengawasan direksi, kesiapan, kepegawaian | 1, 3 |
 | **9** | **Harian & pengaturan** | Buka/tutup outlet, meja konfirmasi, keluhan, pengeluaran, profil perusahaan, simulasi | 1, 2 |
 
-- Urutan pengerjaan: **1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9.** Konter (4) didahulukan di antara modul
+- Urutan pengerjaan: **1 → 1B → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9** (1B ditambahkan 13 September 2026). Konter (4) didahulukan di antara modul
   karena paling sering dipakai.
 - **Setiap sub-proyek punya spec → rencana → implementasi sendiri**, ditulis pada awal sesinya. Berkas
   ini hanya merinci sub-proyek 1 sampai level yang cukup untuk rencana bertugas; sub-proyek 2 dan 3
@@ -106,6 +109,9 @@ Diambil 12 September 2026 pada sesi rancangan. **Jangan ditanyakan ulang.**
 ### 2. Sub-proyek 1 — Fondasi desain
 
 #### 2.1 Token sebagai satu-satunya sumber keputusan visual
+
+> **Diperbarui 13 September 2026:** aksen tunggal diganti enam palet Konter Tebal — lihat
+> `2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md` Bagian A1–A2.
 
 - Token semantik pada `client/src/index.css`: permukaan (`surface`, `surface-raised`, `surface-sunken`),
   teks (`text`, `text-muted`, `text-subtle`), garis (`border`, `border-strong`), **aksen**
@@ -139,6 +145,9 @@ Diambil 12 September 2026 pada sesi rancangan. **Jangan ditanyakan ulang.**
   layar hanya-lihat tidak boleh terpotong, tetapi alur konter tidak dirancang untuk ponsel.
 
 #### 2.3 Tipografi
+
+> **Diperbarui 13 September 2026:** Bricolage Grotesque untuk judul dan angka besar, Manrope untuk isi —
+> lihat `2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md` Bagian A3.
 
 Satu keluarga sans untuk UI dengan dua ketebalan, ditambah angka tabular untuk uang
 (`font-variant-numeric: tabular-nums`). Manrope tetap kecuali perbandingan visual pada sesi fondasi

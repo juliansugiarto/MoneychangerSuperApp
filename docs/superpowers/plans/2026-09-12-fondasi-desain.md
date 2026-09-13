@@ -20,7 +20,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 4 — Navigasi dikelompokkan per tugas
 - [x] Tugas 5 — Pola: kepala halaman, keadaan, ubin angka
 - [x] Tugas 6 — Pola: tabel, daftar + detail, formulir, alur bertahap, laporan
-- [ ] Tugas 7 — Shell aplikasi baru
+- [x] Tugas 7 — Shell aplikasi baru
 - [ ] Tugas 8 — Palet perintah ⌘K dan pintasan konter
 - [ ] Tugas 9 — Galeri pola `/operasional/pola`
 - [ ] Tugas 10 — Panduan suara dan bahasa
