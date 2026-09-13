@@ -19,7 +19,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 3 — Token desain, kepadatan, dan penjaga warna mentah
 - [x] Tugas 4 — Navigasi dikelompokkan per tugas
 - [x] Tugas 5 — Pola: kepala halaman, keadaan, ubin angka
-- [ ] Tugas 6 — Pola: tabel, daftar + detail, formulir, alur bertahap, laporan
+- [x] Tugas 6 — Pola: tabel, daftar + detail, formulir, alur bertahap, laporan
 - [ ] Tugas 7 — Shell aplikasi baru
 - [ ] Tugas 8 — Palet perintah ⌘K dan pintasan konter
 - [ ] Tugas 9 — Galeri pola `/operasional/pola`
@@ -1306,7 +1306,7 @@ git commit -m "Pola halaman: tabel padat, daftar dengan detail, formulir, alur b
   - `AppSidebar({ brand: string; role: BackOfficeRole; userName: string; roleLabel: string; currentPath: string; onNavigate: (path: string) => void; onLogout: () => void })`
   - `DashboardLayout({ children, minimumRole })` — tanda tangan sama dengan hari ini; Tugas 8 menambahkan palet ke dalamnya.
 
-- [ ] **Step 1: Tulis uji fungsi murni**
+- [x] **Step 1: Tulis uji fungsi murni**
 
 `client/src/components/shell/accessState.test.ts`:
 
@@ -1371,12 +1371,12 @@ describe("pageTitleFor", () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan dan pastikan gagal**
+- [x] **Step 2: Jalankan dan pastikan gagal**
 
 Run: `./node_modules/.bin/vitest run client/src/components/shell`
 Expected: FAIL — modul belum ada.
 
-- [ ] **Step 3: Tulis fungsi murninya**
+- [x] **Step 3: Tulis fungsi murninya**
 
 `client/src/components/shell/accessState.ts`:
 
@@ -1445,12 +1445,12 @@ export function pageTitleFor(path: string): { group: string; title: string } {
 }
 ```
 
-- [ ] **Step 4: Jalankan uji fungsi murni**
+- [x] **Step 4: Jalankan uji fungsi murni**
 
 Run: `./node_modules/.bin/vitest run client/src/components/shell`
 Expected: ketiga berkas PASS.
 
-- [ ] **Step 5: Tulis uji kepala halaman**
+- [x] **Step 5: Tulis uji kepala halaman**
 
 `client/src/components/shell/AppHeader.test.tsx`:
 
@@ -1478,7 +1478,7 @@ describe("AppHeader", () => {
 Run: `./node_modules/.bin/vitest run client/src/components/shell/AppHeader.test.tsx`
 Expected: FAIL — `./AppHeader` belum ada.
 
-- [ ] **Step 6: Tulis ikon, panel akses, kepala halaman, dan sidebar**
+- [x] **Step 6: Tulis ikon, panel akses, kepala halaman, dan sidebar**
 
 `client/src/components/shell/navigationIcons.ts`:
 
@@ -1708,7 +1708,7 @@ function NavParent({ label, childItems, currentPath, onNavigate }: {
 }
 ```
 
-- [ ] **Step 7: Tulis ulang `client/src/components/DashboardLayout.tsx`**
+- [x] **Step 7: Tulis ulang `client/src/components/DashboardLayout.tsx`**
 
 Ganti seluruh isinya dengan:
 
@@ -1776,7 +1776,7 @@ export default function DashboardLayout({ children, minimumRole = "STAFF" }: { c
 
 `auth.me` mengembalikan `username` (`safeUser` di `server/routers.ts`), jadi `user!.name || user!.username` aman dipakai.
 
-- [ ] **Step 8: Daftarkan ke fondasi, jalankan uji**
+- [x] **Step 8: Daftarkan ke fondasi, jalankan uji**
 
 Tambahkan ke `FOUNDATION_FILES`:
 
@@ -1794,7 +1794,7 @@ Tambahkan ke `FOUNDATION_FILES`:
 Run: `./node_modules/.bin/vitest run client/src/components/shell client/src/designFoundation.guard.test.ts server/backOfficeNavigation.test.ts`
 Expected: seluruhnya PASS.
 
-- [ ] **Step 9: Perintah mutu dan periksa di peramban**
+- [x] **Step 9: Perintah mutu dan periksa di peramban**
 
 ```bash
 ./node_modules/.bin/vitest run
@@ -1804,7 +1804,7 @@ Expected: seluruhnya PASS.
 
 Buka `http://localhost:3000/operasional`, `/operasional/stock/kas-awal`, dan `/kepatuhan/ira` (peramban yang sudah masuk) pada lebar 1280px: kepala 48px, sidebar 232px dengan delapan kelompok, butir aktif beraksen, sidebar dapat diciutkan, isi halaman lama tampil utuh tanpa terpotong. Tangkap layarnya.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add client/src/components/DashboardLayout.tsx client/src/components/shell client/src/designFoundation.ts

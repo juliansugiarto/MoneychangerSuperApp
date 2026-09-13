@@ -15,4 +15,12 @@ export const FOUNDATION_FILES: readonly string[] = [
   "client/src/components/patterns/FormSection.tsx",
   "client/src/components/patterns/StepFlow.tsx",
   "client/src/components/patterns/ReportLayout.tsx",
+  "client/src/components/DashboardLayout.tsx",
+  "client/src/components/shell/accessState.ts",
+  "client/src/components/shell/brand.ts",
+  "client/src/components/shell/pageTitle.ts",
+  "client/src/components/shell/navigationIcons.ts",
+  "client/src/components/shell/AccessPanel.tsx",
+  "client/src/components/shell/AppHeader.tsx",
+  "client/src/components/shell/AppSidebar.tsx",
 ];

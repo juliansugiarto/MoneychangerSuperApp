@@ -99,14 +99,16 @@
   --chart-3: oklch(0.6 0.12 55);
   --chart-4: oklch(0.66 0.12 175);
   --chart-5: oklch(0.58 0.14 298);
-  --sidebar: oklch(0.22 0.045 259);
-  --sidebar-foreground: oklch(0.96 0.012 254);
-  --sidebar-primary: oklch(0.86 0.15 105);
-  --sidebar-primary-foreground: oklch(0.22 0.045 259);
-  --sidebar-accent: oklch(0.3 0.055 259);
-  --sidebar-accent-foreground: oklch(0.98 0.008 95);
-  --sidebar-border: oklch(0.34 0.05 259);
-  --sidebar-ring: oklch(0.86 0.15 105);
+  /* Sidebar shadcn dipetakan ke token fondasi (spec §2.1): lapisan dalam `Sidebar` dan laci ponselnya
+     memakai `bg-sidebar` sendiri, sehingga kelas pada `AppSidebar` saja tidak cukup. */
+  --sidebar: var(--surface-raised);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--brand-contrast);
+  --sidebar-accent: var(--surface-sunken);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--brand);
   --radius: 0.9rem;
   /* Fondasi desain: permukaan netral, satu aksen, status yang jelas, kepadatan 1280–1440px. */
   --surface: oklch(0.985 0.003 250);
