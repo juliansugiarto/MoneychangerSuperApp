@@ -59,6 +59,15 @@
   --color-danger-soft: var(--danger-soft);
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
+  /* Tema Konter Tebal (spec 2026-09-13 §A2–A3). */
+  --color-paper: var(--paper);
+  --color-second: var(--second);
+  --color-second-contrast: var(--second-contrast);
+  --color-line-quiet: var(--line-quiet);
+  --shadow-hard: 3px 3px 0 var(--ink);
+  --shadow-tile: 4px 4px 0 var(--ink);
+  --shadow-focus: 3px 3px 0 var(--brand);
+  --font-heading: "Bricolage Grotesque", "Manrope", ui-sans-serif, system-ui, sans-serif;
   --spacing-control: var(--control-h);
   --spacing-control-sm: var(--control-h-sm);
   --spacing-row: var(--row-h);
@@ -101,26 +110,23 @@
   --chart-5: oklch(0.58 0.14 298);
   /* Sidebar shadcn dipetakan ke token fondasi (spec §2.1): lapisan dalam `Sidebar` dan laci ponselnya
      memakai `bg-sidebar` sendiri, sehingga kelas pada `AppSidebar` saja tidak cukup. */
-  --sidebar: var(--surface-raised);
+  --sidebar: var(--paper);
   --sidebar-foreground: var(--ink);
   --sidebar-primary: var(--brand);
   --sidebar-primary-foreground: var(--brand-contrast);
   --sidebar-accent: var(--surface-sunken);
   --sidebar-accent-foreground: var(--ink);
-  --sidebar-border: var(--line);
+  --sidebar-border: var(--ink);
   --sidebar-ring: var(--brand);
   --radius: 0.9rem;
-  /* Fondasi desain: permukaan netral, satu aksen, status yang jelas, kepadatan 1280–1440px. */
-  --surface: oklch(0.985 0.003 250);
-  --surface-raised: oklch(1 0 0);
-  --surface-sunken: oklch(0.96 0.004 250);
-  --ink: oklch(0.23 0.02 256);
-  --ink-muted: oklch(0.45 0.02 256);
-  --ink-subtle: oklch(0.58 0.015 256);
-  --line: oklch(0.91 0.006 256);
-  --line-strong: oklch(0.82 0.01 256);
-  --brand: #1d4ed8;
-  --brand-contrast: #ffffff;
+  /* Tema Konter Tebal (spec 2026-09-13 §A1–A2). Keenam variabel palet diganti `applyTheme`; nilai di sini
+     palet MARUN dan dijaga `designFoundation.guard.test.ts`. Token turunannya ada di blok `[data-tema]`. */
+  --paper: #fff6ea;
+  --ink: #1d1414;
+  --brand: #7a1f2e;
+  --brand-contrast: #fff6ea;
+  --second: #f2b33d;
+  --second-contrast: #1d1414;
   --success: oklch(0.5 0.12 150);
   --success-soft: oklch(0.96 0.03 150);
   --warning: oklch(0.55 0.13 65);
@@ -135,6 +141,21 @@
   --row-h-dense: 2rem;
   --header-h: 3rem;
   --gutter: 1rem;
+}
+
+/* Token turunan palet. Dideklarasikan juga pada `[data-tema]` supaya wadah yang diberi palet lain lewat
+   `applyTheme` menghitung ulang permukaan dan garisnya dari palet wadah itu — variabel yang dihitung di
+   :root tidak ikut berubah ketika `--paper` ditimpa pada elemen di bawahnya. */
+:root,
+[data-tema] {
+  --surface: var(--paper);
+  --surface-raised: color-mix(in oklab, var(--paper) 30%, white);
+  --surface-sunken: color-mix(in oklab, var(--ink) 6%, var(--paper));
+  --ink-muted: color-mix(in oklab, var(--ink) 78%, var(--paper));
+  --ink-subtle: color-mix(in oklab, var(--ink) 64%, var(--paper));
+  --line: color-mix(in oklab, var(--ink) 14%, var(--paper));
+  --line-quiet: color-mix(in oklab, var(--ink) 28%, var(--paper));
+  --line-strong: var(--ink);
 }
 
 .dark {

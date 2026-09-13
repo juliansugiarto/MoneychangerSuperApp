@@ -6,7 +6,8 @@
  * aksen yang tidak mencapai kontras WCAG AA dengan teks mana pun diganti aksen produk.
  */
 
-export const PRODUCT_ACCENT = "#1D4ED8";
+/** Warna utama palet MARUN — aksen produk bila perusahaan belum memilih apa pun (spec 2026-09-13 §A2). */
+export const PRODUCT_ACCENT = "#7A1F2E";
 export const LIGHT_TEXT = "#FFFFFF";
 export const DARK_TEXT = "#111827";
 /** WCAG 2.1 AA untuk teks normal. */
@@ -52,19 +53,27 @@ export function contrastRatio(a: string, b: string): number | null {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-function productAccent() {
-  return { accent: PRODUCT_ACCENT, contrast: LIGHT_TEXT, ratio: contrastRatio(PRODUCT_ACCENT, LIGHT_TEXT)! };
+type AccentPair = { accent: string; contrast: string };
+
+const PRODUCT_PAIR: AccentPair = { accent: PRODUCT_ACCENT, contrast: LIGHT_TEXT };
+
+function withRatio(pair: AccentPair) {
+  return { ...pair, ratio: contrastRatio(pair.accent, pair.contrast)! };
 }
 
-export function resolveAccent(candidate: string | null | undefined): AccentResolution {
+/**
+ * `fallback` dipakai bila kandidat kosong atau ditolak. Bawaannya aksen produk; tema mengirim warna utama
+ * palet terpilih supaya penolakan tidak melompat ke palet lain.
+ */
+export function resolveAccent(candidate: string | null | undefined, fallback: AccentPair = PRODUCT_PAIR): AccentResolution {
   const normalized = normalizeHexColor(candidate);
   if (!normalized) {
     const supplied = typeof candidate === "string" && candidate.trim() !== "";
-    return { ...productAccent(), usedFallback: supplied, reason: supplied ? "INVALID" : null };
+    return { ...withRatio(fallback), usedFallback: supplied, reason: supplied ? "INVALID" : null };
   }
   const light = contrastRatio(normalized, LIGHT_TEXT)!;
   const dark = contrastRatio(normalized, DARK_TEXT)!;
   const best = light >= dark ? { contrast: LIGHT_TEXT, ratio: light } : { contrast: DARK_TEXT, ratio: dark };
-  if (best.ratio < MIN_CONTRAST) return { ...productAccent(), usedFallback: true, reason: "LOW_CONTRAST" };
+  if (best.ratio < MIN_CONTRAST) return { ...withRatio(fallback), usedFallback: true, reason: "LOW_CONTRAST" };
   return { accent: normalized, ...best, usedFallback: false, reason: null };
 }

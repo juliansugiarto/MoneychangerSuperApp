@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { PRODUCT_ACCENT } from "@shared/accentColor";
+import { DEFAULT_PALETTE_ID, paletteById } from "@shared/themePalettes";
 import { FOUNDATION_FILES } from "./designFoundation";
 
 const root = process.cwd();
@@ -21,5 +22,14 @@ describe("penjaga fondasi desain", () => {
   it("aksen bawaan di CSS sama dengan PRODUCT_ACCENT", () => {
     const css = readFileSync(join(root, "client/src/index.css"), "utf8").toLowerCase();
     expect(css).toContain(`--brand: ${PRODUCT_ACCENT.toLowerCase()};`);
+  });
+
+  it("nilai palet bawaan di CSS sama dengan palet MARUN", () => {
+    const css = readFileSync(join(root, "client/src/index.css"), "utf8").toLowerCase();
+    const marun = paletteById(DEFAULT_PALETTE_ID);
+    const expected = [["--paper", marun.paper], ["--ink", marun.ink], ["--brand", marun.brand], ["--brand-contrast", marun.brandInk], ["--second", marun.second], ["--second-contrast", marun.secondInk]];
+    for (const [token, value] of expected) {
+      expect(css, token).toContain(`${token}: ${value.toLowerCase()};`);
+    }
   });
 });

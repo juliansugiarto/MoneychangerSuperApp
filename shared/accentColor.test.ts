@@ -70,4 +70,10 @@ describe("resolveAccent", () => {
       }
     }
   });
+
+  it("pasangan pengganti dapat ditentukan pemanggil (warna utama palet terpilih)", () => {
+    const zamrud = { accent: "#0F5A41", contrast: "#F1F6EE" };
+    expect(resolveAccent("#7A7A7A", zamrud)).toMatchObject({ accent: "#0F5A41", contrast: "#F1F6EE", usedFallback: true, reason: "LOW_CONTRAST" });
+    expect(resolveAccent(null, zamrud)).toMatchObject({ accent: "#0F5A41", contrast: "#F1F6EE", usedFallback: false, reason: null });
+  });
 });
