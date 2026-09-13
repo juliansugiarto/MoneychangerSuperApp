@@ -8,7 +8,7 @@
 
 **Tech Stack:** React 19, Tailwind CSS 4, shadcn/Radix (`components/ui`), cmdk, wouter, tRPC, Vitest 2 + Testing Library + jsdom, Playwright.
 
-**Spec:** `docs/superpowers/specs/2026-09-12-desain-ulang-antarmuka-design.md` (§2 dan §6).
+**Spec:** `docs/superpowers/specs/2026-09-12-desain-ulang-antarmuka-design.md` (§2 dan §6), diperbarui oleh `docs/superpowers/specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md` Bagian A (Tugas 7A dan 7B).
 
 ## Status Pengerjaan
 
@@ -21,13 +21,15 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 5 — Pola: kepala halaman, keadaan, ubin angka
 - [x] Tugas 6 — Pola: tabel, daftar + detail, formulir, alur bertahap, laporan
 - [x] Tugas 7 — Shell aplikasi baru
+- [ ] Tugas 7A — Palet dan token Konter Tebal
+- [ ] Tugas 7B — Gaya ulang pola dan shell Konter Tebal
 - [ ] Tugas 8 — Palet perintah ⌘K dan pintasan konter
 - [ ] Tugas 9 — Galeri pola `/operasional/pola`
 - [ ] Tugas 10 — Panduan suara dan bahasa
 - [ ] Tugas 11 — Playwright dan basis data visual `mc_t_visual`
 - [ ] Tugas 12 — Verifikasi di peramban, dokumentasi, penutupan
 
-Urutan mengikat: 1 sebelum 3, 5, 6, 7, 8; 2 sebelum 3; 3 sebelum 5–9; 4 sebelum 7 dan 8; 5 dan 6 sebelum 9; 7 sebelum 8 dan 11; 9 sebelum 11.
+Urutan mengikat: 1 sebelum 3, 5, 6, 7, 8; 2 sebelum 3; 3 sebelum 5–9; 4 sebelum 7 dan 8; 5 dan 6 sebelum 9; 7 sebelum 8 dan 11; 9 sebelum 11. **7A sebelum 7B; 7B sebelum 8, 9, dan 11** (ditambahkan 13 September 2026).
 
 ## Global Constraints
 
@@ -43,6 +45,7 @@ Urutan mengikat: 1 sebelum 3, 5, 6, 7, 8; 2 sebelum 3; 3 sebelum 5–9; 4 sebelu
 - Bahasa layar: Indonesia sehari-hari dengan "Anda"; istilah resmi sebagai label kecil; pesan galat menyebut apa yang terjadi dan langkah berikutnya.
 - Berkas yang terdaftar di `client/src/designFoundation.ts` **tidak boleh** memuat warna mentah (`#…`, `rgb(`, `oklch(`). Warna hanya lewat token.
 - Palet ⌘K di sub-proyek ini **hanya membuka halaman**; pencarian rekaman ditunda ke sub-proyek 4 dan 6 (spec §2.4).
+- **Tema Konter Tebal, intensitas B** (spec 2026-09-13 §A): bingkai, judul, ubin, tombol utama, kepala tabel tebal; input dan baris kerja tenang; enam palet, Marun bawaan. Kelas tebal/tenang hanya lewat `client/src/components/patterns/tebal.ts`. `.font-display` lama tidak diubah; huruf judul baru `font-heading`.
 - Basis data: `moneychanger` dan `mc_t_abcvalas` untuk uji yang ada; `mc_t_visual` khusus Playwright. **Jangan pernah menyentuh produksi.** Peragaan tidak mengetik kata sandi akun uji ke formulir; masuk lewat API di fixture.
 
 ## Struktur Berkas
@@ -56,7 +59,9 @@ Urutan mengikat: 1 sebelum 3, 5, 6, 7, 8; 2 sebelum 3; 3 sebelum 5–9; 4 sebelu
 | `client/src/designFoundation.ts`, `client/src/designFoundation.guard.test.ts` | Daftar berkas di atas fondasi + penjaga warna mentah | 3 (tumbuh 5–9) |
 | `shared/backOfficeNavigation.ts`, `server/backOfficeNavigation.test.ts` | Delapan kelompok per tugas | 4 |
 | `client/src/components/patterns/*` (+ uji) | Enam pola halaman | 5, 6 |
-| `client/src/components/shell/*` (+ uji), `client/src/components/DashboardLayout.tsx` | Shell 48px/232px, merek, akses | 7 |
+| `client/src/components/shell/*` (+ uji), `client/src/components/DashboardLayout.tsx` | Shell 48px/232px, merek, akses | 7, 7B |
+| `shared/themePalettes.ts` (+ uji), `client/src/lib/utils.ts` (+ uji) | Enam palet teruji kontras; `cn` mengenal token | 7A |
+| `client/src/components/patterns/tebal.ts` | Kelas tebal/tenang bersama | 7B |
 | `shared/commandPalette.ts`, `client/src/components/shell/shortcuts.ts`, `CommandPalette.tsx` | ⌘K dan pintasan | 8 |
 | `client/src/pages/GaleriPola.tsx`, `client/src/App.tsx` | Galeri `/operasional/pola` | 9 |
 | `docs/PANDUAN-SUARA-DAN-BAHASA.md` | Panduan bahasa | 10 |
@@ -1813,6 +1818,1012 @@ git commit -m "Shell aplikasi baru: kepala 48px, sidebar 232px per tugas, merek 
 
 ---
 
+### Task 7A: Palet dan token Konter Tebal
+
+Ditambahkan 13 September 2026 dari `docs/superpowers/specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md` Bagian A1–A3. Tidak ada perubahan skema.
+
+**Files:**
+- Create: `client/src/lib/utils.test.ts`, `shared/themePalettes.ts`, `shared/themePalettes.test.ts`
+- Modify: `client/src/lib/utils.ts`, `shared/accentColor.ts`, `shared/accentColor.test.ts`, `client/src/lib/brandAccent.ts`, `client/src/lib/brandAccent.test.tsx`, `client/src/designFoundation.guard.test.ts`, `client/src/index.css`, `client/index.html`
+
+**Interfaces:**
+- Consumes: `normalizeHexColor`, `contrastRatio`, `resolveAccent`, `MIN_CONTRAST`, `LIGHT_TEXT`, `DARK_TEXT` (Tugas 2); token Tugas 3
+- Produces:
+  - `cn(...)` mengenal `text-body|label|title`, `shadow-hard|tile|focus`, dan spasi `control|control-sm|row|row-dense|header|gutter`
+  - `type ThemePaletteId = "MARUN" | "ZAMRUD" | "SAMUDRA" | "TERAKOTA" | "ANGGUR" | "ARANG"`; `type ThemePalette = { id; name; paper; ink; brand; brandInk; second; secondInk }`; `THEME_PALETTES: readonly ThemePalette[]`; `DEFAULT_PALETTE_ID = "MARUN"`; `paletteById(id: string | null | undefined): ThemePalette`
+  - `PRODUCT_ACCENT = "#7A1F2E"`; `resolveAccent(candidate, fallback?: { accent: string; contrast: string })`
+  - `applyTheme(root: HTMLElement, paletteId: string | null | undefined, customBrand?: string | null): { palette: ThemePalette; brand: AccentResolution }` — **menggantikan** `applyBrandAccent`; menulis `--paper --ink --brand --brand-contrast --second --second-contrast` dan atribut `data-tema`
+  - Utilitas Tailwind: `bg-paper`, `bg-second`, `text-second-contrast`, `border-line-quiet`, `shadow-hard`, `shadow-tile`, `shadow-focus`, `font-heading`
+
+- [ ] **Step 1: Tulis uji yang gagal**
+
+`client/src/lib/utils.test.ts`:
+
+```ts
+import { describe, expect, it } from "vitest";
+import { cn } from "./utils";
+
+// Diperiksa 13 September 2026 pada tailwind-merge 3.3.1: tanpa perluasan, `text-body` dianggap warna dan
+// dibuang, sedangkan `h-9 h-control` dan `shadow-xs shadow-hard` sama-sama dipertahankan.
+describe("cn mengenal token fondasi desain", () => {
+  it.each([
+    ["text-body text-ink-muted", "text-body text-ink-muted"],
+    ["text-label text-brand-contrast", "text-label text-brand-contrast"],
+    ["text-sm text-body", "text-body"],
+    ["h-9 h-control", "h-control"],
+    ["px-4 px-gutter", "px-gutter"],
+    ["shadow-xs shadow-hard", "shadow-hard"],
+  ])("%s → %s", (input, expected) => {
+    expect(cn(input)).toBe(expected);
+  });
+});
+```
+
+`shared/themePalettes.test.ts`:
+
+```ts
+import { describe, expect, it } from "vitest";
+import { MIN_CONTRAST, PRODUCT_ACCENT, contrastRatio, normalizeHexColor } from "./accentColor";
+import { DEFAULT_PALETTE_ID, THEME_PALETTES, paletteById } from "./themePalettes";
+
+describe("palet tema Konter Tebal", () => {
+  it("enam palet berurutan dengan Marun sebagai bawaan dan aksen produk", () => {
+    expect(THEME_PALETTES.map((palette) => palette.id)).toEqual(["MARUN", "ZAMRUD", "SAMUDRA", "TERAKOTA", "ANGGUR", "ARANG"]);
+    expect(DEFAULT_PALETTE_ID).toBe("MARUN");
+    expect(paletteById(DEFAULT_PALETTE_ID).brand).toBe(PRODUCT_ACCENT);
+  });
+
+  it.each(THEME_PALETTES.map((palette) => [palette.id, palette] as const))("%s: heks sah dan setiap pasangan lolos AA", (_id, palette) => {
+    for (const value of [palette.paper, palette.ink, palette.brand, palette.brandInk, palette.second, palette.secondInk]) {
+      expect(normalizeHexColor(value)).toBe(value);
+    }
+    expect(contrastRatio(palette.ink, palette.paper)!).toBeGreaterThanOrEqual(MIN_CONTRAST);
+    expect(contrastRatio(palette.brandInk, palette.brand)!).toBeGreaterThanOrEqual(MIN_CONTRAST);
+    expect(contrastRatio(palette.secondInk, palette.second)!).toBeGreaterThanOrEqual(MIN_CONTRAST);
+  });
+
+  it("id yang tidak dikenal atau kosong jatuh ke palet bawaan", () => {
+    expect(paletteById("TIDAK-ADA").id).toBe("MARUN");
+    expect(paletteById(null).id).toBe("MARUN");
+  });
+});
+```
+
+Tambahkan di akhir `describe("resolveAccent", …)` pada `shared/accentColor.test.ts`:
+
+```ts
+  it("pasangan pengganti dapat ditentukan pemanggil (warna utama palet terpilih)", () => {
+    const zamrud = { accent: "#0F5A41", contrast: "#F1F6EE" };
+    expect(resolveAccent("#7A7A7A", zamrud)).toMatchObject({ accent: "#0F5A41", contrast: "#F1F6EE", usedFallback: true, reason: "LOW_CONTRAST" });
+    expect(resolveAccent(null, zamrud)).toMatchObject({ accent: "#0F5A41", contrast: "#F1F6EE", usedFallback: false, reason: null });
+  });
+```
+
+Ganti seluruh isi `client/src/lib/brandAccent.test.tsx`:
+
+```tsx
+import { describe, expect, it } from "vitest";
+import { DARK_TEXT, LIGHT_TEXT } from "@shared/accentColor";
+import { paletteById } from "@shared/themePalettes";
+import { applyTheme } from "./brandAccent";
+
+describe("applyTheme", () => {
+  it("menulis keenam variabel palet terpilih dan menandai wadahnya", () => {
+    const element = document.createElement("div");
+    const zamrud = paletteById("ZAMRUD");
+    applyTheme(element, "ZAMRUD");
+    expect(element.style.getPropertyValue("--paper")).toBe(zamrud.paper);
+    expect(element.style.getPropertyValue("--ink")).toBe(zamrud.ink);
+    expect(element.style.getPropertyValue("--brand")).toBe(zamrud.brand);
+    expect(element.style.getPropertyValue("--brand-contrast")).toBe(zamrud.brandInk);
+    expect(element.style.getPropertyValue("--second")).toBe(zamrud.second);
+    expect(element.style.getPropertyValue("--second-contrast")).toBe(zamrud.secondInk);
+    expect(element.getAttribute("data-tema")).toBe("ZAMRUD");
+  });
+
+  it("warna utama sendiri yang lolos kontras menggantikan warna utama palet", () => {
+    const element = document.createElement("div");
+    const result = applyTheme(element, "MARUN", "#0F766E");
+    expect(element.style.getPropertyValue("--brand")).toBe("#0F766E");
+    expect(element.style.getPropertyValue("--brand-contrast")).toBe(LIGHT_TEXT);
+    expect(result.brand.usedFallback).toBe(false);
+  });
+
+  it("warna utama sendiri yang gagal kontras diganti warna utama palet terpilih, beserta alasannya", () => {
+    const element = document.createElement("div");
+    const result = applyTheme(element, "SAMUDRA", "#7A7A7A");
+    expect(element.style.getPropertyValue("--brand")).toBe(paletteById("SAMUDRA").brand);
+    expect(element.style.getPropertyValue("--brand-contrast")).toBe(paletteById("SAMUDRA").brandInk);
+    expect(result.brand.reason).toBe("LOW_CONTRAST");
+  });
+
+  it("warna utama sendiri yang terang memakai teks gelap", () => {
+    const element = document.createElement("div");
+    applyTheme(element, null, "#FFD60A");
+    expect(element.style.getPropertyValue("--brand-contrast")).toBe(DARK_TEXT);
+  });
+});
+```
+
+Pada `client/src/designFoundation.guard.test.ts`, tambahkan impor sesudah baris `import { PRODUCT_ACCENT } from "@shared/accentColor";`:
+
+```ts
+import { DEFAULT_PALETTE_ID, paletteById } from "@shared/themePalettes";
+```
+
+dan tambahkan uji terakhir di dalam `describe("penjaga fondasi desain", …)`:
+
+```ts
+  it("nilai palet bawaan di CSS sama dengan palet MARUN", () => {
+    const css = readFileSync(join(root, "client/src/index.css"), "utf8").toLowerCase();
+    const marun = paletteById(DEFAULT_PALETTE_ID);
+    const expected = [["--paper", marun.paper], ["--ink", marun.ink], ["--brand", marun.brand], ["--brand-contrast", marun.brandInk], ["--second", marun.second], ["--second-contrast", marun.secondInk]];
+    for (const [token, value] of expected) {
+      expect(css, token).toContain(`${token}: ${value.toLowerCase()};`);
+    }
+  });
+```
+
+- [ ] **Step 2: Jalankan dan pastikan gagal**
+
+Run: `./node_modules/.bin/vitest run client/src/lib/utils.test.ts shared/themePalettes.test.ts shared/accentColor.test.ts client/src/lib/brandAccent.test.tsx client/src/designFoundation.guard.test.ts`
+Expected: FAIL — setidaknya lima dari enam kasus `cn` gagal (pada 13 September 2026 `text-body`/`text-label` dibuang, sedangkan `text-sm text-body`, `h-9 h-control`, dan `shadow-xs shadow-hard` dipertahankan berdua); `./themePalettes` belum ada (dua berkas); `applyTheme` belum ada; uji pengganti `resolveAccent` gagal karena argumen kedua diabaikan. Sebutkan jumlah kegagalan yang benar-benar terlihat.
+
+- [ ] **Step 3: Perluas `cn`**
+
+Ganti seluruh isi `client/src/lib/utils.ts`:
+
+```ts
+import { clsx, type ClassValue } from "clsx";
+import { extendTailwindMerge } from "tailwind-merge";
+
+/**
+ * `tailwind-merge` tidak mengenal token fondasi desain. Tanpa perluasan ini `text-body` dianggap warna
+ * dan dibuang bila bertemu `text-ink`, sementara `h-9 h-control` dan `shadow-xs shadow-hard` sama-sama
+ * dipertahankan sehingga urutan CSS yang menentukan (diperiksa 13 September 2026, v3.3.1).
+ */
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: {
+      text: ["body", "label", "title"],
+      shadow: ["hard", "tile", "focus"],
+      spacing: ["control", "control-sm", "row", "row-dense", "header", "gutter"],
+    },
+  },
+});
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+```
+
+- [ ] **Step 4: Tulis palet dan perbarui aksen**
+
+`shared/themePalettes.ts`:
+
+```ts
+/**
+ * Enam palet siap pakai tema Konter Tebal (spec 2026-09-13 §A1). Data murni: layar hanya membaca token
+ * CSS yang diisi `applyTheme`, bukan heks ini, sehingga berkas ini sengaja tidak masuk `FOUNDATION_FILES`.
+ * Setiap pasangan dijaga AA oleh `themePalettes.test.ts`; palet yang gagal diperbaiki nilainya.
+ */
+export type ThemePaletteId = "MARUN" | "ZAMRUD" | "SAMUDRA" | "TERAKOTA" | "ANGGUR" | "ARANG";
+
+export type ThemePalette = {
+  id: ThemePaletteId;
+  name: string;
+  /** Latar halaman. */
+  paper: string;
+  /** Teks dan garis tebal. */
+  ink: string;
+  /** Blok utama: tombol utama, butir menu aktif, ubin pertama. */
+  brand: string;
+  brandInk: string;
+  /** Blok kedua: ubin kedua. */
+  second: string;
+  secondInk: string;
+};
+
+export const THEME_PALETTES: readonly ThemePalette[] = [
+  { id: "MARUN", name: "Marun", paper: "#FFF6EA", ink: "#1D1414", brand: "#7A1F2E", brandInk: "#FFF6EA", second: "#F2B33D", secondInk: "#1D1414" },
+  { id: "ZAMRUD", name: "Zamrud", paper: "#F1F6EE", ink: "#0F1D17", brand: "#0F5A41", brandInk: "#F1F6EE", second: "#E8B923", secondInk: "#0F1D17" },
+  { id: "SAMUDRA", name: "Samudra", paper: "#EEF3FB", ink: "#0D1726", brand: "#1F3A8A", brandInk: "#EEF3FB", second: "#7DD3C0", secondInk: "#0D1726" },
+  { id: "TERAKOTA", name: "Terakota", paper: "#FFF3E6", ink: "#22160F", brand: "#B93A0C", brandInk: "#FFF3E6", second: "#8FD3C7", secondInk: "#22160F" },
+  { id: "ANGGUR", name: "Anggur", paper: "#F7F1FA", ink: "#1C1222", brand: "#5B2A86", brandInk: "#F7F1FA", second: "#FFD166", secondInk: "#1C1222" },
+  { id: "ARANG", name: "Arang", paper: "#F2F0EA", ink: "#111111", brand: "#161616", brandInk: "#E6FF5C", second: "#E6FF5C", secondInk: "#111111" },
+];
+
+export const DEFAULT_PALETTE_ID: ThemePaletteId = "MARUN";
+
+export function paletteById(id: string | null | undefined): ThemePalette {
+  return THEME_PALETTES.find((palette) => palette.id === id) ?? THEME_PALETTES[0];
+}
+```
+
+Pada `shared/accentColor.ts`, ganti `export const PRODUCT_ACCENT = "#1D4ED8";` dengan:
+
+```ts
+/** Warna utama palet MARUN — aksen produk bila perusahaan belum memilih apa pun (spec 2026-09-13 §A2). */
+export const PRODUCT_ACCENT = "#7A1F2E";
+```
+
+lalu ganti fungsi `productAccent` dan `resolveAccent` dengan:
+
+```ts
+type AccentPair = { accent: string; contrast: string };
+
+const PRODUCT_PAIR: AccentPair = { accent: PRODUCT_ACCENT, contrast: LIGHT_TEXT };
+
+function withRatio(pair: AccentPair) {
+  return { ...pair, ratio: contrastRatio(pair.accent, pair.contrast)! };
+}
+
+/**
+ * `fallback` dipakai bila kandidat kosong atau ditolak. Bawaannya aksen produk; tema mengirim warna utama
+ * palet terpilih supaya penolakan tidak melompat ke palet lain.
+ */
+export function resolveAccent(candidate: string | null | undefined, fallback: AccentPair = PRODUCT_PAIR): AccentResolution {
+  const normalized = normalizeHexColor(candidate);
+  if (!normalized) {
+    const supplied = typeof candidate === "string" && candidate.trim() !== "";
+    return { ...withRatio(fallback), usedFallback: supplied, reason: supplied ? "INVALID" : null };
+  }
+  const light = contrastRatio(normalized, LIGHT_TEXT)!;
+  const dark = contrastRatio(normalized, DARK_TEXT)!;
+  const best = light >= dark ? { contrast: LIGHT_TEXT, ratio: light } : { contrast: DARK_TEXT, ratio: dark };
+  if (best.ratio < MIN_CONTRAST) return { ...withRatio(fallback), usedFallback: true, reason: "LOW_CONTRAST" };
+  return { accent: normalized, ...best, usedFallback: false, reason: null };
+}
+```
+
+Ganti seluruh isi `client/src/lib/brandAccent.ts`:
+
+```ts
+import { resolveAccent, type AccentResolution } from "@shared/accentColor";
+import { paletteById, type ThemePalette } from "@shared/themePalettes";
+
+/**
+ * Menerapkan palet tema dan warna utama pilihan pemilik ke token CSS sebuah wadah (`document.documentElement`
+ * untuk aplikasi, atau wadah pratinjau di galeri). Warna utama yang ditolak `resolveAccent` diganti warna
+ * utama palet terpilih; pemanggil menerima putusannya supaya layar Profil Perusahaan (sub-proyek 2) dapat
+ * menjelaskan alasannya. `data-tema` membuat `index.css` menghitung ulang token turunan pada wadah itu.
+ */
+export function applyTheme(root: HTMLElement, paletteId: string | null | undefined, customBrand?: string | null): { palette: ThemePalette; brand: AccentResolution } {
+  const palette = paletteById(paletteId);
+  const brand = resolveAccent(customBrand, { accent: palette.brand, contrast: palette.brandInk });
+  root.style.setProperty("--paper", palette.paper);
+  root.style.setProperty("--ink", palette.ink);
+  root.style.setProperty("--brand", brand.accent);
+  root.style.setProperty("--brand-contrast", brand.contrast);
+  root.style.setProperty("--second", palette.second);
+  root.style.setProperty("--second-contrast", palette.secondInk);
+  root.setAttribute("data-tema", palette.id);
+  return { palette, brand };
+}
+```
+
+- [ ] **Step 5: Token CSS dan font**
+
+Di `client/src/index.css`, dalam `@theme inline { … }`, sesudah baris `--color-info-soft: var(--info-soft);`, tambahkan:
+
+```css
+  /* Tema Konter Tebal (spec 2026-09-13 §A2–A3). */
+  --color-paper: var(--paper);
+  --color-second: var(--second);
+  --color-second-contrast: var(--second-contrast);
+  --color-line-quiet: var(--line-quiet);
+  --shadow-hard: 3px 3px 0 var(--ink);
+  --shadow-tile: 4px 4px 0 var(--ink);
+  --shadow-focus: 3px 3px 0 var(--brand);
+  --font-heading: "Bricolage Grotesque", "Manrope", ui-sans-serif, system-ui, sans-serif;
+```
+
+Dalam `:root { … }`, ganti `--sidebar: var(--surface-raised);` dengan `--sidebar: var(--paper);` dan `--sidebar-border: var(--line);` dengan `--sidebar-border: var(--ink);`. Lalu ganti blok berikut:
+
+```css
+  /* Fondasi desain: permukaan netral, satu aksen, status yang jelas, kepadatan 1280–1440px. */
+  --surface: oklch(0.985 0.003 250);
+  --surface-raised: oklch(1 0 0);
+  --surface-sunken: oklch(0.96 0.004 250);
+  --ink: oklch(0.23 0.02 256);
+  --ink-muted: oklch(0.45 0.02 256);
+  --ink-subtle: oklch(0.58 0.015 256);
+  --line: oklch(0.91 0.006 256);
+  --line-strong: oklch(0.82 0.01 256);
+  --brand: #1d4ed8;
+  --brand-contrast: #ffffff;
+```
+
+dengan:
+
+```css
+  /* Tema Konter Tebal (spec 2026-09-13 §A1–A2). Keenam variabel palet diganti `applyTheme`; nilai di sini
+     palet MARUN dan dijaga `designFoundation.guard.test.ts`. Token turunannya ada di blok `[data-tema]`. */
+  --paper: #fff6ea;
+  --ink: #1d1414;
+  --brand: #7a1f2e;
+  --brand-contrast: #fff6ea;
+  --second: #f2b33d;
+  --second-contrast: #1d1414;
+```
+
+Sesudah penutup blok `:root { … }` (sebelum `.dark {`), sisipkan:
+
+```css
+/* Token turunan palet. Dideklarasikan juga pada `[data-tema]` supaya wadah yang diberi palet lain lewat
+   `applyTheme` menghitung ulang permukaan dan garisnya dari palet wadah itu — variabel yang dihitung di
+   :root tidak ikut berubah ketika `--paper` ditimpa pada elemen di bawahnya. */
+:root,
+[data-tema] {
+  --surface: var(--paper);
+  --surface-raised: color-mix(in oklab, var(--paper) 30%, white);
+  --surface-sunken: color-mix(in oklab, var(--ink) 6%, var(--paper));
+  --ink-muted: color-mix(in oklab, var(--ink) 78%, var(--paper));
+  --ink-subtle: color-mix(in oklab, var(--ink) 64%, var(--paper));
+  --line: color-mix(in oklab, var(--ink) 14%, var(--paper));
+  --line-quiet: color-mix(in oklab, var(--ink) 28%, var(--paper));
+  --line-strong: var(--ink);
+}
+```
+
+**Jangan** mengubah `.font-display` — 38 berkas halaman lama memakainya; huruf judul baru bernama `font-heading`.
+
+Di `client/index.html`, ganti `https://fonts.googleapis.com/css2?family=IBM+Plex+Mono` dengan `https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono` (sisa URL tetap).
+
+- [ ] **Step 6: Jalankan uji berkas ini**
+
+Run: perintah Step 2.
+Expected: seluruhnya PASS. Bila satu palet gagal AA, **perbaiki nilainya** di `themePalettes.ts` (dan di tabel spec §A1), jangan melonggarkan uji.
+
+- [ ] **Step 7: Perintah mutu, periksa di peramban, commit**
+
+```bash
+./node_modules/.bin/vitest run
+./node_modules/.bin/tsc --noEmit
+./node_modules/.bin/vite build
+grep -o -- "--paper:#fff6ea\|--line-quiet:[^;]*\|Bricolage" dist/public/assets/*.css client/index.html | sort -u
+```
+
+Expected: +2 berkas uji, +17 uji dibanding Tugas 7 (6 `cn` + 8 palet + 1 aksen + 1 `applyTheme` + 1 penjaga); sebutkan angka yang benar-benar terlihat. Buka `http://localhost:3000/operasional` pada 1280×800: shell kini berlatar krem dengan butir menu aktif marun dan teks tinta gelap, halaman lama tetap utuh. Tangkap layarnya. `applyTheme` belum dipanggil aplikasi — pemanggilnya datang di sub-proyek 2 (Profil Perusahaan), jadi seluruh pembeli memakai Marun sampai itu.
+
+```bash
+git add client/src/lib/utils.ts client/src/lib/utils.test.ts shared/themePalettes.ts shared/themePalettes.test.ts shared/accentColor.ts shared/accentColor.test.ts client/src/lib/brandAccent.ts client/src/lib/brandAccent.test.tsx client/src/designFoundation.guard.test.ts client/src/index.css client/index.html
+git commit -m "Tema Konter Tebal: enam palet teruji kontras, token, font judul, cn mengenal token"
+```
+
+---
+
+### Task 7B: Gaya ulang pola dan shell Konter Tebal
+
+Spec 2026-09-13 Bagian A4 (intensitas B). **Struktur dan uji perilaku komponen tidak berubah**; satu-satunya tambahan props adalah `StatTile.tone` opsional (bawaan `"plain"`), untuk blok warna padat.
+
+**Files:**
+- Create: `client/src/components/patterns/tebal.ts`, `client/src/components/shell/AppSidebar.test.tsx`
+- Modify: `client/src/components/patterns/{PageHeader,PageStates,StatTile,DataTable,ListDetailLayout,FormSection,StepFlow,ReportLayout}.tsx`, `client/src/components/shell/{AppHeader,AppSidebar,AccessPanel}.tsx`, `client/src/designFoundation.ts`
+
+**Interfaces:**
+- Consumes: `cn` yang sudah diperluas dan utilitas Tugas 7A
+- Produces:
+  - `BOLD_BUTTON`, `OUTLINE_BUTTON`, `QUIET_FIELD`, `FOCUS_RING` (string kelas) dari `client/src/components/patterns/tebal.ts`
+  - `StatTile({ label, value, hint?, onOpen?, tone?: "plain" | "brand" | "second" })`
+  - Butir induk sidebar ber-`data-active="true"` bila memuat halaman aktif; hanya pada mode ikon ia mendapat blok aksen.
+
+- [ ] **Step 1: Tulis uji sidebar yang gagal**
+
+`client/src/components/shell/AppSidebar.test.tsx`:
+
+```tsx
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "./AppSidebar";
+
+function renderSidebar(currentPath: string, open: boolean) {
+  return render(
+    <SidebarProvider defaultOpen={open}>
+      <AppSidebar brand="Contoh Valuta" role="SHAREHOLDER" userName="Uji" roleLabel="Pemegang Saham" currentPath={currentPath} onNavigate={() => {}} onLogout={() => {}} />
+    </SidebarProvider>,
+  );
+}
+
+const buttonLabelled = (label: string) => screen.getAllByRole("button").find((button) => button.textContent?.trim() === label)!;
+
+describe("AppSidebar", () => {
+  it("induk yang memuat halaman aktif ditandai aktif, supaya rel ikon tetap menunjukkan posisi", () => {
+    renderSidebar("/operasional/stock/kas-awal", false);
+    expect(buttonLabelled("Uang Kas").getAttribute("data-active")).toBe("true");
+    expect(buttonLabelled("Kurs").getAttribute("data-active")).toBe("false");
+  });
+
+  it("butir daun aktif memakai aria-current", () => {
+    renderSidebar("/kepatuhan/ira", true);
+    expect(buttonLabelled("Penilaian Risiko (IRA)").getAttribute("aria-current")).toBe("page");
+  });
+});
+```
+
+Diperiksa 13 September 2026 dengan uji sementara: `AppSidebar` dapat dirender di jsdom dalam `SidebarProvider`, dan induk "Uang Kas" pada `/operasional/stock/kas-awal` saat ini ber-`data-active="false"`.
+
+- [ ] **Step 2: Jalankan dan pastikan gagal**
+
+Run: `./node_modules/.bin/vitest run client/src/components/shell/AppSidebar.test.tsx`
+Expected: uji pertama FAIL (`expected 'false' to be 'true'`); uji kedua PASS.
+
+- [ ] **Step 3: Tulis kelas bersama**
+
+`client/src/components/patterns/tebal.ts`:
+
+```ts
+/**
+ * Kelas gaya Konter Tebal, intensitas B (spec 2026-09-13 §A4): bingkai, judul, ubin, dan tombol utama
+ * tebal; input dan baris kerja tenang. Satu tempat supaya "tebal" dan "tenang" tidak ditulis berbeda di
+ * tiap pola. Seluruhnya token — tanpa warna mentah. Aman dikirim lewat `className` komponen shadcn karena
+ * `cn` sudah mengenal token fondasi (Tugas 7A).
+ */
+
+/** Tombol utama: blok aksen, garis tinta, bayangan keras; ditekan menggeser bayangan. */
+export const BOLD_BUTTON =
+  "h-control rounded-[0.625rem] border-2 border-ink bg-brand px-3 font-bold text-brand-contrast shadow-hard hover:bg-brand active:translate-x-px active:translate-y-px active:shadow-none focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+
+/** Tombol kedua: garis tinta tanpa blok warna. */
+export const OUTLINE_BUTTON =
+  "h-control rounded-[0.625rem] border-2 border-ink bg-surface-raised px-3 font-semibold text-ink shadow-none hover:bg-surface-sunken focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+
+/** Input dan wadah kerja yang tenang; saat difokus mendapat garis tinta dan bayangan aksen. */
+export const QUIET_FIELD =
+  "rounded-lg border-[1.5px] border-line-quiet bg-surface-raised shadow-none focus-visible:border-2 focus-visible:border-ink focus-visible:shadow-focus focus-visible:ring-0";
+
+/** Cincin fokus untuk elemen tebal yang dapat diklik (ubin, baris). */
+export const FOCUS_RING = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+```
+
+Tambahkan `"client/src/components/patterns/tebal.ts",` ke `FOUNDATION_FILES`.
+
+- [ ] **Step 4: Gaya ulang pola**
+
+Ganti seluruh isi setiap berkas berikut.
+
+`client/src/components/patterns/PageHeader.tsx`:
+
+```tsx
+import type { ReactNode } from "react";
+
+/**
+ * Kepala halaman: judul dalam bahasa sehari-hari, istilah resmi BI/PPATK sebagai label kecil di bawahnya
+ * (panduan bahasa), deskripsi singkat, dan tindakan halaman di kanan. Huruf judul Konter Tebal pada
+ * ukuran judul 20px spec program §2.2.
+ */
+export function PageHeader({ title, description, officialLabel, actions }: {
+  title: string;
+  description?: string;
+  officialLabel?: string;
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-3 pb-4">
+      <div className="min-w-0">
+        <h1 className="font-heading text-title font-extrabold tracking-tight text-ink">{title}</h1>
+        {officialLabel ? <p className="mt-0.5 text-label font-semibold text-ink-subtle">{officialLabel}</p> : null}
+        {description ? <p className="mt-1 max-w-3xl text-body text-ink-muted">{description}</p> : null}
+      </div>
+      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+    </div>
+  );
+}
+```
+
+`client/src/components/patterns/PageStates.tsx`:
+
+```tsx
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AlertTriangle, Inbox } from "lucide-react";
+import { BOLD_BUTTON, OUTLINE_BUTTON } from "./tebal";
+
+export function LoadingState({ rows = 3, label = "Memuat…" }: { rows?: number; label?: string }) {
+  return (
+    <div role="status" aria-label={label} className="space-y-2">
+      {Array.from({ length: rows }, (_, index) => <Skeleton key={index} className="h-row w-full rounded-lg bg-surface-sunken" />)}
+    </div>
+  );
+}
+
+/** Keadaan kosong wajib menyebut langkah berikutnya — "Tidak ada data" saja tidak menolong siapa pun. */
+export function EmptyState({ title, nextStep, actionLabel, onAction }: {
+  title: string;
+  nextStep: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <div className="rounded-[0.75rem] border-[1.5px] border-dashed border-line-quiet bg-surface-raised px-4 py-8 text-center">
+      <Inbox aria-hidden className="mx-auto size-6 text-ink-subtle" />
+      <p className="mt-2 text-body font-bold text-ink">{title}</p>
+      <p className="mx-auto mt-1 max-w-md text-body text-ink-muted">{nextStep}</p>
+      {actionLabel && onAction ? <Button className={`mt-3 ${BOLD_BUTTON}`} onClick={onAction}>{actionLabel}</Button> : null}
+    </div>
+  );
+}
+
+/** Pesan galat menyebut apa yang terjadi dan apa yang harus dilakukan (panduan bahasa). */
+export function ErrorState({ what, nextStep, onRetry }: { what: string; nextStep: string; onRetry?: () => void }) {
+  return (
+    <div role="alert" className="rounded-[0.75rem] border-[1.5px] border-danger/40 bg-danger-soft px-4 py-3">
+      <p className="flex items-center gap-2 text-body font-bold text-danger">
+        <AlertTriangle aria-hidden className="size-4" />
+        {what}
+      </p>
+      <p className="mt-1 text-body text-ink-muted">{nextStep}</p>
+      {onRetry ? <Button variant="outline" className={`mt-2 ${OUTLINE_BUTTON} h-control-sm`} onClick={onRetry}>Coba lagi</Button> : null}
+    </div>
+  );
+}
+```
+
+`client/src/components/patterns/StatTile.tsx`:
+
+```tsx
+import { FOCUS_RING } from "./tebal";
+
+const TONES = {
+  plain: "bg-surface-raised text-ink",
+  brand: "bg-brand text-brand-contrast",
+  second: "bg-second text-second-contrast",
+} as const;
+
+/** Ubin angka Konter Tebal: blok bergaris tinta dengan bayangan keras. `tone` memilih blok utama, kedua, atau polos. */
+export function StatTile({ label, value, hint, onOpen, tone = "plain" }: {
+  label: string;
+  value: string;
+  hint?: string;
+  onOpen?: () => void;
+  tone?: keyof typeof TONES;
+}) {
+  const body = (
+    <>
+      <p className="text-label font-bold uppercase tracking-wide opacity-80">{label}</p>
+      <p className="mt-1 font-heading text-2xl font-extrabold tabular-nums">{value}</p>
+      {hint ? <p className="mt-1 text-label font-semibold opacity-80">{hint}</p> : null}
+    </>
+  );
+  const frame = `rounded-[0.75rem] border-2 border-ink p-3 shadow-tile ${TONES[tone]}`;
+  return onOpen ? (
+    <button type="button" onClick={onOpen} className={`${frame} text-left transition-transform hover:-translate-x-px hover:-translate-y-px motion-reduce:transition-none ${FOCUS_RING}`}>
+      {body}
+    </button>
+  ) : (
+    <div className={frame}>{body}</div>
+  );
+}
+```
+
+`client/src/components/patterns/DataTable.tsx`:
+
+```tsx
+import type { ReactNode } from "react";
+
+export type Column<Row> = { key: string; header: string; cell: (row: Row) => ReactNode; align?: "left" | "right" };
+
+/**
+ * Tabel padat: kepala tebal (blok tinta), baris tenang 36px (32px bila `dense`), dipilih dengan klik atau
+ * Enter, angka rata kanan.
+ */
+export function DataTable<Row>({ columns, rows, rowKey, onSelect, selectedKey = null, dense = false, caption }: {
+  columns: Column<Row>[];
+  rows: Row[];
+  rowKey: (row: Row) => string;
+  onSelect?: (row: Row) => void;
+  selectedKey?: string | null;
+  dense?: boolean;
+  caption?: string;
+}) {
+  return (
+    <div className="overflow-x-auto rounded-[0.75rem] border-[1.5px] border-line-quiet bg-surface-raised">
+      <table className="w-full text-body">
+        {caption ? <caption className="sr-only">{caption}</caption> : null}
+        <thead className="bg-ink text-label text-paper">
+          <tr>
+            {columns.map((column) => (
+              <th key={column.key} scope="col" className={`h-row px-3 font-bold uppercase tracking-wide ${column.align === "right" ? "text-right" : "text-left"}`}>
+                {column.header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const key = rowKey(row);
+            const selected = key === selectedKey;
+            return (
+              <tr
+                key={key}
+                aria-selected={onSelect ? selected : undefined}
+                tabIndex={onSelect ? 0 : undefined}
+                onClick={onSelect ? () => onSelect(row) : undefined}
+                onKeyDown={onSelect ? (event) => { if (event.key === "Enter") onSelect(row); } : undefined}
+                className={`border-t border-line ${dense ? "h-row-dense" : "h-row"} ${onSelect ? "cursor-pointer hover:bg-surface-sunken focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink" : ""} ${selected ? "bg-second/30 font-semibold" : ""}`}
+              >
+                {columns.map((column) => (
+                  <td key={column.key} className={`px-3 text-ink ${column.align === "right" ? "text-right tabular-nums" : ""}`}>
+                    {column.cell(row)}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+```
+
+`client/src/components/patterns/ListDetailLayout.tsx`:
+
+```tsx
+import { Button } from "@/components/ui/button";
+import { useEffect, type ReactNode } from "react";
+import { OUTLINE_BUTTON } from "./tebal";
+
+/** Daftar dengan panel detail di samping (≥1280px) — memilih baris tidak meninggalkan daftarnya. */
+export function ListDetailLayout({ list, detail, detailTitle, onCloseDetail }: {
+  list: ReactNode;
+  detail?: ReactNode;
+  detailTitle?: string;
+  onCloseDetail: () => void;
+}) {
+  useEffect(() => {
+    if (!detail) return;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") onCloseDetail(); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [detail, onCloseDetail]);
+
+  return (
+    <div className={detail ? "grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]" : ""}>
+      <div className="min-w-0">{list}</div>
+      {detail ? (
+        <aside aria-label={detailTitle ?? "Detail"} className="min-w-0 rounded-[0.75rem] border-2 border-ink bg-surface-raised shadow-tile">
+          <div className="flex h-header items-center justify-between border-b-2 border-ink px-4">
+            <p className="font-heading text-body font-extrabold text-ink">{detailTitle}</p>
+            <Button variant="outline" size="sm" className={`${OUTLINE_BUTTON} h-control-sm`} onClick={onCloseDetail}>Tutup</Button>
+          </div>
+          <div className="p-4">{detail}</div>
+        </aside>
+      ) : null}
+    </div>
+  );
+}
+```
+
+`client/src/components/patterns/FormSection.tsx`:
+
+```tsx
+import { useId, type ReactNode } from "react";
+
+/**
+ * Formulir satu kolom yang dibagi ke bagian bernomor. Bagian kerja: garis tipis (spec 2026-09-13 §A4).
+ * Titik tak terlihat menjaga nama aksesibel "2. Data identitas" sementara nomornya tampil sebagai lencana.
+ */
+export function FormSection({ number, title, description, children }: {
+  number: number;
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  const headingId = useId();
+  return (
+    <section aria-labelledby={headingId} className="border-b border-line py-4 last:border-b-0">
+      <h2 id={headingId} className="flex items-center gap-2 text-body font-bold text-ink">
+        <span className="inline-grid size-5 place-items-center rounded-md bg-ink text-label font-extrabold tabular-nums text-paper">{number}</span>
+        <span className="sr-only">.</span> {title}
+      </h2>
+      {description ? <p className="mt-0.5 text-label text-ink-muted">{description}</p> : null}
+      <div className="mt-3 grid max-w-2xl gap-3">{children}</div>
+    </section>
+  );
+}
+
+/** Tombol aksi yang menempel di bawah formulir panjang supaya "Simpan" selalu terlihat. */
+export function StickyActions({ children }: { children: ReactNode }) {
+  return (
+    <div className="sticky bottom-0 z-10 flex justify-end gap-2 border-t-2 border-ink bg-paper px-gutter py-2">
+      {children}
+    </div>
+  );
+}
+```
+
+`client/src/components/patterns/StepFlow.tsx`:
+
+```tsx
+import { Button } from "@/components/ui/button";
+import type { ReactNode } from "react";
+import { BOLD_BUTTON, OUTLINE_BUTTON } from "./tebal";
+
+export type Step = { id: string; title: string };
+
+/**
+ * Alur bertahap bernomor. Tindakan akhir (mis. "Kirim untuk disetujui") disediakan isi langkah terakhir
+ * sendiri, karena tiap alur menamai tindakannya berbeda.
+ */
+export function StepFlow({ steps, currentIndex, onStepChange, canAdvance = true, nextLabel = "Lanjut", backLabel = "Kembali", children }: {
+  steps: Step[];
+  currentIndex: number;
+  onStepChange: (index: number) => void;
+  canAdvance?: boolean;
+  nextLabel?: string;
+  backLabel?: string;
+  children: ReactNode;
+}) {
+  const isFirst = currentIndex === 0;
+  const isLast = currentIndex === steps.length - 1;
+  return (
+    <div className="grid gap-4">
+      <ol aria-label="Langkah" className="flex flex-wrap gap-2">
+        {steps.map((step, index) => {
+          const tone = index === currentIndex
+            ? "border-ink bg-brand text-brand-contrast shadow-hard"
+            : index < currentIndex ? "border-transparent text-ink" : "border-transparent text-ink-subtle";
+          return (
+            <li key={step.id} aria-current={index === currentIndex ? "step" : undefined} className={`flex items-center gap-2 rounded-lg border-2 px-2 py-1 text-label font-bold ${tone}`}>
+              <span className="tabular-nums">{index + 1}</span>
+              <span>{step.title}</span>
+            </li>
+          );
+        })}
+      </ol>
+      <div>{children}</div>
+      <div className="flex justify-between gap-2 border-t border-line pt-3">
+        <Button variant="outline" className={OUTLINE_BUTTON} disabled={isFirst} onClick={() => onStepChange(currentIndex - 1)}>{backLabel}</Button>
+        {isLast ? null : <Button className={BOLD_BUTTON} disabled={!canAdvance} onClick={() => onStepChange(currentIndex + 1)}>{nextLabel}</Button>}
+      </div>
+    </div>
+  );
+}
+```
+
+`client/src/components/patterns/ReportLayout.tsx`:
+
+```tsx
+import { Button } from "@/components/ui/button";
+import type { ReactNode } from "react";
+import { OUTLINE_BUTTON } from "./tebal";
+
+/** Laporan: filter dan ekspor di atas, angka ringkas, lalu tabelnya. */
+export function ReportLayout({ filters, summary, table, onExport, exportLabel = "Ekspor" }: {
+  filters?: ReactNode;
+  summary?: ReactNode;
+  table: ReactNode;
+  onExport?: () => void;
+  exportLabel?: string;
+}) {
+  return (
+    <div className="grid gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end gap-2">{filters}</div>
+        {onExport ? <Button variant="outline" className={OUTLINE_BUTTON} onClick={onExport}>{exportLabel}</Button> : null}
+      </div>
+      {summary ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{summary}</div> : null}
+      {table}
+    </div>
+  );
+}
+```
+
+- [ ] **Step 5: Gaya ulang shell**
+
+`client/src/components/shell/AppHeader.tsx`:
+
+```tsx
+import { OUTLINE_BUTTON } from "@/components/patterns/tebal";
+import { Button } from "@/components/ui/button";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Search } from "lucide-react";
+
+/**
+ * Kepala 48px: pemicu sidebar, kelompok › judul, dan pencarian ⌘K. Judulnya bukan heading — h1 milik
+ * `PageHeader` halaman. Slot pengalih perusahaan (spec §2.4) sengaja belum dirender sampai
+ * multi-perusahaan benar-benar ada.
+ */
+export function AppHeader({ group, title, onOpenSearch }: { group: string; title: string; onOpenSearch: () => void }) {
+  return (
+    <header className="sticky top-0 z-30 flex h-header items-center gap-3 border-b-2 border-ink bg-paper px-gutter">
+      <SidebarTrigger className="size-8 rounded-lg text-ink hover:bg-surface-sunken" />
+      <nav aria-label="Jejak" className="flex min-w-0 items-center gap-1.5 text-body">
+        <span className="shrink-0 font-semibold text-ink-subtle">{group}</span>
+        <span aria-hidden className="text-ink-subtle">›</span>
+        <span aria-current="page" className="truncate font-bold text-ink">{title}</span>
+      </nav>
+      <Button type="button" variant="outline" onClick={onOpenSearch} className={`ml-auto ${OUTLINE_BUTTON} h-control-sm gap-2 text-ink-muted`}>
+        <Search aria-hidden className="size-4" />
+        <span>Cari halaman</span>
+        <kbd className="rounded border border-line-quiet px-1 text-label text-ink-subtle">⌘K</kbd>
+      </Button>
+    </header>
+  );
+}
+```
+
+`client/src/components/shell/AccessPanel.tsx`:
+
+```tsx
+import { BOLD_BUTTON } from "@/components/patterns/tebal";
+import { Button } from "@/components/ui/button";
+import { LockKeyhole } from "lucide-react";
+
+/** Satu panel untuk belum masuk, wajib ganti sandi, dan kewenangan kurang. */
+export function AccessPanel({ title, detail, action, onAction }: { title: string; detail: string; action: string; onAction: () => void }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-paper px-4">
+      <div className="w-full max-w-sm rounded-[0.75rem] border-2 border-ink bg-surface-raised p-6 text-center shadow-tile">
+        <LockKeyhole aria-hidden className="mx-auto size-6 text-ink" />
+        <h1 className="mt-3 font-heading text-title font-extrabold text-ink">{title}</h1>
+        <p className="mt-2 text-body text-ink-muted">{detail}</p>
+        <Button onClick={onAction} className={`mt-5 w-full ${BOLD_BUTTON}`}>{action}</Button>
+      </div>
+    </div>
+  );
+}
+```
+
+`client/src/components/shell/AppSidebar.tsx`:
+
+```tsx
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton,
+  SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem,
+} from "@/components/ui/sidebar";
+import { visibleBackOfficeNavigation, type BackOfficeDestination, type BackOfficeRole } from "@shared/backOfficeNavigation";
+import { ChevronRight, LogOut } from "lucide-react";
+import { useState } from "react";
+import { brandInitials } from "./brand";
+import { iconFor, parentIconFor } from "./navigationIcons";
+
+/** Butir aktif Konter Tebal: blok aksen bergaris tinta. Garis transparan pada keadaan biasa mencegah lompatan 2px. */
+const activeItem = "border-2 border-transparent data-[active=true]:border-ink data-[active=true]:bg-brand data-[active=true]:text-brand-contrast data-[active=true]:font-bold data-[active=true]:shadow-hard";
+
+/**
+ * Induk ditandai aktif bila memuat halaman aktif. Saat terbuka, anaknya sudah membawa blok aksen, jadi
+ * induk hanya menebal; pada rel ikon anaknya tidak dirender, sehingga induklah yang mendapat blok aksen.
+ */
+const parentItem = "border-2 border-transparent data-[active=true]:bg-transparent data-[active=true]:font-bold data-[active=true]:text-ink group-data-[collapsible=icon]:data-[active=true]:border-ink group-data-[collapsible=icon]:data-[active=true]:bg-brand group-data-[collapsible=icon]:data-[active=true]:text-brand-contrast group-data-[collapsible=icon]:data-[active=true]:shadow-hard";
+
+export function AppSidebar({ brand, role, userName, roleLabel, currentPath, onNavigate, onLogout }: {
+  brand: string;
+  role: BackOfficeRole;
+  userName: string;
+  roleLabel: string;
+  currentPath: string;
+  onNavigate: (path: string) => void;
+  onLogout: () => void;
+}) {
+  const groups = visibleBackOfficeNavigation(role);
+  return (
+    <Sidebar collapsible="icon" className="border-ink group-data-[side=left]:border-r-2">
+      <SidebarHeader className="h-header justify-center border-b-2 border-ink px-2">
+        <button type="button" onClick={() => onNavigate("/operasional")} className="flex items-center gap-2 rounded-md px-1 text-left">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border-2 border-ink bg-brand font-heading text-label font-extrabold text-brand-contrast shadow-hard">{brandInitials(brand)}</span>
+          <span className="truncate font-heading text-body font-extrabold text-ink group-data-[collapsible=icon]:hidden">{brand}</span>
+        </button>
+      </SidebarHeader>
+      <SidebarContent className="gap-0 py-2">
+        {/* shrink-0: tanpa ini kelompok diperas oleh kolom flex ketika menu lebih tinggi daripada layar
+            (1280×800, peran Shareholder) dan butirnya saling menimpa alih-alih bergulir. */}
+        {groups.map((group) => (
+          <SidebarGroup key={group.label} className="shrink-0 py-1">
+            <SidebarGroupLabel className="h-6 text-label font-extrabold uppercase tracking-wider text-ink-subtle">{group.label}</SidebarGroupLabel>
+            <SidebarMenu className="gap-0.5">
+              {group.items.map((item) => item.children
+                ? <NavParent key={item.label} label={item.label} childItems={item.children} currentPath={currentPath} onNavigate={onNavigate} />
+                : <NavLeaf key={item.path} item={item} currentPath={currentPath} onNavigate={onNavigate} />)}
+            </SidebarMenu>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
+      <SidebarFooter className="border-t-2 border-ink p-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton className="h-control">
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-second text-label font-bold text-second-contrast">{brandInitials(userName)}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-body font-semibold text-ink">{userName}</span>
+                <span className="block truncate text-label text-ink-subtle">{roleLabel}</span>
+              </span>
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => onNavigate("/")}>Lihat halaman publik</DropdownMenuItem>
+            <DropdownMenuItem onClick={onLogout} className="text-danger focus:text-danger"><LogOut className="mr-2 size-4" />Keluar</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
+
+function NavLeaf({ item, currentPath, onNavigate }: { item: BackOfficeDestination; currentPath: string; onNavigate: (path: string) => void }) {
+  const Icon = iconFor(item.path);
+  const isActive = currentPath === item.path;
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton isActive={isActive} tooltip={item.label} aria-current={isActive ? "page" : undefined} onClick={() => onNavigate(item.path)} className={`h-8 text-body text-ink-muted ${activeItem}`}>
+        <Icon className="size-4" />
+        <span>{item.label}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+/** Terbuka dengan sendirinya bila memuat halaman aktif, supaya tautan langsung tidak menyembunyikan menunya. */
+function NavParent({ label, childItems, currentPath, onNavigate }: {
+  label: string;
+  childItems: BackOfficeDestination[];
+  currentPath: string;
+  onNavigate: (path: string) => void;
+}) {
+  const holdsCurrentPage = childItems.some((child) => child.path === currentPath);
+  const [open, setOpen] = useState(holdsCurrentPage);
+  const Icon = parentIconFor(label);
+  return (
+    <Collapsible open={open || holdsCurrentPage} onOpenChange={setOpen} className="group/collapsible" asChild>
+      <SidebarMenuItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton isActive={holdsCurrentPage} tooltip={label} className={`h-8 text-body text-ink-muted ${parentItem}`}>
+            <Icon className="size-4" />
+            <span>{label}</span>
+            <ChevronRight className="ml-auto size-4 transition-transform group-data-[state=open]/collapsible:rotate-90 motion-reduce:transition-none" />
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub className="mr-0 border-l-2 border-ink">
+            {childItems.map((child) => {
+              const isActive = currentPath === child.path;
+              return (
+                <SidebarMenuSubItem key={child.path}>
+                  <SidebarMenuSubButton isActive={isActive} aria-current={isActive ? "page" : undefined} onClick={() => onNavigate(child.path)} className={`h-7 cursor-pointer text-body text-ink-muted ${activeItem}`}>
+                    <span>{child.label}</span>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              );
+            })}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  );
+}
+```
+
+- [ ] **Step 6: Jalankan uji pola, shell, dan penjaga**
+
+Run: `./node_modules/.bin/vitest run client/src/components/patterns client/src/components/shell client/src/designFoundation.guard.test.ts client/src/lib`
+Expected: seluruhnya PASS — uji perilaku Tugas 5–7 tanpa perubahan, dua uji sidebar baru, penjaga warna mentah (termasuk `tebal.ts`).
+
+- [ ] **Step 7: Perintah mutu dan periksa di peramban**
+
+```bash
+./node_modules/.bin/vitest run
+./node_modules/.bin/tsc --noEmit
+./node_modules/.bin/vite build
+for c in "font-heading" "shadow-hard" "shadow-tile" "bg-second" "border-line-quiet" "bg-paper"; do printf "%-18s %s\n" "$c" "$(grep -c -- "$c" dist/public/assets/*.css)"; done
+```
+
+Expected: +1 berkas, +2 uji dibanding Tugas 7A; setiap utilitas di atas bernilai 1 (CSS terkecil satu baris). Sebutkan angka yang terlihat.
+
+Di peramban yang sudah masuk sebagai Pemegang Saham, buka `/operasional`, `/operasional/stock/kas-awal`, dan `/kepatuhan/ira` pada **1280×800, 1440×900, 1920×1080**. Ukur dengan JavaScript, bukan dikira: tinggi `header` 48; lebar `[data-slot="sidebar-container"]` 232 dan `borderRightWidth` `2px`; tidak ada `[data-slot="sidebar-group"]` yang tingginya lebih kecil dari `scrollHeight`; latar butir aktif `rgb(122, 31, 46)`; tidak ada gulir mendatar tingkat halaman. Ciutkan sidebar di `/operasional/stock/kas-awal`: induk "Uang Kas" berlatar `rgb(122, 31, 46)`. Periksa keenam palet dengan menimpa variabel di konsol (`const p = {…}; for (const [k, v] of Object.entries(p)) document.documentElement.style.setProperty(k, v)` memakai nilai tabel spec §A1) dan tangkap layarnya — lalu muat ulang halaman supaya kembali ke Marun. Tab dari awal halaman: setiap elemen fokus bergaris tinta terlihat.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add client/src/components/patterns client/src/components/shell client/src/designFoundation.ts
+git commit -m "Konter Tebal: gaya ulang pola dan shell, induk sidebar menandai halaman aktif pada rel ikon"
+```
+
+---
+
 ### Task 8: Palet perintah ⌘K dan pintasan konter
 
 **Files:**
@@ -2096,7 +3107,8 @@ git commit -m "Palet perintah ⌘K dan pintasan konter N dan /"
 
 **Interfaces:**
 - Consumes: seluruh pola Tugas 5 dan 6; token Tugas 3; `OperationsRoute` di `App.tsx`
-- Produces: rute `/operasional/pola` (CONTROLLER ke atas, **tidak** di sidebar); halaman berisi bagian ber-`id` tetap yang dipotret Playwright di Tugas 11: `token`, `kepala-halaman`, `keadaan`, `ubin`, `tabel`, `daftar-detail`, `formulir`, `alur`, `laporan`.
+- Produces: rute `/operasional/pola` (CONTROLLER ke atas, **tidak** di sidebar); halaman berisi bagian ber-`id` tetap yang dipotret Playwright di Tugas 11: `token`, `palet`, `kepala-halaman`, `keadaan`, `ubin`, `tabel`, `daftar-detail`, `formulir`, `alur`, `laporan`. Bagian `palet` memuat pratinjau keenam palet (spec 2026-09-13 §A6) dengan tombol radio berlabel nama palet dan wadah `data-testid="pratinjau-palet"`; pilihannya **tidak disimpan**.
+- Consumes (tambahan Tugas 7A–7B): `THEME_PALETTES`, `applyTheme`, `BOLD_BUTTON`, `OUTLINE_BUTTON`, `QUIET_FIELD`, `StatTile.tone`
 
 - [ ] **Step 1: Tulis ujinya**
 
@@ -2106,12 +3118,13 @@ git commit -m "Palet perintah ⌘K dan pintasan konter N dan /"
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { paletteById } from "@shared/themePalettes";
 import GaleriPola from "./GaleriPola";
 
 describe("GaleriPola", () => {
   it("memuat setiap pola dan setiap keadaan dengan data contoh statis", () => {
     const { container } = render(<GaleriPola />);
-    for (const id of ["token", "kepala-halaman", "keadaan", "ubin", "tabel", "daftar-detail", "formulir", "alur", "laporan"]) {
+    for (const id of ["token", "palet", "kepala-halaman", "keadaan", "ubin", "tabel", "daftar-detail", "formulir", "alur", "laporan"]) {
       expect(container.querySelector(`section#${id}`), `bagian #${id}`).not.toBeNull();
     }
     expect(screen.getByRole("status")).toBeTruthy();
@@ -2126,6 +3139,15 @@ describe("GaleriPola", () => {
     expect(screen.getByRole("complementary", { name: "Bon FX-2026-0914-001" })).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Lanjut" }));
     expect(screen.getByText("Nasabah, produk, wilayah").closest("li")!.getAttribute("aria-current")).toBe("step");
+  });
+
+  it("pratinjau palet menerapkan palet terpilih hanya pada wadahnya", async () => {
+    render(<GaleriPola />);
+    await userEvent.click(screen.getByRole("radio", { name: "Zamrud" }));
+    const wadah = screen.getByTestId("pratinjau-palet");
+    expect(wadah.style.getPropertyValue("--brand")).toBe(paletteById("ZAMRUD").brand);
+    expect(wadah.getAttribute("data-tema")).toBe("ZAMRUD");
+    expect(document.documentElement.style.getPropertyValue("--brand")).toBe("");
   });
 });
 ```
@@ -2151,7 +3173,10 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/patterns/Page
 import { ReportLayout } from "@/components/patterns/ReportLayout";
 import { StatTile } from "@/components/patterns/StatTile";
 import { StepFlow } from "@/components/patterns/StepFlow";
-import { useState, type ReactNode } from "react";
+import { BOLD_BUTTON, OUTLINE_BUTTON, QUIET_FIELD } from "@/components/patterns/tebal";
+import { applyTheme } from "@/lib/brandAccent";
+import { THEME_PALETTES } from "@shared/themePalettes";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
  * Galeri pola — satu halaman yang memperlihatkan setiap token, pola, dan keadaan dengan data contoh
@@ -2181,9 +3206,41 @@ const langkahContoh = [
 ];
 
 const swatches = [
-  ["bg-surface", "Permukaan"], ["bg-surface-raised", "Permukaan terangkat"], ["bg-surface-sunken", "Permukaan cekung"],
-  ["bg-brand", "Aksen"], ["bg-success", "Berhasil"], ["bg-warning", "Perlu perhatian"], ["bg-danger", "Bahaya"], ["bg-info", "Informasi"],
+  ["bg-paper", "Kertas"], ["bg-surface-raised", "Permukaan terangkat"], ["bg-surface-sunken", "Permukaan cekung"], ["bg-ink", "Tinta"],
+  ["bg-brand", "Warna utama"], ["bg-second", "Warna kedua"], ["bg-success", "Berhasil"], ["bg-warning", "Perlu perhatian"], ["bg-danger", "Bahaya"], ["bg-info", "Informasi"],
 ] as const;
+
+/** Pratinjau palet di dalam wadahnya sendiri; tidak menyentuh tema aplikasi dan tidak disimpan. */
+function PratinjauPalet() {
+  const wadah = useRef<HTMLDivElement>(null);
+  const [paletId, setPaletId] = useState<string>(THEME_PALETTES[0].id);
+  useEffect(() => {
+    if (wadah.current) applyTheme(wadah.current, paletId);
+  }, [paletId]);
+  return (
+    <div>
+      <p className="mb-2 text-label font-semibold text-ink-subtle">Pratinjau — tidak disimpan. Pemilik memilih paletnya di Profil Perusahaan.</p>
+      <div role="radiogroup" aria-label="Palet" className="mb-3 flex flex-wrap gap-2">
+        {THEME_PALETTES.map((palet) => (
+          <button key={palet.id} type="button" role="radio" aria-checked={palet.id === paletId} onClick={() => setPaletId(palet.id)} className={palet.id === paletId ? BOLD_BUTTON : OUTLINE_BUTTON}>
+            {palet.name}
+          </button>
+        ))}
+      </div>
+      <div ref={wadah} data-testid="pratinjau-palet" className="rounded-[0.75rem] border-2 border-ink bg-paper p-4">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <StatTile label="Jumlah bon" value="12" tone="brand" />
+          <StatTile label="Pembelian" value="Rp 18,4 jt" tone="second" />
+          <StatTile label="Penjualan" value="Rp 6,6 jt" />
+        </div>
+        <div className="mt-3 flex gap-2">
+          <Button className={BOLD_BUTTON}>+ Bon baru</Button>
+          <Button variant="outline" className={OUTLINE_BUTTON}>Batal</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Bagian({ id, judul, children }: { id: string; judul: string; children: ReactNode }) {
   return (
@@ -2216,12 +3273,16 @@ export default function GaleriPola() {
         <p className="text-label text-ink-subtle">Label 12px · istilah resmi seperti “Form A1 · TPPU 2A”</p>
       </Bagian>
 
+      <Bagian id="palet" judul="Palet tema">
+        <PratinjauPalet />
+      </Bagian>
+
       <Bagian id="kepala-halaman" judul="Kepala halaman">
         <PageHeader
           title="Seberapa berisiko nasabah Anda?"
           officialLabel="Form A1 · Parameter risiko inheren"
           description="Kami sudah mengisi angka yang terhitung dari data bulan ini. Periksa dan koreksi bila perlu."
-          actions={<Button className="h-control bg-brand text-brand-contrast hover:bg-brand/90">Simpan draf</Button>}
+          actions={<Button className={BOLD_BUTTON}>Simpan draf</Button>}
         />
       </Bagian>
 
@@ -2235,8 +3296,8 @@ export default function GaleriPola() {
 
       <Bagian id="ubin" judul="Ubin angka">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StatTile label="Transaksi hari ini" value="12" hint="3 menunggu tinjauan" onOpen={() => {}} />
-          <StatTile label="Kas Rupiah" value="Rp 25.000.000" />
+          <StatTile label="Transaksi hari ini" value="12" hint="3 menunggu tinjauan" onOpen={() => {}} tone="brand" />
+          <StatTile label="Kas Rupiah" value="Rp 25.000.000" tone="second" />
           <StatTile label="Stok USD" value="$ 4.200" hint="Per 09.00 WIB" />
           <StatTile label="Nasabah berisiko tinggi" value="2" hint="Menunggu keputusan Pemegang Saham" onOpen={() => {}} />
         </div>
@@ -2259,28 +3320,28 @@ export default function GaleriPola() {
         <div className="rounded-lg border border-line bg-surface-raised">
           <div className="px-gutter">
             <FormSection number={1} title="Identitas nasabah" description="Sesuai dokumen identitas yang ditunjukkan.">
-              <div className="grid gap-1"><Label htmlFor="contoh-nama">Nama lengkap</Label><Input id="contoh-nama" className="h-control" defaultValue="Budi Santoso" /></div>
-              <div className="grid gap-1"><Label htmlFor="contoh-nik">NIK</Label><Input id="contoh-nik" className="h-control" defaultValue="3203xxxxxxxxxxxx" /></div>
+              <div className="grid gap-1"><Label htmlFor="contoh-nama">Nama lengkap</Label><Input id="contoh-nama" className={`h-control ${QUIET_FIELD}`} defaultValue="Budi Santoso" /></div>
+              <div className="grid gap-1"><Label htmlFor="contoh-nik">NIK</Label><Input id="contoh-nik" className={`h-control ${QUIET_FIELD}`} defaultValue="3203xxxxxxxxxxxx" /></div>
             </FormSection>
             <FormSection number={2} title="Tujuan transaksi">
-              <div className="grid gap-1"><Label htmlFor="contoh-tujuan">Untuk apa valuta ini?</Label><Input id="contoh-tujuan" className="h-control" defaultValue="Perjalanan ibadah" /></div>
+              <div className="grid gap-1"><Label htmlFor="contoh-tujuan">Untuk apa valuta ini?</Label><Input id="contoh-tujuan" className={`h-control ${QUIET_FIELD}`} defaultValue="Perjalanan ibadah" /></div>
             </FormSection>
           </div>
-          <StickyActions><Button variant="outline" className="h-control">Batal</Button><Button className="h-control bg-brand text-brand-contrast hover:bg-brand/90">Simpan nasabah</Button></StickyActions>
+          <StickyActions><Button variant="outline" className={OUTLINE_BUTTON}>Batal</Button><Button className={BOLD_BUTTON}>Simpan nasabah</Button></StickyActions>
         </div>
       </Bagian>
 
       <Bagian id="alur" judul="Alur bertahap">
         <StepFlow steps={langkahContoh} currentIndex={langkah} onStepChange={setLangkah}>
           <p className="text-body text-ink-muted">Isi langkah “{langkahContoh[langkah].title}” tampil di sini.</p>
-          {langkah === langkahContoh.length - 1 ? <Button className="mt-3 h-control bg-brand text-brand-contrast hover:bg-brand/90">Kirim untuk disetujui</Button> : null}
+          {langkah === langkahContoh.length - 1 ? <Button className={`mt-3 ${BOLD_BUTTON}`}>Kirim untuk disetujui</Button> : null}
         </StepFlow>
       </Bagian>
 
       <Bagian id="laporan" judul="Laporan">
         <ReportLayout
-          filters={<div className="grid gap-1"><Label htmlFor="contoh-periode">Periode</Label><Input id="contoh-periode" className="h-control w-44" defaultValue="September 2026" /></div>}
-          summary={<><StatTile label="Jumlah bon" value="318" /><StatTile label="Nilai beli" value="Rp 1,92 M" /><StatTile label="Nilai jual" value="Rp 2,04 M" /><StatTile label="Selisih kurs" value="Rp 118 jt" /></>}
+          filters={<div className="grid gap-1"><Label htmlFor="contoh-periode">Periode</Label><Input id="contoh-periode" className={`h-control w-44 ${QUIET_FIELD}`} defaultValue="September 2026" /></div>}
+          summary={<><StatTile label="Jumlah bon" value="318" tone="brand" /><StatTile label="Nilai beli" value="Rp 1,92 M" /><StatTile label="Nilai jual" value="Rp 2,04 M" /><StatTile label="Selisih kurs" value="Rp 118 jt" /></>}
           table={<DataTable columns={kolomBon} rows={bonContoh} rowKey={(row) => row.id} dense caption="Contoh laporan transaksi" />}
           onExport={() => {}}
           exportLabel="Ekspor Excel"
@@ -2570,7 +3631,8 @@ export const VIEWPORTS = [
 ```ts
 import { VIEWPORTS, expect, test } from "./fixtures";
 
-const SECTIONS = ["token", "kepala-halaman", "keadaan", "ubin", "tabel", "daftar-detail", "formulir", "alur", "laporan"];
+const SECTIONS = ["token", "palet", "kepala-halaman", "keadaan", "ubin", "tabel", "daftar-detail", "formulir", "alur", "laporan"];
+const PALETTES = ["Marun", "Zamrud", "Samudra", "Terakota", "Anggur", "Arang"];
 
 for (const viewport of VIEWPORTS) {
   test.describe(`fondasi desain @ ${viewport.name}`, () => {
@@ -2603,6 +3665,20 @@ for (const viewport of VIEWPORTS) {
     });
   });
 }
+
+// Satu tangkapan per palet pada ukuran terkecil yang wajib (spec 2026-09-13 §A6).
+test.describe("palet tema @ 1280x800", () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+  for (const name of PALETTES) {
+    test(`palet: ${name}`, async ({ signedInPage: page }) => {
+      await page.goto("/operasional/pola");
+      const section = page.locator("section#palet");
+      await section.scrollIntoViewIfNeeded();
+      await section.getByRole("radio", { name }).click();
+      await expect(section).toHaveScreenshot(`palet-${name.toLowerCase()}-1280x800.png`);
+    });
+  }
+});
 ```
 
 - [ ] **Step 4: Jalankan pertama kali tanpa baseline**
@@ -2620,7 +3696,7 @@ Buka beberapa berkas di `e2e/__screenshots__/` (mis. `shell-1280x800.png`, `daft
 - [ ] **Step 6: Jalankan ulang tanpa perubahan**
 
 Run: `./node_modules/.bin/pnpm test:visual`
-Expected: seluruhnya PASS (3 ukuran × 11 uji = 33 uji).
+Expected: seluruhnya PASS (3 ukuran × 12 uji = 36 uji, ditambah 6 uji palet pada 1280×800 = 42 uji).
 
 - [ ] **Step 7: Perintah mutu, audit, commit**
 
@@ -2660,9 +3736,9 @@ Catat setiap halaman lama yang **rusak** oleh token atau shell baru (bukan yang 
 
 Keluar, buka `/operasional` → panel *Silakan masuk dulu*. Pastikan tombol *Masuk* membawa ke `/login`. (Keadaan *Halaman ini bukan untuk peran Anda* dan *Ganti kata sandi awal Anda* dijaga `accessState.test.ts`; tidak perlu mengetik kata sandi akun uji untuk membuktikannya di layar.)
 
-- [ ] **Step 3: Putuskan tipografi dengan perbandingan berdampingan (spec §2.3)**
+- [ ] **Step 3: Periksa tipografi yang sudah diputuskan (spec 2026-09-13 §A3)**
 
-Di `/operasional/pola` pada 1280×800, tangkap bagian `#token`, `#tabel`, dan `#formulir` dua kali: sekali dengan Manrope (bawaan), sekali dengan keluarga rapat pembanding yang **sudah dimuat** halaman — ubah sementara lewat DevTools `document.body.style.fontFamily = 'ui-sans-serif, system-ui, sans-serif'` (font sistem; tidak menambah muatan font baru). Bandingkan keterbacaan angka tabular, lebar kolom tabel, dan jumlah baris yang muat. **Manrope tetap kecuali font pembanding jelas lebih terbaca pada 14px**; tulis putusannya beserta dua pasang tangkapan layarnya di laporan dan sebagai satu kalimat di `docs/PANDUAN-SUARA-DAN-BAHASA.md` bagian akhir ("Tipografi: … karena …"). Bila berganti, perubahannya hanya pada `font-family` aturan `body` dan `.font-display` di `client/src/index.css`, lalu jalankan `pnpm test:visual:update` dan periksa baseline barunya.
+Tipografi **tidak lagi diputuskan di tugas ini**: Bricolage Grotesque untuk judul dan angka besar, Manrope untuk isi. Di `/operasional/pola` pada 1280×800, jalankan `document.fonts.check('800 20px "Bricolage Grotesque"')` dan `document.fonts.check('14px Manrope')` di konsol — keduanya harus `true`. Matikan jaringan di DevTools lalu muat ulang: halaman tetap terbaca dengan fallback sistem (risiko residual font). Tulis satu kalimat di `docs/PANDUAN-SUARA-DAN-BAHASA.md` bagian akhir: "Tipografi: Bricolage Grotesque untuk judul dan angka besar, Manrope untuk isi — diputuskan pengguna 13 September 2026 (spec tema Konter Tebal §A3)."
 
 - [ ] **Step 4: Perbarui panduan A–Z**
 
@@ -2694,7 +3770,7 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 ./node_modules/.bin/pnpm audit --prod --audit-level=high
 ```
 
-Sebutkan angka yang benar-benar terlihat dan selisihnya terhadap baseline `1428 passed | 2 skipped` (161 berkas). Perkiraan dari rencana ini: +1 berkas/+2 uji (Tugas 1), +1/+18 (Tugas 2), +2/+6 (Tugas 3), +0/+3 (Tugas 4), +1/+7 (Tugas 5), +1/+8 (Tugas 6), +4/+11 (Tugas 7), +2/+8 (Tugas 8), +1/+2 (Tugas 9) — angka sebenarnya yang berlaku, bukan perkiraan ini. Jangan menyebut audit bersih.
+Sebutkan angka yang benar-benar terlihat dan selisihnya terhadap baseline `1428 passed | 2 skipped` (161 berkas). Perkiraan dari rencana ini: +1 berkas/+2 uji (Tugas 1), +1/+18 (Tugas 2), +2/+6 (Tugas 3), +0/+3 (Tugas 4), +1/+7 (Tugas 5), +1/+8 (Tugas 6), +4/+11 (Tugas 7), +2/+17 (Tugas 7A), +1/+2 (Tugas 7B), +2/+8 (Tugas 8), +1/+3 (Tugas 9) — angka sebenarnya yang berlaku, bukan perkiraan ini. Jangan menyebut audit bersih.
 
 - [ ] **Step 6: Centang dan commit**
 
@@ -2717,4 +3793,6 @@ Penerapan ke produksi **tidak** otomatis bagian tugas ini. Bila diminta: `deploy
 2. **Teks isi dasar turun ke 14px** untuk seluruh halaman, termasuk yang lama. Halaman yang menulis ukurannya sendiri tidak terpengaruh; yang mengandalkan bawaan akan sedikit lebih kecil.
 3. **Palet ⌘K belum mencari rekaman** — ditunda ke sub-proyek 4 dan 6 (spec §2.4).
 4. **Baseline Playwright bergantung pada font dan versi Chromium lokal**; diperbarui dengan sadar lewat `test:visual:update`, tidak di CI.
-5. **Aksen perusahaan belum dapat diisi** — kolom `accentColor` baru ada di sub-proyek 2. Sampai itu, `applyBrandAccent` belum dipanggil dari mana pun dan seluruh pembeli memakai aksen produk.
+5. **Palet dan warna utama perusahaan belum dapat dipilih** — kolom `themePalette` dan `accentColor` baru ada di sub-proyek 2 (spec 2026-09-13 §A5). Sampai itu, `applyTheme` hanya dipanggil pratinjau galeri dan seluruh pembeli memakai palet Marun.
+6. **Kontras `--ink-subtle` diturunkan dengan `color-mix`** dan tidak diuji otomatis seperti pasangan palet; diperiksa di peramban pada Tugas 7B dan 12.
+7. **Halaman lama tanpa `h1`** (`/operasional`, `/operasional/stock/kas-awal`, `/kepatuhan/ira`, ditemukan pada verifikasi Tugas 7) — tertutup ketika tiap modul memakai `PageHeader`.
