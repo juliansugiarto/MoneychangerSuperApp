@@ -26,4 +26,5 @@ export const FOUNDATION_FILES: readonly string[] = [
   "client/src/components/shell/AccessPanel.tsx",
   "client/src/components/shell/AppHeader.tsx",
   "client/src/components/shell/AppSidebar.tsx",
+  "client/src/pages/GaleriPola.tsx",
 ];
