@@ -25,7 +25,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 7B — Gaya ulang pola dan shell Konter Tebal
 - [x] Tugas 8 — Palet perintah ⌘K dan pintasan konter
 - [x] Tugas 9 — Galeri pola `/operasional/pola`
-- [ ] Tugas 10 — Panduan suara dan bahasa
+- [x] Tugas 10 — Panduan suara dan bahasa
 - [ ] Tugas 11 — Playwright dan basis data visual `mc_t_visual`
 - [ ] Tugas 12 — Verifikasi di peramban, dokumentasi, penutupan
 
