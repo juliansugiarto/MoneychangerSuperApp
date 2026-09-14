@@ -11,3 +11,7 @@ backups/
 .agents/
 .claude/skills/
 skills-lock.json
+
+test-results/
+playwright-report/
+e2e/.auth/
