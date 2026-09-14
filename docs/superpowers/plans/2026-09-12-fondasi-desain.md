@@ -23,7 +23,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 7 — Shell aplikasi baru
 - [x] Tugas 7A — Palet dan token Konter Tebal
 - [x] Tugas 7B — Gaya ulang pola dan shell Konter Tebal
-- [ ] Tugas 8 — Palet perintah ⌘K dan pintasan konter
+- [x] Tugas 8 — Palet perintah ⌘K dan pintasan konter
 - [ ] Tugas 9 — Galeri pola `/operasional/pola`
 - [ ] Tugas 10 — Panduan suara dan bahasa
 - [ ] Tugas 11 — Playwright dan basis data visual `mc_t_visual`
