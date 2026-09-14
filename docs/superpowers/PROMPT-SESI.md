@@ -70,35 +70,54 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 12 September 2026 (sesudah penerapan produksi dan rancangan Program Desain Ulang Antarmuka)
+## Sesi berikutnya — keadaan per 14 September 2026 (sesudah Tugas 7A dan 7B Fondasi Desain: tema Konter Tebal)
 
 **Seluruh paket peta jalan asli sudah selesai:** K1, B, D, C, E, F1, F2, G, H, I, J (J1+J2), K2,
 K3, L, dan **M**. Dua belas temuan pemeriksaan BI 2026 sudah tertutup; pada
 `specs/2026-09-09-pbi-10-2024-temuan-awal.md` (PBI No. 10 Tahun 2024) Temuan 1 dan 2 tertutup oleh
 Paket L, dan **Temuan 4 tertutup oleh Paket M** dengan premis yang sudah dikoreksi.
 
-**Pekerjaan berikutnya: Program Desain Ulang Antarmuka, sub-proyek 1 (Fondasi Desain), mulai dari
-Tugas 1.** Spec `specs/2026-09-12-desain-ulang-antarmuka-design.md` disetujui pengguna 12 September
-2026 (`5553988`, koreksi §2.4 di `015a618`); rencana bertugas `plans/2026-09-12-fondasi-desain.md`
-(12 tugas, `015a618`). **Seluruh keputusan pengguna tertulis di spec — jangan ditanyakan ulang:**
-produk mandiri lebih dulu (SOLVINC kelak sebagai cara masuk tambahan), halaman kurs publik yang dapat
-dikonfigurasi, 1280–1440px lebih dulu, bahasa sehari-hari dengan istilah BI sebagai label kecil, kode
-pemulihan sekali pakai, desain netral + aksen per perusahaan, penyampaian modul demi modul di tempat
-(pendekatan A), penjelasan AI pada IRA memakai kunci milik pembeli dan mati secara bawaan, Playwright
-sejak sub-proyek 1. Sub-proyek 2–9 masing-masing mendapat spec dan rencana sendiri pada awal sesinya.
+**Pekerjaan berikutnya: Program Desain Ulang Antarmuka, sub-proyek 1 (Fondasi Desain), Tugas 8**
+(palet perintah ⌘K dan pintasan konter). Tugas 1–7, **7A**, dan **7B** sudah di-commit dan tercentang
+di `plans/2026-09-12-fondasi-desain.md`; tersisa Tugas 8, 9, 10, 11, 12. Spec program
+`specs/2026-09-12-desain-ulang-antarmuka-design.md` (12 September) **diperbarui** oleh
+`specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md` (`8250e87`).
+
+**Keputusan pengguna 13 September 2026 — jangan ditanyakan ulang** (lengkapnya di spec 2026-09-13):
+tampilan netral abu-abu ditolak (*"korporat sekali seperti SIPUKA"*; empat tema berganti warna pada
+tata letak yang sama juga ditolak: *"semuanya terlihat sama, seperti buatan AI"*); gaya **Konter
+Tebal** intensitas **B** — bingkai, judul, ubin, tombol utama tebal; input dan baris kerja tenang;
+**enam palet** siap pakai (Marun bawaan, Zamrud, Samudra, Terakota, Anggur, Arang) ditambah warna utama
+sendiri **hanya bila lolos kontras** — pemilihnya dibangun di sub-proyek 2 bersama kolom
+`themePalette`/`accentColor`; **sub-proyek 1B Papan Kurs** disisipkan tepat sesudah fondasi (seluruh
+valuta di satu papan, kurs **per kelompok pecahan**, aktivasi atomik dengan alasan, harga bon terisi
+dari papan dan boleh diubah dalam toleransi — di luar toleransi wajib alasan dan masuk tinjauan; garis
+kisi tegas dan sorot baris + kolom); kurs dikeluarkan dari sub-proyek 5. Urutan program kini
+**1 → 1B → 2 → … → 9**. Keputusan 12 September lain tetap berlaku; keputusan #6 (desain netral) diganti.
+
+**Cara eksekusi yang dipilih pengguna: subagent-driven development** — satu implementer per tugas, satu
+reviewer (spesifikasi + mutu) per tugas, pengendali memeriksa hasil di peramban dan memutus ruling.
+Ledger ada di `.superpowers/sdd/2026-09-12-fondasi-desain/progress.md`: tabel pemindaian pra-eksekusi,
+setiap `Ruling:`, minor tertunda untuk reviu akhir, dan baris `Task <N>: complete`. **Ledger itu tidak
+di-commit** (`.superpowers/` tidak terlacak dan belum di `.gitignore`); bila hilang, `git log` adalah
+pemulihannya — Tugas 7A = `083ad27`, Tugas 7B = `3956517`.
 
 **Prompt untuk sesi berikutnya:**
 
 ```
-Baca docs/superpowers/plans/2026-09-12-fondasi-desain.md dan spec yang dirujuknya.
-Kerjakan HANYA Tugas 1, ikuti langkahnya berurutan.
-Centang setiap langkah di berkas rencana setelah selesai,
-lalu centang barisnya di bagian Status Pengerjaan pada rencana itu.
-Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
+Pakai superpowers:subagent-driven-development untuk docs/superpowers/plans/2026-09-12-fondasi-desain.md.
+Ledger: .superpowers/sdd/2026-09-12-fondasi-desain/progress.md — Tugas 1 sampai 7B sudah complete.
+Lanjutkan dari Tugas 8 sampai Tugas 12, lalu reviu akhir seluruh cabang dan kumpulkan semua Ruling.
+Pemeriksaan peramban dilakukan pengendali. Tugas 12 Step 7 (penerapan produksi) hanya bila saya minta.
 ```
 
-Untuk tugas berikutnya, ganti angkanya saja. Baris *Sub-proyek 1* pada `ROADMAP-SISA-PEKERJAAN.md`
-baru dicentang di Tugas 12.
+Bila ingin mengerjakan langsung satu tugas per sesi, Prompt B di atas tetap berlaku dengan `<N>` = 8.
+Baris *Sub-proyek 1* pada `ROADMAP-SISA-PEKERJAAN.md` baru dicentang di Tugas 12. **Rencana bertugas
+1B belum ditulis** — sesuai aturan program, ditulis pada awal sesi 1B (sesudah Tugas 12) dari spec
+2026-09-13 Bagian B, karena kode kurs yang disentuhnya dapat berubah sebelum itu.
+
+**Produksi tidak disentuh sejak 12 September 2026** (kode produksi tetap `724de6b`; Tugas 1–7B belum
+diterapkan). Keadaan terakhirnya:
 
 **Produksi sudah diterapkan dan direset (11–12 September 2026).** Seluruh tabel produksi dihapus atas
 permintaan pengguna ("FRESHSTART"), lalu `deploy.sh` dijalankan manual: produksi kini `724de6b`,
@@ -111,18 +130,21 @@ impor ulang daftar DTTOT/DPPSPM, mengisi ulang Profil Perusahaan, menghapus bari
 `Bash(ssh -o BatchMode=yes -o ConnectTimeout=10 deploy@187.53.128.14:*)`. Temuan 3 tetap menunggu
 keputusan pengguna.
 
-Baseline uji yang benar-benar dijalankan 11 September 2026 sesudah Paket M Tugas 9:
-`Test Files 161 passed (161)`, `Tests 1428 passed | 2 skipped (1430)`. `tsc --noEmit` bersih,
-`vite build` sukses (hanya peringatan ukuran chunk yang sudah lama ada). Paket M menambah **71 uji**
-di atas baseline L (`1357 passed`): 25 aturan retensi, 9 penulis `relationshipEndedAt`, 25 nonaktif
-dan hapus permanen (17 perilaku + 8 otorisasi), 3 penjaga, 9 pembacaan retensi. Tidak ada uji lama
-yang dibuang; `server/backOfficeNavigation.test.ts` hanya mendapat satu rute baru. **`pnpm audit`
-TIDAK dijalankan** pada sesi ini — Paket M tidak menyentuh dependensi, dan sembilan temuan lama tetap
-berlaku. **Jangan menyebut audit bersih.**
+**Baseline uji yang benar-benar dijalankan pengendali 14 September 2026 pada `f9a3738`** (sesudah
+Tugas 7B): `Test Files 174 passed (174)`, `Tests 1502 passed | 2 skipped (1504)`. Selisih terhadap
+baseline 11 September (`161` berkas / `1428` lulus) adalah **+13 berkas, +74 uji**, seluruhnya dari
+sub-proyek 1: Tugas 1 +1/+2, Tugas 2 +1/+18, Tugas 3 +2/+6, Tugas 4 +0/+3, Tugas 5 +1/+7, Tugas 6
++1/+8, Tugas 7 +4/+11, Tugas 7A +2/+17, Tugas 7B +1/+2. Tidak ada uji lama yang dibuang.
 
-Sesi 12 September 2026 **tidak menjalankan ulang** uji: kode aplikasi tidak berubah; satu-satunya
-perubahan kode adalah `deploy.sh` (`724de6b`, flag `mysqldump` dan penjaga cadangan kosong), yang hanya
-diperiksa `bash -n` lalu terbukti dalam penerapan sungguhan.
+`tsc --noEmit` dan `vite build` bersih pada setiap tugas (dijalankan pengendali pada Tugas 1–7, oleh
+implementer pada 7A dan 7B); **tidak dijalankan ulang pada `f9a3738`**, yang hanya mencentang rencana.
+`pnpm audit --prod --audit-level=high` terakhir dijalankan Tugas 1 (12 September, dependensi `-D`
+baru: `jsdom`, `@testing-library/react`, `@testing-library/dom`, `@testing-library/user-event`):
+**9 kerentanan (6 sedang, 3 tinggi)** — dan isinya **bukan hanya SheetJS**: tujuh advisori berbeda,
+`xlsx` 2 (tinggi), `mysql2` 2 (1 tinggi, 1 sedang), `qs` 3 (sedang). **Jangan menyebut audit bersih.**
+
+**Tidak ada migrasi baru sejak 12 September 2026** — diukur 14 September: `ls drizzle/*.sql` = 59
+berkas, terakhir `0058_brief_proteus.sql`. Sub-proyek 1 memang dilarang menyentuh skema.
 
 **Uji wajib dijalankan dengan `.env` termuat.** Tanpa itu
 `server/internalAuth.developmentAccounts.test.ts` gagal sendirian dengan *"Database tidak
@@ -245,6 +267,62 @@ jalankan ulang berkas itu saja.
 - **Berkas rencana yang sangat panjang wajib ditulis bertahap** (tulis kepala + beberapa tugas, lalu
   tambahkan sisanya per potongan). Menulisnya dalam satu keluaran pernah terpotong batas token keluaran
   12 September 2026.
+- **`tailwind-merge` tidak mengenal token fondasi — `cn` sudah diperluas, dan token baru wajib ikut
+  didaftarkan.** Diperiksa 13 September 2026 pada v3.3.1: tanpa perluasan, `text-body`/`text-label`
+  dianggap **warna** dan dibuang bila bertemu `text-ink`, sedangkan `h-9 h-control` dan
+  `shadow-xs shadow-hard` dipertahankan berdua sehingga urutan CSS yang menentukan. Perluasannya ada di
+  `client/src/lib/utils.ts` (`extendTailwindMerge`, tema `text`/`shadow`/`spacing`) dan dijaga
+  `client/src/lib/utils.test.ts`. Menambah ukuran teks, bayangan, atau spasi bernama baru di
+  `@theme` **tanpa** mendaftarkannya di sana akan membuat kelasnya hilang diam-diam saat dilewatkan ke
+  komponen shadcn.
+- **`.font-display` dipakai 38 berkas halaman lama** (Manrope 800). Jangan mengubahnya; huruf judul
+  Konter Tebal (Bricolage Grotesque) bernama **`font-heading`**.
+- **Lapisan dalam `Sidebar` shadcn memakai `bg-sidebar` sendiri**, dan laci ponselnya tidak menerima
+  `className`. Mewarnai sidebar lewat kelas pada `AppSidebar` saja tidak cukup — token `--sidebar*` di
+  `:root` sudah dipetakan ke token fondasi (`--sidebar: var(--paper)`, `--sidebar-border: var(--ink)`).
+  **`SidebarGroup` wajib `shrink-0`**: tanpanya, bila menu lebih tinggi daripada layar (1280×800,
+  Pemegang Saham), kelompok diperas kolom flex dan butirnya saling menimpa alih-alih bergulir.
+- **Token turunan palet dideklarasikan pada `:root, [data-tema]`.** Variabel yang dihitung di `:root`
+  (mis. `--surface-raised: color-mix(… var(--paper) …)`) tidak ikut berubah bila `--paper` ditimpa
+  pada elemen di bawahnya; `applyTheme` karena itu memberi atribut `data-tema` pada wadahnya.
+- **`--line-quiet` hanya 2,01:1 terhadap latar** (diukur di peramban, Marun) — cukup untuk garis
+  pemisah, **tidak** untuk batas kolom isian (WCAG 1.4.11 menuntut 3:1). `QUIET_FIELD` karena itu memakai
+  `border-ink-subtle` (6,06:1). `--ink` 16,88:1, `--ink-muted` 9,67:1.
+- **Tiga batas perkakas peramban yang menghabiskan waktu verifikasi:** (1) tombol **Tab** yang dikirim
+  ekstensi Chrome **tidak memindahkan fokus** — `activeElement` tetap `BODY`; cincin fokus diperiksa
+  dengan menekan Tab sungguhan atau lewat Playwright. (2) **Transisi CSS tidak maju di tab latar**:
+  pengukuran `getComputedStyle` sesudah menciutkan sidebar dapat membaca keadaan awal transisi (opacity
+  1, lebar 232) dan screenshot dapat menangkapnya di tengah jalan — ukur ulang sesudah screenshot/zoom
+  mengaktifkan tab. (3) **`resize_window` tidak dapat melebihi layar fisik**: 1440×900 dan 1920×1080
+  tetap terbaca 1280×659; ukuran itu diverifikasi Playwright (Tugas 11), bukan peramban ini.
+- **Sesi pengendali tidak boleh mengetik kata sandi untuk masuk**, termasuk akun uji lokal. Bila
+  peramban keluar, minta pengguna masuk sendiri; token dan panel akses tetap dapat diperiksa tanpa masuk.
+- **"Hanya 7 kurs" bukan batas kode.** Basis data lokal `moneychanger` memuat 8 valuta (7 asing + IDR),
+  hanya 1 berkurs aktif; katalog `shared/worldCurrencies.ts` memuat 151 valuta. Masalah halaman Kurs
+  ada pada susunannya (±10 kartu, satu kurs per kartu, aktivasi tidak atomik) — lihat spec 2026-09-13
+  Bagian B.
+- **Mockup sesi rancangan tersimpan lokal** di `.superpowers/brainstorm/59970-1789210543/content/`
+  (`gaya-karakter.html` pilihan 3, `tebal-intensitas.html` pilihan B, `palet-konter-tebal.html`,
+  `papan-kurs.html`) — rujukan visual yang disetujui pengguna, tidak di-commit.
+
+### Risiko residual Fondasi Desain (Tugas 1–7B) yang masih terbuka
+
+- **Halaman lama tanpa `h1`**: `/operasional`, `/operasional/stock/kas-awal`, `/kepatuhan/ira`
+  (dan kemungkinan lainnya) sejak kepala shell berhenti menjadi heading. Tertutup ketika tiap modul
+  memakai `PageHeader`.
+- **1440×900 dan 1920×1080 belum diverifikasi di layar** (batas jendela); menunggu Playwright Tugas 11.
+- **Cincin fokus papan ketik shell Konter Tebal belum terlihat di layar** — ruling pada ledger
+  memindahkannya ke Tugas 12 Step 1. Aturan fokusnya ada di kode.
+- **Kontras turunan hanya diukur untuk Marun.** Pasangan palet diuji otomatis untuk keenam palet,
+  tetapi `--ink-subtle`/`--ink-muted` hasil `color-mix` pada lima palet lain belum diukur.
+- **`QUIET_FIELD` belum dipakai komponen mana pun** sampai input galeri Tugas 9; `applyTheme` belum
+  dipanggil aplikasi sampai pratinjau Tugas 9 dan pemilih palet sub-proyek 2 — seluruh pembeli memakai
+  Marun.
+- **Halaman lama tampil dengan gaya lamanya di dalam shell Konter Tebal** (mis. tab navy dan kartu
+  bayangan lembut di Kas Awal) — campuran gaya yang disengaja sampai modulnya dibangun ulang.
+- **Font dari Google Fonts** membutuhkan internet; tanpa sambungan, peramban memakai fallback sistem.
+- **Implementer subagen tidak mencentang langkah rencana**; pengendali mencentangnya sesudah reviu
+  (`f9a3738`). Periksa ulang checkbox sesudah setiap tugas.
 
 ### Risiko residual Paket J2 yang masih terbuka
 
@@ -701,6 +779,13 @@ Urut sesuai usul pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`:
    rahasia `SSH_*`/`DEPLOY_PATH` pada environment `production` belum benar atau firewall menolak
    GitHub. Log galatnya hanya terlihat oleh pemilik repo di tab Actions. Sampai diperbaiki, setiap
    push ke `main` menghasilkan satu run gagal dan penerapan dilakukan manual.
+10. **Harga per seri uang kertas (lama/baru)** — dikeluarkan dari sub-proyek 1B (spec 2026-09-13 §B4).
+    Seri tidak tercatat di skema mana pun; menambahkannya mengubah `cash_denomination_balances`, sumber
+    kebenaran kas. Sampai diputuskan, selisih harga karena seri diketik pada bon dalam toleransi atau
+    dengan alasan. **Butuh keputusan pengguna** sebelum dirancang.
+11. **`.superpowers/` belum masuk `.gitignore`** — memuat ledger eksekusi subagen dan mockup rancangan.
+    Seluruh commit sesi ini menambahkan berkas dengan nama eksplisit supaya folder itu tidak ikut;
+    `git add -A` akan menyeretnya.
 
 **Antrean migrasi produksi kosong** sejak penerapan 12 September 2026 (jurnal 59 = berkas 59).
 Migrasi berikutnya ikut penerapan manual `deploy.sh`, dan tetap tidak boleh diterapkan tanpa

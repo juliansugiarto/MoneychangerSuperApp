@@ -317,23 +317,29 @@ sebagai tidak ditatausahakan di aplikasi ini.
 
 ---
 
-### Program Desain Ulang Antarmuka — **DIRANCANG 12 September 2026, sub-proyek 1 siap dieksekusi**
+### Program Desain Ulang Antarmuka — **DIRANCANG 12 September 2026; tema Konter Tebal dan sub-proyek 1B ditambahkan 13 September; sub-proyek 1 sedang dieksekusi (Tugas 1–7B selesai 14 September)**
 
-Spec: `specs/2026-09-12-desain-ulang-antarmuka-design.md` (disetujui pengguna 12 September 2026).
-Rencana bertugas sub-proyek 1: `plans/2026-09-12-fondasi-desain.md`. Setiap sub-proyek lain mendapat
-spec dan rencananya sendiri pada awal sesinya.
+Spec: `specs/2026-09-12-desain-ulang-antarmuka-design.md` (disetujui pengguna 12 September 2026),
+**diperbarui** oleh `specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md` (disetujui pengguna
+13 September 2026). Rencana bertugas sub-proyek 1: `plans/2026-09-12-fondasi-desain.md` (kini 14 tugas:
+1–7, 7A, 7B, 8–12). Setiap sub-proyek lain mendapat spec dan rencananya sendiri pada awal sesinya;
+rencana 1B ditulis pada awal sesi 1B dari spec 2026-09-13 Bagian B.
 
 Keputusan pengguna 12 September 2026 (lengkapnya di spec): produk mandiri lebih dulu; halaman kurs
 publik yang dapat dikonfigurasi; 1280–1440px lebih dulu; bahasa sehari-hari dengan istilah BI sebagai
-label kecil; kode pemulihan sekali pakai; desain netral + aksen per perusahaan; penyampaian modul demi
-modul di tempat; penjelasan AI pada IRA memakai kunci milik pembeli, mati secara bawaan; Playwright
-sejak sub-proyek 1.
+label kecil; kode pemulihan sekali pakai; ~~desain netral + aksen per perusahaan~~ **diganti 13 September
+2026: gaya Konter Tebal intensitas B dengan enam palet siap pakai (Marun bawaan) dan warna utama sendiri
+yang lolos kontras**; penyampaian modul demi modul di tempat; penjelasan AI pada IRA memakai kunci milik
+pembeli, mati secara bawaan; Playwright sejak sub-proyek 1. Keputusan 13 September juga menyisipkan
+**papan kurs sebagai sub-proyek 1B** tepat sesudah fondasi dan mengeluarkan kurs dari sub-proyek 5.
+Urutan: 1 → 1B → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9.
 
-- [ ] Sub-proyek 1 — Fondasi desain (token, kepadatan, shell, ⌘K, enam pola, galeri, panduan bahasa, Playwright)
-- [ ] Sub-proyek 2 — Login, penyiapan awal, kode pemulihan, halaman kurs publik
+- [ ] Sub-proyek 1 — Fondasi desain (token, tema Konter Tebal dan enam palet, kepadatan, shell, ⌘K, enam pola, galeri, panduan bahasa, Playwright)
+- [ ] Sub-proyek 1B — Papan kurs (seluruh valuta, kurs per kelompok pecahan, aktivasi atomik, toleransi harga bon)
+- [ ] Sub-proyek 2 — Login, penyiapan awal, kode pemulihan, halaman kurs publik, pemilih palet perusahaan
 - [ ] Sub-proyek 3 — Penilaian risiko berbahasa manusia + penjelasan AI
 - [ ] Sub-proyek 4 — Kasir & transaksi
-- [ ] Sub-proyek 5 — Kas, stok & kurs
+- [ ] Sub-proyek 5 — Kas & stok (kurs pindah ke 1B)
 - [ ] Sub-proyek 6 — Nasabah
 - [ ] Sub-proyek 7 — Laporan & keuangan
 - [ ] Sub-proyek 8 — Kepatuhan & arsip
