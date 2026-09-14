@@ -3,13 +3,16 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { trpc } from "@/lib/trpc";
 import type { BackOfficeRole } from "@shared/backOfficeNavigation";
 import type { CSSProperties, ReactNode } from "react";
+import { useState } from "react";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { AccessPanel } from "./shell/AccessPanel";
 import { accessStateFor } from "./shell/accessState";
 import { AppHeader } from "./shell/AppHeader";
 import { AppSidebar } from "./shell/AppSidebar";
 import { brandName } from "./shell/brand";
+import { CommandPalette } from "./shell/CommandPalette";
 import { pageTitleFor } from "./shell/pageTitle";
+import { useShortcuts } from "./shell/shortcuts";
 
 function goTo(path: string) {
   window.history.pushState({}, "", path);
@@ -29,6 +32,11 @@ export default function DashboardLayout({ children, minimumRole = "STAFF" }: { c
   const { loading, user, logout } = useAuth();
   const access = accessStateFor({ loading, user }, minimumRole);
   const profile = trpc.companyProfile.get.useQuery(undefined, { enabled: access === "ALLOWED", staleTime: 5 * 60_000 });
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useShortcuts({
+    openPalette: () => { if (access === "ALLOWED") setPaletteOpen(true); },
+    newTransaction: () => { if (access === "ALLOWED") goTo("/operasional/transaksi"); },
+  });
 
   if (access === "LOADING") return <DashboardLayoutSkeleton />;
   if (access === "SIGNED_OUT") return <AccessPanel title="Silakan masuk dulu" detail="Halaman ini hanya untuk staf. Masuk dengan akun yang diberikan pemilik usaha Anda." action="Masuk" onAction={() => goTo("/login")} />;
@@ -51,9 +59,10 @@ export default function DashboardLayout({ children, minimumRole = "STAFF" }: { c
         onLogout={logout}
       />
       <SidebarInset className="min-w-0 bg-surface">
-        <AppHeader group={page.group} title={page.title} onOpenSearch={() => {}} />
+        <AppHeader group={page.group} title={page.title} onOpenSearch={() => setPaletteOpen(true)} />
         <main className="min-w-0 flex-1 px-gutter py-4">{children}</main>
       </SidebarInset>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} role={user!.role as BackOfficeRole} onNavigate={goTo} />
     </SidebarProvider>
   );
 }

@@ -21,6 +21,8 @@ export const FOUNDATION_FILES: readonly string[] = [
   "client/src/components/shell/brand.ts",
   "client/src/components/shell/pageTitle.ts",
   "client/src/components/shell/navigationIcons.ts",
+  "client/src/components/shell/shortcuts.ts",
+  "client/src/components/shell/CommandPalette.tsx",
   "client/src/components/shell/AccessPanel.tsx",
   "client/src/components/shell/AppHeader.tsx",
   "client/src/components/shell/AppSidebar.tsx",
