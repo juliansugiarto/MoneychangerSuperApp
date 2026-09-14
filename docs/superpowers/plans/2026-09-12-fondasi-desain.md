@@ -21,8 +21,8 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 5 — Pola: kepala halaman, keadaan, ubin angka
 - [x] Tugas 6 — Pola: tabel, daftar + detail, formulir, alur bertahap, laporan
 - [x] Tugas 7 — Shell aplikasi baru
-- [ ] Tugas 7A — Palet dan token Konter Tebal
-- [ ] Tugas 7B — Gaya ulang pola dan shell Konter Tebal
+- [x] Tugas 7A — Palet dan token Konter Tebal
+- [x] Tugas 7B — Gaya ulang pola dan shell Konter Tebal
 - [ ] Tugas 8 — Palet perintah ⌘K dan pintasan konter
 - [ ] Tugas 9 — Galeri pola `/operasional/pola`
 - [ ] Tugas 10 — Panduan suara dan bahasa
@@ -1835,7 +1835,7 @@ Ditambahkan 13 September 2026 dari `docs/superpowers/specs/2026-09-13-tema-konte
   - `applyTheme(root: HTMLElement, paletteId: string | null | undefined, customBrand?: string | null): { palette: ThemePalette; brand: AccentResolution }` — **menggantikan** `applyBrandAccent`; menulis `--paper --ink --brand --brand-contrast --second --second-contrast` dan atribut `data-tema`
   - Utilitas Tailwind: `bg-paper`, `bg-second`, `text-second-contrast`, `border-line-quiet`, `shadow-hard`, `shadow-tile`, `shadow-focus`, `font-heading`
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 `client/src/lib/utils.test.ts`:
 
@@ -1964,12 +1964,12 @@ dan tambahkan uji terakhir di dalam `describe("penjaga fondasi desain", …)`:
   });
 ```
 
-- [ ] **Step 2: Jalankan dan pastikan gagal**
+- [x] **Step 2: Jalankan dan pastikan gagal**
 
 Run: `./node_modules/.bin/vitest run client/src/lib/utils.test.ts shared/themePalettes.test.ts shared/accentColor.test.ts client/src/lib/brandAccent.test.tsx client/src/designFoundation.guard.test.ts`
 Expected: FAIL — setidaknya lima dari enam kasus `cn` gagal (pada 13 September 2026 `text-body`/`text-label` dibuang, sedangkan `text-sm text-body`, `h-9 h-control`, dan `shadow-xs shadow-hard` dipertahankan berdua); `./themePalettes` belum ada (dua berkas); `applyTheme` belum ada; uji pengganti `resolveAccent` gagal karena argumen kedua diabaikan. Sebutkan jumlah kegagalan yang benar-benar terlihat.
 
-- [ ] **Step 3: Perluas `cn`**
+- [x] **Step 3: Perluas `cn`**
 
 Ganti seluruh isi `client/src/lib/utils.ts`:
 
@@ -1997,7 +1997,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 ```
 
-- [ ] **Step 4: Tulis palet dan perbarui aksen**
+- [x] **Step 4: Tulis palet dan perbarui aksen**
 
 `shared/themePalettes.ts`:
 
@@ -2102,7 +2102,7 @@ export function applyTheme(root: HTMLElement, paletteId: string | null | undefin
 }
 ```
 
-- [ ] **Step 5: Token CSS dan font**
+- [x] **Step 5: Token CSS dan font**
 
 Di `client/src/index.css`, dalam `@theme inline { … }`, sesudah baris `--color-info-soft: var(--info-soft);`, tambahkan:
 
@@ -2170,12 +2170,12 @@ Sesudah penutup blok `:root { … }` (sebelum `.dark {`), sisipkan:
 
 Di `client/index.html`, ganti `https://fonts.googleapis.com/css2?family=IBM+Plex+Mono` dengan `https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono` (sisa URL tetap).
 
-- [ ] **Step 6: Jalankan uji berkas ini**
+- [x] **Step 6: Jalankan uji berkas ini**
 
 Run: perintah Step 2.
 Expected: seluruhnya PASS. Bila satu palet gagal AA, **perbaiki nilainya** di `themePalettes.ts` (dan di tabel spec §A1), jangan melonggarkan uji.
 
-- [ ] **Step 7: Perintah mutu, periksa di peramban, commit**
+- [x] **Step 7: Perintah mutu, periksa di peramban, commit**
 
 ```bash
 ./node_modules/.bin/vitest run
@@ -2208,7 +2208,7 @@ Spec 2026-09-13 Bagian A4 (intensitas B). **Struktur dan uji perilaku komponen t
   - `StatTile({ label, value, hint?, onOpen?, tone?: "plain" | "brand" | "second" })`
   - Butir induk sidebar ber-`data-active="true"` bila memuat halaman aktif; hanya pada mode ikon ia mendapat blok aksen.
 
-- [ ] **Step 1: Tulis uji sidebar yang gagal**
+- [x] **Step 1: Tulis uji sidebar yang gagal**
 
 `client/src/components/shell/AppSidebar.test.tsx`:
 
@@ -2244,12 +2244,12 @@ describe("AppSidebar", () => {
 
 Diperiksa 13 September 2026 dengan uji sementara: `AppSidebar` dapat dirender di jsdom dalam `SidebarProvider`, dan induk "Uang Kas" pada `/operasional/stock/kas-awal` saat ini ber-`data-active="false"`.
 
-- [ ] **Step 2: Jalankan dan pastikan gagal**
+- [x] **Step 2: Jalankan dan pastikan gagal**
 
 Run: `./node_modules/.bin/vitest run client/src/components/shell/AppSidebar.test.tsx`
 Expected: uji pertama FAIL (`expected 'false' to be 'true'`); uji kedua PASS.
 
-- [ ] **Step 3: Tulis kelas bersama**
+- [x] **Step 3: Tulis kelas bersama**
 
 `client/src/components/patterns/tebal.ts`:
 
@@ -2279,7 +2279,7 @@ export const FOCUS_RING = "focus-visible:outline-2 focus-visible:outline-offset-
 
 Tambahkan `"client/src/components/patterns/tebal.ts",` ke `FOUNDATION_FILES`.
 
-- [ ] **Step 4: Gaya ulang pola**
+- [x] **Step 4: Gaya ulang pola**
 
 Ganti seluruh isi setiap berkas berikut.
 
@@ -2611,7 +2611,7 @@ export function ReportLayout({ filters, summary, table, onExport, exportLabel = 
 }
 ```
 
-- [ ] **Step 5: Gaya ulang shell**
+- [x] **Step 5: Gaya ulang shell**
 
 `client/src/components/shell/AppHeader.tsx`:
 
@@ -2797,12 +2797,12 @@ function NavParent({ label, childItems, currentPath, onNavigate }: {
 }
 ```
 
-- [ ] **Step 6: Jalankan uji pola, shell, dan penjaga**
+- [x] **Step 6: Jalankan uji pola, shell, dan penjaga**
 
 Run: `./node_modules/.bin/vitest run client/src/components/patterns client/src/components/shell client/src/designFoundation.guard.test.ts client/src/lib`
 Expected: seluruhnya PASS — uji perilaku Tugas 5–7 tanpa perubahan, dua uji sidebar baru, penjaga warna mentah (termasuk `tebal.ts`).
 
-- [ ] **Step 7: Perintah mutu dan periksa di peramban**
+- [x] **Step 7: Perintah mutu dan periksa di peramban**
 
 ```bash
 ./node_modules/.bin/vitest run
@@ -2815,7 +2815,7 @@ Expected: +1 berkas, +2 uji dibanding Tugas 7A; setiap utilitas di atas bernilai
 
 Di peramban yang sudah masuk sebagai Pemegang Saham, buka `/operasional`, `/operasional/stock/kas-awal`, dan `/kepatuhan/ira` pada **1280×800, 1440×900, 1920×1080**. Ukur dengan JavaScript, bukan dikira: tinggi `header` 48; lebar `[data-slot="sidebar-container"]` 232 dan `borderRightWidth` `2px`; tidak ada `[data-slot="sidebar-group"]` yang tingginya lebih kecil dari `scrollHeight`; latar butir aktif `rgb(122, 31, 46)`; tidak ada gulir mendatar tingkat halaman. Ciutkan sidebar di `/operasional/stock/kas-awal`: induk "Uang Kas" berlatar `rgb(122, 31, 46)`. Periksa keenam palet dengan menimpa variabel di konsol (`const p = {…}; for (const [k, v] of Object.entries(p)) document.documentElement.style.setProperty(k, v)` memakai nilai tabel spec §A1) dan tangkap layarnya — lalu muat ulang halaman supaya kembali ke Marun. Tab dari awal halaman: setiap elemen fokus bergaris tinta terlihat.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add client/src/components/patterns client/src/components/shell client/src/designFoundation.ts
