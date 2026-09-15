@@ -42,8 +42,8 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 
 1. Masuk menggunakan akun internal yang diberikan oleh pengelola akses.
 2. Bila sistem meminta penggantian kata sandi awal, buat kata sandi baru yang hanya diketahui pemilik akun.
-3. Controller membuka **Pengawasan → Mulai Go-Live** dan **Kesiapan Operasional** untuk memeriksa kontrol yang belum siap.
-4. Admin memeriksa **Kontrol Outlet → Kurs Operasional** dan **Bandingkan Kurs**; pastikan daftar kurs aktif benar-benar milik outlet dan bukan data demo/historis.
+3. Controller membuka **Pengaturan → Langkah Persiapan Awal** dan **Kepatuhan → Status Kesiapan** untuk memeriksa kontrol yang belum siap.
+4. Admin memeriksa **Uang & Kurs → Kurs → Kurs Hari Ini** dan **Bandingkan Kurs**; pastikan daftar kurs aktif benar-benar milik outlet dan bukan data demo/historis.
 5. Controller mencatat **setoran modal** pemilik lewat **Kas & Persediaan → Modal & Bank** sebelum hitungan kas pagi yang pertama diisi. Kas awal pertama untuk sebuah mata uang tidak dijurnal bila asal uangnya belum tercatat, sehingga urutan terbalik meninggalkan Kas Rupiah timpang di buku besar (lihat §5.6a).
 6. Staff membuka **Buka & Tutup Outlet** dan **Kas Awal** untuk memastikan checklist serta mata uang kas dapat ditampilkan.
 7. Shareholder membuka **Pelaporan Regulator** hanya untuk membaca panduan; jangan membuat paket dengan data percobaan.
@@ -52,33 +52,45 @@ Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebe
 
 ## 4. Peta Menu
 
+Kelompok menu mengikuti sidebar sekarang (`shared/backOfficeNavigation.ts`): Hari ini, Transaksi, Uang
+& Kurs, Nasabah, Risiko, Laporan, Kepatuhan, Pengaturan. Beberapa menu adalah anak dari induk yang
+hanya mengembang (**Uang Kas**, **Kurs**) — ditulis `Kelompok → Induk → Menu`.
+
 | Kelompok menu | Menu | Kegunaan praktis | Peran minimum |
 |---|---|---|---|
-| Ringkasan | Hari Ini | Melihat transaksi, antrian, saldo tercatat, dan tindakan utama. | Staff |
-| Ringkasan | Monitoring | Pengawasan kondisi operasional dan tindak lanjut. | Controller |
-| Layanan & Transaksi | Buat Transaksi | Membuat bon jual/beli valuta baru, boleh berisi lebih dari satu mata uang. | Staff |
-| Layanan & Transaksi | Daftar Transaksi | Melihat riwayat bon per jenis (Jual/Beli), cetak ulang, ekspor CSV, kirim/batalkan bon. | Staff |
-| Layanan & Transaksi | Simulasi Aman | Latihan bon, guncangan kurs, penutupan, dan arsip tanpa penulisan produksi. | Staff |
-| Layanan & Transaksi | Permintaan Layanan | Mencatat serta menindaklanjuti kebutuhan layanan. | Staff |
-| Layanan & Transaksi | Nasabah Baru | Menambahkan data nasabah baru sesuai dokumen, termasuk Beneficial Owner, status PEP, dan pencocokan DTTOT/DPPSPM. | Staff |
-| Layanan & Transaksi | Daftar Nasabah | Mencari dan meninjau seluruh profil nasabah; ekspor data (tanpa dokumen KTP) ke CSV. | Staff |
-| Layanan & Transaksi | Pemantauan Profil | Worklist nasabah yang jatuh tempo ditinjau, deklarasi profil transaksi disandingkan dengan aktivitas nyatanya, dan pencatatan hasil peninjauan. | Controller |
-| Kontrol Outlet | Buka & Tutup Outlet | Checklist pembukaan, penutupan, catatan serah-terima, dan arsip PDF penutupan. | Staff |
-| Kontrol Outlet | Kurs Operasional | Memantau, menyiapkan, dan mengaktifkan kurs secara manual dengan alasan. | Admin |
-| Kontrol Outlet | Bandingkan Kurs | Membandingkan kurs outlet dengan referensi yang tersedia. | Admin |
-| Kontrol Outlet | Kas & Persediaan | Satu halaman dengan tab Kas Awal / Stok Saat Ini / Stock Opname / Penyesuaian Brankas (Controller) / Modal & Bank (Controller); pindah tab tanpa ganti halaman. | Staff |
-| Kontrol Outlet | Keluhan Nasabah | Register, investigasi, hasil, dan eskalasi pengaduan konsumen. | Staff |
-| Pengawasan | Kesiapan Operasional | Kontrol harian Controller, termasuk status Paket Pelaporan. | Controller |
-| Pengawasan | Direksi Mengetahui | Daftar informasi pengawasan yang perlu diakui Direksi. | Controller |
-| Pengawasan | Mulai Go-Live | Checklist kesiapan penggunaan produksi. | Controller |
-| Pengawasan | Laporan | Ringkasan internal dan arsip cetak/PDF yang tersedia. | Controller |
-| Pengawasan | Aset Tetap | Daftar aset tetap outlet, pendaftaran aset baru, pelepasan aset, dan batas kapitalisasi. | Controller |
-| Pengawasan | Pelaporan Regulator | LKU, snapshot B0002/B0003/B0004, insidental, maker-checker, dan ekspor manual. | Controller |
-| Pengawasan | Jejak Audit | Melihat tindakan penting yang tercatat sistem. | Controller |
-| Pengawasan | Impor Nasabah | Memetakan file pelanggan sesuai format yang ditetapkan. | Controller |
-| Pengawasan | Akses Staf | Membuat, mengatur peran, menonaktifkan, mereset sandi, atau meninjau akun. Dashboard Shareholder menyediakan pintasan khusus untuk Admin dan Staff. | Controller |
-| Pengawasan | Profil Perusahaan | Nama PT, nama dagang, izin usaha, logo, dan lampiran sertifikat — tampil di kwitansi cetak. | Controller |
-| Pengawasan | Arsip Dokumen | SOP, kebijakan internal, surat-menyurat BI, notulen rapat, dan korespondensi regulator, beserta riwayat versi dan masa berlakunya. | Controller |
+| Hari ini | Hari Ini | Melihat transaksi, antrian, saldo tercatat, dan tindakan utama. | Staff |
+| Hari ini | Buka & Tutup Outlet | Checklist pembukaan, penutupan, catatan serah-terima, dan arsip PDF penutupan. | Staff |
+| Hari ini | Pantauan Harian | Pengawasan kondisi operasional dan tindak lanjut (dahulu "Monitoring"). | Controller |
+| Transaksi | Buat Transaksi | Membuat bon jual/beli valuta baru, boleh berisi lebih dari satu mata uang. | Staff |
+| Transaksi | Daftar Transaksi | Melihat riwayat bon per jenis (Jual/Beli), cetak ulang, ekspor CSV, kirim/batalkan bon. | Staff |
+| Transaksi | Latihan (Tanpa Data Asli) | Latihan bon, guncangan kurs, penutupan, dan arsip tanpa penulisan produksi (dahulu "Simulasi Aman"). | Staff |
+| Uang & Kurs → Uang Kas | Kas Awal Hari Ini | Mencatat kas pembukaan per mata uang dengan rincian pecahan wajib. Halaman ini juga memuat tab Stok Saat Ini, Stock Opname, Penyesuaian Brankas (Controller), dan Modal & Bank (Controller) — dahulu satu menu "Kas & Persediaan", kini dibuka lewat salah satu dari tiga menu di bawah ini; tab-nya tidak ganti halaman. | Staff |
+| Uang & Kurs → Uang Kas | Sisa Uang Saat Ini | Melihat stok kas berjalan per mata uang dan pecahan (tab yang sama dengan Kas Awal Hari Ini). | Staff |
+| Uang & Kurs → Uang Kas | Hitung Fisik Uang | Stock opname: menghitung fisik uang dan merekonsiliasi selisih (tab yang sama). | Staff |
+| Uang & Kurs → Uang Kas | Penyesuaian Brankas | Penyesuaian brankas/off-hours dengan rincian pecahan wajib (tab yang sama). | Controller |
+| Uang & Kurs → Kurs | Kurs Hari Ini | Memantau, menyiapkan, dan mengaktifkan kurs secara manual dengan alasan (dahulu "Kurs Operasional"). | Admin |
+| Uang & Kurs → Kurs | Bandingkan Kurs | Membandingkan kurs outlet dengan referensi yang tersedia. | Admin |
+| Nasabah | Nasabah Baru | Menambahkan data nasabah baru sesuai dokumen, termasuk Beneficial Owner, status PEP, dan pencocokan DTTOT/DPPSPM. | Staff |
+| Nasabah | Daftar Nasabah | Mencari dan meninjau seluruh profil nasabah; ekspor data (tanpa dokumen KTP) ke CSV. | Staff |
+| Nasabah | Keluhan Nasabah | Register, investigasi, hasil, dan eskalasi pengaduan konsumen — kategori "Layanan staf" mencakup kebutuhan yang dulu dicatat lewat menu terpisah "Permintaan Layanan"; menu itu sendiri tidak lagi ada di sidebar. | Staff |
+| Nasabah | Pemantauan Profil | Worklist nasabah yang jatuh tempo ditinjau, deklarasi profil transaksi disandingkan dengan aktivitas nyatanya, dan pencatatan hasil peninjauan. | Controller |
+| Nasabah | Tambah dari Excel | Memetakan file pelanggan sesuai format yang ditetapkan (dahulu "Impor Nasabah" di kelompok Pengawasan). | Controller |
+| Laporan | Laporan Transaksi | Ringkasan internal dan arsip cetak/PDF yang tersedia (dahulu "Laporan" di kelompok Pengawasan). | Controller |
+| Laporan | Aset Tetap | Daftar aset tetap outlet, pendaftaran aset baru, pelepasan aset, dan batas kapitalisasi. | Controller |
+| Laporan | Riwayat Aktivitas | Melihat tindakan penting yang tercatat sistem (dahulu "Jejak Audit" di kelompok Pengawasan). | Controller |
+| Kepatuhan | Status Kesiapan | Kontrol harian Controller, termasuk status Paket Pelaporan (dahulu "Kesiapan Operasional" di kelompok Pengawasan). | Controller |
+| Kepatuhan | Untuk Diketahui Direksi | Daftar informasi pengawasan yang perlu diakui Direksi (dahulu "Direksi Mengetahui"). | Controller |
+| Kepatuhan | Laporan ke Regulator | LKU, snapshot B0002/B0003/B0004, insidental, maker-checker, dan ekspor manual (dahulu "Pelaporan Regulator"). | Controller |
+| Kepatuhan | Arsip Dokumen | SOP, kebijakan internal, surat-menyurat BI, notulen rapat, dan korespondensi regulator, beserta riwayat versi dan masa berlakunya. | Controller |
+| Pengaturan | Pengguna & Hak Akses | Membuat, mengatur peran, menonaktifkan, mereset sandi, atau meninjau akun. Dashboard Shareholder menyediakan pintasan khusus untuk Admin dan Staff (dahulu "Akses Staf" di kelompok Pengawasan). | Controller |
+| Pengaturan | Profil Perusahaan | Nama PT, nama dagang, izin usaha, logo, dan lampiran sertifikat — tampil di kwitansi cetak. | Controller |
+| Pengaturan | Langkah Persiapan Awal | Checklist kesiapan penggunaan produksi (dahulu "Mulai Go-Live" di kelompok Pengawasan). | Controller |
+
+### Mencari halaman dengan cepat
+
+Tekan **⌘K** (Mac) atau **Ctrl+K** (Windows), ketik sebagian nama halaman — misalnya "kas awal" atau
+"IRA" — lalu tekan Enter. Hanya halaman yang boleh dibuka peran Anda yang muncul. Di luar kolom isian,
+tombol **N** membuka Buat Transaksi dan **/** membuka pencarian yang sama.
 
 ## 5. Alur Satu Hari Operasional
 
@@ -187,7 +199,7 @@ Alasannya: kas awal **pertama** untuk sebuah mata uang tidak dijurnal — kalau 
 
 ### 5.8 Profil Perusahaan — Controller ke atas
 
-1. Buka **Pengawasan → Profil Perusahaan**. Isi nama PT (badan hukum), nama moneychanger (dagang), nomor izin usaha KUPVA, Kode KUPVA, NPWP, NIB, alamat, telepon, email, dan website. Nama PT dan nama moneychanger wajib diisi, sisanya opsional.
+1. Buka **Pengaturan → Profil Perusahaan**. Isi nama PT (badan hukum), nama moneychanger (dagang), nomor izin usaha KUPVA, Kode KUPVA, NPWP, NIB, alamat, telepon, email, dan website. Nama PT dan nama moneychanger wajib diisi, sisanya opsional.
 2. **Sandi pelapor BI (SINTA)** bersifat sensitif — hanya untuk referensi internal, tidak pernah ditampilkan di kwitansi maupun layar publik manapun.
 3. Unggah **logo** (JPG/PNG/WEBP, maksimal 8 MB) — tampil otomatis di kwitansi cetak begitu tersimpan.
 4. Unggah **sertifikat izin usaha** (scan/foto) dan **lampiran izin lainnya** (bisa lebih dari satu file) untuk arsip digital perusahaan.
@@ -199,14 +211,14 @@ Alasannya: kas awal **pertama** untuk sebuah mata uang tidak dijurnal — kalau 
 
 ### 5.9 Pencatatan Pengeluaran — Staff ke atas
 
-1. Buka **Kontrol Outlet → Pencatatan Pengeluaran**. Halaman ini adalah log pengeluaran operasional sederhana (sewa, gaji, utilitas, perlengkapan, pemasaran, pemeliharaan, izin/pajak, lainnya) untuk pelaporan keuangan internal — **sepenuhnya terpisah** dari sistem transaksi valuta dan kas: mencatat pengeluaran di sini tidak pernah menyentuh saldo kas, stok pecahan, atau rekening bank.
+1. Buka **Transaksi → Catat Pengeluaran**. Halaman ini adalah log pengeluaran operasional sederhana (sewa, gaji, utilitas, perlengkapan, pemasaran, pemeliharaan, izin/pajak, lainnya) untuk pelaporan keuangan internal — **sepenuhnya terpisah** dari sistem transaksi valuta dan kas: mencatat pengeluaran di sini tidak pernah menyentuh saldo kas, stok pecahan, atau rekening bank.
 2. Isi tanggal, kategori, nominal (Rp), dan deskripsi; catatan tambahan dan bukti pengeluaran (foto/scan struk, JPG/PNG/WEBP/PDF, maksimal 8 MB) bersifat opsional dan bisa ditambahkan kapan saja setelah entri tersimpan.
 3. Setiap entri bersifat **permanen** (tidak dapat diedit atau dihapus) untuk menjaga jejak audit. Bila salah catat, tambahkan entri koreksi baru dengan keterangan yang jelas menjelaskan koreksinya — jangan mengandalkan edit/hapus yang memang sengaja tidak disediakan.
 4. Riwayat pengeluaran menampilkan total bulan berjalan dan daftar seluruh entri, terbaru di atas.
 
 ### 5.10 Cek Watchlist DTTOT/DPPSPM — Staff ke atas (impor: Controller ke atas)
 
-1. Buka **Kontrol Outlet → Cek Watchlist DTTOT/DPPSPM** untuk mencocokkan nama secara fuzzy (toleran typo/urutan kata) terhadap Daftar Terduga Teroris dan Organisasi Teroris (DTTOT) dan Daftar Pendanaan Proliferasi Senjata Pemusnah Massal (DPPSPM) — data resmi PPATK/DK PBB. Tombol "Cek sekarang di DTTOT/DPPSPM" pada formulir Tambah/Edit Nasabah (§5.3) menjalankan pencarian yang sama secara inline.
+1. Buka **Nasabah → Cek Daftar DTTOT/DPPSPM** untuk mencocokkan nama secara fuzzy (toleran typo/urutan kata) terhadap Daftar Terduga Teroris dan Organisasi Teroris (DTTOT) dan Daftar Pendanaan Proliferasi Senjata Pemusnah Massal (DPPSPM) — data resmi PPATK/DK PBB. Tombol "Cek sekarang di DTTOT/DPPSPM" pada formulir Tambah/Edit Nasabah (§5.3) menjalankan pencarian yang sama secara inline.
 2. **Ini murni alat bantu penyaringan** — hasil pencarian tidak pernah menandai nasabah secara otomatis. Petugas tetap wajib memeriksa setiap kandidat kecocokan secara manual (nama, tanggal lahir, kewarganegaraan, alamat) sebelum mencentang kolom Cocok DTTOT/DPPSPM di profil nasabah dan mengisi catatannya.
 3. Halaman menampilkan daftar yang **sedang dimuat** (DTTOT dan setiap sub-daftar DPPSPM seperti DPRK/Iran, jumlah entri, sumber berkas, serta kapan dan oleh siapa terakhir diimpor) — periksa tanggal impor untuk menilai seberapa terkini datanya sebelum mengandalkan hasil pencarian.
 4. **Controller/Shareholder** dapat mengimpor atau memperbarui daftar dengan mengunggah workbook resmi PPATK/DK PBB (XLSX/XLS, maksimal 5 MB). Sistem mendeteksi otomatis jenis berkas (DTTOT atau DPPSPM) dan, untuk DPPSPM, sumbernya (dari pola kode referensi seperti `DPRKi.001`/`IRe.003`) dari struktur kolom — tidak perlu memilih jenis secara manual. Mengunggah ulang daftar DTTOT menggantikan **seluruh** entri DTTOT lama; mengunggah DPPSPM untuk satu sumber (mis. DPRK) hanya menggantikan entri sumber tersebut, sub-daftar DPPSPM lain (mis. Iran) tidak terpengaruh.
@@ -443,7 +455,7 @@ Selama ini angka laporan keuangan **diketik ulang** ke berkas Excel BI. Pengetik
 
 ### 6.4 Klasifikasi Risiko dan Ambang Pita — Controller
 
-Buka **Pengawasan › Klasifikasi Risiko**. Halaman ini **tidak menilai apa pun** — ia menyimpan
+Buka **Risiko › Klasifikasi Risiko**. Halaman ini **tidak menilai apa pun** — ia menyimpan
 keputusan manusia beserta rujukannya, yang kemudian dipakai penilaian risiko individual (IRA).
 
 **Klasifikasi risiko inheren.** Enam dimensi dalam bentuk tab: mata uang, kategori pekerjaan,
@@ -481,7 +493,7 @@ sesudahnya.
 
 ### 6.5 Penilaian Risiko Lembaga (IRA) — Admin mengisi, Pemegang Saham menyetujui
 
-Buka **Pengawasan › Penilaian Risiko (IRA)**. Satu penilaian untuk satu periode, umumnya satu tahun
+Buka **Risiko › Penilaian Risiko (IRA)**. Satu penilaian untuk satu periode, umumnya satu tahun
 buku. Akhir periode bersifat **eksklusif**: untuk menilai tahun 2026 penuh, isi 1 Januari 2026
 sampai 1 Januari 2027.
 
@@ -597,7 +609,7 @@ Kartu **Ekspor LTKM goAML (XML)** di halaman Pelaporan Regulator membangun file 
 
 ## 7A. Arsip Dokumen Perusahaan
 
-Menutup temuan pemeriksaan BI 3. Menu **Pengawasan → Arsip Dokumen**, Controller ke atas.
+Menutup temuan pemeriksaan BI 3. Menu **Kepatuhan → Arsip Dokumen**, Controller ke atas.
 
 ### Apa yang disimpan di sini
 
@@ -662,7 +674,7 @@ surat-menyurat regulator dan notulen rapat, yang merupakan bacaan pengawasan dan
 
 ## 7B. Penatausahaan Dokumen — Controller ke atas
 
-Buka **Pengawasan → Penatausahaan Dokumen**. Halaman ini menjawab pertanyaan pemeriksa tentang
+Buka **Kepatuhan → Penatausahaan Dokumen**. Halaman ini menjawab pertanyaan pemeriksa tentang
 **Pasal 48 PBI 10/2024**: berapa lama dokumen dan catatan nasabah wajib ditatausahakan, dihitung dari
 data yang benar-benar tercatat. Halaman ini **hanya membaca**.
 

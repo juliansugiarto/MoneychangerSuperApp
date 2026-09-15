@@ -27,7 +27,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 9 — Galeri pola `/operasional/pola`
 - [x] Tugas 10 — Panduan suara dan bahasa
 - [x] Tugas 11 — Playwright dan basis data visual `mc_t_visual`
-- [ ] Tugas 12 — Verifikasi di peramban, dokumentasi, penutupan
+- [x] Tugas 12 — Verifikasi di peramban, dokumentasi, penutupan
 
 Urutan mengikat: 1 sebelum 3, 5, 6, 7, 8; 2 sebelum 3; 3 sebelum 5–9; 4 sebelum 7 dan 8; 5 dan 6 sebelum 9; 7 sebelum 8 dan 11; 9 sebelum 11. **7A sebelum 7B; 7B sebelum 8, 9, dan 11** (ditambahkan 13 September 2026).
 
@@ -3796,3 +3796,8 @@ Penerapan ke produksi **tidak** otomatis bagian tugas ini. Bila diminta: `deploy
 5. **Palet dan warna utama perusahaan belum dapat dipilih** — kolom `themePalette` dan `accentColor` baru ada di sub-proyek 2 (spec 2026-09-13 §A5). Sampai itu, `applyTheme` hanya dipanggil pratinjau galeri dan seluruh pembeli memakai palet Marun.
 6. **Kontras `--ink-subtle` diturunkan dengan `color-mix`** dan tidak diuji otomatis seperti pasangan palet; diperiksa di peramban pada Tugas 7B dan 12.
 7. **Halaman lama tanpa `h1`** (`/operasional`, `/operasional/stock/kas-awal`, `/kepatuhan/ira`, ditemukan pada verifikasi Tugas 7) — tertutup ketika tiap modul memakai `PageHeader`.
+8. **Pintasan ⌘K/N/`/` dipasang di `useEffect`** (`client/src/components/shell/shortcuts.ts`) sesudah render pertama; tombol yang ditekan saat halaman masih memuat hilang. Uji Playwright menunggu judul galeri tampil sebelum menekan ⌘K karena alasan ini (ditemukan Tugas 11).
+9. **`pnpm audit --prod --audit-level=high` memuat 9 temuan (3 high, 6 moderate)**: 2 high + 6 moderate pada `xlsx`/SheetJS (GHSA-4r6h-8v6p-xvw6, GHSA-5pgg-2g8v-p4x9, dan sisanya — tanpa versi terpatch dari upstream) sudah dikenal sejak sebelumnya, dan 1 high baru pada `mysql2` (GHSA-3f6p-5ww8-9rcr, `. > drizzle-orm@0.45.2 > mysql2@3.15.1` dan `. > mysql2@3.15.1` — versi terpatch `>=3.22.0`), di luar temuan SheetJS/xlsx; menaikkan driver MySQL menyentuh backend sehingga ditunda ke paket tersendiri.
+10. **Pengembalian fokus sesudah Esc pada palet ⌘K belum terbukti di peramban** (animasi keluar tertahan pada tab tersembunyi); `data-state=closed` terbukti.
+11. **Tombol merek sidebar** (`client/src/components/shell/AppSidebar.tsx:35`) belum memakai `FOCUS_RING`; memakai cincin bawaan peramban.
+12. **Ukuran 1440×900 dan 1920×1080 hanya terverifikasi lewat baseline Playwright, bukan peramban manual** (layar fisik 1351px); fallback font luring belum diuji dengan jaringan dimatikan.

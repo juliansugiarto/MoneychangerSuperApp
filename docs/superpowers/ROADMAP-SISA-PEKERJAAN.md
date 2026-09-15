@@ -334,7 +334,7 @@ pembeli, mati secara bawaan; Playwright sejak sub-proyek 1. Keputusan 13 Septemb
 **papan kurs sebagai sub-proyek 1B** tepat sesudah fondasi dan mengeluarkan kurs dari sub-proyek 5.
 Urutan: 1 → 1B → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9.
 
-- [ ] Sub-proyek 1 — Fondasi desain (token, tema Konter Tebal dan enam palet, kepadatan, shell, ⌘K, enam pola, galeri, panduan bahasa, Playwright)
+- [x] Sub-proyek 1 — Fondasi desain (token, tema Konter Tebal dan enam palet, kepadatan, shell, ⌘K, enam pola, galeri, panduan bahasa, Playwright)
 - [ ] Sub-proyek 1B — Papan kurs (seluruh valuta, kurs per kelompok pecahan, aktivasi atomik, toleransi harga bon)
 - [ ] Sub-proyek 2 — Login, penyiapan awal, kode pemulihan, halaman kurs publik, pemilih palet perusahaan
 - [ ] Sub-proyek 3 — Penilaian risiko berbahasa manusia + penjelasan AI

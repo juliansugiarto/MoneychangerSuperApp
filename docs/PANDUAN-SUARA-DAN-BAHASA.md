@@ -40,3 +40,5 @@ ini — di sana istilah resmi dipakai apa adanya.
 | kas awal | modal awal harian, opening cash |
 | hitung fisik uang | stock opname (kecuali label resmi) |
 | nonaktifkan | hapus (bila barisnya tetap tersimpan) |
+
+Tipografi: Bricolage Grotesque untuk judul dan angka besar, Manrope untuk isi — diputuskan pengguna 13 September 2026 (spec tema Konter Tebal §A3).
