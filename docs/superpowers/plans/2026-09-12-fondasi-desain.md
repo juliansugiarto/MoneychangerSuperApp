@@ -26,7 +26,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 8 — Palet perintah ⌘K dan pintasan konter
 - [x] Tugas 9 — Galeri pola `/operasional/pola`
 - [x] Tugas 10 — Panduan suara dan bahasa
-- [ ] Tugas 11 — Playwright dan basis data visual `mc_t_visual`
+- [x] Tugas 11 — Playwright dan basis data visual `mc_t_visual`
 - [ ] Tugas 12 — Verifikasi di peramban, dokumentasi, penutupan
 
 Urutan mengikat: 1 sebelum 3, 5, 6, 7, 8; 2 sebelum 3; 3 sebelum 5–9; 4 sebelum 7 dan 8; 5 dan 6 sebelum 9; 7 sebelum 8 dan 11; 9 sebelum 11. **7A sebelum 7B; 7B sebelum 8, 9, dan 11** (ditambahkan 13 September 2026).
