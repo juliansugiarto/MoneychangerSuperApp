@@ -101,6 +101,7 @@ import {
   updatePublicAnnouncement,
   updateServiceRequest,
 } from "./operations";
+import { deactivateRateTier, saveRateTier } from "./rateBoard";
 import { listCustomerProfileMonitoring, listCustomerProfileReviews, recordCustomerProfileReview } from "./customerProfileMonitoring";
 import { addCompanyDocumentVersion, companyArchiveWorklist, createCompanyDocument, deactivateCompanyDocument, listCompanyArchiveDocuments, listCompanyArchiveVersions } from "./companyDocumentArchive";
 import { getOperationalDocumentDownloadUrl, listCompanyDocuments, listDeactivatedCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
@@ -488,6 +489,20 @@ export const appRouter = router({
     proposeLatest: adminProcedure.mutation(({ ctx }) => proposeLatestReferenceRates(ctx.user.id)),
     activate: adminProcedure.input(z.object({ rateId: z.number().int().positive(), approvalReason: z.string().trim().min(10).max(1000) })).mutation(({ input, ctx }) => activateOperationalRate(input.rateId, ctx.user.id, input.approvalReason)),
     activateMany: adminProcedure.input(z.object({ rateIds: z.array(z.number().int().positive()).min(1).max(100), approvalReason: z.string().trim().min(10).max(1000) })).mutation(({ input, ctx }) => activateOperationalRates(input.rateIds, ctx.user.id, input.approvalReason)),
+  }),
+
+  rateTiers: router({
+    save: adminProcedure.input(z.object({
+      tierId: z.number().int().positive().optional(),
+      currencyId: z.number().int().positive(),
+      label: z.string().trim().min(1).max(40),
+      denominationValues: z.array(decimalString).min(1).max(40),
+      sortOrder: z.number().int().min(0).max(999).default(0),
+    })).mutation(({ input, ctx }) => saveRateTier(input, ctx.user.id)),
+    deactivate: adminProcedure.input(z.object({
+      tierId: z.number().int().positive(),
+      reason: z.string().trim().max(1000).default(""),
+    })).mutation(({ input, ctx }) => deactivateRateTier(input, ctx.user.id)),
   }),
 
   publicContent: router({
