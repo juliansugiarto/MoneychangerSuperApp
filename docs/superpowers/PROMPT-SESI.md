@@ -70,29 +70,43 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 16 September 2026 (Sub-proyek 1 Fondasi Desain SELESAI: Tugas 1–12, plus butir 11 dan 13)
+## Sesi berikutnya — keadaan per 16 September 2026 (Sub-proyek 1B Papan Kurs: Tugas 1–4 dari 14 selesai)
 
 **Seluruh paket peta jalan asli sudah selesai:** K1, B, D, C, E, F1, F2, G, H, I, J (J1+J2), K2,
 K3, L, dan **M**. Dua belas temuan pemeriksaan BI 2026 sudah tertutup; pada
 `specs/2026-09-09-pbi-10-2024-temuan-awal.md` (PBI No. 10 Tahun 2024) Temuan 1 dan 2 tertutup oleh
 Paket L, dan **Temuan 4 tertutup oleh Paket M** dengan premis yang sudah dikoreksi.
 
-**Sub-proyek 1 (Fondasi Desain) selesai 16 September 2026.** Keempat belas baris pada Status
-Pengerjaan `plans/2026-09-12-fondasi-desain.md` tercentang (Tugas 1–12 termasuk 7A dan 7B), dan baris
-*Sub-proyek 1* pada `ROADMAP-SISA-PEKERJAAN.md` sudah dicentang di commit Tugas 12 (`a62562f`).
-Spec program `specs/2026-09-12-desain-ulang-antarmuka-design.md` (12 September) **diperbarui** oleh
+**Sub-proyek 1 (Fondasi Desain) selesai 16 September 2026**, termasuk dua sisanya (butir 11 dan 13,
+`f53a04c`). Spec program `specs/2026-09-12-desain-ulang-antarmuka-design.md` **diperbarui** oleh
 `specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md` (`8250e87`).
 
-**Dua sisa Fondasi Desain sudah dibereskan 16 September 2026** (`f53a04c`, dikerjakan langsung tanpa
-subagen). Butir 13: `shortcutFor` kini menahan `N` dan `/` bila targetnya di dalam
-`[role=dialog]`/`[role=alertdialog]` **atau** bila ada dialog `data-state=open` di halaman — periksa
-dua arah karena fokus bisa masih di `body` sesudah dialog dibuka lewat tombol; ⌘K sengaja **tetap**
-berlaku di mana pun, sebab palet perintah sendiri sebuah dialog dan menggerbangnya akan mengunci palet.
-Butir 11: tombol merek `AppSidebar` memakai `FOCUS_RING`. Tiga uji baru (dua di `shortcuts.test.tsx`,
-satu di `AppSidebar.test.tsx`); uji butir 13 dibuktikan gagal lebih dulu tanpa penjaganya.
+**Sedang dikerjakan: sub-proyek 1B (Papan Kurs).** Rencananya sudah ditulis —
+`plans/2026-09-16-papan-kurs.md`, **14 tugas**, memuat kode, uji, dan nomor baris. **Tugas 1–4
+selesai 16 September 2026**, satu commit per tugas, dikerjakan langsung tanpa subagen:
 
-**Pekerjaan berikutnya: sub-proyek 1B (Papan Kurs).** Rencananya **belum ditulis** — sesuai aturan
-program, ditulis pada awal sesi 1B dari spec 2026-09-13 Bagian B.
+| Tugas | Commit | Isi |
+|---|---|---|
+| 1 | `2f70aa3` | Skema + migrasi aditif `0059`: tabel `rate_tiers`, `operational_rates.rateTierId`/`.approvalReason`/`.activationBatchId`, `exchange_transaction_denomination_entries.operationalRateId`/`.referenceRateSnapshot`/`.rateDeviationPercent`, `exchange_transactions.rateDeviationReason`, `operational_settings.rateDeviationTolerancePercent` |
+| 2 | `5f01e5f` | `shared/rateTiers.ts` — pencocokan pecahan ke kelompok, murni |
+| 3 | `28855c9` | `server/rateBoard.ts` + router `rateTiers.save`/`.deactivate` (`adminProcedure`) |
+| 4 | `dde48d0` | `planBoardActivation` + `activateOperationalRateIds`: aktivasi **atomik** satu transaksi |
+
+**Tugas berikutnya: Tugas 5 — `rates.board`** (isi papan dan riwayat batch hari ini, WIB). Urutan
+mengikat pada rencana: 5 sebelum 6, 7, 11; 8 sebelum 9 dan 13; 11 sebelum 12; 12 dan 13 sebelum 14.
+Pengguna meminta laporan sesudah **Tugas 9** (toleransi bon) dan **Tugas 12** (layar papan).
+
+**Perubahan perilaku yang sudah terjadi pada Tugas 4 — jangan dikira masih seperti dulu:**
+perulangan lama `activateOperationalRates` (dulu `server/operations.ts:1306`) yang memanggil
+aktivasi satu per satu **di luar** satu transaksi sudah dibuang. Kini `activateOperationalRate` dan
+`activateOperationalRates` keduanya hanya membungkus `activateOperationalRateIds` di
+`server/rateBoard.ts` — satu-satunya jalur aktivasi di seluruh aplikasi. RETIRE-nya sekarang
+**per pasangan (valuta, kelompok)**, bukan per valuta: mengubah harga satu kelompok tidak lagi
+mencabut kurs tingkat valuta.
+
+**Aturan kurs yang tetap berlaku dan sudah ditegakkan kode:** aktivasi **manual** dengan alasan
+**≥ 10 karakter**, diperiksa **sebelum kueri apa pun**. Tidak ada satu pun jalur kode yang
+mengaktifkan kurs tanpa alasan manusia.
 
 **Keputusan pengguna 13 September 2026 — jangan ditanyakan ulang** (lengkapnya di spec 2026-09-13):
 tampilan netral abu-abu ditolak (*"korporat sekali seperti SIPUKA"*; empat tema berganti warna pada
@@ -106,42 +120,41 @@ dari papan dan boleh diubah dalam toleransi — di luar toleransi wajib alasan d
 kisi tegas dan sorot baris + kolom); kurs dikeluarkan dari sub-proyek 5. Urutan program kini
 **1 → 1B → 2 → … → 9**. Keputusan 12 September lain tetap berlaku; keputusan #6 (desain netral) diganti.
 
-**Cara eksekusi Tugas 8–12: subagent-driven development** — satu implementer per tugas, satu
-reviewer (spesifikasi + mutu) per tugas, pengendali memeriksa hasil di peramban dan memutus ruling.
-Ledger ada di `.superpowers/sdd/2026-09-12-fondasi-desain/progress.md`: tabel pemindaian pra-eksekusi,
-setiap `Ruling:` (18 buah), minor tertunda, dan baris `Task <N>: complete`. **Ledger itu tidak
-di-commit** (`.superpowers/` tidak terlacak dan belum di `.gitignore`); bila hilang, `git log` adalah
-pemulihannya — Tugas 7A = `083ad27`, 7B = `3956517`, 8 = `efcdb00`, 9 = `4dea8e3`, 10 = `61f8211`,
-11 = `044a9b4`, 12 = `a62562f` + perbaikan `256a58a`.
-
 **Biaya subagen jauh lebih besar daripada perkiraan pengguna** (16 September: *"can we stop using
-agent because its burnt token so much?"*) — tiga belas subagen untuk lima tugas, satu di antaranya
-mati tanpa laporan sesudah 10 menit dan harus diulang. **Sesi berikutnya: kerjakan langsung, tanpa
-subagen**, kecuali pengguna meminta sebaliknya.
+agent because its burnt token so much?"*). **Kerjakan langsung, tanpa subagen**, kecuali pengguna
+meminta sebaliknya. Tugas 1–4 dikerjakan begitu dan memang cukup.
 
-**Reviu akhir seluruh cabang TIDAK pernah selesai.** Reviewer `opus` mati di tengah jalan karena batas
-pemakaian mingguan (429, *"resets 2pm Asia/Jakarta"*). Sebagai gantinya pengendali menjalankan
-pemeriksaan lintas tugas yang tertarget dan **lulus**: (a) setiap tujuan pada `visibleBackOfficeNavigation`
-punya rute di `App.tsx` dan `minimumRole`-nya **sama persis** dengan penjaga rutenya — palet ⌘K tidak
-pernah menawarkan halaman yang ditolak, dan tidak ada halaman diizinkan yang tersembunyi (36 daun, 41
-rute); (b) `pageTitleFor` diturunkan dari pohon sidebar sehingga nama menu yang berganti tidak pernah
-meninggalkan kepala halaman basi; (c) `FOUNDATION_FILES` memuat 21 berkas dan yang tidak terdaftar
-memang harus memuat warna mentah (`index.css`, `shared/themePalettes.ts`) atau belum dibangun ulang.
-Yang **belum** diperiksa siapa pun secara menyeluruh: mutu kode Tugas 1–7 (dikerjakan tanpa reviewer),
-dan pemeriksaan arsitektur/keamanan lintas berkas di luar ketiga pemeriksaan di atas.
+**Reviu akhir cabang Fondasi Desain TIDAK pernah selesai** (reviewer mati karena batas pemakaian
+mingguan). Yang **belum** diperiksa siapa pun secara menyeluruh: mutu kode Fondasi Desain Tugas 1–7,
+dan pemeriksaan arsitektur/keamanan lintas berkas. **Sub-proyek 1B Tugas 1–4 juga belum direviu
+siapa pun** selain uji dan perintah mutu.
 
-**Prompt untuk sesi berikutnya — memulai sub-proyek 1B (Papan Kurs):**
+**Prompt untuk sesi berikutnya — melanjutkan sub-proyek 1B dari Tugas 5:**
 
 ```
-Tulis rencana sub-proyek 1B (Papan Kurs) dari docs/superpowers/specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md
-Bagian B, dengan superpowers:writing-plans. Kerjakan sendiri, tanpa subagen. Baca dulu
-docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md dan docs/SKEMA-DATABASE-PROJECT.md bagian kurs.
+Jalankan docs/superpowers/plans/2026-09-16-papan-kurs.md dengan
+superpowers:executing-plans, satu commit per tugas, centang "Status Pengerjaan" sesudah commit-nya.
+
+Baca rencananya dulu; jangan baca spec, panduan A–Z, atau skema database kecuali
+tugas yang sedang dikerjakan menyuruhnya — rencananya sudah memuat kode, uji,
+dan nomor barisnya. Kerjakan sendiri, tanpa subagen.
+
+Mulai dari Tugas 5. Tugas 1–4 sudah selesai dan sudah di-commit.
+
+Baseline uji sesudah Tugas 4: Test Files 181 passed (181), Tests 1543 passed |
+2 skipped (1545). Tiap tugas menyebut angka yang benar-benar terlihat pada
+keluaran vitest, bukan yang diharapkan rencananya; bila berbeda, jelaskan
+selisihnya sebelum lanjut.
+
+Laporkan ke saya sesudah Tugas 9 (toleransi bon) dan Tugas 12 (layar papan)
+sebelum meneruskan.
 ```
 
 Bila ingin mengerjakan satu tugas per sesi dari sebuah rencana, Prompt B di atas tetap berlaku.
 
-**Produksi tidak disentuh sejak 12 September 2026** (kode produksi tetap `724de6b`; Tugas 1–7B belum
-diterapkan). Keadaan terakhirnya:
+**Produksi tidak disentuh sejak 12 September 2026** (kode produksi tetap `724de6b`). **Migrasi `0059`
+TIDAK diterapkan ke produksi** — hanya ke dua basis data lokal, sebagaimana dituntut rencananya.
+Keadaan terakhir produksi:
 
 **Produksi sudah diterapkan dan direset (11–12 September 2026).** Seluruh tabel produksi dihapus atas
 permintaan pengguna ("FRESHSTART"), lalu `deploy.sh` dijalankan manual: produksi kini `724de6b`,
@@ -154,51 +167,58 @@ impor ulang daftar DTTOT/DPPSPM, mengisi ulang Profil Perusahaan, menghapus bari
 `Bash(ssh -o BatchMode=yes -o ConnectTimeout=10 deploy@187.53.128.14:*)`. Temuan 3 tetap menunggu
 keputusan pengguna.
 
-**Baseline uji terakhir yang benar-benar dijalankan, oleh pengendali pada `f53a04c`**
-(16 September 2026, dengan `.env` dan `TENANT_TEST_SECONDARY_URL` termuat): `Test Files 177 passed
-(177)`, `Tests 1516 passed | 2 skipped (1518)`. Selisih terhadap `a62562f` (`1513 lulus | 2 dilewati`)
-adalah **+3 uji**, tepat tiga uji baru butir 11 dan 13 — tidak ada berkas uji baru dan tidak ada uji
-lama yang dibuang. `./node_modules/.bin/tsc --noEmit` **keluar 0 tanpa keluaran** dan
-`./node_modules/.bin/vite build` **`✓ built in 4.37s`** pada jalan yang sama (peringatan potongan
->500 kB tetap ada, `index-*.js` 1.012,42 kB — sudah lama begitu, bukan hal baru).
+**Baseline uji terakhir yang benar-benar dijalankan, oleh pengendali pada `dde48d0`**
+(16 September 2026, dengan `.env` dan `TENANT_TEST_SECONDARY_URL` termuat): `Test Files 181 passed
+(181)`, `Tests 1543 passed | 2 skipped (1545)`. Selisih terhadap baseline `f53a04c`
+(`177` berkas / `1516 lulus | 2 dilewati`) adalah **+4 berkas, +27 uji**, seluruhnya dari sub-proyek
+1B: Tugas 1 +1/+4 (`server/rateBoardSchema.test.ts`), Tugas 2 +1/+9 (`shared/rateTiers.test.ts`),
+Tugas 3 +1/+7 (`server/rateTierWrites.test.ts`), Tugas 4 +1/+7
+(`server/rateBoardActivation.test.ts`). Tidak ada uji lama yang dibuang. Angka tiap tugas **persis**
+seperti yang diramalkan rencananya. `./node_modules/.bin/tsc --noEmit` **keluar 0 tanpa keluaran**
+dan `./node_modules/.bin/vite build` **`✓ built in 4.65s`** pada jalan yang sama (peringatan potongan
+>500 kB tetap ada — sudah lama begitu, bukan hal baru).
 
-**Selisih terhadap baseline 11 September** (`161` berkas / `1428` lulus) adalah **+16 berkas, +88 uji**,
-seluruhnya dari sub-proyek 1: Tugas 1 +1/+2, Tugas 2 +1/+18, Tugas 3 +2/+6, Tugas 4 +0/+3, Tugas 5
-+1/+7, Tugas 6 +1/+8, Tugas 7 +4/+11, Tugas 7A +2/+17, Tugas 7B +1/+2, Tugas 8 +2/+8, Tugas 9 +1/+3,
-Tugas 10–12 +0/+0 (dokumen; Vitest tidak memuat `e2e/`), butir 11+13 +0/+3.
+**Playwright `test:visual` TIDAK dijalankan sesi ini** (42 lulus terakhir pada `a62562f`). Sub-proyek
+1B belum menyentuh layar mana pun; layarnya baru dibangun pada Tugas 11–12.
 
-**Playwright: `./node_modules/.bin/pnpm test:visual` = 42 lulus** pada `044a9b4` dan diulang pada
-`a62562f` (3 ukuran × 11 + 6 palet = 39 baseline PNG di `e2e/__screenshots__/fondasi.spec.ts/`).
-Servernya sendiri di port 3100 terhadap `mc_t_visual`; **tidak menyentuh `moneychanger`**.
+`pnpm audit --prod --audit-level=high` **tidak dijalankan sesi ini** — dependensi tidak bertambah di
+sub-proyek 1B. Hasil terakhir (15 September): **9 kerentanan (3 tinggi, 6 sedang)**, termasuk
+`xlsx`/SheetJS yang sudah dikenal dan **satu temuan tinggi pada `mysql2`** (GHSA-3f6p-5ww8-9rcr,
+lewat `drizzle-orm@0.45.2 > mysql2@3.15.1`; terpatch `>=3.22.0`) — menaikkannya menyentuh backend,
+jadi ditunda ke paket tersendiri. **Jangan menyebut audit bersih.**
 
-`pnpm audit --prod --audit-level=high` dijalankan Tugas 11 dan 12 (15 September): **9 kerentanan
-(3 tinggi, 6 sedang)**. Selain `xlsx`/SheetJS yang sudah dikenal, ada **satu temuan tinggi baru pada
-`mysql2`** (GHSA-3f6p-5ww8-9rcr, lewat `drizzle-orm@0.45.2 > mysql2@3.15.1`; terpatch `>=3.22.0`) —
-menaikkannya menyentuh backend, jadi ditunda ke paket tersendiri (butir 9 Risiko residual rencana).
-**Jangan menyebut audit bersih.**
-
-**Tidak ada migrasi baru sejak 12 September 2026** — diukur 14 September: `ls drizzle/*.sql` = 59
-berkas, terakhir `0058_brief_proteus.sql`. Sub-proyek 1 memang dilarang menyentuh skema.
+**Migrasi terakhir `0059`** (`0059_cuddly_saracen.sql`, sub-proyek 1B Tugas 1 — aditif seluruhnya:
+satu `CREATE TABLE`, delapan `ADD` kolom, tiga `CREATE INDEX`; tanpa `DROP`/`MODIFY`/`CHANGE` dan
+tanpa statement enum). Diukur 16 September sesudah penerapan: `ls drizzle/*.sql` = **60 berkas**,
+jurnal `moneychanger` = **60**, jurnal `mc_t_abcvalas` = **60**. **Jurnal produksi tetap 59.**
+Cadangan sebelum migrasi ada di `/tmp/backup-0059/` (dibuat dengan
+`--single-transaction --set-gtid-purged=OFF`, pemulihannya **dibuktikan** ke basis data sekali pakai:
+66 tabel pulih). `/tmp` dibersihkan sendiri oleh macOS — jangan mengandalkan berkas itu lagi.
+**Rollback `0059`: mengembalikan commit sudah cukup** untuk aplikasinya; tabel dan kolom baru
+**dibiarkan** tanpa `DROP` kecuali pengguna menyetujui penghapusannya.
 
 **Uji wajib dijalankan dengan `.env` termuat.** Tanpa itu
 `server/internalAuth.developmentAccounts.test.ts` gagal sendirian dengan *"Database tidak
 tersedia"* — kegagalan lingkungan, bukan regresi. **Gejala kedua yang mudah disalahartikan:** tanpa
 `TENANT_TEST_SECONDARY_URL`, empat uji `server/tenantIsolation.live.test.ts` **dilewati diam-diam**
-(`describe.skipIf`), jadi jumlahnya turun menjadi `1512 lulus | 6 dilewati` tanpa satu pun kegagalan.
-Bila jumlah "dilewati" bukan **2**, yang kurang adalah env, bukan ujinya:
+(`describe.skipIf`), sehingga jumlah "dilewati" menjadi 6 tanpa satu pun kegagalan. Bila jumlah
+"dilewati" bukan **2**, yang kurang adalah env, bukan ujinya:
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
 export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 ```
 
-Migrasi terakhir **`0058`** (`0058_brief_proteus.sql`, Paket M Tugas 1 — empat kolom aditif
-nullable), sudah diterapkan ke dua basis data lokal lewat `node scripts/tenant.mjs migrate-all`;
-jurnal keduanya **59**. **Sudah diterapkan ke produksi** pada penerapan 12 September 2026 (jurnal
-produksi 59, diukur sesudah penerapan).
-
 **Satu uji diketahui flaky dan bukan bagian paket mana pun:** `server/tenantIsolation.live.test.ts`
 > *"setiap ikatan hanya melihat database miliknya sendiri"*. Bila gagal sendirian di bawah beban,
 jalankan ulang berkas itu saja.
+
+**Kegagalan flaky KEDUA yang belum teridentifikasi (16 September 2026, sub-proyek 1B Tugas 3).**
+Satu jalan penuh menunjukkan `1 failed | 1535 passed | 2 skipped`; nama berkasnya **hilang dari
+buffer sebelum sempat dicatat**, dan **empat** jalan penuh berikutnya pada commit yang sama lulus
+bersih. Jadi ada kegagalan sesekali yang **belum diketahui berkasnya** — mungkin
+`tenantIsolation.live` di atas, mungkin bukan. Bila sesi berikutnya melihat satu kegagalan tunggal
+pada jalan penuh, **catat nama berkasnya dahulu** (`vitest run > berkas.log 2>&1`) sebelum
+mengulang; mengulang lebih dahulu menghapus satu-satunya bukti.
 
 ### Yang tidak perlu ditemukan ulang
 
@@ -233,6 +253,13 @@ jalankan ulang berkas itu saja.
 - **Rute baru wajib didaftarkan pada `server/backOfficeNavigation.test.ts`** bila ia menjadi tujuan
   sidebar. Rute **berparameter** (mis. `/kepatuhan/ira/:id`) bukan tujuan sidebar dan tidak masuk
   peta itu.
+- **Aktivasi kurs hanya punya SATU jalur:** `activateOperationalRateIds` di `server/rateBoard.ts`.
+  `activateOperationalRate` dan `activateOperationalRates` pada `server/operations.ts` sekarang
+  cuma pembungkusnya (lewat impor dinamis, supaya kedua modul tidak saling mengimpor di tingkat
+  modul). Jangan menambahkan jalur aktivasi kedua — aturannya akan berselisih diam-diam. Seluruh
+  keputusannya diambil `planBoardActivation` **sebelum** transaksi dibuka, dan alasan ≥ 10 karakter
+  diperiksa **sebelum kueri apa pun**: `server/operations.test.ts` menuntut galat "alasan terlalu
+  pendek" muncul walau kurs yang dirujuk tidak ada.
 - **Dialog wajib memakai `max-h-[85vh] overflow-y-auto`.**
 - **Bercabanglah pada `isPending`, bukan `isLoading`.** Ditambah temuan 9 September 2026:
   `QueryClient` aplikasi ini memakai bawaan, dan percobaan ulangnya dapat berstatus
@@ -355,6 +382,35 @@ jalankan ulang berkas itu saja.
 - **Mockup sesi rancangan tersimpan lokal** di `.superpowers/brainstorm/59970-1789210543/content/`
   (`gaya-karakter.html` pilihan 3, `tebal-intensitas.html` pilihan B, `palet-konter-tebal.html`,
   `papan-kurs.html`) — rujukan visual yang disetujui pengguna, tidak di-commit.
+
+### Risiko residual Sub-proyek 1B (Tugas 1–4) yang masih terbuka
+
+1. **Kolom dan tabel `0059` masih kosong penulisnya.** `rate_tiers` belum pernah diisi lewat layar
+   mana pun (routernya ada, layarnya baru dibangun Tugas 12); `referenceRateSnapshot`,
+   `rateDeviationPercent`, dan `rateDeviationReason` belum ada penulisnya sama sekali — penulisnya
+   dibangun Tugas 9 dan 13. **Sampai Tugas 13 selesai, ini pekerjaan yang belum selesai, bukan
+   keadaan sah**, tepat seperti yang dilarang `CLAUDE.md`. Jangan melaporkan sub-proyek 1B selesai
+   sebelum rantai itu tersambung dan diperagakan end-to-end.
+2. **`activateOperationalRateIds` belum pernah dijalankan terhadap basis data sungguhan.** Yang
+   diuji sejauh ini adalah perencananya (`planBoardActivation`, murni) dan uji lama
+   `operations.test.ts` yang memakai basis data palsu. RETIRE per pasangan (valuta, kelompok) —
+   termasuk cabang `isNull(rateTierId)` — **belum dibuktikan pada MySQL**. Peragaannya dituntut
+   Tugas 14.
+3. **Belum ada satu pun uji yang membuktikan aktivasi benar-benar berguling balik** ketika satu
+   pernyataan di tengah transaksi gagal. Yang ada baru penolakan sebelum transaksi dibuka.
+4. **`saveRateTier` membaca baris yang baru disisipkan dengan `ORDER BY id DESC LIMIT 1`**, bukan
+   dari id yang dikembalikan penyisipannya. Di bawah dua penyisipan serentak pada valuta yang sama,
+   id yang dikembalikan bisa milik baris orang lain. Beban nyatanya satu admin per papan, jadi
+   dibiarkan — tetapi jangan menyalin polanya ke jalur yang lebih ramai.
+6. **`docs/SKEMA-DATABASE-PROJECT.md` dan panduan A–Z BELUM diperbarui untuk `0059`.** Tabel
+   `rate_tiers` dan delapan kolom baru belum tercatat di sana. Rencananya menaruh seluruh pekerjaan
+   dokumentasi pada **Tugas 14**; sampai tugas itu dikerjakan, kedua dokumen itu **tertinggal di
+   belakang skema**. Jangan memercayainya sebagai daftar kolom yang lengkap sementara ini.
+
+5. **Kedua kaki transaksi valuta belum tersentuh sub-proyek ini.** `rateDeviationPercent` baru ada
+   di sisi valuta asing (`exchange_transaction_denomination_entries`). Ketika Tugas 9 dan 13
+   mengisinya, **periksa ulang terhadap sisi Rupiah** (`exchange_transaction_payment_denominations`)
+   sebagaimana dituntut `CLAUDE.md` — jangan menyelesaikan satu kaki saja.
 
 ### Risiko residual Fondasi Desain (Tugas 1–12) yang masih terbuka
 

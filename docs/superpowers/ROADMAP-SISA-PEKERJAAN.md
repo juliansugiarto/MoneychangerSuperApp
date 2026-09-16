@@ -317,13 +317,13 @@ sebagai tidak ditatausahakan di aplikasi ini.
 
 ---
 
-### Program Desain Ulang Antarmuka — **DIRANCANG 12 September 2026; tema Konter Tebal dan sub-proyek 1B ditambahkan 13 September; sub-proyek 1 sedang dieksekusi (Tugas 1–7B selesai 14 September)**
+### Program Desain Ulang Antarmuka — **DIRANCANG 12 September 2026; tema Konter Tebal dan sub-proyek 1B ditambahkan 13 September; sub-proyek 1 SELESAI 16 September; sub-proyek 1B sedang dieksekusi (Tugas 1–4 dari 14 selesai 16 September)**
 
 Spec: `specs/2026-09-12-desain-ulang-antarmuka-design.md` (disetujui pengguna 12 September 2026),
 **diperbarui** oleh `specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md` (disetujui pengguna
 13 September 2026). Rencana bertugas sub-proyek 1: `plans/2026-09-12-fondasi-desain.md` (kini 14 tugas:
-1–7, 7A, 7B, 8–12). Setiap sub-proyek lain mendapat spec dan rencananya sendiri pada awal sesinya;
-rencana 1B ditulis pada awal sesi 1B dari spec 2026-09-13 Bagian B.
+1–7, 7A, 7B, 8–12). Setiap sub-proyek lain mendapat spec dan rencananya sendiri pada awal sesinya.
+Rencana sub-proyek 1B sudah ditulis: `plans/2026-09-16-papan-kurs.md` (14 tugas).
 
 Keputusan pengguna 12 September 2026 (lengkapnya di spec): produk mandiri lebih dulu; halaman kurs
 publik yang dapat dikonfigurasi; 1280–1440px lebih dulu; bahasa sehari-hari dengan istilah BI sebagai
@@ -335,7 +335,7 @@ pembeli, mati secara bawaan; Playwright sejak sub-proyek 1. Keputusan 13 Septemb
 Urutan: 1 → 1B → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9.
 
 - [x] Sub-proyek 1 — Fondasi desain (token, tema Konter Tebal dan enam palet, kepadatan, shell, ⌘K, enam pola, galeri, panduan bahasa, Playwright)
-- [ ] Sub-proyek 1B — Papan kurs (seluruh valuta, kurs per kelompok pecahan, aktivasi atomik, toleransi harga bon)
+- [ ] Sub-proyek 1B — Papan kurs (seluruh valuta, kurs per kelompok pecahan, aktivasi atomik, toleransi harga bon) — Tugas 1–4 dari 14 selesai 16 September 2026
 - [ ] Sub-proyek 2 — Login, penyiapan awal, kode pemulihan, halaman kurs publik, pemilih palet perusahaan
 - [ ] Sub-proyek 3 — Penilaian risiko berbahasa manusia + penjelasan AI
 - [ ] Sub-proyek 4 — Kasir & transaksi
