@@ -1,3 +1,4 @@
+import Decimal from "decimal.js";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { auditLogs, currencies, operationalRates, rateReferenceSnapshots, rateTiers, rateVolatilityAlerts } from "../drizzle/schema";
@@ -257,4 +258,71 @@ export async function readRateBoard(now = new Date()): Promise<RateBoardPayload>
     alerts: alertRows.map(({ alert, currency }) => ({ id: alert.id, currencyCode: currency.code, message: `Referensi ${currency.code} bergerak ${String(alert.percentageChange)}% — periksa sebelum mengaktifkan.` })),
     latestReferenceDate: referenceRows[0]?.referenceDate ?? null,
   };
+}
+
+export type BoardDraftInput = { currencyId: number; rateTierId: number | null; quoteUnit: string; buyRate: string; sellRate: string; referenceSnapshotId?: number | null };
+
+/** Draf baru **mengganti** draf lama untuk pasangan valuta + kelompok yang sama: papan menyimpan satu niat per sel, bukan tumpukan niat. */
+export function planDraftReplacement(
+  existingDrafts: readonly { id: number; currencyId: number; rateTierId: number | null }[],
+  inputs: readonly BoardDraftInput[],
+) {
+  const seen = new Set<string>();
+  for (const row of inputs) {
+    const key = `${row.currencyId}:${row.rateTierId ?? "ALL"}`;
+    if (seen.has(key)) throw new Error("Ada dua nilai untuk sel yang sama dalam satu penyimpanan. Muat ulang papan lalu ulangi.");
+    seen.add(key);
+    const buy = new Decimal(row.buyRate);
+    const sell = new Decimal(row.sellRate);
+    if (buy.lte(0) || sell.lte(0) || new Decimal(row.quoteUnit).lte(0)) throw new Error("Kurs beli, kurs jual, dan satuan kuotasi harus lebih besar dari nol.");
+    if (buy.gt(sell)) throw new Error("Kurs beli tidak boleh lebih tinggi daripada kurs jual pada sel yang sama.");
+  }
+  const replaceRateIds = existingDrafts.filter((draft) => seen.has(`${draft.currencyId}:${draft.rateTierId ?? "ALL"}`)).map((draft) => draft.id);
+  return { replaceRateIds, inserts: [...inputs] };
+}
+
+export async function saveBoardDrafts(inputs: BoardDraftInput[], actorUserId: number) {
+  const db = await databaseOrThrow();
+  const existing = await db.select({ id: operationalRates.id, currencyId: operationalRates.currencyId, rateTierId: operationalRates.rateTierId })
+    .from(operationalRates).where(and(eq(operationalRates.status, "DRAFT"), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false)));
+  const plan = planDraftReplacement(existing, inputs);
+  const effectiveAt = new Date();
+  await db.transaction(async (tx) => {
+    if (plan.replaceRateIds.length) await tx.delete(operationalRates).where(inArray(operationalRates.id, plan.replaceRateIds));
+    for (const row of plan.inserts) {
+      await tx.insert(operationalRates).values({
+        currencyId: row.currencyId, rateTierId: row.rateTierId, referenceSnapshotId: row.referenceSnapshotId ?? null,
+        quoteUnit: new Decimal(row.quoteUnit).toFixed(6), buyRate: new Decimal(row.buyRate).toFixed(6), sellRate: new Decimal(row.sellRate).toFixed(6),
+        effectiveAt, status: "DRAFT", proposedByUserId: actorUserId,
+      });
+    }
+    await tx.insert(auditLogs).values({
+      actorUserId, action: "OPERATIONAL_RATE_BOARD_DRAFTED", entityType: "operational_rate_batch", entityId: effectiveAt.toISOString(),
+      afterState: { savedCells: plan.inserts.length, replacedRateIds: plan.replaceRateIds },
+    });
+  });
+  return { saved: plan.inserts.length, replaced: plan.replaceRateIds.length };
+}
+
+export async function activateBoardDrafts(input: { rateIds?: number[]; approvalReason: string }, actorUserId: number) {
+  const db = await databaseOrThrow();
+  const rateIds = input.rateIds?.length
+    ? input.rateIds
+    : (await db.select({ id: operationalRates.id }).from(operationalRates)
+        .where(and(eq(operationalRates.status, "DRAFT"), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false)))).map((row) => row.id);
+  return activateOperationalRateIds(rateIds, actorUserId, input.approvalReason);
+}
+
+/** Membuang seluruh draf papan tanpa menyentuh satu pun kurs yang sedang aktif. */
+export async function discardBoardDrafts(actorUserId: number) {
+  const db = await databaseOrThrow();
+  const drafts = await db.select({ id: operationalRates.id }).from(operationalRates)
+    .where(and(eq(operationalRates.status, "DRAFT"), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false)));
+  if (!drafts.length) return { discarded: 0 };
+  const ids = drafts.map((row) => row.id);
+  await db.transaction(async (tx) => {
+    await tx.delete(operationalRates).where(inArray(operationalRates.id, ids));
+    await tx.insert(auditLogs).values({ actorUserId, action: "OPERATIONAL_RATE_DRAFTS_DISCARDED", entityType: "operational_rate_batch", entityId: new Date().toISOString(), beforeState: { rateIds: ids } });
+  });
+  return { discarded: ids.length };
 }

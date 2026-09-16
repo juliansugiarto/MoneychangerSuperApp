@@ -101,7 +101,7 @@ import {
   updatePublicAnnouncement,
   updateServiceRequest,
 } from "./operations";
-import { deactivateRateTier, readRateBoard, saveRateTier } from "./rateBoard";
+import { activateBoardDrafts, deactivateRateTier, discardBoardDrafts, readRateBoard, saveBoardDrafts, saveRateTier } from "./rateBoard";
 import { listCustomerProfileMonitoring, listCustomerProfileReviews, recordCustomerProfileReview } from "./customerProfileMonitoring";
 import { addCompanyDocumentVersion, companyArchiveWorklist, createCompanyDocument, deactivateCompanyDocument, listCompanyArchiveDocuments, listCompanyArchiveVersions } from "./companyDocumentArchive";
 import { getOperationalDocumentDownloadUrl, listCompanyDocuments, listDeactivatedCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
@@ -490,6 +490,21 @@ export const appRouter = router({
     proposeLatest: adminProcedure.mutation(({ ctx }) => proposeLatestReferenceRates(ctx.user.id)),
     activate: adminProcedure.input(z.object({ rateId: z.number().int().positive(), approvalReason: z.string().trim().min(10).max(1000) })).mutation(({ input, ctx }) => activateOperationalRate(input.rateId, ctx.user.id, input.approvalReason)),
     activateMany: adminProcedure.input(z.object({ rateIds: z.array(z.number().int().positive()).min(1).max(100), approvalReason: z.string().trim().min(10).max(1000) })).mutation(({ input, ctx }) => activateOperationalRates(input.rateIds, ctx.user.id, input.approvalReason)),
+    saveBoardDrafts: adminProcedure.input(z.object({
+      cells: z.array(z.object({
+        currencyId: z.number().int().positive(),
+        rateTierId: z.number().int().positive().nullable().default(null),
+        quoteUnit: decimalString.default("1"),
+        buyRate: decimalString,
+        sellRate: decimalString,
+        referenceSnapshotId: z.number().int().positive().nullable().optional(),
+      })).min(1).max(400),
+    })).mutation(({ input, ctx }) => saveBoardDrafts(input.cells, ctx.user.id)),
+    activateBoard: adminProcedure.input(z.object({
+      rateIds: z.array(z.number().int().positive()).max(400).optional(),
+      approvalReason: z.string().trim().min(10).max(1000),
+    })).mutation(({ input, ctx }) => activateBoardDrafts(input, ctx.user.id)),
+    discardBoardDrafts: adminProcedure.mutation(({ ctx }) => discardBoardDrafts(ctx.user.id)),
   }),
 
   rateTiers: router({
