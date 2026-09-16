@@ -23,7 +23,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 7 — "Salin kurs kemarin" dan "Isi saran dari referensi BI" yang sadar kelompok
 - [x] Tugas 8 — Toleransi selisih harga: pengaturan dan aturan murni
 - [x] Tugas 9 — Rujukan dan toleransi per baris pecahan pada pembuatan bon
-- [ ] Tugas 10 — Label kelompok pada kurs publik, Beranda, dan Meja Konfirmasi
+- [x] Tugas 10 — Label kelompok pada kurs publik, Beranda, dan Meja Konfirmasi
 - [ ] Tugas 11 — Kisi papan kurs di klien (`RateBoardGrid`)
 - [ ] Tugas 12 — Halaman `/operasional/kurs` yang baru
 - [ ] Tugas 13 — Bon: harga terisi otomatis dari papan dan alasan selisih

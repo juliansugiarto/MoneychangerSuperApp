@@ -1191,7 +1191,13 @@ export function differencePercent(base: string, reference: string | null) {
 /** Compares current outlet prices with recorded references without changing an outlet rate. */
 export async function getRateComparisonDashboard() {
   const [operationalRows, referenceRows, observationRows] = await Promise.all([listOperationalRates(), listReferenceSnapshots(), listMarketRateObservations(250)]);
-  const activeRates = selectPublicActiveRateRows(operationalRows);
+  // Pembanding bekerja per valuta; dengan kelompok pecahan, kurs tingkat valuta mewakili valutanya
+  // bila ada, selain itu kelompok pertama yang ditemukan.
+  const representativeByCurrency = new Map<number, typeof operationalRows[number]>();
+  for (const row of selectPublicActiveRateRows(operationalRows)) {
+    if (!representativeByCurrency.has(row.rate.currencyId) || row.rate.rateTierId === null) representativeByCurrency.set(row.rate.currencyId, row);
+  }
+  const activeRates = Array.from(representativeByCurrency.values());
   const biByCurrency = new Map<number, typeof referenceRows[number]>();
   const jisdorByCurrency = new Map<number, typeof observationRows[number]>();
   const marketByCurrency = new Map<number, typeof observationRows[number]>();
@@ -1219,12 +1225,14 @@ export async function getRateComparisonDashboard() {
   });
 }
 
-export function selectPublicActiveRateRows<T extends { rate: { currencyId: number; status: string; effectiveAt: Date; notes: string | null; isDemo?: boolean; isHistorical?: boolean } }>(rows: T[], now = new Date()) {
-  const seen = new Set<number>();
+export function selectPublicActiveRateRows<T extends { rate: { currencyId: number; rateTierId?: number | null; status: string; effectiveAt: Date; notes: string | null; isDemo?: boolean; isHistorical?: boolean } }>(rows: T[], now = new Date()) {
+  // Kuncinya pasangan valuta + kelompok, supaya kelompok pecahan satu valuta tidak saling membuang.
+  const seen = new Set<string>();
   return rows.filter(({ rate }) => {
     if (rate.status !== "ACTIVE" || rate.effectiveAt > now || rate.isDemo || rate.isHistorical || rate.notes?.startsWith("[DEMO]")) return false;
-    if (seen.has(rate.currencyId)) return false;
-    seen.add(rate.currencyId);
+    const key = `${rate.currencyId}:${rate.rateTierId ?? "ALL"}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 }
@@ -1233,11 +1241,12 @@ export function selectPublicActiveRateRows<T extends { rate: { currencyId: numbe
 export async function listPublicActiveRates() {
   return retryTransientDatabaseRead(async () => {
     const db = await databaseOrThrow();
-    const rows = await db.select({ rate: operationalRates, currency: currencies }).from(operationalRates)
+    const rows = await db.select({ rate: operationalRates, currency: currencies, tier: rateTiers }).from(operationalRates)
       .innerJoin(currencies, eq(operationalRates.currencyId, currencies.id))
+      .leftJoin(rateTiers, eq(operationalRates.rateTierId, rateTiers.id))
       .where(and(eq(operationalRates.status, "ACTIVE"), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false), eq(currencies.active, true), lte(operationalRates.effectiveAt, new Date())))
       .orderBy(desc(operationalRates.effectiveAt), currencies.code);
-    return selectPublicActiveRateRows(rows).map(({ rate, currency }) => ({ rate, currency, isDemo: false }));
+    return selectPublicActiveRateRows(rows).map(({ rate, currency, tier }) => ({ rate, currency, tier: tier ? { id: tier.id, label: tier.label } : null, isDemo: false }));
   });
 }
 
