@@ -78,6 +78,8 @@ export const rateReferenceSnapshots = mysqlTable("rate_reference_snapshots", {
 export const operationalRates = mysqlTable("operational_rates", {
   id: int("id").autoincrement().primaryKey(),
   currencyId: int("currencyId").notNull(),
+  /** Kelompok pecahan yang dihargai baris ini; kosong berarti kurs tingkat valuta yang berlaku untuk pecahan mana pun yang tidak masuk kelompok. */
+  rateTierId: int("rateTierId"),
   referenceSnapshotId: int("referenceSnapshotId"),
   /** The denominator associated with buyRate and sellRate. */
   quoteUnit: decimal("quoteUnit", { precision: 18, scale: 6 }).default("1.000000").notNull(),
@@ -89,6 +91,10 @@ export const operationalRates = mysqlTable("operational_rates", {
   approvedByUserId: int("approvedByUserId"),
   approvedAt: datetime("approvedAt"),
   notes: text("notes"),
+  /** Alasan aktivasi yang diketik penyetuju, disalin ke setiap kurs dalam satu batch. Penulis data untuk riwayat hari ini di papan — riwayat tidak pernah dibaca dari audit_logs. */
+  approvalReason: varchar("approvalReason", { length: 1000 }),
+  /** Satu id per penekanan "Aktifkan", sama untuk seluruh kurs dalam aktivasi itu. */
+  activationBatchId: varchar("activationBatchId", { length: 36 }),
   /** Training-only rate versions must never become an operational live rate. */
   isDemo: boolean("isDemo").default(false).notNull(),
   /** Archived import rate; never eligible for a live transaction or public display. */
@@ -99,7 +105,29 @@ export const operationalRates = mysqlTable("operational_rates", {
   index("operational_rate_currency_status_idx").on(table.currencyId, table.status),
   index("operational_rate_live_status_idx").on(table.isDemo, table.isHistorical, table.status, table.currencyId),
   index("operational_rate_effective_idx").on(table.effectiveAt),
+  index("operational_rate_currency_tier_status_idx").on(table.currencyId, table.rateTierId, table.status),
+  index("operational_rate_activation_batch_idx").on(table.activationBatchId),
 ]);
+
+/**
+ * Kelompok harga pecahan dalam satu valuta, mis. USD "100" · "50" · "5–20". Money changer di
+ * Indonesia lazim menghargai pecahan besar dan kecil berbeda, dan satu kurs per valuta memaksa
+ * selisih itu diketik ulang pada setiap bon. Valuta tanpa kelompok aktif berperilaku persis
+ * seperti sebelum tabel ini ada: satu kurs untuk semua pecahan.
+ */
+export const rateTiers = mysqlTable("rate_tiers", {
+  id: int("id").autoincrement().primaryKey(),
+  currencyId: int("currencyId").notNull(),
+  /** Label yang dibaca kasir di papan dan di bon, mis. "100" atau "5–20". */
+  label: varchar("label", { length: 40 }).notNull(),
+  /** Larik nilai muka desimal (string) yang termasuk kelompok ini, mis. ["5.000000","10.000000","20.000000"]. Satu nilai muka tidak boleh berada di dua kelompok aktif pada valuta yang sama — ditegakkan server, bukan basis data. */
+  denominationValues: json("denominationValues").$type<string[]>().notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [index("rate_tiers_currency_active_idx").on(table.currencyId, table.active)]);
 
 export const customers = mysqlTable("customers", {
   id: int("id").autoincrement().primaryKey(),
@@ -260,6 +288,8 @@ export const exchangeTransactions = mysqlTable("exchange_transactions", {
   referenceRateSnapshot: decimal("referenceRateSnapshot", { precision: 24, scale: 6 }),
   /** Optional note explaining why the applied rate differs from the reference rate (e.g. rounding, negotiation). */
   dealNotes: varchar("dealNotes", { length: 255 }),
+  /** Alasan yang wajib diisi ketika ada baris pecahan berharga di luar toleransi kurs papan. */
+  rateDeviationReason: varchar("rateDeviationReason", { length: 1000 }),
   /** Immutable full-precision result in Rupiah, retained as decimal rather than float. On a multi-line bon this is the sum of every exchangeTransactionLines row, not a single conversion. */
   rupiahAmount: decimal("rupiahAmount", { precision: 24, scale: 2 }).notNull(),
   paymentMethod: mysqlEnum("paymentMethod", ["CASH", "BANK_TRANSFER", "OTHER"]).notNull(),
@@ -361,6 +391,11 @@ export const exchangeTransactionDenominationEntries = mysqlTable("exchange_trans
   lineTotal: decimal("lineTotal", { precision: 24, scale: 6 }).notNull(),
   /** Price the teller typed in for THIS specific denomination group (e.g. USD 100s priced differently from USD 10s in the same deal). Required for transaction bons going forward; null on cash-movement denomination rows (those have no price concept) and on bons written before per-denomination pricing existed. */
   agreedRate: decimal("agreedRate", { precision: 24, scale: 6 }),
+  /** Kurs papan yang berlaku untuk pecahan ini saat bon disimpan — dihitung ulang di server, tidak pernah dipercaya dari klien. Kosong bila valutanya tidak punya kurs aktif. */
+  operationalRateId: int("operationalRateId"),
+  referenceRateSnapshot: decimal("referenceRateSnapshot", { precision: 24, scale: 6 }),
+  /** |agreedRate − rujukan| / rujukan × 100. Per baris pecahan, karena pecahan dalam satu bon dapat jatuh ke kelompok harga yang berbeda. */
+  rateDeviationPercent: decimal("rateDeviationPercent", { precision: 8, scale: 4 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [
   index("exchange_transaction_denomination_entries_transaction_idx").on(table.transactionId),
@@ -762,6 +797,8 @@ export const operationalSettings = mysqlTable("operational_settings", {
   eddCashDailyThresholdIdr: decimal("eddCashDailyThresholdIdr", { precision: 24, scale: 2 }).default("100000000.00").notNull(),
   /** A reference movement at or above this percentage is shown as a rate-shock warning. */
   rateShockThresholdPercent: decimal("rateShockThresholdPercent", { precision: 8, scale: 4 }).default("1.5000").notNull(),
+  /** Batas selisih harga bon terhadap kurs papan, dua arah. Di luar batas ini kasir wajib mengisi alasan dan bonnya masuk antrean tinjauan. */
+  rateDeviationTolerancePercent: decimal("rateDeviationTolerancePercent", { precision: 8, scale: 4 }).default("0.5000").notNull(),
   updatedByUserId: int("updatedByUserId"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [uniqueIndex("operational_settings_code_uq").on(table.settingCode)]);
