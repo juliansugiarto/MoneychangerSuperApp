@@ -70,18 +70,26 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 14 September 2026 (sesudah Tugas 7A dan 7B Fondasi Desain: tema Konter Tebal)
+## Sesi berikutnya — keadaan per 16 September 2026 (Sub-proyek 1 Fondasi Desain SELESAI: Tugas 1–12)
 
 **Seluruh paket peta jalan asli sudah selesai:** K1, B, D, C, E, F1, F2, G, H, I, J (J1+J2), K2,
 K3, L, dan **M**. Dua belas temuan pemeriksaan BI 2026 sudah tertutup; pada
 `specs/2026-09-09-pbi-10-2024-temuan-awal.md` (PBI No. 10 Tahun 2024) Temuan 1 dan 2 tertutup oleh
 Paket L, dan **Temuan 4 tertutup oleh Paket M** dengan premis yang sudah dikoreksi.
 
-**Pekerjaan berikutnya: Program Desain Ulang Antarmuka, sub-proyek 1 (Fondasi Desain), Tugas 8**
-(palet perintah ⌘K dan pintasan konter). Tugas 1–7, **7A**, dan **7B** sudah di-commit dan tercentang
-di `plans/2026-09-12-fondasi-desain.md`; tersisa Tugas 8, 9, 10, 11, 12. Spec program
-`specs/2026-09-12-desain-ulang-antarmuka-design.md` (12 September) **diperbarui** oleh
+**Sub-proyek 1 (Fondasi Desain) selesai 16 September 2026.** Keempat belas baris pada Status
+Pengerjaan `plans/2026-09-12-fondasi-desain.md` tercentang (Tugas 1–12 termasuk 7A dan 7B), dan baris
+*Sub-proyek 1* pada `ROADMAP-SISA-PEKERJAAN.md` sudah dicentang di commit Tugas 12 (`a62562f`).
+Spec program `specs/2026-09-12-desain-ulang-antarmuka-design.md` (12 September) **diperbarui** oleh
 `specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md` (`8250e87`).
+
+**Pekerjaan berikutnya: sub-proyek 1B (Papan Kurs).** Rencananya **belum ditulis** — sesuai aturan
+program, ditulis pada awal sesi 1B dari spec 2026-09-13 Bagian B. Sebelum atau sambil itu, dua sisa
+Fondasi Desain yang sudah diketahui dan belum dikerjakan (keduanya ada di daftar Risiko residual
+rencana): **butir 13** — `N` dan `/` masih aktif saat dialog modal terbuka sehingga `N` di dalam
+dialog berpindah halaman dan membuang isinya (perbaikan satu baris di
+`client/src/components/shell/shortcuts.ts` + uji), dan **butir 11** — tombol merek sidebar tanpa
+`FOCUS_RING`.
 
 **Keputusan pengguna 13 September 2026 — jangan ditanyakan ulang** (lengkapnya di spec 2026-09-13):
 tampilan netral abu-abu ditolak (*"korporat sekali seperti SIPUKA"*; empat tema berganti warna pada
@@ -95,26 +103,49 @@ dari papan dan boleh diubah dalam toleransi — di luar toleransi wajib alasan d
 kisi tegas dan sorot baris + kolom); kurs dikeluarkan dari sub-proyek 5. Urutan program kini
 **1 → 1B → 2 → … → 9**. Keputusan 12 September lain tetap berlaku; keputusan #6 (desain netral) diganti.
 
-**Cara eksekusi yang dipilih pengguna: subagent-driven development** — satu implementer per tugas, satu
+**Cara eksekusi Tugas 8–12: subagent-driven development** — satu implementer per tugas, satu
 reviewer (spesifikasi + mutu) per tugas, pengendali memeriksa hasil di peramban dan memutus ruling.
 Ledger ada di `.superpowers/sdd/2026-09-12-fondasi-desain/progress.md`: tabel pemindaian pra-eksekusi,
-setiap `Ruling:`, minor tertunda untuk reviu akhir, dan baris `Task <N>: complete`. **Ledger itu tidak
+setiap `Ruling:` (18 buah), minor tertunda, dan baris `Task <N>: complete`. **Ledger itu tidak
 di-commit** (`.superpowers/` tidak terlacak dan belum di `.gitignore`); bila hilang, `git log` adalah
-pemulihannya — Tugas 7A = `083ad27`, Tugas 7B = `3956517`.
+pemulihannya — Tugas 7A = `083ad27`, 7B = `3956517`, 8 = `efcdb00`, 9 = `4dea8e3`, 10 = `61f8211`,
+11 = `044a9b4`, 12 = `a62562f` + perbaikan `256a58a`.
 
-**Prompt untuk sesi berikutnya:**
+**Biaya subagen jauh lebih besar daripada perkiraan pengguna** (16 September: *"can we stop using
+agent because its burnt token so much?"*) — tiga belas subagen untuk lima tugas, satu di antaranya
+mati tanpa laporan sesudah 10 menit dan harus diulang. **Sesi berikutnya: kerjakan langsung, tanpa
+subagen**, kecuali pengguna meminta sebaliknya.
+
+**Reviu akhir seluruh cabang TIDAK pernah selesai.** Reviewer `opus` mati di tengah jalan karena batas
+pemakaian mingguan (429, *"resets 2pm Asia/Jakarta"*). Sebagai gantinya pengendali menjalankan
+pemeriksaan lintas tugas yang tertarget dan **lulus**: (a) setiap tujuan pada `visibleBackOfficeNavigation`
+punya rute di `App.tsx` dan `minimumRole`-nya **sama persis** dengan penjaga rutenya — palet ⌘K tidak
+pernah menawarkan halaman yang ditolak, dan tidak ada halaman diizinkan yang tersembunyi (36 daun, 41
+rute); (b) `pageTitleFor` diturunkan dari pohon sidebar sehingga nama menu yang berganti tidak pernah
+meninggalkan kepala halaman basi; (c) `FOUNDATION_FILES` memuat 21 berkas dan yang tidak terdaftar
+memang harus memuat warna mentah (`index.css`, `shared/themePalettes.ts`) atau belum dibangun ulang.
+Yang **belum** diperiksa siapa pun secara menyeluruh: mutu kode Tugas 1–7 (dikerjakan tanpa reviewer),
+dan pemeriksaan arsitektur/keamanan lintas berkas di luar ketiga pemeriksaan di atas.
+
+**Prompt untuk sesi berikutnya (bereskan sisa Fondasi Desain, tanpa subagen):**
 
 ```
-Pakai superpowers:subagent-driven-development untuk docs/superpowers/plans/2026-09-12-fondasi-desain.md.
-Ledger: .superpowers/sdd/2026-09-12-fondasi-desain/progress.md — Tugas 1 sampai 7B sudah complete.
-Lanjutkan dari Tugas 8 sampai Tugas 12, lalu reviu akhir seluruh cabang dan kumpulkan semua Ruling.
-Pemeriksaan peramban dilakukan pengendali. Tugas 12 Step 7 (penerapan produksi) hanya bila saya minta.
+Kerjakan sendiri, tanpa subagen. Dua sisa Fondasi Desain dari daftar Risiko residual
+docs/superpowers/plans/2026-09-12-fondasi-desain.md: butir 13 (N dan / masih aktif saat dialog modal
+terbuka — perbaiki shortcutFor di client/src/components/shell/shortcuts.ts beserta ujinya) dan butir 11
+(tombol merek AppSidebar.tsx:35 tanpa FOCUS_RING). Jalankan vitest, tsc, vite build, lalu tunjukkan
+angkanya. Jangan menerapkan ke produksi.
 ```
 
-Bila ingin mengerjakan langsung satu tugas per sesi, Prompt B di atas tetap berlaku dengan `<N>` = 8.
-Baris *Sub-proyek 1* pada `ROADMAP-SISA-PEKERJAAN.md` baru dicentang di Tugas 12. **Rencana bertugas
-1B belum ditulis** — sesuai aturan program, ditulis pada awal sesi 1B (sesudah Tugas 12) dari spec
-2026-09-13 Bagian B, karena kode kurs yang disentuhnya dapat berubah sebelum itu.
+**Prompt untuk memulai sub-proyek 1B (Papan Kurs):**
+
+```
+Tulis rencana sub-proyek 1B (Papan Kurs) dari docs/superpowers/specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md
+Bagian B, dengan superpowers:writing-plans. Kerjakan sendiri, tanpa subagen. Baca dulu
+docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md dan docs/SKEMA-DATABASE-PROJECT.md bagian kurs.
+```
+
+Bila ingin mengerjakan satu tugas per sesi dari sebuah rencana, Prompt B di atas tetap berlaku.
 
 **Produksi tidak disentuh sejak 12 September 2026** (kode produksi tetap `724de6b`; Tugas 1–7B belum
 diterapkan). Keadaan terakhirnya:
@@ -130,18 +161,25 @@ impor ulang daftar DTTOT/DPPSPM, mengisi ulang Profil Perusahaan, menghapus bari
 `Bash(ssh -o BatchMode=yes -o ConnectTimeout=10 deploy@187.53.128.14:*)`. Temuan 3 tetap menunggu
 keputusan pengguna.
 
-**Baseline uji yang benar-benar dijalankan pengendali 14 September 2026 pada `f9a3738`** (sesudah
-Tugas 7B): `Test Files 174 passed (174)`, `Tests 1502 passed | 2 skipped (1504)`. Selisih terhadap
-baseline 11 September (`161` berkas / `1428` lulus) adalah **+13 berkas, +74 uji**, seluruhnya dari
-sub-proyek 1: Tugas 1 +1/+2, Tugas 2 +1/+18, Tugas 3 +2/+6, Tugas 4 +0/+3, Tugas 5 +1/+7, Tugas 6
-+1/+8, Tugas 7 +4/+11, Tugas 7A +2/+17, Tugas 7B +1/+2. Tidak ada uji lama yang dibuang.
+**Baseline uji terakhir yang benar-benar dijalankan, oleh implementer Tugas 12 pada `a62562f`**
+(15 September 2026): `Test Files 177 passed (177)`, `Tests 1513 passed | 2 skipped (1515)`. Selisih
+terhadap baseline 11 September (`161` berkas / `1428` lulus) adalah **+16 berkas, +85 uji**, seluruhnya
+dari sub-proyek 1: Tugas 1 +1/+2, Tugas 2 +1/+18, Tugas 3 +2/+6, Tugas 4 +0/+3, Tugas 5 +1/+7, Tugas 6
++1/+8, Tugas 7 +4/+11, Tugas 7A +2/+17, Tugas 7B +1/+2, Tugas 8 +2/+8, Tugas 9 +1/+3, Tugas 10 +0/+0
+(dokumen), Tugas 11 +0/+0 (Vitest tidak memuat `e2e/`), Tugas 12 +0/+0. Tidak ada uji lama yang dibuang.
+`tsc --noEmit` dan `vite build` bersih pada jalan yang sama. **Commit sesudahnya (`256a58a`) hanya
+menyentuh `docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md`, jadi angka itu masih berlaku** — tetapi suite tidak
+dijalankan ulang di atasnya.
 
-`tsc --noEmit` dan `vite build` bersih pada setiap tugas (dijalankan pengendali pada Tugas 1–7, oleh
-implementer pada 7A dan 7B); **tidak dijalankan ulang pada `f9a3738`**, yang hanya mencentang rencana.
-`pnpm audit --prod --audit-level=high` terakhir dijalankan Tugas 1 (12 September, dependensi `-D`
-baru: `jsdom`, `@testing-library/react`, `@testing-library/dom`, `@testing-library/user-event`):
-**9 kerentanan (6 sedang, 3 tinggi)** — dan isinya **bukan hanya SheetJS**: tujuh advisori berbeda,
-`xlsx` 2 (tinggi), `mysql2` 2 (1 tinggi, 1 sedang), `qs` 3 (sedang). **Jangan menyebut audit bersih.**
+**Playwright: `./node_modules/.bin/pnpm test:visual` = 42 lulus** pada `044a9b4` dan diulang pada
+`a62562f` (3 ukuran × 11 + 6 palet = 39 baseline PNG di `e2e/__screenshots__/fondasi.spec.ts/`).
+Servernya sendiri di port 3100 terhadap `mc_t_visual`; **tidak menyentuh `moneychanger`**.
+
+`pnpm audit --prod --audit-level=high` dijalankan Tugas 11 dan 12 (15 September): **9 kerentanan
+(3 tinggi, 6 sedang)**. Selain `xlsx`/SheetJS yang sudah dikenal, ada **satu temuan tinggi baru pada
+`mysql2`** (GHSA-3f6p-5ww8-9rcr, lewat `drizzle-orm@0.45.2 > mysql2@3.15.1`; terpatch `>=3.22.0`) —
+menaikkannya menyentuh backend, jadi ditunda ke paket tersendiri (butir 9 Risiko residual rencana).
+**Jangan menyebut audit bersih.**
 
 **Tidak ada migrasi baru sejak 12 September 2026** — diukur 14 September: `ls drizzle/*.sql` = 59
 berkas, terakhir `0058_brief_proteus.sql`. Sub-proyek 1 memang dilarang menyentuh skema.
@@ -301,28 +339,53 @@ jalankan ulang berkas itu saja.
   hanya 1 berkurs aktif; katalog `shared/worldCurrencies.ts` memuat 151 valuta. Masalah halaman Kurs
   ada pada susunannya (±10 kartu, satu kurs per kartu, aktivasi tidak atomik) — lihat spec 2026-09-13
   Bagian B.
+- **Tab Chrome yang tidak di depan tidak merender.** Lewat ekstensi Chrome, `document.visibilityState`
+  bisa tetap `hidden` walau jendelanya terlihat: gulir tidak maju, animasi keluar dialog Radix tertahan
+  (elemen bertahan di DOM dengan `data-state=closed`), dan tangkapan layar mengembalikan gambar basi.
+  Pengukuran tata letak (`getBoundingClientRect`, `getComputedStyle`) tetap benar. Beri tunggu **8 detik**
+  sesudah `navigate` sebelum mengukur, dan jangan menyimpulkan cacat dari tangkapan layar yang basi.
+- **`browser_batch` dengan 8 halaman sekaligus habis waktu.** Dua halaman per batch aman.
+- **Tombol `Tab` dan `Escape` dari ekstensi tidak selalu sampai.** Sesudah `navigate`, `Tab` kerap
+  meninggalkan fokus di `BODY`; memanggil `element.focus()` lewat `javascript_tool` lalu menekan `Tab`
+  berhasil. `type` maupun `key` juga tidak menyisipkan karakter ke input React yang terkendali.
+- **`git` bisa mati total karena lisensi Xcode.** 16 September seluruh perintah `git` (dan `python3`)
+  gagal dengan *"You have not agreed to the Xcode license agreements"* karena `xcode-select -p`
+  menunjuk `/Applications/Xcode.app`. Perbaikannya butuh sudo pengguna:
+  `sudo xcode-select -s /Library/Developer/CommandLineTools` atau `sudo xcodebuild -license`.
+  `node` tetap jalan, jadi skrip pemeriksaan tulis dengan `node -e`, bukan `python3`.
 - **Mockup sesi rancangan tersimpan lokal** di `.superpowers/brainstorm/59970-1789210543/content/`
   (`gaya-karakter.html` pilihan 3, `tebal-intensitas.html` pilihan B, `palet-konter-tebal.html`,
   `papan-kurs.html`) — rujukan visual yang disetujui pengguna, tidak di-commit.
 
-### Risiko residual Fondasi Desain (Tugas 1–7B) yang masih terbuka
+### Risiko residual Fondasi Desain (Tugas 1–12) yang masih terbuka
 
+Daftar lengkapnya (13 butir) ada di akhir `plans/2026-09-12-fondasi-desain.md`. Yang paling mudah
+menggigit sesi berikutnya:
+
+- **`N` dan `/` masih aktif saat dialog modal terbuka** (butir 13, ditemukan 16 September):
+  `shortcutFor` hanya menahan diri bila fokus di kolom isian, sehingga `N` di dalam dialog yang
+  fokusnya pada tombol berpindah ke Buat Transaksi dan membuang isi dialog. Sebelas halaman lama
+  memakai `AlertDialog`/`Dialog`. Perbaikannya satu baris + uji; **belum dikerjakan**.
+- **Tombol merek sidebar tanpa `FOCUS_RING`** (butir 11, `AppSidebar.tsx:35`) — memakai cincin bawaan
+  peramban, tidak konsisten dengan butir sidebar dan tombol tebal.
 - **Halaman lama tanpa `h1`**: `/operasional`, `/operasional/stock/kas-awal`, `/kepatuhan/ira`
   (dan kemungkinan lainnya) sejak kepala shell berhenti menjadi heading. Tertutup ketika tiap modul
   memakai `PageHeader`.
-- **1440×900 dan 1920×1080 belum diverifikasi di layar** (batas jendela); menunggu Playwright Tugas 11.
-- **Cincin fokus papan ketik shell Konter Tebal belum terlihat di layar** — ruling pada ledger
-  memindahkannya ke Tugas 12 Step 1. Aturan fokusnya ada di kode.
+- **1440×900 dan 1920×1080 hanya terbukti lewat baseline Playwright**, bukan peramban manual — layar
+  fisik mesin ini membatasi jendela di 1351px. Fallback font luring belum pernah diuji.
+- **Pengembalian fokus sesudah `Esc` pada palet ⌘K belum terbukti di peramban** (butir 10);
+  `data-state=closed` terbukti, animasi keluarnya tertahan di tab tersembunyi.
 - **Kontras turunan hanya diukur untuk Marun.** Pasangan palet diuji otomatis untuk keenam palet,
   tetapi `--ink-subtle`/`--ink-muted` hasil `color-mix` pada lima palet lain belum diukur.
-- **`QUIET_FIELD` belum dipakai komponen mana pun** sampai input galeri Tugas 9; `applyTheme` belum
-  dipanggil aplikasi sampai pratinjau Tugas 9 dan pemilih palet sub-proyek 2 — seluruh pembeli memakai
-  Marun.
 - **Halaman lama tampil dengan gaya lamanya di dalam shell Konter Tebal** (mis. tab navy dan kartu
   bayangan lembut di Kas Awal) — campuran gaya yang disengaja sampai modulnya dibangun ulang.
 - **Font dari Google Fonts** membutuhkan internet; tanpa sambungan, peramban memakai fallback sistem.
-- **Implementer subagen tidak mencentang langkah rencana**; pengendali mencentangnya sesudah reviu
-  (`f9a3738`). Periksa ulang checkbox sesudah setiap tugas.
+  Baseline Playwright juga bergantung pada font yang sudah ter-cache (bisa goyah di mesin bersih).
+- **Implementer subagen tidak mencentang langkah rencana**; pengendali mencentangnya sesudah reviu.
+  Periksa ulang checkbox sesudah setiap tugas.
+- **Mutu kode Tugas 1–7 tidak pernah ditinjau siapa pun** (dikerjakan langsung sebelum SDD), dan reviu
+  akhir lintas cabang tidak pernah selesai — lihat blok keadaan di atas untuk tiga pemeriksaan
+  tertarget yang menggantikannya.
 
 ### Risiko residual Paket J2 yang masih terbuka
 
