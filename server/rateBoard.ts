@@ -1,6 +1,7 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
-import { auditLogs, operationalRates, rateTiers } from "../drizzle/schema";
-import { findTierOverlap, normalizeDenominationValue, sortTiers, type RateTierRow } from "../shared/rateTiers";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { nanoid } from "nanoid";
+import { auditLogs, currencies, operationalRates, rateTiers } from "../drizzle/schema";
+import { findTierOverlap, normalizeDenominationValue, OTHER_TIER_LABEL, sortTiers, type RateTierRow } from "../shared/rateTiers";
 import { databaseOrThrow, writeAudit } from "./operations";
 
 export const ACTIVATION_REASON_MIN_LENGTH = 10;
@@ -67,4 +68,85 @@ export async function deactivateRateTier(input: { tierId: number; reason: string
     await tx.insert(auditLogs).values({ actorUserId, action: "RATE_TIER_DEACTIVATED", entityType: "rate_tier", entityId: String(input.tierId), beforeState: { active: true }, afterState: { active: false, retiredRateIds: plan.retireRateIds }, reason: plan.reason || null });
   });
   return { tierId: input.tierId, retiredRateIds: plan.retireRateIds };
+}
+
+export type ActivationDraft = {
+  id: number; currencyId: number; currencyCode: string; rateTierId: number | null; tierLabel: string;
+  status: "DRAFT" | "ACTIVE" | "RETIRED"; isDemo: boolean; isHistorical: boolean;
+};
+export type ActivationPlan = { activateRateIds: number[]; retireKeys: { currencyId: number; rateTierId: number | null }[]; batchId: string };
+
+const activationKey = (currencyId: number, rateTierId: number | null) => `${currencyId}:${rateTierId ?? "ALL"}`;
+
+/**
+ * Seluruh keputusan aktivasi diambil **sebelum** transaksi dibuka, sehingga kegagalan apa pun terjadi
+ * saat belum ada satu baris pun yang berubah. Satu draf rusak membatalkan seluruh batch, dan galatnya
+ * menyebut valuta serta kelompok yang gagal — "aktivasi gagal" tanpa baris yang disebut memaksa
+ * operator menebak kurs mana yang harus diperbaiki.
+ */
+export function planBoardActivation(drafts: readonly ActivationDraft[], reason: string, batchId: string): ActivationPlan {
+  const trimmed = reason.trim();
+  if (trimmed.length < ACTIVATION_REASON_MIN_LENGTH) throw new Error(`Alasan aktivasi kurs minimal ${ACTIVATION_REASON_MIN_LENGTH} karakter.`);
+  if (!drafts.length) throw new Error("Pilih setidaknya satu proposal kurs untuk diaktifkan.");
+  const seen = new Set<string>();
+  for (const draft of drafts) {
+    const where = `${draft.currencyCode} · ${draft.tierLabel}`;
+    if (draft.status !== "DRAFT") throw new Error(`Kurs ${where} tidak lagi berstatus DRAFT, jadi tidak ada satu pun kurs dalam aktivasi ini yang diaktifkan. Muat ulang papan lalu ulangi.`);
+    if (draft.isDemo || draft.isHistorical) throw new Error(`Kurs ${where} adalah kurs demo atau historis dan tidak dapat diaktifkan pada operasi live.`);
+    const key = activationKey(draft.currencyId, draft.rateTierId);
+    if (seen.has(key)) throw new Error(`Ada dua draf untuk ${where} dalam satu aktivasi. Buang salah satunya lalu ulangi.`);
+    seen.add(key);
+  }
+  return {
+    activateRateIds: drafts.map((draft) => draft.id),
+    retireKeys: drafts.map((draft) => ({ currencyId: draft.currencyId, rateTierId: draft.rateTierId })),
+    batchId,
+  };
+}
+
+/**
+ * Satu transaksi basis data untuk seluruh batch. Menggantikan perulangan lama di `operations.ts`
+ * yang dapat berhenti di tengah dan meninggalkan papan separuh aktif.
+ */
+export async function activateOperationalRateIds(rateIds: number[], actorUserId: number, approvalReason: string) {
+  // Alasan diperiksa sebelum kueri apa pun: pemeriksaan termurah lebih dahulu, dan pesannya tetap
+  // menyebut alasan yang kurang panjang alih-alih tersamar oleh galat "proposal tidak ditemukan".
+  if (approvalReason.trim().length < ACTIVATION_REASON_MIN_LENGTH) throw new Error(`Alasan aktivasi kurs minimal ${ACTIVATION_REASON_MIN_LENGTH} karakter.`);
+  const uniqueIds = Array.from(new Set(rateIds));
+  const db = await databaseOrThrow();
+  const rows = uniqueIds.length
+    ? await db.select({ rate: operationalRates, currency: currencies, tier: rateTiers })
+        .from(operationalRates)
+        .innerJoin(currencies, eq(operationalRates.currencyId, currencies.id))
+        .leftJoin(rateTiers, eq(operationalRates.rateTierId, rateTiers.id))
+        .where(inArray(operationalRates.id, uniqueIds))
+    : [];
+  if (rows.length !== uniqueIds.length) throw new Error("Sebagian proposal kurs tidak ditemukan. Muat ulang papan lalu ulangi.");
+  const drafts: ActivationDraft[] = rows.map(({ rate, currency, tier }) => ({
+    id: rate.id, currencyId: rate.currencyId, currencyCode: currency.code, rateTierId: rate.rateTierId,
+    tierLabel: tier?.label ?? OTHER_TIER_LABEL, status: rate.status, isDemo: rate.isDemo, isHistorical: rate.isHistorical,
+  }));
+  const batchId = nanoid(21);
+  const plan = planBoardActivation(drafts, approvalReason, batchId);
+  const reason = approvalReason.trim();
+  const activatedAt = new Date();
+  await db.transaction(async (tx) => {
+    for (const key of plan.retireKeys) {
+      await tx.update(operationalRates).set({ status: "RETIRED" }).where(and(
+        eq(operationalRates.currencyId, key.currencyId),
+        key.rateTierId === null ? isNull(operationalRates.rateTierId) : eq(operationalRates.rateTierId, key.rateTierId),
+        eq(operationalRates.status, "ACTIVE"), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false),
+      ));
+    }
+    await tx.update(operationalRates)
+      .set({ status: "ACTIVE", approvedByUserId: actorUserId, approvedAt: activatedAt, approvalReason: reason, activationBatchId: batchId })
+      .where(inArray(operationalRates.id, plan.activateRateIds));
+    for (const draft of drafts) {
+      await tx.insert(auditLogs).values({
+        actorUserId, action: "OPERATIONAL_RATE_ACTIVATED", entityType: "operational_rate", entityId: String(draft.id),
+        beforeState: { status: "DRAFT" }, afterState: { status: "ACTIVE", approvedAt: activatedAt, activationBatchId: batchId, rateTierId: draft.rateTierId }, reason,
+      });
+    }
+  });
+  return { activated: plan.activateRateIds.length, batchId, rateIds: plan.activateRateIds };
 }

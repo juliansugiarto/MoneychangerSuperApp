@@ -1286,28 +1286,17 @@ export async function proposeLatestReferenceRates(actorUserId: number, effective
   return { created: createdIds.length, skipped: skippedCurrencyCodes.length, createdRateIds: createdIds, skippedCurrencyCodes };
 }
 
+/** Aktivasi tunggal adalah batch beranggota satu; tidak ada jalur aktivasi kedua yang dapat berselisih aturannya. */
 export async function activateOperationalRate(rateId: number, actorUserId: number, approvalReason: string) {
-  const reason = approvalReason.trim();
-  if (reason.length < 10) throw new Error("Alasan aktivasi kurs minimal 10 karakter.");
+  const { activateOperationalRateIds } = await import("./rateBoard");
+  const result = await activateOperationalRateIds([rateId], actorUserId, approvalReason);
   const db = await databaseOrThrow();
-  const draft = (await db.select().from(operationalRates).where(eq(operationalRates.id, rateId)).limit(1))[0];
-  if (!draft || draft.status !== "DRAFT") throw new Error("Hanya proposal kurs berstatus DRAFT yang dapat diaktifkan.");
-  if (draft.isDemo || draft.isHistorical) throw new Error("Proposal kurs demo atau historis tidak dapat diaktifkan pada operasi live.");
-  const activatedAt = new Date();
-  await db.transaction(async (tx) => {
-    await tx.update(operationalRates).set({ status: "RETIRED" }).where(and(eq(operationalRates.currencyId, draft.currencyId), eq(operationalRates.status, "ACTIVE"), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false)));
-    await tx.update(operationalRates).set({ status: "ACTIVE", approvedByUserId: actorUserId, approvedAt: activatedAt }).where(eq(operationalRates.id, rateId));
-    await tx.insert(auditLogs).values({ actorUserId, action: "OPERATIONAL_RATE_ACTIVATED", entityType: "operational_rate", entityId: String(rateId), beforeState: { status: draft.status }, afterState: { status: "ACTIVE", approvedAt: activatedAt }, reason });
-  });
-  return { ...draft, status: "ACTIVE" as const, approvedByUserId: actorUserId, approvedAt: activatedAt };
+  return (await db.select().from(operationalRates).where(eq(operationalRates.id, rateId)).limit(1))[0] ?? result;
 }
 
-/** Activates selected draft versions; activation remains atomic for each currency. */
 export async function activateOperationalRates(rateIds: number[], actorUserId: number, approvalReason: string) {
-  const uniqueRateIds = Array.from(new Set(rateIds));
-  if (!uniqueRateIds.length) throw new Error("Pilih setidaknya satu proposal kurs untuk diaktifkan.");
-  for (const rateId of uniqueRateIds) await activateOperationalRate(rateId, actorUserId, approvalReason);
-  return { activated: uniqueRateIds.length, rateIds: uniqueRateIds };
+  const { activateOperationalRateIds } = await import("./rateBoard");
+  return activateOperationalRateIds(rateIds, actorUserId, approvalReason);
 }
 
 async function reviewThresholdUsd() {
