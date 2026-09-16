@@ -2,6 +2,7 @@ import Decimal from "decimal.js";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { auditLogs, currencies, operationalRates, rateReferenceSnapshots, rateTiers, rateVolatilityAlerts } from "../drizzle/schema";
+import type { BoardCellPayload } from "../shared/rateBoard";
 import { deviationRejectionMessage, exceedsTolerance, rateDeviationPercent, type DeviationRow } from "../shared/rateDeviation";
 import { startOfNextOperationalDay, startOfOperationalDay } from "../shared/regulatoryActionQueue";
 import { findTierOverlap, matchTier, normalizeDenominationValue, OTHER_TIER_LABEL, sortTiers, type RateTierRow } from "../shared/rateTiers";
@@ -177,13 +178,7 @@ export function groupTodayActivationBatches(rows: readonly ActivationHistoryRow[
   return Array.from(byBatch.values()).sort((left, right) => right.approvedAt.getTime() - left.approvedAt.getTime());
 }
 
-export type BoardCellPayload = {
-  currencyId: number; currencyCode: string; currencyName: string;
-  rateTierId: number | null; tierLabel: string; sortOrder: number; quoteUnit: string;
-  activeRateId: number | null; activeBuyRate: string | null; activeSellRate: string | null; activeEffectiveAt: Date | null;
-  draftRateId: number | null; draftBuyRate: string | null; draftSellRate: string | null;
-  referenceBuyRate: string | null; referenceSellRate: string | null; referenceSnapshotId: number | null;
-};
+export type { BoardCellPayload } from "../shared/rateBoard";
 
 export type RateBoardPayload = {
   cells: BoardCellPayload[];
