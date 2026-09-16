@@ -20,6 +20,7 @@ describe("getReviewThreshold", () => {
       reviewThresholdUsd: "10000.00",
       eddCashDailyThresholdIdr: "100000000.00",
       rateShockThresholdPercent: "1.5000",
+      rateDeviationTolerancePercent: "0.5000",
       isFallback: true,
     });
   });

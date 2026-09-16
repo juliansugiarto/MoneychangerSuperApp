@@ -43,6 +43,7 @@ import {
 import type { IraCustomerType, IraDistributionChannel, IraLegalForm, IraOccupationCategory } from "../shared/iraVocabulary";
 import { getDb } from "./db";
 import { knownDenominationsFor } from "../shared/currencyDenominations";
+import { DEFAULT_RATE_DEVIATION_TOLERANCE_PERCENT } from "../shared/rateDeviation";
 import { PRIMARY_REVENUE_ROW_KEY } from "../shared/regulatoryForms";
 import { startOfOperationalDay, startOfNextOperationalDay, startOfOperationalMonth, startOfNextOperationalMonth } from "../shared/regulatoryActionQueue";
 import { isKnownSuspiciousIndicatorCode } from "../shared/suspiciousTransactionIndicators";
@@ -69,6 +70,7 @@ Decimal.set({ precision: 40, rounding: Decimal.ROUND_HALF_UP });
 const DEFAULT_REVIEW_THRESHOLD_USD = "10000.00";
 const DEFAULT_EDD_CASH_DAILY_THRESHOLD_IDR = "100000000.00";
 const DEFAULT_RATE_SHOCK_THRESHOLD_PERCENT = "1.5000";
+const DEFAULT_RATE_DEVIATION_TOLERANCE = DEFAULT_RATE_DEVIATION_TOLERANCE_PERCENT;
 const OPENING_CHECKLIST_KEYS = ["modalKerjaDiterima", "alatUvSiap", "mesinHitungSiap", "kasAwalDicatat"] as const;
 const CLOSING_CHECKLIST_KEYS = ["opnameFisikDilakukan", "kasDirekonsiliasi", "uangDiserahterimakan", "brankasDikunci"] as const;
 
@@ -218,6 +220,13 @@ export function normalizeEddCashDailyThreshold(value: string) {
 
 export function normalizeRateShockThreshold(value: string) {
   return nonNegativeDecimal(value, "Ambang perubahan kurs").toDecimalPlaces(4, Decimal.ROUND_HALF_UP).toFixed(4);
+}
+
+/** Toleransi selisih harga bon terhadap kurs papan; persen, jadi di atas 100 tidak bermakna. */
+export function normalizeRateDeviationTolerance(value: string) {
+  const parsed = nonNegativeDecimal(value, "Toleransi selisih harga");
+  if (parsed.gt(100)) throw new Error("Toleransi selisih harga tidak boleh lebih dari 100 persen.");
+  return parsed.toDecimalPlaces(4, Decimal.ROUND_HALF_UP).toFixed(4);
 }
 
 /** LTKT (Laporan Transaksi Keuangan Tunai) to PPATK — a fixed regulatory threshold, not an
@@ -1319,28 +1328,29 @@ export async function getReviewThreshold() {
   try {
     const db = await databaseOrThrow();
     const found = (await db.select().from(operationalSettings).where(eq(operationalSettings.settingCode, "REVIEW_THRESHOLD")).limit(1))[0];
-    return { reviewThresholdUsd: found?.reviewThresholdUsd ?? DEFAULT_REVIEW_THRESHOLD_USD, eddCashDailyThresholdIdr: found?.eddCashDailyThresholdIdr ?? DEFAULT_EDD_CASH_DAILY_THRESHOLD_IDR, rateShockThresholdPercent: found?.rateShockThresholdPercent ?? DEFAULT_RATE_SHOCK_THRESHOLD_PERCENT, isFallback: false };
+    return { reviewThresholdUsd: found?.reviewThresholdUsd ?? DEFAULT_REVIEW_THRESHOLD_USD, eddCashDailyThresholdIdr: found?.eddCashDailyThresholdIdr ?? DEFAULT_EDD_CASH_DAILY_THRESHOLD_IDR, rateShockThresholdPercent: found?.rateShockThresholdPercent ?? DEFAULT_RATE_SHOCK_THRESHOLD_PERCENT, rateDeviationTolerancePercent: found?.rateDeviationTolerancePercent ?? DEFAULT_RATE_DEVIATION_TOLERANCE, isFallback: false };
   } catch (error) {
     // The threshold read is informational on the rates screen. A temporary DB
     // outage must not fail the whole tRPC batch or prevent reporting from loading.
     console.warn("[Operations] Review threshold unavailable; using safe default.", error);
-    return { reviewThresholdUsd: DEFAULT_REVIEW_THRESHOLD_USD, eddCashDailyThresholdIdr: DEFAULT_EDD_CASH_DAILY_THRESHOLD_IDR, rateShockThresholdPercent: DEFAULT_RATE_SHOCK_THRESHOLD_PERCENT, isFallback: true };
+    return { reviewThresholdUsd: DEFAULT_REVIEW_THRESHOLD_USD, eddCashDailyThresholdIdr: DEFAULT_EDD_CASH_DAILY_THRESHOLD_IDR, rateShockThresholdPercent: DEFAULT_RATE_SHOCK_THRESHOLD_PERCENT, rateDeviationTolerancePercent: DEFAULT_RATE_DEVIATION_TOLERANCE, isFallback: true };
   }
 }
 
-export async function updateReviewThreshold(reviewThresholdUsd: string, actorUserId: number, eddCashDailyThresholdIdr?: string, rateShockThresholdPercent?: string) {
+export async function updateReviewThreshold(reviewThresholdUsd: string, actorUserId: number, eddCashDailyThresholdIdr?: string, rateShockThresholdPercent?: string, rateDeviationTolerancePercent?: string) {
   const db = await databaseOrThrow();
   const normalized = normalizeReviewThreshold(reviewThresholdUsd);
   const normalizedEdd = eddCashDailyThresholdIdr ? normalizeEddCashDailyThreshold(eddCashDailyThresholdIdr) : undefined;
   const normalizedRateShock = rateShockThresholdPercent ? normalizeRateShockThreshold(rateShockThresholdPercent) : undefined;
+  const normalizedDeviation = rateDeviationTolerancePercent ? normalizeRateDeviationTolerance(rateDeviationTolerancePercent) : undefined;
   const existing = (await db.select().from(operationalSettings).where(eq(operationalSettings.settingCode, "REVIEW_THRESHOLD")).limit(1))[0];
   if (existing) {
-    await db.update(operationalSettings).set({ reviewThresholdUsd: normalized, ...(normalizedEdd ? { eddCashDailyThresholdIdr: normalizedEdd } : {}), ...(normalizedRateShock ? { rateShockThresholdPercent: normalizedRateShock } : {}), updatedByUserId: actorUserId }).where(eq(operationalSettings.id, existing.id));
+    await db.update(operationalSettings).set({ reviewThresholdUsd: normalized, ...(normalizedEdd ? { eddCashDailyThresholdIdr: normalizedEdd } : {}), ...(normalizedRateShock ? { rateShockThresholdPercent: normalizedRateShock } : {}), ...(normalizedDeviation ? { rateDeviationTolerancePercent: normalizedDeviation } : {}), updatedByUserId: actorUserId }).where(eq(operationalSettings.id, existing.id));
   } else {
-    await db.insert(operationalSettings).values({ settingCode: "REVIEW_THRESHOLD", reviewThresholdUsd: normalized, eddCashDailyThresholdIdr: normalizedEdd ?? DEFAULT_EDD_CASH_DAILY_THRESHOLD_IDR, rateShockThresholdPercent: normalizedRateShock ?? DEFAULT_RATE_SHOCK_THRESHOLD_PERCENT, updatedByUserId: actorUserId });
+    await db.insert(operationalSettings).values({ settingCode: "REVIEW_THRESHOLD", reviewThresholdUsd: normalized, eddCashDailyThresholdIdr: normalizedEdd ?? DEFAULT_EDD_CASH_DAILY_THRESHOLD_IDR, rateShockThresholdPercent: normalizedRateShock ?? DEFAULT_RATE_SHOCK_THRESHOLD_PERCENT, rateDeviationTolerancePercent: normalizedDeviation ?? DEFAULT_RATE_DEVIATION_TOLERANCE, updatedByUserId: actorUserId });
   }
-  await writeAudit({ actorUserId, action: "REVIEW_THRESHOLD_UPDATED", entityType: "operational_setting", entityId: "REVIEW_THRESHOLD", beforeState: { reviewThresholdUsd: existing?.reviewThresholdUsd ?? DEFAULT_REVIEW_THRESHOLD_USD, eddCashDailyThresholdIdr: existing?.eddCashDailyThresholdIdr ?? DEFAULT_EDD_CASH_DAILY_THRESHOLD_IDR, rateShockThresholdPercent: existing?.rateShockThresholdPercent ?? DEFAULT_RATE_SHOCK_THRESHOLD_PERCENT }, afterState: { reviewThresholdUsd: normalized, eddCashDailyThresholdIdr: normalizedEdd ?? existing?.eddCashDailyThresholdIdr ?? DEFAULT_EDD_CASH_DAILY_THRESHOLD_IDR, rateShockThresholdPercent: normalizedRateShock ?? existing?.rateShockThresholdPercent ?? DEFAULT_RATE_SHOCK_THRESHOLD_PERCENT } });
-  return { reviewThresholdUsd: normalized, eddCashDailyThresholdIdr: normalizedEdd ?? existing?.eddCashDailyThresholdIdr ?? DEFAULT_EDD_CASH_DAILY_THRESHOLD_IDR, rateShockThresholdPercent: normalizedRateShock ?? existing?.rateShockThresholdPercent ?? DEFAULT_RATE_SHOCK_THRESHOLD_PERCENT };
+  await writeAudit({ actorUserId, action: "REVIEW_THRESHOLD_UPDATED", entityType: "operational_setting", entityId: "REVIEW_THRESHOLD", beforeState: { reviewThresholdUsd: existing?.reviewThresholdUsd ?? DEFAULT_REVIEW_THRESHOLD_USD, eddCashDailyThresholdIdr: existing?.eddCashDailyThresholdIdr ?? DEFAULT_EDD_CASH_DAILY_THRESHOLD_IDR, rateShockThresholdPercent: existing?.rateShockThresholdPercent ?? DEFAULT_RATE_SHOCK_THRESHOLD_PERCENT, rateDeviationTolerancePercent: existing?.rateDeviationTolerancePercent ?? DEFAULT_RATE_DEVIATION_TOLERANCE }, afterState: { reviewThresholdUsd: normalized, eddCashDailyThresholdIdr: normalizedEdd ?? existing?.eddCashDailyThresholdIdr ?? DEFAULT_EDD_CASH_DAILY_THRESHOLD_IDR, rateShockThresholdPercent: normalizedRateShock ?? existing?.rateShockThresholdPercent ?? DEFAULT_RATE_SHOCK_THRESHOLD_PERCENT, rateDeviationTolerancePercent: normalizedDeviation ?? existing?.rateDeviationTolerancePercent ?? DEFAULT_RATE_DEVIATION_TOLERANCE } });
+  return { reviewThresholdUsd: normalized, eddCashDailyThresholdIdr: normalizedEdd ?? existing?.eddCashDailyThresholdIdr ?? DEFAULT_EDD_CASH_DAILY_THRESHOLD_IDR, rateShockThresholdPercent: normalizedRateShock ?? existing?.rateShockThresholdPercent ?? DEFAULT_RATE_SHOCK_THRESHOLD_PERCENT, rateDeviationTolerancePercent: normalizedDeviation ?? existing?.rateDeviationTolerancePercent ?? DEFAULT_RATE_DEVIATION_TOLERANCE };
 }
 
 function transactionNumber() {

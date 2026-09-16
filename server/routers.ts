@@ -556,7 +556,7 @@ export const appRouter = router({
 
   settings: router({
     reviewThreshold: adminProcedure.query(() => getReviewThreshold()),
-    updateReviewThreshold: adminProcedure.input(z.object({ reviewThresholdUsd: decimalString, eddCashDailyThresholdIdr: decimalString.optional(), rateShockThresholdPercent: decimalString.optional() })).mutation(({ input, ctx }) => updateReviewThreshold(input.reviewThresholdUsd, ctx.user.id, input.eddCashDailyThresholdIdr, input.rateShockThresholdPercent)),
+    updateReviewThreshold: adminProcedure.input(z.object({ reviewThresholdUsd: decimalString, eddCashDailyThresholdIdr: decimalString.optional(), rateShockThresholdPercent: decimalString.optional(), rateDeviationTolerancePercent: decimalString.optional() })).mutation(({ input, ctx }) => updateReviewThreshold(input.reviewThresholdUsd, ctx.user.id, input.eddCashDailyThresholdIdr, input.rateShockThresholdPercent, input.rateDeviationTolerancePercent)),
   }),
 
   currencies: router({

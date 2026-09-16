@@ -21,7 +21,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 5 — `rates.board`: isi papan dan riwayat batch hari ini (WIB)
 - [x] Tugas 6 — `rates.saveBoardDrafts` dan `rates.activateBoard`
 - [x] Tugas 7 — "Salin kurs kemarin" dan "Isi saran dari referensi BI" yang sadar kelompok
-- [ ] Tugas 8 — Toleransi selisih harga: pengaturan dan aturan murni
+- [x] Tugas 8 — Toleransi selisih harga: pengaturan dan aturan murni
 - [ ] Tugas 9 — Rujukan dan toleransi per baris pecahan pada pembuatan bon
 - [ ] Tugas 10 — Label kelompok pada kurs publik, Beranda, dan Meja Konfirmasi
 - [ ] Tugas 11 — Kisi papan kurs di klien (`RateBoardGrid`)
