@@ -101,7 +101,7 @@ import {
   updatePublicAnnouncement,
   updateServiceRequest,
 } from "./operations";
-import { deactivateRateTier, saveRateTier } from "./rateBoard";
+import { deactivateRateTier, readRateBoard, saveRateTier } from "./rateBoard";
 import { listCustomerProfileMonitoring, listCustomerProfileReviews, recordCustomerProfileReview } from "./customerProfileMonitoring";
 import { addCompanyDocumentVersion, companyArchiveWorklist, createCompanyDocument, deactivateCompanyDocument, listCompanyArchiveDocuments, listCompanyArchiveVersions } from "./companyDocumentArchive";
 import { getOperationalDocumentDownloadUrl, listCompanyDocuments, listDeactivatedCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
@@ -476,6 +476,7 @@ export const appRouter = router({
 
   rates: router({
     activeRates: publicProcedure.query(() => listPublicActiveRates()),
+    board: adminProcedure.query(() => readRateBoard()),
     syncStatus: adminProcedure.query(() => getRateSyncStatus()),
     syncNow: adminProcedure.mutation(({ ctx }) => syncBiReferenceRates("MANUAL", ctx.user.id)),
     references: adminProcedure.query(() => listReferenceSnapshots()),

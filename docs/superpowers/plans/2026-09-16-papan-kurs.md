@@ -18,7 +18,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 2 — `shared/rateTiers.ts`: pencocokan pecahan ke kelompok
 - [x] Tugas 3 — Kelola kelompok pecahan di server (`rateTiers.save` / `rateTiers.deactivate`)
 - [x] Tugas 4 — Aktivasi atomik: `planBoardActivation` dan `activateOperationalRateIds`
-- [ ] Tugas 5 — `rates.board`: isi papan dan riwayat batch hari ini (WIB)
+- [x] Tugas 5 — `rates.board`: isi papan dan riwayat batch hari ini (WIB)
 - [ ] Tugas 6 — `rates.saveBoardDrafts` dan `rates.activateBoard`
 - [ ] Tugas 7 — "Salin kurs kemarin" dan "Isi saran dari referensi BI" yang sadar kelompok
 - [ ] Tugas 8 — Toleransi selisih harga: pengaturan dan aturan murni

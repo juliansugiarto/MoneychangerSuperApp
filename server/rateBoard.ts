@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { auditLogs, currencies, operationalRates, rateTiers } from "../drizzle/schema";
+import { auditLogs, currencies, operationalRates, rateReferenceSnapshots, rateTiers, rateVolatilityAlerts } from "../drizzle/schema";
+import { startOfNextOperationalDay, startOfOperationalDay } from "../shared/regulatoryActionQueue";
 import { findTierOverlap, normalizeDenominationValue, OTHER_TIER_LABEL, sortTiers, type RateTierRow } from "../shared/rateTiers";
 import { databaseOrThrow, writeAudit } from "./operations";
 
@@ -149,4 +150,111 @@ export async function activateOperationalRateIds(rateIds: number[], actorUserId:
     }
   });
   return { activated: plan.activateRateIds.length, batchId, rateIds: plan.activateRateIds };
+}
+
+export type ActivationHistoryRow = { activationBatchId: string; approvedAt: Date; approvalReason: string | null };
+export type ActivationBatch = { batchId: string; approvedAt: Date; rateCount: number; approvalReason: string | null };
+
+/**
+ * Riwayat dibaca dari `operational_rates.activationBatchId`, **bukan** dari `audit_logs`: jejak audit
+ * adalah bukti, bukan sumber tampilan, dan layar yang membacanya akan pecah begitu bentuk jejaknya
+ * berubah. Batas harinya zona operasional WIB, bukan tanggal UTC proses.
+ */
+export function groupTodayActivationBatches(rows: readonly ActivationHistoryRow[], now: Date): ActivationBatch[] {
+  const from = startOfOperationalDay(now);
+  const until = startOfNextOperationalDay(now);
+  const byBatch = new Map<string, ActivationBatch>();
+  for (const row of rows) {
+    if (!row.activationBatchId) continue;
+    const approvedAt = new Date(row.approvedAt);
+    if (approvedAt < from || approvedAt >= until) continue;
+    const existing = byBatch.get(row.activationBatchId);
+    if (existing) { existing.rateCount += 1; continue; }
+    byBatch.set(row.activationBatchId, { batchId: row.activationBatchId, approvedAt, rateCount: 1, approvalReason: row.approvalReason });
+  }
+  return Array.from(byBatch.values()).sort((left, right) => right.approvedAt.getTime() - left.approvedAt.getTime());
+}
+
+export type BoardCellPayload = {
+  currencyId: number; currencyCode: string; currencyName: string;
+  rateTierId: number | null; tierLabel: string; sortOrder: number; quoteUnit: string;
+  activeRateId: number | null; activeBuyRate: string | null; activeSellRate: string | null; activeEffectiveAt: Date | null;
+  draftRateId: number | null; draftBuyRate: string | null; draftSellRate: string | null;
+  referenceBuyRate: string | null; referenceSellRate: string | null; referenceSnapshotId: number | null;
+};
+
+export type RateBoardPayload = {
+  cells: BoardCellPayload[];
+  batchesToday: ActivationBatch[];
+  alerts: { id: number; currencyCode: string; message: string }[];
+  latestReferenceDate: Date | null;
+};
+
+/**
+ * Satu kueri untuk seluruh papan: tiap valuta aktif memunculkan satu baris per kelompok aktif,
+ * ditambah satu baris "Pecahan lain" untuk kurs tingkat valuta. Baris "Pecahan lain" selalu ada —
+ * pecahan yang tidak masuk kelompok mana pun harus punya tempat untuk dihargai, dan baris yang hanya
+ * muncul ketika kursnya sudah ada membuat kurs pertamanya mustahil diisi.
+ */
+export async function readRateBoard(now = new Date()): Promise<RateBoardPayload> {
+  const db = await databaseOrThrow();
+  const [currencyRows, tierRows, rateRows, referenceRows, alertRows] = await Promise.all([
+    db.select().from(currencies).where(eq(currencies.active, true)).orderBy(currencies.code),
+    db.select().from(rateTiers).where(eq(rateTiers.active, true)),
+    db.select().from(operationalRates).where(and(eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false), inArray(operationalRates.status, ["DRAFT", "ACTIVE"]))).orderBy(desc(operationalRates.id)),
+    db.select().from(rateReferenceSnapshots).where(eq(rateReferenceSnapshots.isDemo, false)).orderBy(desc(rateReferenceSnapshots.referenceDate), desc(rateReferenceSnapshots.fetchedAt)),
+    db.select({ alert: rateVolatilityAlerts, currency: currencies }).from(rateVolatilityAlerts).innerJoin(currencies, eq(rateVolatilityAlerts.currencyId, currencies.id)).where(isNull(rateVolatilityAlerts.resolvedAt)),
+  ]);
+
+  const tiersByCurrency = new Map<number, RateTierRow[]>();
+  for (const row of tierRows) {
+    const list = tiersByCurrency.get(row.currencyId) ?? [];
+    list.push({ id: row.id, currencyId: row.currencyId, label: row.label, denominationValues: (row.denominationValues ?? []) as string[], sortOrder: row.sortOrder, active: row.active });
+    tiersByCurrency.set(row.currencyId, list);
+  }
+  const latestReferenceByCurrency = new Map<number, typeof referenceRows[number]>();
+  for (const row of referenceRows) if (!latestReferenceByCurrency.has(row.currencyId)) latestReferenceByCurrency.set(row.currencyId, row);
+
+  const key = (currencyId: number, rateTierId: number | null) => `${currencyId}:${rateTierId ?? "ALL"}`;
+  const activeByKey = new Map<string, typeof rateRows[number]>();
+  const draftByKey = new Map<string, typeof rateRows[number]>();
+  for (const rate of rateRows) {
+    const bucket = rate.status === "ACTIVE" ? activeByKey : draftByKey;
+    const cellKey = key(rate.currencyId, rate.rateTierId);
+    if (!bucket.has(cellKey)) bucket.set(cellKey, rate);
+  }
+
+  const cells: BoardCellPayload[] = [];
+  for (const currency of currencyRows) {
+    if (currency.code === "IDR") continue;
+    const reference = latestReferenceByCurrency.get(currency.id);
+    const tiers = sortTiers(tiersByCurrency.get(currency.id) ?? []);
+    const rows: { rateTierId: number | null; tierLabel: string; sortOrder: number }[] = [
+      ...tiers.map((tier) => ({ rateTierId: tier.id, tierLabel: tier.label, sortOrder: tier.sortOrder })),
+      { rateTierId: null, tierLabel: OTHER_TIER_LABEL, sortOrder: 9999 },
+    ];
+    for (const row of rows) {
+      const cellKey = key(currency.id, row.rateTierId);
+      const active = activeByKey.get(cellKey);
+      const draft = draftByKey.get(cellKey);
+      cells.push({
+        currencyId: currency.id, currencyCode: currency.code, currencyName: currency.name,
+        rateTierId: row.rateTierId, tierLabel: row.tierLabel, sortOrder: row.sortOrder,
+        quoteUnit: String(active?.quoteUnit ?? draft?.quoteUnit ?? reference?.quoteUnit ?? "1.000000"),
+        activeRateId: active?.id ?? null, activeBuyRate: active ? String(active.buyRate) : null, activeSellRate: active ? String(active.sellRate) : null, activeEffectiveAt: active?.effectiveAt ?? null,
+        draftRateId: draft?.id ?? null, draftBuyRate: draft ? String(draft.buyRate) : null, draftSellRate: draft ? String(draft.sellRate) : null,
+        referenceBuyRate: reference ? String(reference.buyRate) : null, referenceSellRate: reference ? String(reference.sellRate) : null, referenceSnapshotId: reference?.id ?? null,
+      });
+    }
+  }
+
+  const historyRows = rateRows.filter((rate) => rate.status === "ACTIVE" && rate.approvedAt)
+    .map((rate) => ({ activationBatchId: rate.activationBatchId ?? "", approvedAt: rate.approvedAt as Date, approvalReason: rate.approvalReason }));
+
+  return {
+    cells,
+    batchesToday: groupTodayActivationBatches(historyRows, now),
+    alerts: alertRows.map(({ alert, currency }) => ({ id: alert.id, currencyCode: currency.code, message: `Referensi ${currency.code} bergerak ${String(alert.percentageChange)}% — periksa sebelum mengaktifkan.` })),
+    latestReferenceDate: referenceRows[0]?.referenceDate ?? null,
+  };
 }
