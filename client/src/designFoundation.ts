@@ -28,4 +28,8 @@ export const FOUNDATION_FILES: readonly string[] = [
   "client/src/components/shell/AppSidebar.tsx",
   "client/src/pages/GaleriPola.tsx",
   "client/src/pages/rates/RateBoardGrid.tsx",
+  "client/src/pages/rates/RateBoardFooter.tsx",
+  "client/src/pages/rates/RateTierDialog.tsx",
+  "client/src/pages/rates/RateReferencePanel.tsx",
+  "client/src/pages/Rates.tsx",
 ];

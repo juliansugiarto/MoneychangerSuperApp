@@ -182,6 +182,8 @@ export type { BoardCellPayload } from "../shared/rateBoard";
 
 export type RateBoardPayload = {
   cells: BoardCellPayload[];
+  /** Kelompok aktif beserta nilai mukanya, untuk dialog kelola kelompok — baris papan hanya membawa labelnya. */
+  tiers: RateTierRow[];
   batchesToday: ActivationBatch[];
   alerts: { id: number; currencyCode: string; message: string }[];
   latestReferenceDate: Date | null;
@@ -250,6 +252,7 @@ export async function readRateBoard(now = new Date()): Promise<RateBoardPayload>
 
   return {
     cells,
+    tiers: Array.from(tiersByCurrency.values()).flatMap((list) => sortTiers(list)),
     batchesToday: groupTodayActivationBatches(historyRows, now),
     alerts: alertRows.map(({ alert, currency }) => ({ id: alert.id, currencyCode: currency.code, message: `Referensi ${currency.code} bergerak ${String(alert.percentageChange)}% — periksa sebelum mengaktifkan.` })),
     latestReferenceDate: referenceRows[0]?.referenceDate ?? null,

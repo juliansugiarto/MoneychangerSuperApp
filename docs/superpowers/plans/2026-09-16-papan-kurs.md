@@ -25,7 +25,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 9 — Rujukan dan toleransi per baris pecahan pada pembuatan bon
 - [x] Tugas 10 — Label kelompok pada kurs publik, Beranda, dan Meja Konfirmasi
 - [x] Tugas 11 — Kisi papan kurs di klien (`RateBoardGrid`)
-- [ ] Tugas 12 — Halaman `/operasional/kurs` yang baru
+- [x] Tugas 12 — Halaman `/operasional/kurs` yang baru
 - [ ] Tugas 13 — Bon: harga terisi otomatis dari papan dan alasan selisih
 - [ ] Tugas 14 — Peragaan end-to-end, verifikasi peramban, dokumentasi, penutupan
 

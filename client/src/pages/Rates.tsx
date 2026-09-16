@@ -1,140 +1,217 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { Badge } from "@/components/ui/badge";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { CurrencyPicker } from "@/components/CurrencyPicker";
+import { DataTable } from "@/components/patterns/DataTable";
+import { PageHeader } from "@/components/patterns/PageHeader";
+import { EmptyState, ErrorState, LoadingState } from "@/components/patterns/PageStates";
+import { StatTile } from "@/components/patterns/StatTile";
+import { BOLD_BUTTON, OUTLINE_BUTTON, QUIET_FIELD } from "@/components/patterns/tebal";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { operationalActionError } from "@/lib/rateActionError";
-import { Activity, BadgeDollarSign, CheckCircle2, CircleAlert, ListChecks, RefreshCw, SendHorizontal, TableProperties } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
+import { cellChanged, cellKey, editedValue, filterBoardCells, type BoardCellPayload, type BoardEdits, type BoardFilter, type RateField } from "@shared/rateBoard";
+import { RateBoardFooter } from "./rates/RateBoardFooter";
+import { RateBoardGrid } from "./rates/RateBoardGrid";
+import { RateReferencePanel } from "./rates/RateReferencePanel";
+import { RateTierDialog } from "./rates/RateTierDialog";
 
-function dateLabel(value: Date | string) {
-  return new Date(value).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
-}
+const FILTERS: { value: BoardFilter; label: string }[] = [
+  { value: "SEMUA", label: "Semua" },
+  { value: "BERUBAH", label: "Berubah" },
+  { value: "TANPA_KURS", label: "Tanpa kurs" },
+];
+const jam = (value: Date | string) => new Date(value).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
 
-function dateTimeLabel(value: Date | string) {
-  return new Date(value).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
+/**
+ * Sel yang ikut aktivasi berikutnya: yang disunting berbeda dari kurs aktif, atau yang sudah punya draf
+ * tersimpan. Draf hasil "Salin kurs kemarin" sama persis dengan kurs aktif, tetapi tetap harus dapat
+ * diaktifkan ulang dengan alasan hari ini — kalau tidak, tombol salin tidak menghasilkan apa-apa.
+ */
+function readyCells(cells: readonly BoardCellPayload[], edits: BoardEdits) {
+  return cells.filter((cell) => cellChanged(cell, edits) || cell.draftRateId !== null);
 }
 
 export default function Rates() {
-  const { user } = useAuth();
   const utils = trpc.useUtils();
-  const { data: syncStatus } = trpc.rates.syncStatus.useQuery(undefined, { enabled: Boolean(user) });
-  const { data: references, isLoading: referencesLoading } = trpc.rates.references.useQuery(undefined, { enabled: Boolean(user) });
-  const { data: marketObservations } = trpc.rates.marketObservations.useQuery(undefined, { enabled: Boolean(user) });
-  const { data: volatilityAlerts } = trpc.rates.volatilityAlerts.useQuery(undefined, { enabled: Boolean(user) });
-  const { data: operationalRates } = trpc.rates.listOperational.useQuery(undefined, { enabled: Boolean(user) });
-  const { data: currencies } = trpc.currencies.list.useQuery(undefined, { enabled: Boolean(user) });
-  const { data: reviewSettings } = trpc.settings.reviewThreshold.useQuery(undefined, { enabled: user?.role === "ADMIN" });
-  const [currencyId, setCurrencyId] = useState("");
-  const [buyRate, setBuyRate] = useState("");
-  const [sellRate, setSellRate] = useState("");
-  const [reviewThresholdUsd, setReviewThresholdUsd] = useState("");
-  const [eddCashDailyThresholdIdr, setEddCashDailyThresholdIdr] = useState("");
-  const [rateShockThresholdPercent, setRateShockThresholdPercent] = useState("");
-  const [selectedDraftIds, setSelectedDraftIds] = useState<number[]>([]);
-  const [activationReason, setActivationReason] = useState("");
-  const [activationConfirmed, setActivationConfirmed] = useState(false);
-  const [observationCurrencyId, setObservationCurrencyId] = useState("");
-  const [observationSource, setObservationSource] = useState("VIP Money Changer");
-  const [observationUrl, setObservationUrl] = useState("https://www.vip.co.id/");
-  const [observationBuyRate, setObservationBuyRate] = useState("");
-  const [observationSellRate, setObservationSellRate] = useState("");
-  const [newCurrencyCode, setNewCurrencyCode] = useState("");
-  const [newCurrencyName, setNewCurrencyName] = useState("");
-  const latestReferences = useMemo(() => {
-    const seen = new Set<number>();
-    return (references ?? []).filter((item) => {
-      if (seen.has(item.currency.id)) return false;
-      seen.add(item.currency.id);
-      return true;
-    });
-  }, [references]);
-  const selectedReference = useMemo(() => latestReferences.find((item) => String(item.currency.id) === currencyId), [latestReferences, currencyId]);
-  const draftRates = useMemo(() => (operationalRates ?? []).filter(({ rate }) => rate.status === "DRAFT"), [operationalRates]);
+  const board = trpc.rates.board.useQuery();
+  const currencies = trpc.currencies.list.useQuery();
+  const [edits, setEdits] = useState<BoardEdits>({});
+  const [filter, setFilter] = useState<BoardFilter>("SEMUA");
+  const [query, setQuery] = useState("");
+  const [reason, setReason] = useState("");
+  const [addingCurrency, setAddingCurrency] = useState(false);
+  const [tierCurrencyId, setTierCurrencyId] = useState<number | null>(null);
 
-  const refreshRates = () => Promise.all([utils.rates.references.invalidate(), utils.rates.listOperational.invalidate(), utils.rates.activeRates.invalidate(), utils.rates.marketObservations.invalidate(), utils.rates.volatilityAlerts.invalidate()]);
-  const propose = trpc.rates.propose.useMutation({ onSuccess: () => { toast.success("Proposal kurs dibuat dan menunggu aktivasi."); refreshRates(); setBuyRate(""); setSellRate(""); }, onError: (error) => toast.error(operationalActionError(error)) });
-  const proposeLatest = trpc.rates.proposeLatest.useMutation({ onSuccess: (result) => { toast.success(`${result.created} proposal dibuat; ${result.skipped} proposal yang sama dilewati.`); refreshRates(); }, onError: (error) => toast.error(operationalActionError(error)) });
-  const activate = trpc.rates.activate.useMutation({ onSuccess: () => { toast.success("Kurs operasional aktif diperbarui."); setActivationReason(""); setActivationConfirmed(false); refreshRates(); }, onError: (error) => toast.error(operationalActionError(error)) });
-  const activateMany = trpc.rates.activateMany.useMutation({ onSuccess: (result) => { toast.success(`${result.activated} kurs operasional berhasil diaktifkan.`); setSelectedDraftIds([]); setActivationReason(""); setActivationConfirmed(false); refreshRates(); }, onError: (error) => toast.error(operationalActionError(error)) });
-  const sync = trpc.rates.syncNow.useMutation({ onSuccess: (result) => { toast.success(`Sinkronisasi selesai: ${result.inserted} snapshot baru.`); utils.rates.references.invalidate(); utils.rates.syncStatus.invalidate(); }, onError: (error) => { toast.error(operationalActionError(error)); utils.rates.syncStatus.invalidate(); }, onSettled: () => utils.rates.syncStatus.invalidate() });
-  const recordObservation = trpc.rates.recordObservation.useMutation({ onSuccess: (result) => { toast.success(result.alert ? "Observasi tersimpan dan peringatan perubahan kurs dibuat." : "Observasi pembanding berhasil disimpan."); setObservationBuyRate(""); setObservationSellRate(""); refreshRates(); }, onError: (error) => toast.error(operationalActionError(error)) });
-  const resolveVolatilityAlert = trpc.rates.resolveVolatilityAlert.useMutation({ onSuccess: () => { toast.success("Peringatan kurs telah ditandai ditinjau."); utils.rates.volatilityAlerts.invalidate(); }, onError: (error) => toast.error(operationalActionError(error)) });
-  const updateThreshold = trpc.settings.updateReviewThreshold.useMutation({ onSuccess: (result) => { toast.success(`Ambang review, EDD, dan perubahan kurs ${result.rateShockThresholdPercent}% diperbarui.`); utils.settings.reviewThreshold.invalidate(); }, onError: (error) => toast.error(operationalActionError(error)) });
-  const createCurrencyMutation = trpc.currencies.create.useMutation({ onSuccess: (result) => { toast.success(`Mata uang ${result.code} ditambahkan dan langsung aktif.`); setNewCurrencyCode(""); setNewCurrencyName(""); utils.currencies.list.invalidate(); }, onError: (error) => toast.error(operationalActionError(error)) });
-  const setCurrencyActiveMutation = trpc.currencies.setActive.useMutation({ onSuccess: () => { toast.success("Status mata uang diperbarui."); utils.currencies.list.invalidate(); }, onError: (error) => toast.error(operationalActionError(error)) });
-  useEffect(() => {
-    if (reviewSettings?.reviewThresholdUsd && !reviewThresholdUsd) setReviewThresholdUsd(String(reviewSettings.reviewThresholdUsd));
-    if (reviewSettings?.eddCashDailyThresholdIdr && !eddCashDailyThresholdIdr) setEddCashDailyThresholdIdr(String(reviewSettings.eddCashDailyThresholdIdr));
-    if (reviewSettings?.rateShockThresholdPercent && !rateShockThresholdPercent) setRateShockThresholdPercent(String(reviewSettings.rateShockThresholdPercent));
-  }, [reviewSettings?.reviewThresholdUsd, reviewSettings?.eddCashDailyThresholdIdr, reviewSettings?.rateShockThresholdPercent, reviewThresholdUsd, eddCashDailyThresholdIdr, rateShockThresholdPercent]);
+  const refresh = () => Promise.all([utils.rates.board.invalidate(), utils.rates.activeRates.invalidate(), utils.rates.comparison.invalidate()]);
+  const onError = (error: { message?: string }) => toast.error(operationalActionError(error));
+  const saveDrafts = trpc.rates.saveBoardDrafts.useMutation({ onError });
+  const activateBoard = trpc.rates.activateBoard.useMutation({ onError });
+  const discardDrafts = trpc.rates.discardBoardDrafts.useMutation({
+    onSuccess: (result) => { toast.success(`${result.discarded} draf dibuang; kurs yang berlaku tidak berubah.`); setEdits({}); refresh(); },
+    onError,
+  });
+  const copyActive = trpc.rates.copyActiveToDrafts.useMutation({
+    onSuccess: (result) => { toast.success(`${result.saved} kurs disalin sebagai draf. Periksa, lalu aktifkan dengan alasan.`); setEdits({}); refresh(); },
+    onError,
+  });
+  const suggest = trpc.rates.suggestFromReference.useMutation({
+    onSuccess: (result) => { toast.success(`${result.saved} saran dari referensi BI diisi sebagai draf. Sesuaikan margin sebelum mengaktifkan.`); setEdits({}); refresh(); },
+    onError,
+  });
+  const setCurrencyActive = trpc.currencies.setActive.useMutation({ onError });
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    if (!currencyId || !selectedReference) return toast.error("Pilih mata uang yang memiliki referensi BI.");
-    propose.mutate({ currencyId: Number(currencyId), referenceSnapshotId: selectedReference.snapshot.id, quoteUnit: String(selectedReference.snapshot.quoteUnit), buyRate, sellRate, effectiveAt: new Date() });
-  };
-  const canAdministerRates = ["ADMIN", "CONTROLLER", "SHAREHOLDER"].includes(user?.role ?? "");
-  const canSync = canAdministerRates;
-  const canPropose = canAdministerRates;
-  const canActivateRates = canPropose && activationConfirmed && activationReason.trim().length >= 10;
-  const toggleDraft = (rateId: number) => setSelectedDraftIds((current) => current.includes(rateId) ? current.filter((id) => id !== rateId) : [...current, rateId]);
-  const activateAllVisible = () => setSelectedDraftIds(draftRates.map(({ rate }) => rate.id));
-  const latestObservations = useMemo(() => {
-    const seen = new Set<string>();
-    return (marketObservations ?? []).filter(({ observation }) => {
-      const key = `${observation.currencyId}:${observation.sourceName}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
+  const cells = board.data?.cells ?? [];
+  const visibleCells = useMemo(() => filterBoardCells(cells, filter, query, edits), [cells, filter, query, edits]);
+  const ready = useMemo(() => readyCells(cells, edits), [cells, edits]);
+  const activeCount = cells.filter((cell) => cell.activeRateId !== null).length;
+  const lastBatch = board.data?.batchesToday[0];
+  const boardCurrencies = useMemo(() => {
+    const seen = new Map<number, string>();
+    for (const cell of cells) if (!seen.has(cell.currencyId)) seen.set(cell.currencyId, cell.currencyCode);
+    return Array.from(seen, ([id, code]) => ({ id, code }));
+  }, [cells]);
+  const tierCurrency = boardCurrencies.find((item) => item.id === tierCurrencyId) ?? null;
+  const busy = saveDrafts.isPending || activateBoard.isPending || discardDrafts.isPending;
+
+  const onEdit = (key: string, field: RateField, value: string) =>
+    setEdits((current) => ({ ...current, [key]: { ...current[key], [field]: value.replace(/\s/g, "").replace(",", ".") } }));
+
+  /** Menyimpan suntingan layar sebagai draf. Mengembalikan false bila ada sel setengah terisi atau server menolak. */
+  const commitEdits = async (): Promise<boolean> => {
+    const edited = cells.filter((cell) => edits[cellKey(cell)] && cellChanged(cell, edits));
+    if (!edited.length) return true;
+    const incomplete = edited.filter((cell) => !editedValue(cell, edits, "buyRate") || !editedValue(cell, edits, "sellRate"));
+    if (incomplete.length) {
+      toast.error(`Kurs beli dan jual ${incomplete.map((cell) => `${cell.currencyCode} ${cell.tierLabel}`).join(", ")} harus diisi keduanya sebelum disimpan.`);
+      return false;
+    }
+    try {
+      const result = await saveDrafts.mutateAsync({
+        cells: edited.map((cell) => ({
+          currencyId: cell.currencyId, rateTierId: cell.rateTierId, quoteUnit: cell.quoteUnit,
+          buyRate: editedValue(cell, edits, "buyRate"), sellRate: editedValue(cell, edits, "sellRate"),
+          referenceSnapshotId: cell.referenceSnapshotId,
+        })),
+      });
+      setEdits({});
+      toast.success(`${result.saved} draf kurs disimpan.`);
       return true;
-    });
-  }, [marketObservations]);
-  const openAlerts = (volatilityAlerts ?? []).filter(({ alert }) => !alert.resolvedAt);
-  const submitObservation = (event: FormEvent) => {
-    event.preventDefault();
-    const currency = currencies?.find((item) => String(item.id) === observationCurrencyId);
-    if (!currency) return toast.error("Pilih mata uang untuk observasi pembanding.");
-    recordObservation.mutate({ currencyCode: currency.code, sourceName: observationSource, sourceKind: "MARKET", sourceUrl: observationUrl || undefined, quoteUnit: "1", buyRate: observationBuyRate, sellRate: observationSellRate, observedAt: new Date(), notes: "Observasi pembanding pasar; bukan kurs outlet." });
+    } catch {
+      return false;
+    }
   };
 
-  return <div className="mx-auto max-w-7xl space-y-6">
-    <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="mt-2 max-w-2xl text-sm leading-6 text-[#475569]">Referensi resmi, JISDOR, dan pembanding pasar membantu keputusan. Kurs outlet tetap proposal terpisah yang hanya berlaku setelah disetujui manusia.</p></div>{canSync ? <Button variant="outline" disabled={sync.isPending} onClick={() => sync.mutate()} className="press-scale border-[#bcd2e5] bg-white text-[#183f70]"><RefreshCw className={sync.isPending ? "mr-2 size-4 animate-spin" : "mr-2 size-4"} /> Perbarui BI & JISDOR</Button> : null}</section>
+  const activate = async () => {
+    if (!(await commitEdits())) return;
+    // Daftar id diambil dari papan yang baru dimuat ulang, supaya jumlah yang diaktifkan sama dengan yang disebut tombolnya.
+    const fresh = await utils.rates.board.fetch();
+    const rateIds = readyCells(fresh.cells, {}).map((cell) => cell.draftRateId).filter((id): id is number => id !== null);
+    if (!rateIds.length) return toast.error("Tidak ada draf kurs untuk diaktifkan. Isi atau salin kurs lebih dahulu.");
+    try {
+      const result = await activateBoard.mutateAsync({ rateIds, approvalReason: reason.trim() });
+      toast.success(`${result.activated} kurs berlaku sekarang.`);
+      setReason("");
+    } finally {
+      refresh();
+    }
+  };
 
-    <Card className={syncStatus?.lastError ? "border-rose-200 bg-rose-50" : "border-[#dce6f0] bg-[#fbfdff]"}><CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-semibold text-[#18395f]">Status sinkronisasi BI</p><p className="mt-1 text-xs text-[#475569]">{syncStatus?.lastSuccessfulAt ? `Snapshot terakhir berhasil disimpan ${dateTimeLabel(syncStatus.lastSuccessfulAt)}.` : "Belum ada snapshot BI tersimpan."}</p>{syncStatus?.lastError ? <p className="mt-2 max-w-3xl text-xs leading-5 text-rose-700"><span className="font-semibold">Tindakan diperlukan:</span> {syncStatus.lastError} Snapshot tersimpan sebelumnya tetap ditampilkan; sistem tidak akan menggantinya dengan data perkiraan.</p> : null}</div><Badge className={syncStatus?.lastError ? "status-rejected" : "status-approved"}>{syncStatus?.lastError ? "PERLU DITINJAU" : "TERKENDALI"}</Badge></CardContent></Card>
+  const onCurrencyPicked = async (picked: { id: number; code: string }) => {
+    setAddingCurrency(false);
+    const known = currencies.data?.find((item) => item.id === picked.id);
+    if (known && !known.active) await setCurrencyActive.mutateAsync({ currencyId: picked.id, active: true }).catch(() => undefined);
+    await Promise.all([refresh(), utils.currencies.list.invalidate()]);
+    toast.success(`${picked.code} ada di papan. Isi kursnya, lalu aktifkan dengan alasan.`);
+  };
 
-    {openAlerts.length ? <Card className="border-amber-200 bg-amber-50"><CardHeader><div className="flex items-center gap-2"><Activity className="size-5 text-amber-700" /><CardTitle className="font-display text-xl text-amber-900">Peringatan perubahan kurs</CardTitle></div><CardDescription className="text-amber-800">Perubahan material perlu ditinjau sebelum keputusan kurs outlet berikutnya. Peringatan tidak mengubah kurs secara otomatis.</CardDescription></CardHeader><CardContent><div className="space-y-3">{openAlerts.slice(0, 5).map(({ alert, currency }) => <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-white/70 p-4 sm:flex-row sm:items-center sm:justify-between" key={alert.id}><div><p className="font-semibold text-[#70581d]">{currency.code} · {alert.sourceName} · {String(alert.percentageChange)}%</p><p className="mt-1 text-xs leading-5 text-[#876f35]">{alert.message}</p></div><Button size="sm" variant="outline" disabled={resolveVolatilityAlert.isPending} onClick={() => { const notes = window.prompt("Catatan peninjauan perubahan kurs:"); if (notes?.trim()) resolveVolatilityAlert.mutate({ alertId: alert.id, notes: notes.trim() }); }} className="border-amber-300 text-amber-800">Tandai ditinjau</Button></div>)}</div></CardContent></Card> : null}
+  const header = (
+    <PageHeader
+      title="Kurs berapa hari ini?"
+      officialLabel="Kurs operasional"
+      description="Isi seluruh kurs sekaligus, lalu aktifkan dengan alasan."
+      actions={<>
+        <Button variant="outline" className={OUTLINE_BUTTON} disabled={copyActive.isPending || busy} onClick={() => copyActive.mutate()}>Salin kurs kemarin</Button>
+        <Button variant="outline" className={OUTLINE_BUTTON} disabled={suggest.isPending || busy} onClick={() => suggest.mutate()}>Isi saran dari referensi BI</Button>
+        <Button className={BOLD_BUTTON} onClick={() => setAddingCurrency((value) => !value)} aria-expanded={addingCurrency}>+ Tambah valuta</Button>
+      </>}
+    />
+  );
 
-    {canSync ? <Card className="border-[#dce6f0]"><CardContent className="flex flex-col gap-4 py-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-sm font-semibold text-[#18395f]">Ambang review & perubahan kurs</p><p className="mt-1 max-w-2xl text-xs leading-5 text-[#475569]">Nilai ekuivalen USD dan akumulasi transaksi tunai menjadi indikator review. Perubahan referensi sebesar ambang yang ditetapkan akan menghasilkan peringatan untuk ditelaah manusia; sistem tidak mengubah kurs outlet otomatis.</p></div><div className="grid w-full gap-2 sm:grid-cols-2 lg:w-[620px]"><Input aria-label="Ambang review dalam USD" inputMode="decimal" value={reviewThresholdUsd} onChange={(event) => setReviewThresholdUsd(event.target.value)} placeholder="10000.00" /><Input aria-label="Ambang EDD tunai harian dalam Rupiah" inputMode="decimal" value={eddCashDailyThresholdIdr} onChange={(event) => setEddCashDailyThresholdIdr(event.target.value)} placeholder="100000000.00" /><Input aria-label="Ambang perubahan kurs dalam persen" inputMode="decimal" value={rateShockThresholdPercent} onChange={(event) => setRateShockThresholdPercent(event.target.value)} placeholder="1.5000" /><Button disabled={!reviewThresholdUsd || !eddCashDailyThresholdIdr || !rateShockThresholdPercent || updateThreshold.isPending} onClick={() => updateThreshold.mutate({ reviewThresholdUsd, eddCashDailyThresholdIdr, rateShockThresholdPercent })}>Simpan ambang</Button></div></CardContent></Card> : null}
+  if (board.isLoading) return <div className="mx-auto max-w-7xl">{header}<LoadingState rows={6} label="Memuat papan kurs" /></div>;
+  if (board.isError || !board.data) return <div className="mx-auto max-w-7xl">{header}<ErrorState what="Papan kurs tidak dapat dimuat." nextStep="Periksa sambungan lalu coba lagi." onRetry={() => board.refetch()} /></div>;
 
-    {user?.role === "ADMIN" ? <Card className="border-[#dce6f0] shadow-sm"><CardHeader><CardTitle className="font-display text-xl text-[#18395f]">Kelola mata uang</CardTitle><CardDescription>Tambahkan mata uang yang akan dipakai di kas awal, stok opname, dan nota. Nonaktifkan mata uang yang tidak lagi dipakai tanpa menghapus riwayatnya.</CardDescription></CardHeader><CardContent className="space-y-4"><form className="grid gap-3 sm:grid-cols-[120px_1fr_auto]" onSubmit={(event) => { event.preventDefault(); if (!newCurrencyCode.trim() || !newCurrencyName.trim()) return; createCurrencyMutation.mutate({ code: newCurrencyCode.trim().toUpperCase(), name: newCurrencyName.trim() }); }}><div><Label className="text-xs">Kode (3 huruf)</Label><Input className="mt-1 uppercase" value={newCurrencyCode} maxLength={3} onChange={(event) => setNewCurrencyCode(event.target.value)} placeholder="USD" /></div><div><Label className="text-xs">Nama mata uang</Label><Input className="mt-1" value={newCurrencyName} onChange={(event) => setNewCurrencyName(event.target.value)} placeholder="Dolar Amerika Serikat" /></div><Button type="submit" className="self-end bg-[#183f70] text-white hover:bg-[#12345d]" disabled={!newCurrencyCode.trim() || !newCurrencyName.trim() || createCurrencyMutation.isPending}>{createCurrencyMutation.isPending ? "Menambahkan…" : "Tambah mata uang"}</Button></form><div className="overflow-x-auto rounded-xl border border-[#e2eaf2]"><table className="w-full min-w-[480px] text-left text-sm"><thead className="bg-[#f5f8fc] text-xs font-bold tracking-wide text-[#587189] uppercase"><tr><th className="px-4 py-3">Kode</th><th className="px-4 py-3">Nama</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Aksi</th></tr></thead><tbody>{currencies?.length ? currencies.map((currency) => <tr key={currency.id} className="border-t border-[#edf2f7] bg-white"><td className="px-4 py-3 font-semibold text-[#18395f]">{currency.code}</td><td className="px-4 py-3 text-[#536b7e]">{currency.name}</td><td className="px-4 py-3"><Badge className={currency.active ? "status-approved" : "status-inactive"}>{currency.active ? "AKTIF" : "NONAKTIF"}</Badge></td><td className="px-4 py-3 text-right"><Button variant="outline" size="sm" disabled={setCurrencyActiveMutation.isPending} onClick={() => setCurrencyActiveMutation.mutate({ currencyId: currency.id, active: !currency.active })} className="border-[#bcd2e5] text-[#183f70]">{currency.active ? "Nonaktifkan" : "Aktifkan"}</Button></td></tr>) : <tr><td colSpan={4} className="px-4 py-6 text-center text-sm text-[#475569]">Belum ada mata uang tersimpan. Tambahkan mata uang pertama di atas.</td></tr>}</tbody></table></div></CardContent></Card> : null}
-    <Card className="border-[#dce6f0] shadow-sm"><CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><div className="flex items-center gap-2"><TableProperties className="size-5 text-[#3f9276]" /><CardTitle className="font-display text-xl text-[#18395f]">Snapshot referensi terbaru</CardTitle></div><CardDescription className="mt-2">Setiap mata uang menampilkan snapshot BI terbaru yang tersimpan, termasuk basis kuotasi asli seperti JPY per 100 unit.</CardDescription></div>{canPropose ? <Button disabled={!latestReferences.length || proposeLatest.isPending} onClick={() => proposeLatest.mutate()} className="press-scale bg-[#183f70] text-white hover:bg-[#12345d]"><SendHorizontal className="mr-2 size-4" /> {proposeLatest.isPending ? "Membuat proposal…" : "Ajukan semua sebagai proposal"}</Button> : null}</CardHeader><CardContent>{referencesLoading ? <p className="py-6 text-sm text-[#475569]">Memuat snapshot referensi…</p> : latestReferences.length ? <div className="overflow-x-auto rounded-xl border border-[#e2eaf2]"><table className="w-full min-w-[700px] text-left text-sm"><thead className="bg-[#f5f8fc] text-xs font-bold tracking-wide text-[#587189] uppercase"><tr><th className="px-4 py-3">Tanggal referensi</th><th className="px-4 py-3">Mata uang</th><th className="px-4 py-3 text-right">Unit</th><th className="px-4 py-3 text-right">Beli BI</th><th className="px-4 py-3 text-right">Jual BI</th><th className="px-4 py-3">Sumber</th></tr></thead><tbody>{latestReferences.map(({ snapshot, currency }) => <tr key={snapshot.id} className="border-t border-[#edf2f7] bg-white"><td className="px-4 py-3 text-[#536b7e]">{dateLabel(snapshot.referenceDate)}</td><td className="px-4 py-3 font-semibold text-[#18395f]">{currency.code}<span className="ml-2 text-xs font-normal text-[#718397]">{currency.name}</span></td><td className="px-4 py-3 text-right tabular-nums text-[#536b7e]">{String(snapshot.quoteUnit)}</td><td className="px-4 py-3 text-right font-medium tabular-nums text-[#18395f]">{String(snapshot.buyRate)}</td><td className="px-4 py-3 text-right font-medium tabular-nums text-[#18395f]">{String(snapshot.sellRate)}</td><td className="px-4 py-3"><Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Bank Indonesia</Badge></td></tr>)}</tbody></table></div> : <div className="rounded-2xl border border-dashed border-[#cbd9e7] bg-[#f8fbfe] px-5 py-10 text-center"><CircleAlert className="mx-auto mb-3 size-5 text-[#7994aa]" /><p className="text-sm font-semibold text-[#415f7b]">Belum ada snapshot referensi yang dapat ditampilkan.</p><p className="mx-auto mt-1 max-w-xl text-xs leading-5 text-[#475569]">Jalankan sinkronisasi BI saat sumber tersedia untuk menyimpan referensi resmi yang akan digunakan dalam proposal kurs.</p></div>}</CardContent></Card>
+  return (
+    <div className="mx-auto max-w-7xl">
+      {header}
+      {addingCurrency ? (
+        <div className="mb-4 max-w-md">
+          <CurrencyPicker onSelect={onCurrencyPicked} excludeCodes={["IDR", ...boardCurrencies.map((item) => item.code)]} placeholder="Ketik kode atau nama valuta, mis. GBP" />
+        </div>
+      ) : null}
 
-    <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-      <Card className="border-[#dce6f0] shadow-sm"><CardHeader><CardTitle className="font-display text-xl text-[#18395f]">Catat pembanding pasar</CardTitle><CardDescription>Gunakan untuk kurs indikatif seperti VIP atau sumber eksternal lain yang telah diperiksa petugas. Nilai ini tidak pernah menjadi kurs outlet otomatis.</CardDescription></CardHeader><CardContent><form className="space-y-3" onSubmit={submitObservation}><div className="grid gap-3 sm:grid-cols-2"><div><Label>Mata uang</Label><Select value={observationCurrencyId} onValueChange={setObservationCurrencyId}><SelectTrigger><SelectValue placeholder="Pilih mata uang" /></SelectTrigger><SelectContent>{currencies?.filter((currency) => currency.active).map((currency) => <SelectItem value={String(currency.id)} key={currency.id}>{currency.code} — {currency.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Nama sumber</Label><Input value={observationSource} onChange={(event) => setObservationSource(event.target.value)} placeholder="Contoh: VIP Money Changer" /></div></div><div><Label>URL sumber (opsional)</Label><Input value={observationUrl} onChange={(event) => setObservationUrl(event.target.value)} placeholder="https://..." /></div><div className="grid gap-3 sm:grid-cols-2"><div><Label>Beli pembanding</Label><Input inputMode="decimal" value={observationBuyRate} onChange={(event) => setObservationBuyRate(event.target.value)} placeholder="0.000000" /></div><div><Label>Jual pembanding</Label><Input inputMode="decimal" value={observationSellRate} onChange={(event) => setObservationSellRate(event.target.value)} placeholder="0.000000" /></div></div><p className="rounded-xl bg-[#fff8eb] p-3 text-xs leading-5 text-[#80622a]">Kurs pembanding dapat berubah saat transaksi dan hanya dipakai untuk membaca kondisi pasar. Konfirmasi sumber serta ketersediaan sebelum dipakai sebagai bahan keputusan.</p><Button type="submit" disabled={!canAdministerRates || !observationCurrencyId || !observationSource || !observationBuyRate || !observationSellRate || recordObservation.isPending} className="press-scale w-full bg-[#183f70] text-white hover:bg-[#12345d]"><TableProperties className="mr-2 size-4" />{recordObservation.isPending ? "Menyimpan observasi…" : "Simpan observasi pembanding"}</Button></form></CardContent></Card>
-      <Card className="border-[#dce6f0] shadow-sm"><CardHeader><CardTitle className="font-display text-xl text-[#18395f]">Referensi multi-sumber terbaru</CardTitle><CardDescription>BI tetap menjadi rujukan resmi. JISDOR dan pembanding pasar dicatat dengan waktu observasi agar perubahan dapat dibaca tanpa mencampurkan status kurs outlet.</CardDescription></CardHeader><CardContent>{latestObservations.length ? <div className="overflow-x-auto rounded-xl border border-[#e2eaf2]"><table className="w-full min-w-[620px] text-left text-sm"><thead className="bg-[#f5f8fc] text-xs font-bold tracking-wide text-[#587189] uppercase"><tr><th className="px-3 py-3">Sumber</th><th className="px-3 py-3">Valuta</th><th className="px-3 py-3 text-right">Beli</th><th className="px-3 py-3 text-right">Jual</th><th className="px-3 py-3">Waktu</th></tr></thead><tbody>{latestObservations.map(({ observation, currency }) => <tr className="border-t border-[#edf2f7]" key={observation.id}><td className="px-3 py-3"><span className="font-semibold text-[#294665]">{observation.sourceName}</span><br /><span className="text-xs text-[#718397]">{observation.sourceKind === "OFFICIAL" ? "Referensi resmi" : "Pembanding pasar"}</span></td><td className="px-3 py-3 font-semibold text-[#294665]">{currency.code}</td><td className="px-3 py-3 text-right tabular-nums">{String(observation.buyRate)}</td><td className="px-3 py-3 text-right tabular-nums">{String(observation.sellRate)}</td><td className="px-3 py-3 text-xs text-[#718397]">{dateTimeLabel(observation.observedAt)}</td></tr>)}</tbody></table></div> : <div className="rounded-2xl border border-dashed border-[#cbd9e7] bg-[#f8fbfe] px-5 py-10 text-center"><CircleAlert className="mx-auto mb-3 size-5 text-[#7994aa]" /><p className="text-sm font-semibold text-[#415f7b]">Belum ada observasi multi-sumber.</p><p className="mx-auto mt-1 max-w-xl text-xs leading-5 text-[#475569]">Perbarui BI & JISDOR atau simpan pembanding pasar setelah sumbernya diperiksa.</p></div>}</CardContent></Card>
-    </section>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatTile tone="brand" label="Berlaku sekarang" value={`${activeCount} kurs`}
+          hint={lastBatch ? `Aktivasi terakhir ${jam(lastBatch.approvedAt)} WIB · ${lastBatch.rateCount} kurs` : "Belum ada aktivasi hari ini"} />
+        <StatTile tone="second" label="Belum diaktifkan" value={`${ready.length} kurs`} hint={ready.length ? "Periksa lalu aktifkan di bilah bawah" : "Tidak ada perubahan"} />
+        <StatTile label="Perlu perhatian" value={`${board.data.alerts.length} peringatan`} hint={board.data.alerts.length ? "Lihat Referensi & pengaturan" : "Referensi tenang"} />
+      </div>
 
-    <div className="grid gap-6 xl:grid-cols-[0.94fr_1.06fr]">
-      <Card className="border-[#dce6f0] shadow-sm"><CardHeader><CardTitle className="font-display text-xl text-[#18395f]">Ajukan satu kurs operasional</CardTitle><CardDescription>Gunakan bila margin per mata uang perlu disesuaikan sebelum diajukan. Nilai transaksi kemudian dikunci sebagai snapshot.</CardDescription></CardHeader><CardContent><form className="space-y-4" onSubmit={submit}><div className="space-y-1.5"><Label>Mata uang referensi</Label><Select value={currencyId} onValueChange={(value) => { setCurrencyId(value); const match = latestReferences.find((item) => String(item.currency.id) === value); setBuyRate(match?.snapshot.buyRate ?? ""); setSellRate(match?.snapshot.sellRate ?? ""); }}><SelectTrigger><SelectValue placeholder="Pilih mata uang" /></SelectTrigger><SelectContent>{currencies?.filter((currency) => latestReferences.some((item) => item.currency.id === currency.id)).map((currency) => <SelectItem value={String(currency.id)} key={currency.id}>{currency.code} — {currency.name}</SelectItem>)}</SelectContent></Select></div>{selectedReference ? <div className="rounded-xl border border-[#dbe7f0] bg-[#f6fafc] p-3 text-xs text-[#536b7e]">BI {dateLabel(selectedReference.snapshot.referenceDate)} · Unit {String(selectedReference.snapshot.quoteUnit)} · Beli {String(selectedReference.snapshot.buyRate)} · Jual {String(selectedReference.snapshot.sellRate)}</div> : null}<div className="grid gap-4 sm:grid-cols-2"><div className="space-y-1.5"><Label>Kurs beli operasional</Label><Input inputMode="decimal" value={buyRate} onChange={(event) => setBuyRate(event.target.value)} placeholder="0.000000" /></div><div className="space-y-1.5"><Label>Kurs jual operasional</Label><Input inputMode="decimal" value={sellRate} onChange={(event) => setSellRate(event.target.value)} placeholder="0.000000" /></div></div><Button className="press-scale w-full bg-[#183f70] text-white hover:bg-[#12345d]" type="submit" disabled={!canPropose || propose.isPending}><SendHorizontal className="mr-2 size-4" /> {propose.isPending ? "Menyimpan…" : "Ajukan kurs"}</Button></form></CardContent></Card>
-      <Card className="border-[#dce6f0] shadow-sm">
-        <CardHeader><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><CardTitle className="font-display text-xl text-[#18395f]">Versi kurs operasional</CardTitle><CardDescription className="mt-2">Pilih proposal yang sudah ditinjau. Aktivasi selalu memensiunkan kurs aktif pada mata uang yang sama dan membutuhkan alasan keputusan.</CardDescription></div>{canPropose && draftRates.length ? <Button variant="outline" size="sm" onClick={activateAllVisible} className="border-[#bcd2e5] text-[#183f70]">Pilih semua draft</Button> : null}</div></CardHeader>
-        <CardContent>
-          <div className="mb-4 rounded-xl border border-[#dce6f0] bg-[#f5f8fc] p-4">
-            <Label htmlFor="activation-reason">Alasan aktivasi kurs</Label>
-            <Textarea id="activation-reason" value={activationReason} onChange={(event) => setActivationReason(event.target.value)} placeholder="Contoh: margin USD telah ditinjau terhadap BI dan kondisi kas outlet." className="mt-2 min-h-20 bg-white" />
-            <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs leading-5 text-[#526c84]"><input type="checkbox" className="mt-0.5 size-4 accent-[#3e9365]" checked={activationConfirmed} onChange={(event) => setActivationConfirmed(event.target.checked)} /><span>Saya sudah meninjau referensi, margin, dan kecukupan kas. Saya memahami bahwa aktivasi akan mengganti kurs outlet aktif untuk valuta terkait.</span></label>
-            <div className="mt-3 flex flex-wrap items-center gap-3"><span className="text-xs font-medium text-[#536b7e]">{selectedDraftIds.length} proposal dipilih</span><Button size="sm" disabled={!selectedDraftIds.length || activateMany.isPending || !canActivateRates} onClick={() => activateMany.mutate({ rateIds: selectedDraftIds, approvalReason: activationReason.trim() })} className="bg-[#3e9365] text-white hover:bg-[#2f7d53]"><CheckCircle2 className="mr-1.5 size-4" />Aktifkan yang dipilih</Button></div>
+      <section className="mt-6" aria-labelledby="riwayat-hari-ini">
+        <h2 id="riwayat-hari-ini" className="mb-2 font-heading text-body font-extrabold text-ink">Riwayat hari ini</h2>
+        {board.data.batchesToday.length ? (
+          <DataTable dense caption="Aktivasi kurs hari ini" rows={board.data.batchesToday} rowKey={(row) => row.batchId} columns={[
+            { key: "waktu", header: "Waktu", cell: (row) => `${jam(row.approvedAt)} WIB` },
+            { key: "jumlah", header: "Jumlah kurs", align: "right", cell: (row) => row.rateCount },
+            { key: "alasan", header: "Alasan", cell: (row) => row.approvalReason ?? "—" },
+          ]} />
+        ) : <EmptyState title="Belum ada aktivasi kurs hari ini" nextStep="Isi kursnya di papan bawah, lalu aktifkan dengan alasan." />}
+      </section>
+
+      <section className="mt-6" aria-labelledby="papan-kurs">
+        <h2 id="papan-kurs" className="sr-only">Papan kurs</h2>
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div role="group" aria-label="Saring papan" className="flex gap-1">
+            {FILTERS.map((item) => (
+              <Button key={item.value} variant="outline" aria-pressed={filter === item.value} onClick={() => setFilter(item.value)}
+                className={filter === item.value ? BOLD_BUTTON : OUTLINE_BUTTON}>
+                {item.label}
+              </Button>
+            ))}
           </div>
-          <div className="space-y-3">{operationalRates?.length ? operationalRates.map(({ rate, currency }) => <div key={rate.id} className="rounded-2xl border border-[#e2eaf2] bg-[#fbfdff] p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div className="flex gap-3"><input aria-label={`Pilih proposal ${currency.code}`} type="checkbox" className="mt-1 size-4 accent-[#3e9365]" checked={selectedDraftIds.includes(rate.id)} disabled={rate.status !== "DRAFT" || !canPropose} onChange={() => toggleDraft(rate.id)} /><div><p className="font-semibold text-[#18395f]">{currency.code} <span className="font-normal text-[#475569]">· unit {String(rate.quoteUnit)}</span></p><p className="mt-1 text-xs text-[#475569]">Beli {String(rate.buyRate)} · Jual {String(rate.sellRate)}</p></div></div><Badge className={rate.status === "ACTIVE" ? "status-approved" : rate.status === "DRAFT" ? "status-pending" : "status-inactive"}>{rate.status}</Badge></div>{rate.status === "DRAFT" && canPropose ? <Button variant="outline" size="sm" disabled={activate.isPending || !canActivateRates} onClick={() => activate.mutate({ rateId: rate.id, approvalReason: activationReason.trim() })} className="mt-3 border-[#bcd2e5] text-[#183f70]"><CheckCircle2 className="mr-1.5 size-4" />Aktifkan satu ini</Button> : null}</div>) : <div className="rounded-2xl border border-dashed border-[#cbd9e7] bg-[#f8fbfe] px-5 py-10 text-center text-sm text-[#475569]">Belum ada proposal kurs. Jalankan sinkronisasi BI, lalu ajukan seluruh snapshot sebagai proposal.</div>}</div>
-        </CardContent>
-      </Card>
-    </div>
+          <Input aria-label="Cari valuta" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari kode atau nama valuta" className={`${QUIET_FIELD} h-control w-64`} />
+          <div className="ml-auto w-60">
+            <Select value={tierCurrencyId ? String(tierCurrencyId) : ""} onValueChange={(value) => setTierCurrencyId(Number(value))}>
+              <SelectTrigger aria-label="Kelola kelompok pecahan" className={QUIET_FIELD}><SelectValue placeholder="Kelola kelompok pecahan…" /></SelectTrigger>
+              <SelectContent>{boardCurrencies.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.code}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+        </div>
 
-    <Card className="border-[#d8e7df] bg-[#f8fcf8]"><CardHeader><div className="flex items-center gap-2"><ListChecks className="size-5 text-[#3f9276]" /><CardTitle className="font-display text-xl text-[#18395f]">Alur kerja harian</CardTitle></div><CardDescription>Urutan ini memisahkan referensi, keputusan kurs, pencatatan transaksi, dan rekonsiliasi agar jejak audit tetap mudah ditelusuri.</CardDescription></CardHeader><CardContent><ol className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[["1", "Sinkronkan BI", "ADMIN mengawasi sinkronisasi dan menyimpan snapshot referensi; Controller serta Shareholder memiliki kewenangan yang sama."], ["2", "Ajukan & aktifkan", "ADMIN mengajukan serta mengaktifkan kurs yang telah ditinjau."], ["3", "KYC & transaksi", "STAFF melengkapi nasabah, membuat draft, dan mengirim transaksi."], ["4", "Review & laporan", "CONTROLLER menilai transaksi berflag, melakukan pengawasan kas, opname, dan laporan."]].map(([step, title, text]) => <li key={step} className="rounded-xl border border-[#dbe9df] bg-white p-4"><span className="font-display text-2xl font-semibold text-[#69b65c]">{step}</span><h3 className="mt-2 text-sm font-bold text-[#18395f]">{title}</h3><p className="mt-1 text-xs leading-5 text-[#475569]">{text}</p></li>)}</ol></CardContent></Card>
-  </div>;
+        {!cells.length ? (
+          <EmptyState title="Belum ada valuta aktif" nextStep="Tambahkan valuta lebih dahulu lewat tombol + Tambah valuta." actionLabel="+ Tambah valuta" onAction={() => setAddingCurrency(true)} />
+        ) : visibleCells.length ? (
+          <RateBoardGrid cells={visibleCells} edits={edits} onEdit={onEdit} onCommit={() => { void commitEdits().then((ok) => { if (ok) refresh(); }); }} />
+        ) : (
+          <EmptyState title="Tidak ada baris yang cocok" nextStep="Ubah penyaring atau kosongkan pencarian." actionLabel="Tampilkan semua" onAction={() => { setFilter("SEMUA"); setQuery(""); }} />
+        )}
+        <p className="mt-2 text-label text-ink-muted">Enter menyimpan draf · ↑/↓ pindah baris · Tab pindah kolom. Draf belum berlaku sampai diaktifkan.</p>
+
+        <RateBoardFooter pendingCount={ready.length} reason={reason} onReasonChange={setReason} isPending={busy}
+          onDiscard={() => { setEdits({}); discardDrafts.mutate(); }} onActivate={() => { void activate(); }} />
+      </section>
+
+      <RateReferencePanel alerts={board.data.alerts} latestReferenceDate={board.data.latestReferenceDate} />
+
+      {tierCurrency ? (
+        <RateTierDialog
+          open currencyId={tierCurrency.id} currencyCode={tierCurrency.code}
+          tiers={board.data.tiers.filter((tier) => tier.currencyId === tierCurrency.id)}
+          activeTierIds={new Set(cells.filter((cell) => cell.currencyId === tierCurrency.id && cell.rateTierId !== null && cell.activeRateId !== null).map((cell) => cell.rateTierId as number))}
+          onOpenChange={(next) => { if (!next) setTierCurrencyId(null); }}
+        />
+      ) : null}
+    </div>
+  );
 }
