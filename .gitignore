@@ -9,8 +9,16 @@ backups/
 
 # Skill pihak ketiga yang dipasang lewat `npx skills add` — alat bantu agen, bukan bagian produk.
 .agents/
-.claude/skills/
+.claude/skills/*
 skills-lock.json
+# Pengecualian: `serah-terima` ditulis untuk proyek ini dan mengatur penutupan sesi. Ia menyebut
+# berkas repo ini dan tidak dapat dipasang ulang dari mana pun — karena itu ia dilacak.
+!.claude/skills/serah-terima/
+
+# Keadaan kerja agen per sesi: papan curah gagasan, port dan token sementara, serta ledger SDD
+# (taklimat, laporan, dan diff peninjau). Bukan bagian produk, dan kesimpulannya sudah disarikan ke
+# docs/superpowers/PROMPT-SESI.md; diff-nya sendiri dapat dibangkitkan ulang dari `git log`.
+.superpowers/
 
 test-results/
 playwright-report/

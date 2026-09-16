@@ -96,6 +96,17 @@ selesai 16 September 2026**, satu commit per tugas, dikerjakan langsung tanpa su
 mengikat pada rencana: 5 sebelum 6, 7, 11; 8 sebelum 9 dan 13; 11 sebelum 12; 12 dan 13 sebelum 14.
 Pengguna meminta laporan sesudah **Tugas 9** (toleransi bon) dan **Tugas 12** (layar papan).
 
+**Penutupan sesi diperketat 16 September 2026 atas permintaan pengguna.** Sebabnya:
+`plans/2026-09-16-papan-kurs.md` menganggur **di luar git** sepanjang sesi perancangannya dan baru
+ketahuan pada serah terima berikutnya — padahal prompt sesi berikutnya menyuruh membaca rencana itu.
+Empat tambalan sudah dipasang: (a) skill `serah-terima` kini mewajibkan `git status` **bersih sebelum**
+prompt sesi berikutnya diberikan (langkah 6 dan 9); (b) `.superpowers/` masuk `.gitignore` supaya derau
+`??` tidak lagi menyembunyikan berkas penting di tengahnya; (c) skill `serah-terima` sendiri **kini
+dilacak git** — ia ditulis untuk proyek ini dan tidak dapat dipasang ulang dari mana pun, sementara
+skill pihak ketiga tetap diabaikan; (d) angka antrean migrasi yang basi pada
+`~/.claude/hooks/aturan-keras.sh` diperbaiki. **Aturannya sekarang: jangan pernah menyerahkan prompt
+sesi berikutnya sementara yang dirujuknya masih `??`.**
+
 **Perubahan perilaku yang sudah terjadi pada Tugas 4 — jangan dikira masih seperti dulu:**
 perulangan lama `activateOperationalRates` (dulu `server/operations.ts:1306`) yang memanggil
 aktivasi satu per satu **di luar** satu transaksi sudah dibuang. Kini `activateOperationalRate` dan
@@ -212,13 +223,16 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 > *"setiap ikatan hanya melihat database miliknya sendiri"*. Bila gagal sendirian di bawah beban,
 jalankan ulang berkas itu saja.
 
-**Kegagalan flaky KEDUA yang belum teridentifikasi (16 September 2026, sub-proyek 1B Tugas 3).**
+**Kegagalan flaky KEDUA yang tidak dapat direproduksi (16 September 2026, sub-proyek 1B Tugas 3).**
 Satu jalan penuh menunjukkan `1 failed | 1535 passed | 2 skipped`; nama berkasnya **hilang dari
-buffer sebelum sempat dicatat**, dan **empat** jalan penuh berikutnya pada commit yang sama lulus
-bersih. Jadi ada kegagalan sesekali yang **belum diketahui berkasnya** — mungkin
-`tenantIsolation.live` di atas, mungkin bukan. Bila sesi berikutnya melihat satu kegagalan tunggal
-pada jalan penuh, **catat nama berkasnya dahulu** (`vitest run > berkas.log 2>&1`) sebelum
-mengulang; mengulang lebih dahulu menghapus satu-satunya bukti.
+buffer sebelum sempat dicatat**. **Diburu khusus pada `dde48d0` dengan lima jalan penuh berturut-turut
+yang seluruh keluarannya ditulis ke berkas log** (`/tmp/claude-501/flaky-1..5.log`): kelimanya
+`1543 passed | 2 skipped`, tanpa satu pun `FAIL`. Ditambah empat jalan penuh lain sepanjang sesi,
+**sembilan jalan bersih berturut-turut** sesudah kejadian itu. Jadi ia **tidak tertutup, hanya tidak
+terulang** — mungkin `tenantIsolation.live` di atas, mungkin bukan.
+Bila sesi berikutnya melihat satu kegagalan tunggal pada jalan penuh, **catat nama berkasnya dahulu**
+(`vitest run > berkas.log 2>&1`) sebelum mengulang; mengulang lebih dahulu menghapus satu-satunya
+bukti, dan itulah sebabnya kejadian pertama tidak pernah teridentifikasi.
 
 ### Yang tidak perlu ditemukan ulang
 
@@ -260,6 +274,11 @@ mengulang; mengulang lebih dahulu menghapus satu-satunya bukti.
   keputusannya diambil `planBoardActivation` **sebelum** transaksi dibuka, dan alasan ≥ 10 karakter
   diperiksa **sebelum kueri apa pun**: `server/operations.test.ts` menuntut galat "alasan terlalu
   pendek" muncul walau kurs yang dirujuk tidak ada.
+- **Mengecualikan satu anak dari direktori yang diabaikan menuntut pola `/*`, bukan nama direktori.**
+  `.claude/skills/` diikuti `!.claude/skills/serah-terima/` **tidak bekerja** — git tidak menuruni
+  direktori yang sudah diabaikan, jadi negasinya tidak pernah dievaluasi. Yang benar
+  `.claude/skills/*`. Diperiksa dengan `git check-ignore -v <berkas>`; skill pihak ketiga tetap
+  diabaikan karena semuanya symlink, dan `serah-terima` satu-satunya direktori sungguhan di sana.
 - **Dialog wajib memakai `max-h-[85vh] overflow-y-auto`.**
 - **Bercabanglah pada `isPending`, bukan `isLoading`.** Ditambah temuan 9 September 2026:
   `QueryClient` aplikasi ini memakai bawaan, dan percobaan ulangnya dapat berstatus
@@ -381,7 +400,9 @@ mengulang; mengulang lebih dahulu menghapus satu-satunya bukti.
   `node` tetap jalan, jadi skrip pemeriksaan tulis dengan `node -e`, bukan `python3`.
 - **Mockup sesi rancangan tersimpan lokal** di `.superpowers/brainstorm/59970-1789210543/content/`
   (`gaya-karakter.html` pilihan 3, `tebal-intensitas.html` pilihan B, `palet-konter-tebal.html`,
-  `papan-kurs.html`) — rujukan visual yang disetujui pengguna, tidak di-commit.
+  `papan-kurs.html`) — rujukan visual yang disetujui pengguna. Sejak 16 September 2026 seluruh
+  `.superpowers/` masuk `.gitignore`, jadi berkas ini **tidak ada cadangannya di git**; bila mesin ini
+  hilang, mockup-nya ikut hilang dan yang tersisa hanya keputusan tertulis di spec.
 
 ### Risiko residual Sub-proyek 1B (Tugas 1–4) yang masih terbuka
 
@@ -898,13 +919,13 @@ Urut sesuai usul pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`:
     Seri tidak tercatat di skema mana pun; menambahkannya mengubah `cash_denomination_balances`, sumber
     kebenaran kas. Sampai diputuskan, selisih harga karena seri diketik pada bon dalam toleransi atau
     dengan alasan. **Butuh keputusan pengguna** sebelum dirancang.
-11. **`.superpowers/` belum masuk `.gitignore`** — memuat ledger eksekusi subagen dan mockup rancangan.
-    Seluruh commit sesi ini menambahkan berkas dengan nama eksplisit supaya folder itu tidak ikut;
-    `git add -A` akan menyeretnya.
 
-**Antrean migrasi produksi kosong** sejak penerapan 12 September 2026 (jurnal 59 = berkas 59).
-Migrasi berikutnya ikut penerapan manual `deploy.sh`, dan tetap tidak boleh diterapkan tanpa
-permintaan eksplisit pada giliran itu.
+**Antrean migrasi produksi = 1 (`0059`)** per 16 September 2026: berkas 60, jurnal produksi masih 59.
+Sebelum `0059` antreannya kosong (jurnal 59 = berkas 59 sejak penerapan 12 September 2026). Migrasi
+berikutnya ikut penerapan manual `deploy.sh`, dan tetap tidak boleh diterapkan tanpa permintaan
+eksplisit pada giliran itu. Hook `~/.claude/hooks/aturan-keras.sh` dahulu menyuntikkan angka basi
+("antrean 23, `0034`-`0056`") ke setiap prompt bertopik migrasi; **sudah diperbaiki 16 September 2026**
+dan wajib ikut diperbarui setiap kali antrean berubah.
 
 ---
 
