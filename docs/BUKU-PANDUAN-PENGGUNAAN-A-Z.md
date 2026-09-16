@@ -91,7 +91,9 @@ hanya mengembang (**Uang Kas**, **Kurs**) — ditulis `Kelompok → Induk → Me
 
 Tekan **⌘K** (Mac) atau **Ctrl+K** (Windows), ketik sebagian nama halaman — misalnya "kas awal" atau
 "IRA" — lalu tekan Enter. Hanya halaman yang boleh dibuka peran Anda yang muncul. Di luar kolom isian,
-tombol **N** membuka Buat Transaksi dan **/** membuka pencarian yang sama.
+tombol **N** membuka Buat Transaksi dan **/** membuka pencarian yang sama. **N** dan **/** sengaja
+tidak aktif selama sebuah kotak dialog terbuka, supaya menekannya tidak berpindah halaman dan membuang
+isian dialog yang belum disimpan; ⌘K/Ctrl+K tetap berlaku di mana pun.
 
 ## 5. Alur Satu Hari Operasional
 

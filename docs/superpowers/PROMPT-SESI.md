@@ -70,7 +70,7 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 16 September 2026 (Sub-proyek 1 Fondasi Desain SELESAI: Tugas 1–12)
+## Sesi berikutnya — keadaan per 16 September 2026 (Sub-proyek 1 Fondasi Desain SELESAI: Tugas 1–12, plus butir 11 dan 13)
 
 **Seluruh paket peta jalan asli sudah selesai:** K1, B, D, C, E, F1, F2, G, H, I, J (J1+J2), K2,
 K3, L, dan **M**. Dua belas temuan pemeriksaan BI 2026 sudah tertutup; pada
@@ -83,13 +83,16 @@ Pengerjaan `plans/2026-09-12-fondasi-desain.md` tercentang (Tugas 1–12 termasu
 Spec program `specs/2026-09-12-desain-ulang-antarmuka-design.md` (12 September) **diperbarui** oleh
 `specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md` (`8250e87`).
 
+**Dua sisa Fondasi Desain sudah dibereskan 16 September 2026** (`f53a04c`, dikerjakan langsung tanpa
+subagen). Butir 13: `shortcutFor` kini menahan `N` dan `/` bila targetnya di dalam
+`[role=dialog]`/`[role=alertdialog]` **atau** bila ada dialog `data-state=open` di halaman — periksa
+dua arah karena fokus bisa masih di `body` sesudah dialog dibuka lewat tombol; ⌘K sengaja **tetap**
+berlaku di mana pun, sebab palet perintah sendiri sebuah dialog dan menggerbangnya akan mengunci palet.
+Butir 11: tombol merek `AppSidebar` memakai `FOCUS_RING`. Tiga uji baru (dua di `shortcuts.test.tsx`,
+satu di `AppSidebar.test.tsx`); uji butir 13 dibuktikan gagal lebih dulu tanpa penjaganya.
+
 **Pekerjaan berikutnya: sub-proyek 1B (Papan Kurs).** Rencananya **belum ditulis** — sesuai aturan
-program, ditulis pada awal sesi 1B dari spec 2026-09-13 Bagian B. Sebelum atau sambil itu, dua sisa
-Fondasi Desain yang sudah diketahui dan belum dikerjakan (keduanya ada di daftar Risiko residual
-rencana): **butir 13** — `N` dan `/` masih aktif saat dialog modal terbuka sehingga `N` di dalam
-dialog berpindah halaman dan membuang isinya (perbaikan satu baris di
-`client/src/components/shell/shortcuts.ts` + uji), dan **butir 11** — tombol merek sidebar tanpa
-`FOCUS_RING`.
+program, ditulis pada awal sesi 1B dari spec 2026-09-13 Bagian B.
 
 **Keputusan pengguna 13 September 2026 — jangan ditanyakan ulang** (lengkapnya di spec 2026-09-13):
 tampilan netral abu-abu ditolak (*"korporat sekali seperti SIPUKA"*; empat tema berganti warna pada
@@ -127,17 +130,7 @@ memang harus memuat warna mentah (`index.css`, `shared/themePalettes.ts`) atau b
 Yang **belum** diperiksa siapa pun secara menyeluruh: mutu kode Tugas 1–7 (dikerjakan tanpa reviewer),
 dan pemeriksaan arsitektur/keamanan lintas berkas di luar ketiga pemeriksaan di atas.
 
-**Prompt untuk sesi berikutnya (bereskan sisa Fondasi Desain, tanpa subagen):**
-
-```
-Kerjakan sendiri, tanpa subagen. Dua sisa Fondasi Desain dari daftar Risiko residual
-docs/superpowers/plans/2026-09-12-fondasi-desain.md: butir 13 (N dan / masih aktif saat dialog modal
-terbuka — perbaiki shortcutFor di client/src/components/shell/shortcuts.ts beserta ujinya) dan butir 11
-(tombol merek AppSidebar.tsx:35 tanpa FOCUS_RING). Jalankan vitest, tsc, vite build, lalu tunjukkan
-angkanya. Jangan menerapkan ke produksi.
-```
-
-**Prompt untuk memulai sub-proyek 1B (Papan Kurs):**
+**Prompt untuk sesi berikutnya — memulai sub-proyek 1B (Papan Kurs):**
 
 ```
 Tulis rencana sub-proyek 1B (Papan Kurs) dari docs/superpowers/specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md
@@ -161,15 +154,18 @@ impor ulang daftar DTTOT/DPPSPM, mengisi ulang Profil Perusahaan, menghapus bari
 `Bash(ssh -o BatchMode=yes -o ConnectTimeout=10 deploy@187.53.128.14:*)`. Temuan 3 tetap menunggu
 keputusan pengguna.
 
-**Baseline uji terakhir yang benar-benar dijalankan, oleh implementer Tugas 12 pada `a62562f`**
-(15 September 2026): `Test Files 177 passed (177)`, `Tests 1513 passed | 2 skipped (1515)`. Selisih
-terhadap baseline 11 September (`161` berkas / `1428` lulus) adalah **+16 berkas, +85 uji**, seluruhnya
-dari sub-proyek 1: Tugas 1 +1/+2, Tugas 2 +1/+18, Tugas 3 +2/+6, Tugas 4 +0/+3, Tugas 5 +1/+7, Tugas 6
-+1/+8, Tugas 7 +4/+11, Tugas 7A +2/+17, Tugas 7B +1/+2, Tugas 8 +2/+8, Tugas 9 +1/+3, Tugas 10 +0/+0
-(dokumen), Tugas 11 +0/+0 (Vitest tidak memuat `e2e/`), Tugas 12 +0/+0. Tidak ada uji lama yang dibuang.
-`tsc --noEmit` dan `vite build` bersih pada jalan yang sama. **Commit sesudahnya (`256a58a`) hanya
-menyentuh `docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md`, jadi angka itu masih berlaku** — tetapi suite tidak
-dijalankan ulang di atasnya.
+**Baseline uji terakhir yang benar-benar dijalankan, oleh pengendali pada `f53a04c`**
+(16 September 2026, dengan `.env` dan `TENANT_TEST_SECONDARY_URL` termuat): `Test Files 177 passed
+(177)`, `Tests 1516 passed | 2 skipped (1518)`. Selisih terhadap `a62562f` (`1513 lulus | 2 dilewati`)
+adalah **+3 uji**, tepat tiga uji baru butir 11 dan 13 — tidak ada berkas uji baru dan tidak ada uji
+lama yang dibuang. `./node_modules/.bin/tsc --noEmit` **keluar 0 tanpa keluaran** dan
+`./node_modules/.bin/vite build` **`✓ built in 4.37s`** pada jalan yang sama (peringatan potongan
+>500 kB tetap ada, `index-*.js` 1.012,42 kB — sudah lama begitu, bukan hal baru).
+
+**Selisih terhadap baseline 11 September** (`161` berkas / `1428` lulus) adalah **+16 berkas, +88 uji**,
+seluruhnya dari sub-proyek 1: Tugas 1 +1/+2, Tugas 2 +1/+18, Tugas 3 +2/+6, Tugas 4 +0/+3, Tugas 5
++1/+7, Tugas 6 +1/+8, Tugas 7 +4/+11, Tugas 7A +2/+17, Tugas 7B +1/+2, Tugas 8 +2/+8, Tugas 9 +1/+3,
+Tugas 10–12 +0/+0 (dokumen; Vitest tidak memuat `e2e/`), butir 11+13 +0/+3.
 
 **Playwright: `./node_modules/.bin/pnpm test:visual` = 42 lulus** pada `044a9b4` dan diulang pada
 `a62562f` (3 ukuran × 11 + 6 palet = 39 baseline PNG di `e2e/__screenshots__/fondasi.spec.ts/`).
@@ -186,7 +182,10 @@ berkas, terakhir `0058_brief_proteus.sql`. Sub-proyek 1 memang dilarang menyentu
 
 **Uji wajib dijalankan dengan `.env` termuat.** Tanpa itu
 `server/internalAuth.developmentAccounts.test.ts` gagal sendirian dengan *"Database tidak
-tersedia"* — kegagalan lingkungan, bukan regresi:
+tersedia"* — kegagalan lingkungan, bukan regresi. **Gejala kedua yang mudah disalahartikan:** tanpa
+`TENANT_TEST_SECONDARY_URL`, empat uji `server/tenantIsolation.live.test.ts` **dilewati diam-diam**
+(`describe.skipIf`), jadi jumlahnya turun menjadi `1512 lulus | 6 dilewati` tanpa satu pun kegagalan.
+Bila jumlah "dilewati" bukan **2**, yang kurang adalah env, bukan ujinya:
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
 export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
@@ -359,15 +358,12 @@ jalankan ulang berkas itu saja.
 
 ### Risiko residual Fondasi Desain (Tugas 1–12) yang masih terbuka
 
-Daftar lengkapnya (13 butir) ada di akhir `plans/2026-09-12-fondasi-desain.md`. Yang paling mudah
-menggigit sesi berikutnya:
+Daftar lengkapnya (13 butir, dua di antaranya sudah dicoret) ada di akhir
+`plans/2026-09-12-fondasi-desain.md`. Yang paling mudah menggigit sesi berikutnya:
 
-- **`N` dan `/` masih aktif saat dialog modal terbuka** (butir 13, ditemukan 16 September):
-  `shortcutFor` hanya menahan diri bila fokus di kolom isian, sehingga `N` di dalam dialog yang
-  fokusnya pada tombol berpindah ke Buat Transaksi dan membuang isi dialog. Sebelas halaman lama
-  memakai `AlertDialog`/`Dialog`. Perbaikannya satu baris + uji; **belum dikerjakan**.
-- **Tombol merek sidebar tanpa `FOCUS_RING`** (butir 11, `AppSidebar.tsx:35`) — memakai cincin bawaan
-  peramban, tidak konsisten dengan butir sidebar dan tombol tebal.
+- ~~`N` dan `/` aktif saat dialog terbuka (butir 13)~~ dan ~~tombol merek tanpa `FOCUS_RING`
+  (butir 11)~~ — **keduanya selesai 16 September 2026** (`f53a04c`); rinciannya di blok keadaan di atas.
+  Yang **belum** terbukti: perilaku dialog itu belum dilihat di peramban sungguhan, baru di jsdom.
 - **Halaman lama tanpa `h1`**: `/operasional`, `/operasional/stock/kas-awal`, `/kepatuhan/ira`
   (dan kemungkinan lainnya) sejak kepala shell berhenti menjadi heading. Tertutup ketika tiap modul
   memakai `PageHeader`.
