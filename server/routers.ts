@@ -361,6 +361,7 @@ export const customerUpdateInput = z.object({
  */
 export const transactionCreateInput = z.object({
       operation: z.enum(["BUY", "SELL"]),
+      rateDeviationReason: z.string().trim().max(1000).optional(),
       customerId: z.number().int().positive(),
       /** Physical receipt-book number, typed manually by the teller. Jual and Beli books are numbered independently. */
       receiptNumber: z.string().trim().min(1).max(80),

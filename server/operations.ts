@@ -36,6 +36,7 @@ import {
   sanctionsWatchlistEntries,
   serviceRequests,
   stockOpnameDenominations,
+  rateTiers,
   stockOpnames,
   transactionReviewActions,
   type StaffRole,
@@ -43,7 +44,9 @@ import {
 import type { IraCustomerType, IraDistributionChannel, IraLegalForm, IraOccupationCategory } from "../shared/iraVocabulary";
 import { getDb } from "./db";
 import { knownDenominationsFor } from "../shared/currencyDenominations";
-import { DEFAULT_RATE_DEVIATION_TOLERANCE_PERCENT } from "../shared/rateDeviation";
+import { DEFAULT_RATE_DEVIATION_TOLERANCE_PERCENT, RATE_DEVIATION_REVIEW_REASON } from "../shared/rateDeviation";
+import type { RateTierRow } from "../shared/rateTiers";
+import type { ActiveRateForPricing, DenominationReference, PricedEntry } from "./rateBoard";
 import { PRIMARY_REVENUE_ROW_KEY } from "../shared/regulatoryForms";
 import { startOfOperationalDay, startOfNextOperationalDay, startOfOperationalMonth, startOfNextOperationalMonth } from "../shared/regulatoryActionQueue";
 import { isKnownSuspiciousIndicatorCode } from "../shared/suspiciousTransactionIndicators";
@@ -1371,6 +1374,8 @@ export type CreateTransactionLineInput = {
 
 export type CreateTransactionInput = {
   operation: "BUY" | "SELL";
+  /** Wajib (min. 10 karakter) bila harga salah satu baris pecahan melampaui toleransi terhadap kurs papan. */
+  rateDeviationReason?: string;
   customerId: number;
   /** Physical receipt-book number, typed manually by the teller. Unique per operation (Jual and Beli books are numbered independently). */
   receiptNumber: string;
@@ -1527,9 +1532,22 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   const lineCurrencyIds = Array.from(new Set(input.lines.map((line) => line.currencyId)));
   const lineCurrencies = await db.select().from(currencies).where(inArray(currencies.id, lineCurrencyIds));
   const currencyById = new Map(lineCurrencies.map((currency) => [currency.id, currency]));
-  const activeRatesByCurrency = new Map((await db.select({ rate: operationalRates }).from(operationalRates)
+  const activeRateRows = (await db.select({ rate: operationalRates }).from(operationalRates)
     .where(and(inArray(operationalRates.currencyId, lineCurrencyIds), eq(operationalRates.status, "ACTIVE"), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false))))
-    .map(({ rate }) => [rate.currencyId, rate]));
+    .map(({ rate }) => rate);
+  // Rujukan tingkat baris valuta hanya informatif; dengan kelompok pecahan satu valuta dapat punya
+  // beberapa kurs aktif, jadi kurs tingkat valuta didahulukan supaya pilihannya tidak acak.
+  const activeRatesByCurrency = new Map<number, typeof activeRateRows[number]>();
+  for (const rate of activeRateRows) {
+    if (!activeRatesByCurrency.has(rate.currencyId) || rate.rateTierId === null) activeRatesByCurrency.set(rate.currencyId, rate);
+  }
+  const activeRates: ActiveRateForPricing[] = activeRateRows.map((rate) => ({ id: rate.id, currencyId: rate.currencyId, rateTierId: rate.rateTierId, buyRate: String(rate.buyRate), sellRate: String(rate.sellRate), quoteUnit: String(rate.quoteUnit) }));
+  const tiersByCurrency = new Map<number, RateTierRow[]>();
+  for (const tier of await db.select().from(rateTiers).where(and(inArray(rateTiers.currencyId, lineCurrencyIds), eq(rateTiers.active, true)))) {
+    const list = tiersByCurrency.get(tier.currencyId) ?? [];
+    list.push({ id: tier.id, currencyId: tier.currencyId, label: tier.label, denominationValues: (tier.denominationValues ?? []) as string[], sortOrder: tier.sortOrder, active: tier.active });
+    tiersByCurrency.set(tier.currencyId, list);
+  }
 
   type PreparedLine = { currencyId: number; operationalRateId: number | null; referenceRateSnapshot: string | null; quoteUnit: string; agreedRate: string; foreignAmount: string; rupiahAmount: string; denominationRows: ReturnType<typeof reconcilePricedDenominations>["rows"] };
   const preparedLines: PreparedLine[] = input.lines.map((line, index) => {
@@ -1550,6 +1568,24 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     return { currencyId: line.currencyId, operationalRateId: activeRate?.id ?? null, referenceRateSnapshot, quoteUnit: quoteUnit.toFixed(6), agreedRate: agreedRate.toFixed(6), foreignAmount: totalForeign.toFixed(6), rupiahAmount: totalRupiah, denominationRows };
   });
   const rupiahAmount = preparedLines.reduce((sum, line) => sum.plus(line.rupiahAmount), new Decimal(0)).toFixed(2);
+
+  // Satu perulangan menyusun daftar pecahan berharga dan alamat (baris, pecahan) masing-masing,
+  // supaya rujukan hasil penilaian dikembalikan ke baris pecahan yang tepat tanpa indeks bergeser.
+  const pricedEntries: PricedEntry[] = [];
+  const pricedSlots: { lineIndex: number; rowIndex: number }[] = [];
+  preparedLines.forEach((line, lineIndex) => line.denominationRows.forEach((entry, rowIndex) => {
+    pricedEntries.push({ currencyId: line.currencyId, currencyCode: currencyById.get(line.currencyId)?.code ?? `#${line.currencyId}`, denominationValue: entry.denominationValue, agreedRate: entry.agreedRate });
+    pricedSlots.push({ lineIndex, rowIndex });
+  }));
+  // Impor dinamis: rateBoard.ts sudah mengimpor berkas ini, jadi impor statis akan melingkar.
+  const { assessDenominationDeviations } = await import("./rateBoard");
+  const { rateDeviationTolerancePercent } = await getReviewThreshold();
+  const deviation = assessDenominationDeviations({
+    entries: pricedEntries, operation: input.operation, tiersByCurrency, activeRates,
+    tolerancePercent: String(rateDeviationTolerancePercent), reason: input.rateDeviationReason ?? null,
+  });
+  const denominationReferences = preparedLines.map((line) => new Array<DenominationReference | undefined>(line.denominationRows.length));
+  pricedSlots.forEach((slot, index) => { denominationReferences[slot.lineIndex][slot.rowIndex] = deviation.references[index]; });
 
   // A SELL bon hands out foreign currency we're supposed to already be holding — never let it draft
   // against stock we don't have.
@@ -1686,8 +1722,12 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     const unknownCode = input.suspiciousIndicators.find((code) => !isKnownSuspiciousIndicatorCode(code));
     if (unknownCode) throw new Error(`Indikator TKM "${unknownCode}" tidak dikenal.`);
   }
-  const requiresReview = assessment.requiresReview || Boolean(input.isSuspiciousTransaction);
-  const reviewReason = [assessment.reviewReason, input.isSuspiciousTransaction ? "TRANSAKSI_MENCURIGAKAN_TKM" : null].filter(Boolean).join("; ") || null;
+  const requiresReview = assessment.requiresReview || Boolean(input.isSuspiciousTransaction) || deviation.requiresReview;
+  const reviewReason = [
+    assessment.reviewReason,
+    input.isSuspiciousTransaction ? "TRANSAKSI_MENCURIGAKAN_TKM" : null,
+    deviation.requiresReview ? RATE_DEVIATION_REVIEW_REASON : null,
+  ].filter(Boolean).join("; ") || null;
   const number = transactionNumber();
 
   const created = await db.transaction(async (tx) => {
@@ -1731,6 +1771,7 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
       requiresReview,
       reviewStatus: requiresReview ? "NEEDS_REVIEW" : "NOT_REVIEWED",
       reviewReason,
+      rateDeviationReason: deviation.requiresReview ? (input.rateDeviationReason?.trim() ?? null) : null,
     });
     const row = (await tx.select().from(exchangeTransactions).where(eq(exchangeTransactions.transactionNumber, number)).limit(1))[0];
     if (!row) throw new Error("Transaksi tidak dapat dibuat.");
@@ -1747,7 +1788,13 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
         rupiahAmount: line.rupiahAmount,
       }).$returningId();
       if (insertedLine) {
-        await tx.insert(exchangeTransactionDenominationEntries).values(line.denominationRows.map((entry) => ({ transactionId: row.id, transactionLineId: insertedLine.id, denominationValue: entry.denominationValue, quantity: entry.quantity, lineTotal: entry.lineTotal, agreedRate: entry.agreedRate })));
+        await tx.insert(exchangeTransactionDenominationEntries).values(line.denominationRows.map((entry, rowIndex) => {
+          const reference = denominationReferences[index][rowIndex];
+          return {
+            transactionId: row.id, transactionLineId: insertedLine.id, denominationValue: entry.denominationValue, quantity: entry.quantity, lineTotal: entry.lineTotal, agreedRate: entry.agreedRate,
+            operationalRateId: reference?.operationalRateId ?? null, referenceRateSnapshot: reference?.referenceRateSnapshot ?? null, rateDeviationPercent: reference?.rateDeviationPercent ?? null,
+          };
+        }));
       }
     }
     if (paymentDenominationRows.length && paymentCurrencyId) {
@@ -1755,7 +1802,7 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     }
     return row;
   });
-  await writeAudit({ actorUserId: tellerUserId, action: "TRANSACTION_DRAFT_CREATED", entityType: "exchange_transaction", entityId: String(created.id), afterState: { transactionNumber: number, receiptNumber, operation: input.operation, lineCount: preparedLines.length, rupiahAmount, requiresReview, reviewReason, underlyingRequired: created.underlyingRequired } });
+  await writeAudit({ actorUserId: tellerUserId, action: "TRANSACTION_DRAFT_CREATED", entityType: "exchange_transaction", entityId: String(created.id), afterState: { transactionNumber: number, receiptNumber, operation: input.operation, lineCount: preparedLines.length, rupiahAmount, requiresReview, reviewReason, underlyingRequired: created.underlyingRequired, rateDeviationCount: deviation.exceeding.length } });
   return created;
 }
 

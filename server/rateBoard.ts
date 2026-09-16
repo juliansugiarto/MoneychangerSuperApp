@@ -2,8 +2,9 @@ import Decimal from "decimal.js";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { auditLogs, currencies, operationalRates, rateReferenceSnapshots, rateTiers, rateVolatilityAlerts } from "../drizzle/schema";
+import { deviationRejectionMessage, exceedsTolerance, rateDeviationPercent, type DeviationRow } from "../shared/rateDeviation";
 import { startOfNextOperationalDay, startOfOperationalDay } from "../shared/regulatoryActionQueue";
-import { findTierOverlap, normalizeDenominationValue, OTHER_TIER_LABEL, sortTiers, type RateTierRow } from "../shared/rateTiers";
+import { findTierOverlap, matchTier, normalizeDenominationValue, OTHER_TIER_LABEL, sortTiers, type RateTierRow } from "../shared/rateTiers";
 import { databaseOrThrow, writeAudit } from "./operations";
 
 export const ACTIVATION_REASON_MIN_LENGTH = 10;
@@ -358,4 +359,55 @@ export async function suggestDraftsFromReference(actorUserId: number) {
   const drafts = buildReferenceDrafts(board.cells);
   if (!drafts.length) throw new Error("Belum ada snapshot BI tersimpan. Jalankan sinkronisasi referensi lebih dahulu.");
   return saveBoardDrafts(drafts, actorUserId);
+}
+
+export type ActiveRateForPricing = { id: number; currencyId: number; rateTierId: number | null; buyRate: string; sellRate: string; quoteUnit: string };
+export type PricedEntry = { currencyId: number; currencyCode: string; denominationValue: string; agreedRate: string };
+export type DenominationReference = { operationalRateId: number | null; referenceRateSnapshot: string | null; rateDeviationPercent: string | null };
+
+/**
+ * Rujukan dicari **per pecahan**, bukan per valuta: satu bon dapat memuat USD 100 (kelompok "100") dan
+ * USD 10 (kelompok "5–20"), dan kedua baris itu berhak atas kurs papannya masing-masing. Pecahan yang
+ * tidak masuk kelompok mana pun memakai kurs tingkat valuta bila ada.
+ */
+export function resolveDenominationReference(entry: PricedEntry, operation: "BUY" | "SELL", tiers: readonly RateTierRow[], activeRates: readonly ActiveRateForPricing[]): DenominationReference {
+  const value = normalizeDenominationValue(entry.denominationValue);
+  const tier = matchTier(tiers, value);
+  const forCurrency = activeRates.filter((rate) => rate.currencyId === entry.currencyId);
+  const rate = (tier ? forCurrency.find((row) => row.rateTierId === tier.id) : undefined)
+    ?? forCurrency.find((row) => row.rateTierId === null)
+    ?? null;
+  if (!rate) return { operationalRateId: null, referenceRateSnapshot: null, rateDeviationPercent: null };
+  const reference = operation === "BUY" ? rate.buyRate : rate.sellRate;
+  return { operationalRateId: rate.id, referenceRateSnapshot: reference, rateDeviationPercent: rateDeviationPercent(entry.agreedRate, reference) };
+}
+
+/**
+ * Dihitung di server pada saat simpan, tidak pernah dipercaya dari klien: kurs dapat diaktifkan
+ * antara bon dibuka dan bon disimpan, dan yang berlaku adalah kurs saat simpan.
+ */
+export function assessDenominationDeviations(input: {
+  entries: readonly PricedEntry[];
+  operation: "BUY" | "SELL";
+  tiersByCurrency: Map<number, RateTierRow[]>;
+  activeRates: readonly ActiveRateForPricing[];
+  tolerancePercent: string;
+  reason: string | null;
+}) {
+  const references: DenominationReference[] = [];
+  const exceeding: DeviationRow[] = [];
+  for (const entry of input.entries) {
+    const reference = resolveDenominationReference(entry, input.operation, input.tiersByCurrency.get(entry.currencyId) ?? [], input.activeRates);
+    references.push(reference);
+    if (reference.referenceRateSnapshot && exceedsTolerance(reference.rateDeviationPercent, input.tolerancePercent)) {
+      exceeding.push({
+        currencyCode: entry.currencyCode, denominationValue: entry.denominationValue,
+        agreedRate: entry.agreedRate, referenceRate: reference.referenceRateSnapshot,
+        deviationPercent: reference.rateDeviationPercent as string,
+      });
+    }
+  }
+  const reason = input.reason?.trim() ?? "";
+  if (exceeding.length && reason.length < ACTIVATION_REASON_MIN_LENGTH) throw new Error(deviationRejectionMessage(exceeding, input.tolerancePercent));
+  return { references, exceeding, requiresReview: exceeding.length > 0 };
 }
