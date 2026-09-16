@@ -101,7 +101,7 @@ import {
   updatePublicAnnouncement,
   updateServiceRequest,
 } from "./operations";
-import { activateBoardDrafts, deactivateRateTier, discardBoardDrafts, readRateBoard, saveBoardDrafts, saveRateTier } from "./rateBoard";
+import { activateBoardDrafts, copyActiveRatesToDrafts, deactivateRateTier, discardBoardDrafts, readRateBoard, saveBoardDrafts, saveRateTier, suggestDraftsFromReference } from "./rateBoard";
 import { listCustomerProfileMonitoring, listCustomerProfileReviews, recordCustomerProfileReview } from "./customerProfileMonitoring";
 import { addCompanyDocumentVersion, companyArchiveWorklist, createCompanyDocument, deactivateCompanyDocument, listCompanyArchiveDocuments, listCompanyArchiveVersions } from "./companyDocumentArchive";
 import { getOperationalDocumentDownloadUrl, listCompanyDocuments, listDeactivatedCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
@@ -505,6 +505,8 @@ export const appRouter = router({
       approvalReason: z.string().trim().min(10).max(1000),
     })).mutation(({ input, ctx }) => activateBoardDrafts(input, ctx.user.id)),
     discardBoardDrafts: adminProcedure.mutation(({ ctx }) => discardBoardDrafts(ctx.user.id)),
+    copyActiveToDrafts: adminProcedure.mutation(({ ctx }) => copyActiveRatesToDrafts(ctx.user.id)),
+    suggestFromReference: adminProcedure.mutation(({ ctx }) => suggestDraftsFromReference(ctx.user.id)),
   }),
 
   rateTiers: router({

@@ -326,3 +326,36 @@ export async function discardBoardDrafts(actorUserId: number) {
   });
   return { discarded: ids.length };
 }
+
+/**
+ * Kedua penyusun ini **tidak pernah** mengaktifkan apa pun: hasilnya masuk ke `saveBoardDrafts` dan
+ * menunggu alasan manusia. Sel tanpa sumber angka dilewati, bukan diisi nol — kurs nol yang lolos ke
+ * bon jauh lebih berbahaya daripada sel yang dibiarkan kosong.
+ */
+export function buildCopyDrafts(cells: readonly BoardCellPayload[]): BoardDraftInput[] {
+  return cells.filter((cell) => cell.activeBuyRate && cell.activeSellRate).map((cell) => ({
+    currencyId: cell.currencyId, rateTierId: cell.rateTierId, quoteUnit: cell.quoteUnit,
+    buyRate: cell.activeBuyRate as string, sellRate: cell.activeSellRate as string,
+  }));
+}
+
+export function buildReferenceDrafts(cells: readonly BoardCellPayload[]): BoardDraftInput[] {
+  return cells.filter((cell) => cell.referenceBuyRate && cell.referenceSellRate).map((cell) => ({
+    currencyId: cell.currencyId, rateTierId: cell.rateTierId, quoteUnit: cell.quoteUnit,
+    buyRate: cell.referenceBuyRate as string, sellRate: cell.referenceSellRate as string, referenceSnapshotId: cell.referenceSnapshotId,
+  }));
+}
+
+export async function copyActiveRatesToDrafts(actorUserId: number) {
+  const board = await readRateBoard();
+  const drafts = buildCopyDrafts(board.cells);
+  if (!drafts.length) throw new Error("Belum ada kurs aktif yang dapat disalin. Isi kurs hari ini secara manual atau pakai saran dari referensi BI.");
+  return saveBoardDrafts(drafts, actorUserId);
+}
+
+export async function suggestDraftsFromReference(actorUserId: number) {
+  const board = await readRateBoard();
+  const drafts = buildReferenceDrafts(board.cells);
+  if (!drafts.length) throw new Error("Belum ada snapshot BI tersimpan. Jalankan sinkronisasi referensi lebih dahulu.");
+  return saveBoardDrafts(drafts, actorUserId);
+}

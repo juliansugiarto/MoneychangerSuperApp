@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planDraftReplacement, type BoardDraftInput } from "./rateBoard";
+import { buildCopyDrafts, buildReferenceDrafts, planDraftReplacement, type BoardCellPayload, type BoardDraftInput } from "./rateBoard";
 
 const input = (currencyId: number, rateTierId: number | null, buyRate: string): BoardDraftInput =>
   ({ currencyId, rateTierId, quoteUnit: "1.000000", buyRate, sellRate: "16400.000000" });
@@ -34,5 +34,44 @@ describe("menyimpan draf papan", () => {
 
   it("menolak dua sel untuk pasangan valuta + kelompok yang sama dalam satu penyimpanan", () => {
     expect(() => planDraftReplacement([], [input(1, 5, "16290"), input(1, 5, "16295")])).toThrow(/dua nilai/i);
+  });
+});
+
+const cell = (over: Partial<BoardCellPayload> = {}): BoardCellPayload => ({
+  currencyId: 1, currencyCode: "USD", currencyName: "Dolar Amerika Serikat", rateTierId: null, tierLabel: "Pecahan lain", sortOrder: 9999,
+  quoteUnit: "1.000000", activeRateId: null, activeBuyRate: null, activeSellRate: null, activeEffectiveAt: null,
+  draftRateId: null, draftBuyRate: null, draftSellRate: null,
+  referenceBuyRate: null, referenceSellRate: null, referenceSnapshotId: null, ...over,
+});
+
+describe("salin kurs kemarin", () => {
+  it("membuat draf dari kurs yang sedang aktif, per kelompok", () => {
+    const drafts = buildCopyDrafts([
+      cell({ rateTierId: 5, tierLabel: "100", activeRateId: 21, activeBuyRate: "16290.000000", activeSellRate: "16400.000000" }),
+      cell({ rateTierId: 6, tierLabel: "5\u201320", activeRateId: 22, activeBuyRate: "16100.000000", activeSellRate: "16300.000000" }),
+    ]);
+    expect(drafts).toEqual([
+      { currencyId: 1, rateTierId: 5, quoteUnit: "1.000000", buyRate: "16290.000000", sellRate: "16400.000000" },
+      { currencyId: 1, rateTierId: 6, quoteUnit: "1.000000", buyRate: "16100.000000", sellRate: "16300.000000" },
+    ]);
+  });
+
+  it("melewati sel yang belum punya kurs aktif alih-alih mengarang nol", () => {
+    expect(buildCopyDrafts([cell()])).toEqual([]);
+  });
+});
+
+describe("saran dari referensi BI", () => {
+  it("membuat draf untuk setiap kelompok dari snapshot valutanya", () => {
+    const drafts = buildReferenceDrafts([
+      cell({ rateTierId: 5, tierLabel: "100", referenceBuyRate: "16200.000000", referenceSellRate: "16360.000000", referenceSnapshotId: 9 }),
+      cell({ rateTierId: null, referenceBuyRate: "16200.000000", referenceSellRate: "16360.000000", referenceSnapshotId: 9 }),
+    ]);
+    expect(drafts.map((row) => row.rateTierId)).toEqual([5, null]);
+    expect(drafts[0]).toEqual({ currencyId: 1, rateTierId: 5, quoteUnit: "1.000000", buyRate: "16200.000000", sellRate: "16360.000000", referenceSnapshotId: 9 });
+  });
+
+  it("melewati valuta yang belum punya snapshot BI", () => {
+    expect(buildReferenceDrafts([cell()])).toEqual([]);
   });
 });
