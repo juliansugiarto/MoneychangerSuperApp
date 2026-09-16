@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { FOCUS_RING } from "@/components/patterns/tebal";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 
@@ -18,6 +19,12 @@ describe("AppSidebar", () => {
     renderSidebar("/operasional/stock/kas-awal", false);
     expect(buttonLabelled("Uang Kas").getAttribute("data-active")).toBe("true");
     expect(buttonLabelled("Kurs").getAttribute("data-active")).toBe("false");
+  });
+
+  it("tombol merek memakai cincin fokus Konter Tebal, bukan bawaan peramban", () => {
+    renderSidebar("/operasional", true);
+    const brand = buttonLabelled("CVContoh Valuta");
+    for (const kelas of FOCUS_RING.split(" ")) expect(brand.classList.contains(kelas)).toBe(true);
   });
 
   it("butir daun aktif memakai aria-current", () => {

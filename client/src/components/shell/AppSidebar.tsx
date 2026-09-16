@@ -1,3 +1,4 @@
+import { FOCUS_RING } from "@/components/patterns/tebal";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
@@ -32,7 +33,7 @@ export function AppSidebar({ brand, role, userName, roleLabel, currentPath, onNa
   return (
     <Sidebar collapsible="icon" className="border-ink group-data-[side=left]:border-r-2">
       <SidebarHeader className="h-header justify-center border-b-2 border-ink px-2">
-        <button type="button" onClick={() => onNavigate("/operasional")} className="flex items-center gap-2 rounded-md px-1 text-left">
+        <button type="button" onClick={() => onNavigate("/operasional")} className={`flex items-center gap-2 rounded-md px-1 text-left ${FOCUS_RING}`}>
           <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border-2 border-ink bg-brand font-heading text-label font-extrabold text-brand-contrast shadow-hard">{brandInitials(brand)}</span>
           <span className="truncate font-heading text-body font-extrabold text-ink group-data-[collapsible=icon]:hidden">{brand}</span>
         </button>
