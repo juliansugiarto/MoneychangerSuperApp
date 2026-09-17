@@ -120,6 +120,7 @@ export default function OperationsDashboard() {
             <p className="text-[11px] font-bold uppercase tracking-wide text-amber-800">Alasan masuk antrian review</p>
             <p className="mt-1 text-sm text-amber-900">{reviewingTransaction.reviewReason ?? "Memerlukan pemeriksaan"}</p>
             {reviewingTransaction.thresholdReason ? <p className="mt-2 text-sm text-amber-900"><span className="font-semibold">Alasan ambang underlying:</span> {reviewingTransaction.thresholdReason}</p> : null}
+            {reviewingTransaction.rateDeviationReason ? <p className="mt-2 text-sm text-amber-900"><span className="font-semibold">Alasan selisih harga dari kurs papan:</span> {reviewingTransaction.rateDeviationReason}</p> : null}
           </div>
 
           {reviewingTransaction.isSuspiciousTransaction ? <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">

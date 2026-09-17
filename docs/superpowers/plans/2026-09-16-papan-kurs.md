@@ -27,7 +27,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 11 — Kisi papan kurs di klien (`RateBoardGrid`)
 - [x] Tugas 12 — Halaman `/operasional/kurs` yang baru
 - [x] Tugas 13 — Bon: harga terisi otomatis dari papan dan alasan selisih
-- [ ] Tugas 14 — Peragaan end-to-end, verifikasi peramban, dokumentasi, penutupan
+- [x] Tugas 14 — Peragaan end-to-end, verifikasi peramban, dokumentasi, penutupan
 
 Urutan mengikat: 1 sebelum semuanya; 2 sebelum 3, 5, 9; 4 sebelum 6; 5 sebelum 6, 7, 11; 8 sebelum 9 dan 13; 9 sebelum 13; 11 sebelum 12; 12 dan 13 sebelum 14.
 

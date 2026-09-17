@@ -1,5 +1,5 @@
 import Decimal from "decimal.js";
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { auditLogs, currencies, operationalRates, rateReferenceSnapshots, rateTiers, rateVolatilityAlerts } from "../drizzle/schema";
 import type { BoardCellPayload } from "../shared/rateBoard";
@@ -23,7 +23,7 @@ export function assertTierSaveValid(existing: readonly RateTierRow[], input: Tie
   const next = [...existing.filter((tier) => tier.id !== candidate.id), candidate];
   const overlap = findTierOverlap(next);
   if (overlap) {
-    throw new Error(`Pecahan ${overlap.value} sudah masuk kelompok "${overlap.labels[0]}"; satu pecahan tidak boleh berada di dua kelompok aktif (bentrok dengan "${overlap.labels[1]}"). Keluarkan pecahan itu dari salah satu kelompok lebih dahulu.`);
+    throw new Error(`Pecahan ${new Decimal(overlap.value).toString()} sudah masuk kelompok "${overlap.labels[0]}"; satu pecahan tidak boleh berada di dua kelompok aktif (bentrok dengan "${overlap.labels[1]}"). Keluarkan pecahan itu dari salah satu kelompok lebih dahulu.`);
   }
   return sortTiers(next);
 }
@@ -197,12 +197,17 @@ export type RateBoardPayload = {
  */
 export async function readRateBoard(now = new Date()): Promise<RateBoardPayload> {
   const db = await databaseOrThrow();
-  const [currencyRows, tierRows, rateRows, referenceRows, alertRows] = await Promise.all([
+  const [currencyRows, tierRows, rateRows, referenceRows, alertRows, approvedTodayRows] = await Promise.all([
     db.select().from(currencies).where(eq(currencies.active, true)).orderBy(currencies.code),
     db.select().from(rateTiers).where(eq(rateTiers.active, true)),
     db.select().from(operationalRates).where(and(eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false), inArray(operationalRates.status, ["DRAFT", "ACTIVE"]))).orderBy(desc(operationalRates.id)),
     db.select().from(rateReferenceSnapshots).where(eq(rateReferenceSnapshots.isDemo, false)).orderBy(desc(rateReferenceSnapshots.referenceDate), desc(rateReferenceSnapshots.fetchedAt)),
     db.select({ alert: rateVolatilityAlerts, currency: currencies }).from(rateVolatilityAlerts).innerJoin(currencies, eq(rateVolatilityAlerts.currencyId, currencies.id)).where(isNull(rateVolatilityAlerts.resolvedAt)),
+    // Riwayat membaca status apa pun: kurs pagi yang sudah digantikan kurs siang tetap bagian dari aktivasi pagi.
+    // `approvedAt` adalah datetime UTC, jadi batas instan WIB dapat dibandingkan langsung.
+    db.select({ activationBatchId: operationalRates.activationBatchId, approvedAt: operationalRates.approvedAt, approvalReason: operationalRates.approvalReason })
+      .from(operationalRates)
+      .where(and(eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false), isNotNull(operationalRates.activationBatchId), gte(operationalRates.approvedAt, startOfOperationalDay(now)))),
   ]);
 
   const tiersByCurrency = new Map<number, RateTierRow[]>();
@@ -247,7 +252,7 @@ export async function readRateBoard(now = new Date()): Promise<RateBoardPayload>
     }
   }
 
-  const historyRows = rateRows.filter((rate) => rate.status === "ACTIVE" && rate.approvedAt)
+  const historyRows = approvedTodayRows.filter((rate) => rate.approvedAt)
     .map((rate) => ({ activationBatchId: rate.activationBatchId ?? "", approvedAt: rate.approvedAt as Date, approvalReason: rate.approvalReason }));
 
   return {
