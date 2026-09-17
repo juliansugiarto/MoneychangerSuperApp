@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCopyDrafts, buildReferenceDrafts, planDraftReplacement, type BoardCellPayload, type BoardDraftInput } from "./rateBoard";
+import { buildCopyDrafts, buildReferenceDrafts, planDraftReplacement, pricingCells, type BoardCellPayload, type BoardDraftInput } from "./rateBoard";
 
 const input = (currencyId: number, rateTierId: number | null, buyRate: string): BoardDraftInput =>
   ({ currencyId, rateTierId, quoteUnit: "1.000000", buyRate, sellRate: "16400.000000" });
@@ -73,5 +73,16 @@ describe("saran dari referensi BI", () => {
 
   it("melewati valuta yang belum punya snapshot BI", () => {
     expect(buildReferenceDrafts([cell()])).toEqual([]);
+  });
+});
+
+describe("harga papan untuk kasir", () => {
+  it("hanya membawa kurs yang berlaku, tanpa draf maupun referensi BI", () => {
+    const rows = pricingCells([
+      cell({ activeRateId: 21, activeBuyRate: "16290.000000", activeSellRate: "16400.000000", draftRateId: 31, draftBuyRate: "16500.000000", draftSellRate: "16600.000000", referenceBuyRate: "16200.000000", referenceSnapshotId: 9 }),
+      cell({ currencyId: 2, currencyCode: "SGD", draftRateId: 32, draftBuyRate: "12000.000000", draftSellRate: "12100.000000" }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ activeBuyRate: "16290.000000", draftRateId: null, draftBuyRate: null, draftSellRate: null, referenceBuyRate: null, referenceSnapshotId: null });
   });
 });

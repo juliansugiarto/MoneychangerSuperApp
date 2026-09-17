@@ -35,6 +35,13 @@ describe("rujukan per baris pecahan", () => {
       .toEqual({ operationalRateId: null, referenceRateSnapshot: null, rateDeviationPercent: null });
   });
 
+  it("menyamakan satuan kuotasi: kurs papan per 100 dibandingkan dengan harga bon per 1", () => {
+    const jpy: ActiveRateForPricing[] = [{ id: 40, currencyId: 3, rateTierId: null, buyRate: "11225.580000", sellRate: "11340.000000", quoteUnit: "100.000000" }];
+    const perSatu = { currencyId: 3, currencyCode: "JPY", denominationValue: "1000.000000", agreedRate: "112.2558", quoteUnit: "1.000000" };
+    expect(resolveDenominationReference(perSatu, "BUY", [], jpy))
+      .toEqual({ operationalRateId: 40, referenceRateSnapshot: "112.255800", rateDeviationPercent: "0.0000" });
+  });
+
   it("satu bon dapat membawa dua rujukan berbeda untuk dua pecahan", () => {
     const seratus = resolveDenominationReference(entry("100.000000", "16290"), "BUY", TIERS, RATES);
     const sepuluh = resolveDenominationReference(entry("10.000000", "16100"), "BUY", TIERS, RATES);

@@ -101,7 +101,7 @@ import {
   updatePublicAnnouncement,
   updateServiceRequest,
 } from "./operations";
-import { activateBoardDrafts, copyActiveRatesToDrafts, deactivateRateTier, discardBoardDrafts, readRateBoard, saveBoardDrafts, saveRateTier, suggestDraftsFromReference } from "./rateBoard";
+import { activateBoardDrafts, copyActiveRatesToDrafts, readBoardPricing, deactivateRateTier, discardBoardDrafts, readRateBoard, saveBoardDrafts, saveRateTier, suggestDraftsFromReference } from "./rateBoard";
 import { listCustomerProfileMonitoring, listCustomerProfileReviews, recordCustomerProfileReview } from "./customerProfileMonitoring";
 import { addCompanyDocumentVersion, companyArchiveWorklist, createCompanyDocument, deactivateCompanyDocument, listCompanyArchiveDocuments, listCompanyArchiveVersions } from "./companyDocumentArchive";
 import { getOperationalDocumentDownloadUrl, listCompanyDocuments, listDeactivatedCompanyDocuments, listExpenseDocuments, listOperationalDocuments } from "./documentOperations";
@@ -478,6 +478,7 @@ export const appRouter = router({
   rates: router({
     activeRates: publicProcedure.query(() => listPublicActiveRates()),
     board: adminProcedure.query(() => readRateBoard()),
+    pricing: staffProcedure.query(async () => readBoardPricing(String((await getReviewThreshold()).rateDeviationTolerancePercent))),
     syncStatus: adminProcedure.query(() => getRateSyncStatus()),
     syncNow: adminProcedure.mutation(({ ctx }) => syncBiReferenceRates("MANUAL", ctx.user.id)),
     references: adminProcedure.query(() => listReferenceSnapshots()),

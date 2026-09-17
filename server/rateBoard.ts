@@ -259,6 +259,22 @@ export async function readRateBoard(now = new Date()): Promise<RateBoardPayload>
   };
 }
 
+/**
+ * Harga papan untuk formulir bon. Kasir (STAFF) tidak boleh membaca draf maupun papan penuh, tetapi
+ * butuh kurs yang berlaku per kelompok beserta toleransinya — kurs aktif itu sudah publik lewat
+ * `rates.activeRates`. Draf dan referensi BI dikosongkan di sini, bukan hanya disembunyikan di layar.
+ */
+export function pricingCells(cells: readonly BoardCellPayload[]): BoardCellPayload[] {
+  return cells.filter((cell) => cell.activeRateId !== null).map((cell) => ({
+    ...cell, draftRateId: null, draftBuyRate: null, draftSellRate: null, referenceBuyRate: null, referenceSellRate: null, referenceSnapshotId: null,
+  }));
+}
+
+export async function readBoardPricing(tolerancePercent: string) {
+  const board = await readRateBoard();
+  return { cells: pricingCells(board.cells), tiers: board.tiers, tolerancePercent };
+}
+
 export type BoardDraftInput = { currencyId: number; rateTierId: number | null; quoteUnit: string; buyRate: string; sellRate: string; referenceSnapshotId?: number | null };
 
 /** Draf baru **mengganti** draf lama untuk pasangan valuta + kelompok yang sama: papan menyimpan satu niat per sel, bukan tumpukan niat. */
@@ -360,7 +376,8 @@ export async function suggestDraftsFromReference(actorUserId: number) {
 }
 
 export type ActiveRateForPricing = { id: number; currencyId: number; rateTierId: number | null; buyRate: string; sellRate: string; quoteUnit: string };
-export type PricedEntry = { currencyId: number; currencyCode: string; denominationValue: string; agreedRate: string };
+/** `quoteUnit` adalah satuan harga pada baris bon; kosong berarti sama dengan satuan kurs papannya. */
+export type PricedEntry = { currencyId: number; currencyCode: string; denominationValue: string; agreedRate: string; quoteUnit?: string };
 export type DenominationReference = { operationalRateId: number | null; referenceRateSnapshot: string | null; rateDeviationPercent: string | null };
 
 /**
@@ -376,7 +393,12 @@ export function resolveDenominationReference(entry: PricedEntry, operation: "BUY
     ?? forCurrency.find((row) => row.rateTierId === null)
     ?? null;
   if (!rate) return { operationalRateId: null, referenceRateSnapshot: null, rateDeviationPercent: null };
-  const reference = operation === "BUY" ? rate.buyRate : rate.sellRate;
+  const boardRate = operation === "BUY" ? rate.buyRate : rate.sellRate;
+  // Kurs papan dapat dikuotasi per 100 unit (JPY) sementara harga bon per 1 unit; rujukan disimpan dalam
+  // satuan baris bon supaya sebanding dengan `agreedRate` pada baris pecahan yang sama.
+  const reference = entry.quoteUnit && !new Decimal(entry.quoteUnit).eq(rate.quoteUnit)
+    ? new Decimal(boardRate).times(entry.quoteUnit).div(rate.quoteUnit).toFixed(6)
+    : boardRate;
   return { operationalRateId: rate.id, referenceRateSnapshot: reference, rateDeviationPercent: rateDeviationPercent(entry.agreedRate, reference) };
 }
 

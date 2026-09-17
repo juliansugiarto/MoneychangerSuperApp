@@ -1583,7 +1583,7 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   const pricedEntries: PricedEntry[] = [];
   const pricedSlots: { lineIndex: number; rowIndex: number }[] = [];
   preparedLines.forEach((line, lineIndex) => line.denominationRows.forEach((entry, rowIndex) => {
-    pricedEntries.push({ currencyId: line.currencyId, currencyCode: currencyById.get(line.currencyId)?.code ?? `#${line.currencyId}`, denominationValue: entry.denominationValue, agreedRate: entry.agreedRate });
+    pricedEntries.push({ currencyId: line.currencyId, currencyCode: currencyById.get(line.currencyId)?.code ?? `#${line.currencyId}`, denominationValue: entry.denominationValue, agreedRate: entry.agreedRate, quoteUnit: line.quoteUnit });
     pricedSlots.push({ lineIndex, rowIndex });
   }));
   // Impor dinamis: rateBoard.ts sudah mengimpor berkas ini, jadi impor statis akan melingkar.

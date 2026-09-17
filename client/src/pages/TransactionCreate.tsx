@@ -7,11 +7,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { formatPlainAmount } from "@/lib/money";
 import { trpc } from "@/lib/trpc";
 import { IRA_DISTRIBUTION_CHANNEL_LABELS, type IraDistributionChannel } from "@shared/iraVocabulary";
 import { SUSPICIOUS_TRANSACTION_INDICATOR_CATEGORIES } from "@shared/suspiciousTransactionIndicators";
 import { customerHighRiskDenial } from "@shared/customerHighRisk";
+import { exceedsTolerance, rateDeviationPercent } from "@shared/rateDeviation";
+import { suggestDenominationRate } from "./rates/tierPricing";
 import { ArrowLeftRight, Banknote, CircleDollarSign, FileText, Plus, Printer, Search, ShieldAlert, Sparkles, Trash2, Upload, UserPlus } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -19,7 +22,8 @@ import { useLocation } from "wouter";
 import { Customer, PrintableLine, printBon } from "./Transactions";
 
 /** Every denomination group is priced on its own (e.g. USD 100s vs USD 10s in the same deal), so price lives here, not on the line. */
-type PricedDenominationRow = { value: string; quantity: string; rate: string };
+/** `rateAuto` menandai harga yang diisi dari papan kurs: boleh diganti ketika pecahannya berubah, sedangkan harga ketikan kasir tidak pernah ditimpa. */
+type PricedDenominationRow = { value: string; quantity: string; rate: string; rateAuto?: boolean };
 type LineDraft = { key: string; currency: PickedCurrency | null; quoteUnit: string; denominations: PricedDenominationRow[]; sellTargetAmount: string };
 /** The Rupiah leg of a CASH deal has no price to enter — it's already valued at face value. */
 type PlainDenominationRow = { value: string; quantity: string };
@@ -36,8 +40,8 @@ export default function TransactionCreate() {
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
 
-  const { data: rates } = trpc.rates.listOperational.useQuery(undefined, { enabled: Boolean(user) });
-  const referenceRateFor = (currencyId?: number) => rates?.find(({ rate, currency }) => rate.status === "ACTIVE" && currency.id === currencyId);
+  // Kurs papan yang berlaku, dibaca ulang setiap formulir kembali difokus: kurs dapat diaktifkan saat bon masih diisi.
+  const { data: pricing } = trpc.rates.pricing.useQuery(undefined, { enabled: Boolean(user), refetchOnWindowFocus: true });
   const { data: currencyList } = trpc.currencies.list.useQuery(undefined, { enabled: Boolean(user) });
   const idrCurrencyId = currencyList?.find((currency) => currency.code === "IDR")?.id;
   const [autoFillingPayment, setAutoFillingPayment] = useState(false);
@@ -117,17 +121,49 @@ export default function TransactionCreate() {
   const addLine = () => setLines((prev) => [...prev, emptyLine()]);
   const removeLine = (index: number) => setLines((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
   const addDenominationRow = (lineIndex: number) => setLines((prev) => prev.map((line, i) => (i === lineIndex ? { ...line, denominations: [...line.denominations, emptyDenominationRow()] } : line)));
-  const updateDenominationRow = (lineIndex: number, denomIndex: number, field: keyof PricedDenominationRow, value: string) => setLines((prev) => prev.map((line, i) => (i === lineIndex ? { ...line, denominations: line.denominations.map((row, j) => (j === denomIndex ? { ...row, [field]: value } : row)) } : line)));
+  const updateDenominationRow = (lineIndex: number, denomIndex: number, field: "value" | "quantity" | "rate", value: string) => setLines((prev) => prev.map((line, i) => (i === lineIndex ? { ...line, denominations: line.denominations.map((row, j) => (j === denomIndex ? { ...row, [field]: value, ...(field === "rate" ? { rateAuto: false } : {}) } : row)) } : line)));
   const removeDenominationRow = (lineIndex: number, denomIndex: number) => setLines((prev) => prev.map((line, i) => (i === lineIndex ? { ...line, denominations: line.denominations.length > 1 ? line.denominations.filter((_, j) => j !== denomIndex) : line.denominations } : line)));
 
   const totalRupiah = useMemo(() => lines.reduce((sum, line) => sum + lineRupiahTotal(line), 0), [lines]);
 
+  const suggestedRate = (line: LineDraft, row: PricedDenominationRow) =>
+    line.currency && pricing ? suggestDenominationRate(pricing, pricing.tiers, line.currency.id, operation, row.value, line.quoteUnit || "1") : null;
+  // Mengisi harga kosong (dan memperbarui harga isian papan) setiap kali pecahan, valuta, jenis bon, atau
+  // papannya berubah — satu tempat untuk semua jalur: ketik manual, auto-isi dari stok, ganti BELI/JUAL.
+  useEffect(() => {
+    if (!pricing) return;
+    setLines((prev) => {
+      let changed = false;
+      const next = prev.map((line) => ({
+        ...line,
+        denominations: line.denominations.map((row) => {
+          if (row.rate && !row.rateAuto) return row;
+          const suggestion = suggestedRate(line, row) ?? "";
+          if (suggestion === row.rate) return row;
+          changed = true;
+          return { ...row, rate: suggestion, rateAuto: suggestion !== "" };
+        }),
+      }));
+      return changed ? next : prev;
+    });
+  }, [lines, pricing, operation]);
+
+  const tolerancePercent = pricing?.tolerancePercent ?? null;
+  const rowDeviation = (line: LineDraft, row: PricedDenominationRow) => {
+    const reference = suggestedRate(line, row);
+    if (!reference || !(Number(row.rate) > 0)) return null;
+    const percent = rateDeviationPercent(row.rate, reference);
+    return { reference, percent, exceeds: tolerancePercent !== null && exceedsTolerance(percent, tolerancePercent) };
+  };
+  const hasDeviationOutsideTolerance = lines.some((line) => line.denominations.some((row) => rowDeviation(line, row)?.exceeds));
+  const [rateDeviationReason, setRateDeviationReason] = useState("");
+
   // Rough client-side nudge only — a proactive prompt, not the enforcement. The server always
   // re-checks against the real BI reference rate at save time regardless of what this estimates.
-  const usdOutletRate = rates?.find(({ rate, currency }) => rate.status === "ACTIVE" && currency.code === "USD");
-  const estimatedUsdEquivalent = usdOutletRate && totalRupiah > 0
-    ? totalRupiah / Number(operation === "BUY" ? usdOutletRate.rate.buyRate : usdOutletRate.rate.sellRate)
-    : 0;
+  const usdCells = pricing?.cells.filter((cell) => cell.currencyCode === "USD") ?? [];
+  const usdOutletRate = usdCells.find((cell) => cell.rateTierId === null) ?? usdCells[0];
+  const usdOutletPrice = usdOutletRate ? Number(operation === "BUY" ? usdOutletRate.activeBuyRate : usdOutletRate.activeSellRate) / (Number(usdOutletRate.quoteUnit) || 1) : 0;
+  const estimatedUsdEquivalent = usdOutletPrice > 0 && totalRupiah > 0 ? totalRupiah / usdOutletPrice : 0;
   const estimatedMeetsThreshold = estimatedUsdEquivalent >= 10000;
   // Nudge, not enforcement — never auto-unchecks, so a teller's own manual reason for requiring
   // underlying is never silently discarded.
@@ -286,6 +322,7 @@ export default function TransactionCreate() {
       operation,
       receiptNumber: receiptNumber.trim(),
       customerId: customer.id,
+      rateDeviationReason: hasDeviationOutsideTolerance ? rateDeviationReason.trim() || undefined : undefined,
       lines: lines.map((line) => ({ currencyId: line.currency!.id, quoteUnit: line.quoteUnit || "1", denominations: line.denominations.map((row) => ({ value: row.value, quantity: Number(row.quantity), rate: row.rate })) })),
       paymentMethod,
       distributionChannel,
@@ -350,7 +387,7 @@ export default function TransactionCreate() {
         <CardHeader><CardTitle className="flex items-center gap-2 font-display text-lg text-[#18395f]"><CircleDollarSign className="size-5 text-[#5c8f53]" /> 2. Baris mata uang &amp; pecahan</CardTitle><CardDescription>Cari mata uang apa saja di dunia — tidak dibatasi kurs otomatis. Setiap pecahan wajib punya harga sendiri, karena pecahan besar dan kecil sering dihargai berbeda.</CardDescription></CardHeader>
         <CardContent className="space-y-4">
           {lines.map((line, index) => {
-            const reference = referenceRateFor(line.currency?.id);
+            const boardCells = line.currency ? pricing?.cells.filter((cell) => cell.currencyId === line.currency!.id) ?? [] : [];
             return <div key={line.key} className="rounded-xl border border-[#dce6f0] bg-[#fbfdff] p-4">
               <div className="flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-wide text-[#5c8f53]">Baris {index + 1}</p>{lines.length > 1 ? <Button type="button" size="sm" variant="ghost" className="h-7 text-rose-600" onClick={() => removeLine(index)}><Trash2 className="mr-1 size-3.5" />Hapus baris</Button> : null}</div>
 
@@ -360,7 +397,8 @@ export default function TransactionCreate() {
                   : <div className="mt-1"><CurrencyPicker excludeCodes={["IDR"]} onSelect={(currency) => updateLine(index, { currency })} /></div>}
                 <p className="mt-1 text-[11px] text-slate-600">Rupiah tidak bisa dipilih di sini — Rupiah selalu sisi pembayaran, bukan baris mata uang yang ditransaksikan.</p>
               </div>
-              {reference ? <p className="mt-2 text-xs text-slate-600">Kurs referensi hari ini (pembanding saja): {operation === "BUY" ? String(reference.rate.buyRate) : String(reference.rate.sellRate)} IDR per {String(reference.rate.quoteUnit)} {reference.currency.code}.</p> : null}
+              {boardCells.length ? <p className="mt-2 text-xs text-slate-600">Kurs papan hari ini ({operation === "BUY" ? "beli" : "jual"}): {boardCells.map((cell) => `${cell.tierLabel} ${formatPlainAmount(Number(operation === "BUY" ? cell.activeBuyRate : cell.activeSellRate))}`).join(" · ")} IDR per {Number(boardCells[0].quoteUnit)} {line.currency?.code}. Harga pecahan terisi otomatis dan tetap boleh diubah.</p>
+                : line.currency ? <p className="mt-2 text-xs text-slate-600">Belum ada kurs papan untuk {line.currency.code}; isi harga tiap pecahan secara manual.</p> : null}
 
               {operation === "SELL" && line.currency ? <div className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-[#5c8f53]/40 bg-[#f5fbf5] p-3">
                 <div className="flex-1"><Label className="text-xs">Jumlah {line.currency.code} yang akan dijual</Label><Input className="mt-1" inputMode="decimal" value={line.sellTargetAmount} onChange={(e) => updateLine(index, { sellTargetAmount: e.target.value })} placeholder="Contoh: 500" /></div>
@@ -374,12 +412,25 @@ export default function TransactionCreate() {
                   <Input required inputMode="numeric" value={row.quantity} onChange={(e) => updateDenominationRow(index, denomIndex, "quantity", e.target.value)} placeholder="Lembar" />
                   <Input required inputMode="decimal" value={row.rate} onChange={(e) => updateDenominationRow(index, denomIndex, "rate", e.target.value)} placeholder="Harga pecahan ini" />
                   <Button type="button" size="sm" variant="ghost" className="text-rose-600" disabled={line.denominations.length === 1} onClick={() => removeDenominationRow(index, denomIndex)}>Hapus</Button>
+                  {(() => {
+                    const deviation = rowDeviation(line, row);
+                    if (!deviation || deviation.percent === null || Number(deviation.percent) === 0) return null;
+                    const selisih = `${Number(deviation.percent).toLocaleString("id-ID", { maximumFractionDigits: 2 })}% dari kurs papan ${formatPlainAmount(Number(deviation.reference))}`;
+                    return <p className={`col-span-4 text-[11px] ${deviation.exceeds ? "font-semibold text-warning" : "text-slate-600"}`}>
+                      {deviation.exceeds ? `Selisih ${selisih}. Di luar toleransi ±${Number(tolerancePercent).toLocaleString("id-ID", { maximumFractionDigits: 2 })}% — isi alasan selisih harga di bawah.` : `Selisih ${selisih}.`}
+                    </p>;
+                  })()}
                 </div>)}
                 <p className="mt-2 text-xs text-[#475569]">Contoh: 1000 USD dengan pecahan 100×5 harga 17800, pecahan 50×5 harga 17500, pecahan 10×25 harga 17000 — tambahkan tiga baris pecahan seperti itu.</p>
               </div>
               {lineForeignTotal(line) > 0 ? <p className="mt-2 text-xs font-semibold text-[#18395f]">Total baris ini: {formatPlainAmount(lineForeignTotal(line))} {line.currency?.code ?? ""} · Rp {formatPlainAmount(lineRupiahTotal(line))}</p> : null}
             </div>;
           })}
+          {hasDeviationOutsideTolerance ? <div className="rounded-lg border-2 border-warning bg-warning-soft p-3">
+            <Label htmlFor="alasan-selisih" className="text-xs font-semibold">Alasan selisih harga (wajib, minimal 10 karakter)</Label>
+            <Textarea id="alasan-selisih" className="mt-1 bg-white" rows={2} value={rateDeviationReason} onChange={(e) => setRateDeviationReason(e.target.value)} placeholder="Mis. nasabah langganan, harga disepakati manajer konter." />
+            <p className="mt-1 text-[11px]">Bon dengan harga di luar toleransi tetap dapat dikirim, tetapi masuk antrean tinjauan Controller.</p>
+          </div> : null}
           <Button type="button" variant="outline" className="w-full border-dashed border-[#8fb08a] text-[#3d7139]" onClick={addLine}><Plus className="mr-2 size-4" />Tambah baris mata uang</Button>
           <div className="rounded-xl bg-[#18395f] px-4 py-3 text-right text-white"><span className="text-xs uppercase tracking-wide text-white/70">Total keseluruhan transaksi</span><p className="font-display text-xl font-semibold">Rp {formatPlainAmount(totalRupiah)}</p></div>
         </CardContent>
