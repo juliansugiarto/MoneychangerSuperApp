@@ -70,95 +70,104 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 16 September 2026 (Sub-proyek 1B Papan Kurs: Tugas 1–4 dari 14 selesai)
+## Sesi berikutnya — keadaan per 21 September 2026 (Sub-proyek 1B Papan Kurs SELESAI, 14 dari 14 tugas)
 
 **Seluruh paket peta jalan asli sudah selesai:** K1, B, D, C, E, F1, F2, G, H, I, J (J1+J2), K2,
 K3, L, dan **M**. Dua belas temuan pemeriksaan BI 2026 sudah tertutup; pada
 `specs/2026-09-09-pbi-10-2024-temuan-awal.md` (PBI No. 10 Tahun 2024) Temuan 1 dan 2 tertutup oleh
 Paket L, dan **Temuan 4 tertutup oleh Paket M** dengan premis yang sudah dikoreksi.
 
-**Sub-proyek 1 (Fondasi Desain) selesai 16 September 2026**, termasuk dua sisanya (butir 11 dan 13,
-`f53a04c`). Spec program `specs/2026-09-12-desain-ulang-antarmuka-design.md` **diperbarui** oleh
+**Sub-proyek 1 (Fondasi Desain) selesai 16 September 2026.** Spec program
+`specs/2026-09-12-desain-ulang-antarmuka-design.md` **diperbarui** oleh
 `specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md` (`8250e87`).
 
-**Sedang dikerjakan: sub-proyek 1B (Papan Kurs).** Rencananya sudah ditulis —
-`plans/2026-09-16-papan-kurs.md`, **14 tugas**, memuat kode, uji, dan nomor baris. **Tugas 1–4
-selesai 16 September 2026**, satu commit per tugas, dikerjakan langsung tanpa subagen:
+**Sub-proyek 1B (Papan Kurs) SELESAI 21 September 2026** — seluruh 14 tugas tercentang pada
+`plans/2026-09-16-papan-kurs.md`, satu commit per tugas, dikerjakan langsung tanpa subagen.
+Tugas 1–4 (`2f70aa3`, `5f01e5f`, `28855c9`, `dde48d0`) pada sesi 16 September; Tugas 5–14 pada sesi
+ini: `7cbdea5` (rates.board + riwayat WIB), `1da0680` (simpan/aktifkan/buang draf), `b677415`
+(salin kurs & saran BI), `6acb039` (toleransi sebagai pengaturan), `a41fcb9` (rujukan per baris
+pecahan), `fb6f9f0` (label kelompok pada kurs publik), `d7aa640` (kisi papan), `0d92b02` (halaman
+`/operasional/kurs`), `5f25cf1` (harga bon dari papan), `884f45c` (peragaan + dokumentasi).
 
-| Tugas | Commit | Isi |
-|---|---|---|
-| 1 | `2f70aa3` | Skema + migrasi aditif `0059`: tabel `rate_tiers`, `operational_rates.rateTierId`/`.approvalReason`/`.activationBatchId`, `exchange_transaction_denomination_entries.operationalRateId`/`.referenceRateSnapshot`/`.rateDeviationPercent`, `exchange_transactions.rateDeviationReason`, `operational_settings.rateDeviationTolerancePercent` |
-| 2 | `5f01e5f` | `shared/rateTiers.ts` — pencocokan pecahan ke kelompok, murni |
-| 3 | `28855c9` | `server/rateBoard.ts` + router `rateTiers.save`/`.deactivate` (`adminProcedure`) |
-| 4 | `dde48d0` | `planBoardActivation` + `activateOperationalRateIds`: aktivasi **atomik** satu transaksi |
+**Empat penyimpangan dari rencana yang sengaja diambil — jangan "dikembalikan" ke bunyi rencana:**
 
-**Tugas berikutnya: Tugas 5 — `rates.board`** (isi papan dan riwayat batch hari ini, WIB). Urutan
-mengikat pada rencana: 5 sebelum 6, 7, 11; 8 sebelum 9 dan 13; 11 sebelum 12; 12 dan 13 sebelum 14.
-Pengguna meminta laporan sesudah **Tugas 9** (toleransi bon) dan **Tugas 12** (layar papan).
+1. **`rates.pricing` (`staffProcedure`) ditambahkan**, tidak ada di rencana. Rencana menyuruh
+   formulir bon membaca `rates.board` (ADMIN) dan `settings.reviewThreshold` (ADMIN); kasir STAFF
+   akan melihat papan kosong dan harga tidak pernah terisi. `readBoardPricing`/`pricingCells` di
+   `server/rateBoard.ts` mengembalikan **hanya kurs berlaku** (draf dan referensi BI dikosongkan,
+   bukan sekadar disembunyikan di layar) ditambah kelompok dan toleransi.
+2. **Satuan kuotasi disamakan di dua tempat.** Kurs papan boleh per 100 unit (JPY dari BI begitu),
+   sementara baris bon selalu per 1 unit dan formulirnya tidak punya kolom untuk mengubahnya.
+   `suggestDenominationRate` (klien) dan `resolveDenominationReference` (server) mengalikan
+   `× satuan baris ÷ satuan papan`. Tanpa ini harga JPY terisi **100× salah** dan selisihnya ~99%.
+3. **Dua angka pada rencana memang salah hitung, bukan kodenya:** 195/16290 × 100 = **1,1971%**
+   (rencana menulis 1,1970) dan nilai lama yang dicoret pada kisi tampil **`16.290`** dalam format
+   id-ID (rencana menulis `16290`). Ujinya disesuaikan ke angka yang benar, kodenya tidak.
+4. **Riwayat hari ini membaca kurs berstatus apa pun** yang `approvedAt`-nya hari ini, bukan hanya
+   yang masih ACTIVE. Ketahuan saat peragaan: batch pagi menyusut 10 → 7 begitu kurs siang
+   menggantikan sebagiannya. `approvedAt` kolom `datetime` (jam UTC), jadi dibandingkan langsung
+   terhadap `startOfOperationalDay` tanpa normalisasi.
 
-**Penutupan sesi diperketat 16 September 2026 atas permintaan pengguna.** Sebabnya:
-`plans/2026-09-16-papan-kurs.md` menganggur **di luar git** sepanjang sesi perancangannya dan baru
-ketahuan pada serah terima berikutnya — padahal prompt sesi berikutnya menyuruh membaca rencana itu.
-Empat tambalan sudah dipasang: (a) skill `serah-terima` kini mewajibkan `git status` **bersih sebelum**
-prompt sesi berikutnya diberikan (langkah 6 dan 9); (b) `.superpowers/` masuk `.gitignore` supaya derau
-`??` tidak lagi menyembunyikan berkas penting di tengahnya; (c) skill `serah-terima` sendiri **kini
-dilacak git** — ia ditulis untuk proyek ini dan tidak dapat dipasang ulang dari mana pun, sementara
-skill pihak ketiga tetap diabaikan; (d) angka antrean migrasi yang basi pada
-`~/.claude/hooks/aturan-keras.sh` diperbaiki. **Aturannya sekarang: jangan pernah menyerahkan prompt
-sesi berikutnya sementara yang dirujuknya masih `??`.**
+**Peragaan end-to-end kedelapan skenario spec §B6 SUDAH dijalankan** pada `moneychanger` lokal
+(21 September, pengguna masuk sendiri sebagai Pemegang Saham; Claude tidak pernah mengetik sandi
+pengembangan). Kelompok USD 100 · 50 · 5–20 dibuat lewat dialog; aktivasi pagi satu batch 10 kurs;
+aktivasi siang hanya menyentuh kelompoknya; aktivasi basi ditolak **utuh** dengan pesan menyebut
+"USD · 5–20"; tumpang tindih pecahan ditolak menyebut kedua label; bon JUAL tepat kurs papan lolos
+tanpa tanda tinjauan dan **kedua kaki kas bergerak**; bon 1,29% dari papan ditolak tanpa alasan,
+tersimpan dengan alasan dan bertanda `SELISIH_KURS_MELEBIHI_TOLERANSI`; satu bon memuat dua rujukan
+berbeda (USD 100 → kelompok, USD 1 → Pecahan lain); kurs yang diaktifkan di tengah pengisian membuat
+`referenceRateSnapshot` mengikuti **kurs saat simpan**. Bon uji `E2E-PK-B01`–`B04` dan `E2E-PK-J01`
+**sengaja ditinggalkan** — jangan dibersihkan.
 
-**Perubahan perilaku yang sudah terjadi pada Tugas 4 — jangan dikira masih seperti dulu:**
-perulangan lama `activateOperationalRates` (dulu `server/operations.ts:1306`) yang memanggil
-aktivasi satu per satu **di luar** satu transaksi sudah dibuang. Kini `activateOperationalRate` dan
-`activateOperationalRates` keduanya hanya membungkus `activateOperationalRateIds` di
-`server/rateBoard.ts` — satu-satunya jalur aktivasi di seluruh aplikasi. RETIRE-nya sekarang
-**per pasangan (valuta, kelompok)**, bukan per valuta: mengubah harga satu kelompok tidak lagi
-mencabut kurs tingkat valuta.
+**Verifikasi peramban** pada lebar **1280, 1440, dan 1920**: tanpa gulir mendatar, judul
+"Kurs berapa hari ini?", ↑/↓ dan Tab/Shift+Tab berpindah sel, sorot baris + kolom terlihat, keadaan
+kosong penyaring "Berubah" benar, panel "Referensi & pengaturan" memuat keenam bagiannya, konsol
+bersih. **Tingginya tidak pernah mencapai 800/900/1080** — panel peramban memotong viewport ke
+**603 px**; keadaan memuat dan galat halaman juga **tidak pernah dipicu** di peramban.
 
 **Aturan kurs yang tetap berlaku dan sudah ditegakkan kode:** aktivasi **manual** dengan alasan
 **≥ 10 karakter**, diperiksa **sebelum kueri apa pun**. Tidak ada satu pun jalur kode yang
-mengaktifkan kurs tanpa alasan manusia.
+mengaktifkan kurs tanpa alasan manusia. RETIRE-nya **per pasangan (valuta, kelompok)**: mengubah
+harga satu kelompok tidak mencabut kurs tingkat valuta.
 
 **Keputusan pengguna 13 September 2026 — jangan ditanyakan ulang** (lengkapnya di spec 2026-09-13):
 tampilan netral abu-abu ditolak (*"korporat sekali seperti SIPUKA"*; empat tema berganti warna pada
 tata letak yang sama juga ditolak: *"semuanya terlihat sama, seperti buatan AI"*); gaya **Konter
-Tebal** intensitas **B** — bingkai, judul, ubin, tombol utama tebal; input dan baris kerja tenang;
-**enam palet** siap pakai (Marun bawaan, Zamrud, Samudra, Terakota, Anggur, Arang) ditambah warna utama
-sendiri **hanya bila lolos kontras** — pemilihnya dibangun di sub-proyek 2 bersama kolom
-`themePalette`/`accentColor`; **sub-proyek 1B Papan Kurs** disisipkan tepat sesudah fondasi (seluruh
-valuta di satu papan, kurs **per kelompok pecahan**, aktivasi atomik dengan alasan, harga bon terisi
-dari papan dan boleh diubah dalam toleransi — di luar toleransi wajib alasan dan masuk tinjauan; garis
-kisi tegas dan sorot baris + kolom); kurs dikeluarkan dari sub-proyek 5. Urutan program kini
-**1 → 1B → 2 → … → 9**. Keputusan 12 September lain tetap berlaku; keputusan #6 (desain netral) diganti.
+Tebal** intensitas **B**; **enam palet** siap pakai (Marun bawaan, Zamrud, Samudra, Terakota, Anggur,
+Arang) ditambah warna utama sendiri **hanya bila lolos kontras** — pemilihnya dibangun di
+**sub-proyek 2** bersama kolom `themePalette`/`accentColor`. Urutan program **1 → 1B → 2 → … → 9**;
+kurs sudah keluar dari sub-proyek 5 dan selesai di 1B.
 
 **Biaya subagen jauh lebih besar daripada perkiraan pengguna** (16 September: *"can we stop using
 agent because its burnt token so much?"*). **Kerjakan langsung, tanpa subagen**, kecuali pengguna
-meminta sebaliknya. Tugas 1–4 dikerjakan begitu dan memang cukup.
+meminta sebaliknya. Seluruh 14 tugas dikerjakan begitu dan memang cukup.
 
 **Reviu akhir cabang Fondasi Desain TIDAK pernah selesai** (reviewer mati karena batas pemakaian
 mingguan). Yang **belum** diperiksa siapa pun secara menyeluruh: mutu kode Fondasi Desain Tugas 1–7,
-dan pemeriksaan arsitektur/keamanan lintas berkas. **Sub-proyek 1B Tugas 1–4 juga belum direviu
-siapa pun** selain uji dan perintah mutu.
+pemeriksaan arsitektur/keamanan lintas berkas, dan **seluruh sub-proyek 1B** — yang terakhir hanya
+lolos uji, perintah mutu, dan peragaan, belum pernah direviu kode oleh siapa pun.
 
-**Prompt untuk sesi berikutnya — melanjutkan sub-proyek 1B dari Tugas 5:**
+**Tugas berikutnya: sub-proyek 2 (Login, penyiapan awal, kode pemulihan, halaman kurs publik,
+pemilih palet perusahaan) — rencananya BELUM ditulis.** Mulai dari sesi rancangan (Prompt A) dengan
+`specs/2026-09-12-desain-ulang-antarmuka-design.md` dan
+`specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md` sebagai spec-nya.
+
+**Prompt untuk sesi berikutnya — merancang sub-proyek 2:**
 
 ```
-Jalankan docs/superpowers/plans/2026-09-16-papan-kurs.md dengan
-superpowers:executing-plans, satu commit per tugas, centang "Status Pengerjaan" sesudah commit-nya.
+Rancang sub-proyek 2 Program Desain Ulang Antarmuka (login, penyiapan awal, kode
+pemulihan, halaman kurs publik, pemilih palet perusahaan) dengan
+superpowers:brainstorming lalu superpowers:writing-plans.
 
-Baca rencananya dulu; jangan baca spec, panduan A–Z, atau skema database kecuali
-tugas yang sedang dikerjakan menyuruhnya — rencananya sudah memuat kode, uji,
-dan nomor barisnya. Kerjakan sendiri, tanpa subagen.
+Spec-nya: docs/superpowers/specs/2026-09-12-desain-ulang-antarmuka-design.md dan
+docs/superpowers/specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md.
+Sub-proyek 1 dan 1B sudah selesai; papan kurs jangan dirancang ulang.
 
-Mulai dari Tugas 5. Tugas 1–4 sudah selesai dan sudah di-commit.
+Rencananya ditulis ke docs/superpowers/plans/ dengan kode, uji, nomor baris, dan
+satu tugas per commit — bentuknya mengikuti plans/2026-09-16-papan-kurs.md.
+Kerjakan sendiri, tanpa subagen. Commit rencananya sebelum sesi ditutup.
 
-Baseline uji sesudah Tugas 4: Test Files 181 passed (181), Tests 1543 passed |
-2 skipped (1545). Tiap tugas menyebut angka yang benar-benar terlihat pada
-keluaran vitest, bukan yang diharapkan rencananya; bila berbeda, jelaskan
-selisihnya sebelum lanjut.
-
-Laporkan ke saya sesudah Tugas 9 (toleransi bon) dan Tugas 12 (layar papan)
-sebelum meneruskan.
+Baseline uji: Test Files 189 passed (189), Tests 1603 passed | 2 skipped (1605).
 ```
 
 Bila ingin mengerjakan satu tugas per sesi dari sebuah rencana, Prompt B di atas tetap berlaku.
@@ -178,19 +187,24 @@ impor ulang daftar DTTOT/DPPSPM, mengisi ulang Profil Perusahaan, menghapus bari
 `Bash(ssh -o BatchMode=yes -o ConnectTimeout=10 deploy@187.53.128.14:*)`. Temuan 3 tetap menunggu
 keputusan pengguna.
 
-**Baseline uji terakhir yang benar-benar dijalankan, oleh pengendali pada `dde48d0`**
-(16 September 2026, dengan `.env` dan `TENANT_TEST_SECONDARY_URL` termuat): `Test Files 181 passed
-(181)`, `Tests 1543 passed | 2 skipped (1545)`. Selisih terhadap baseline `f53a04c`
-(`177` berkas / `1516 lulus | 2 dilewati`) adalah **+4 berkas, +27 uji**, seluruhnya dari sub-proyek
-1B: Tugas 1 +1/+4 (`server/rateBoardSchema.test.ts`), Tugas 2 +1/+9 (`shared/rateTiers.test.ts`),
-Tugas 3 +1/+7 (`server/rateTierWrites.test.ts`), Tugas 4 +1/+7
-(`server/rateBoardActivation.test.ts`). Tidak ada uji lama yang dibuang. Angka tiap tugas **persis**
-seperti yang diramalkan rencananya. `./node_modules/.bin/tsc --noEmit` **keluar 0 tanpa keluaran**
-dan `./node_modules/.bin/vite build` **`✓ built in 4.65s`** pada jalan yang sama (peringatan potongan
->500 kB tetap ada — sudah lama begitu, bukan hal baru).
+**Baseline uji terakhir yang benar-benar dijalankan, pada `884f45c`** (21 September 2026, dengan
+`.env` dan `TENANT_TEST_SECONDARY_URL` termuat): `Test Files 189 passed (189)`,
+`Tests 1603 passed | 2 skipped (1605)`. Selisih terhadap baseline `dde48d0`
+(`181` berkas / `1543 lulus | 2 dilewati`) adalah **+8 berkas, +60 uji**, seluruhnya dari sub-proyek
+1B Tugas 5–13: `server/rateBoardHistory.test.ts` (+3), `server/rateBoardDrafts.test.ts` (+11, tiga
+tugas menambahinya), `shared/rateDeviation.test.ts` (+8), `server/rateDeviationReview.test.ts` (+12),
+`shared/rateBoard.test.ts` (+10), `client/src/pages/rates/RateBoardGrid.test.tsx` (+6),
+`client/src/pages/rates/RateBoardFooter.test.tsx` (+4), `client/src/pages/rates/tierPricing.test.ts`
+(+5), ditambah satu uji baru pada `server/publicRates.test.ts`. Tidak ada uji lama yang dibuang;
+`server/reviewSettings.test.ts` **disunting** (bukan ditambah) untuk kolom toleransi baru.
+**Rencana meramalkan 1601** — selisih +2 adalah −1 salah hitung rencana pada Tugas 9 (kodenya memuat
+11 uji, teksnya menulis 12) dan +3 uji yang tidak ada di rencana (dua uji satuan kuotasi JPY,
+satu uji `pricingCells`). `./node_modules/.bin/tsc --noEmit` **keluar 0 tanpa keluaran** dan
+`./node_modules/.bin/vite build` **`✓ built in 3.78s`** pada jalan yang sama.
 
-**Playwright `test:visual` TIDAK dijalankan sesi ini** (42 lulus terakhir pada `a62562f`). Sub-proyek
-1B belum menyentuh layar mana pun; layarnya baru dibangun pada Tugas 11–12.
+**Playwright `test:visual` TIDAK dijalankan sesi ini** (42 lulus terakhir pada `a62562f`) — padahal
+sub-proyek 1B **mengganti isi `client/src/pages/Rates.tsx` seluruhnya**. Bila ada snapshot visual
+yang menyentuh halaman Kurs, ia hampir pasti perlu diperbarui; itu belum diperiksa siapa pun.
 
 `pnpm audit --prod --audit-level=high` **tidak dijalankan sesi ini** — dependensi tidak bertambah di
 sub-proyek 1B. Hasil terakhir (15 September): **9 kerentanan (3 tinggi, 6 sedang)**, termasuk
@@ -198,15 +212,12 @@ sub-proyek 1B. Hasil terakhir (15 September): **9 kerentanan (3 tinggi, 6 sedang
 lewat `drizzle-orm@0.45.2 > mysql2@3.15.1`; terpatch `>=3.22.0`) — menaikkannya menyentuh backend,
 jadi ditunda ke paket tersendiri. **Jangan menyebut audit bersih.**
 
-**Migrasi terakhir `0059`** (`0059_cuddly_saracen.sql`, sub-proyek 1B Tugas 1 — aditif seluruhnya:
-satu `CREATE TABLE`, delapan `ADD` kolom, tiga `CREATE INDEX`; tanpa `DROP`/`MODIFY`/`CHANGE` dan
-tanpa statement enum). Diukur 16 September sesudah penerapan: `ls drizzle/*.sql` = **60 berkas**,
-jurnal `moneychanger` = **60**, jurnal `mc_t_abcvalas` = **60**. **Jurnal produksi tetap 59.**
-Cadangan sebelum migrasi ada di `/tmp/backup-0059/` (dibuat dengan
-`--single-transaction --set-gtid-purged=OFF`, pemulihannya **dibuktikan** ke basis data sekali pakai:
-66 tabel pulih). `/tmp` dibersihkan sendiri oleh macOS — jangan mengandalkan berkas itu lagi.
-**Rollback `0059`: mengembalikan commit sudah cukup** untuk aplikasinya; tabel dan kolom baru
-**dibiarkan** tanpa `DROP` kecuali pengguna menyetujui penghapusannya.
+**Migrasi terakhir tetap `0059`** (`0059_cuddly_saracen.sql`, Tugas 1) — **sub-proyek 1B Tugas 5–14
+tidak menambah migrasi satu pun**, seluruhnya memakai kolom yang sudah ada. Diukur 16 September
+sesudah penerapan: `ls drizzle/*.sql` = **60 berkas**, jurnal `moneychanger` = **60**, jurnal
+`mc_t_abcvalas` = **60**. **Jurnal produksi tetap 59.** **Rollback `0059`: mengembalikan commit sudah
+cukup** untuk aplikasinya; tabel dan kolom baru **dibiarkan** tanpa `DROP` kecuali pengguna
+menyetujui penghapusannya.
 
 **Uji wajib dijalankan dengan `.env` termuat.** Tanpa itu
 `server/internalAuth.developmentAccounts.test.ts` gagal sendirian dengan *"Database tidak
@@ -236,6 +247,17 @@ bukti, dan itulah sebabnya kejadian pertama tidak pernah teridentifikasi.
 
 ### Yang tidak perlu ditemukan ulang
 
+- **Kasir (STAFF) tidak dapat membaca `rates.board` maupun `settings.reviewThreshold`** — keduanya
+  `adminProcedure`. Formulir bon membaca `rates.pricing` (`staffProcedure`). Setiap fitur baru yang
+  ingin memperlihatkan kurs kepada kasir menempel di sana, bukan di papan.
+- **Kurs papan boleh dikuotasi per 100 unit (JPY), baris bon selalu per 1.** Satuan disamakan di
+  `suggestDenominationRate` dan `resolveDenominationReference`. Setiap pembaca kurs baru wajib
+  memeriksa satuannya; lupa memeriksa berarti salah 100×, bukan salah sedikit.
+- **Riwayat papan dibaca dari `operational_rates.activationBatchId`, tanpa menyaring status.**
+  Menyaring `status='ACTIVE'` membuat batch pagi menyusut begitu kurs siang menggantikannya — itu
+  bukan hal yang terlihat dari kode, hanya dari peragaan dua aktivasi dalam satu hari.
+- **Dialog kelompok pecahan hanya menawarkan pecahan dari `CURRENCY_DENOMINATIONS`** — valuta yang
+  belum ada di katalog itu tidak dapat dikelompokkan sama sekali; layarnya mengatakan begitu.
 - **Jangan menulis helper jendela waktu yang keempat.** Batas hari, bulan, dan **tahun** operasional
   memakai `startOfOperationalDay`/`startOfOperationalMonth` pada `shared/regulatoryActionQueue.ts`.
   Batas tahun didapat dengan memanggil `startOfOperationalMonth` pada sebuah tanggal di bulan Januari
@@ -404,34 +426,44 @@ bukti, dan itulah sebabnya kejadian pertama tidak pernah teridentifikasi.
   `.superpowers/` masuk `.gitignore`, jadi berkas ini **tidak ada cadangannya di git**; bila mesin ini
   hilang, mockup-nya ikut hilang dan yang tersisa hanya keputusan tertulis di spec.
 
-### Risiko residual Sub-proyek 1B (Tugas 1–4) yang masih terbuka
+### Risiko residual Sub-proyek 1B (SELESAI) yang masih terbuka
 
-1. **Kolom dan tabel `0059` masih kosong penulisnya.** `rate_tiers` belum pernah diisi lewat layar
-   mana pun (routernya ada, layarnya baru dibangun Tugas 12); `referenceRateSnapshot`,
-   `rateDeviationPercent`, dan `rateDeviationReason` belum ada penulisnya sama sekali — penulisnya
-   dibangun Tugas 9 dan 13. **Sampai Tugas 13 selesai, ini pekerjaan yang belum selesai, bukan
-   keadaan sah**, tepat seperti yang dilarang `CLAUDE.md`. Jangan melaporkan sub-proyek 1B selesai
-   sebelum rantai itu tersambung dan diperagakan end-to-end.
-2. **`activateOperationalRateIds` belum pernah dijalankan terhadap basis data sungguhan.** Yang
-   diuji sejauh ini adalah perencananya (`planBoardActivation`, murni) dan uji lama
-   `operations.test.ts` yang memakai basis data palsu. RETIRE per pasangan (valuta, kelompok) —
-   termasuk cabang `isNull(rateTierId)` — **belum dibuktikan pada MySQL**. Peragaannya dituntut
-   Tugas 14.
-3. **Belum ada satu pun uji yang membuktikan aktivasi benar-benar berguling balik** ketika satu
-   pernyataan di tengah transaksi gagal. Yang ada baru penolakan sebelum transaksi dibuka.
-4. **`saveRateTier` membaca baris yang baru disisipkan dengan `ORDER BY id DESC LIMIT 1`**, bukan
-   dari id yang dikembalikan penyisipannya. Di bawah dua penyisipan serentak pada valuta yang sama,
-   id yang dikembalikan bisa milik baris orang lain. Beban nyatanya satu admin per papan, jadi
-   dibiarkan — tetapi jangan menyalin polanya ke jalur yang lebih ramai.
-6. **`docs/SKEMA-DATABASE-PROJECT.md` dan panduan A–Z BELUM diperbarui untuk `0059`.** Tabel
-   `rate_tiers` dan delapan kolom baru belum tercatat di sana. Rencananya menaruh seluruh pekerjaan
-   dokumentasi pada **Tugas 14**; sampai tugas itu dikerjakan, kedua dokumen itu **tertinggal di
-   belakang skema**. Jangan memercayainya sebagai daftar kolom yang lengkap sementara ini.
-
-5. **Kedua kaki transaksi valuta belum tersentuh sub-proyek ini.** `rateDeviationPercent` baru ada
-   di sisi valuta asing (`exchange_transaction_denomination_entries`). Ketika Tugas 9 dan 13
-   mengisinya, **periksa ulang terhadap sisi Rupiah** (`exchange_transaction_payment_denominations`)
-   sebagaimana dituntut `CLAUDE.md` — jangan menyelesaikan satu kaki saja.
+1. **Penyaring "Berubah" tidak menampilkan draf yang nilainya sama dengan kurs berlaku.**
+   `cellChanged` membandingkan terhadap kurs aktif, jadi draf hasil **"Salin kurs kemarin"** tidak
+   pernah muncul di penyaring itu — padahal ikut diaktifkan. Ubin "Belum diaktifkan" dan bilah bawah
+   memakai hitungan yang berbeda (`readyCells` pada `Rates.tsx`: berubah **atau** punya draf), justru
+   supaya tombol salin tidak menghasilkan papan yang terlihat kosong. Dua definisi ini hidup
+   berdampingan dengan sengaja; jangan menyatukannya tanpa memutuskan mana yang benar.
+2. **Kolom kurs pada kisi menampilkan nilai mentah basis data** (`16310.000000`). Kolom Referensi BI
+   dan nilai lama yang dicoret sudah berformat id-ID, kotak isiannya belum — mengubahnya berarti
+   memformat sambil diketik, dan itu belum dirancang.
+3. **Rujukan tingkat baris valuta (`exchange_transaction_lines.referenceRateSnapshot`) tidak
+   disesuaikan satuan kuotasinya.** Hanya baris pecahan yang disesuaikan. Nilai baris itu kini
+   mendahulukan kurs tanpa kelompok supaya tidak acak, tetapi **tidak ada layar yang menampilkannya**;
+   bila kelak ditampilkan, JPY akan terbaca 100× lebih besar.
+4. **`exchange_transaction_lines.agreedRate` tetap rata-rata tertimbang** (risiko yang dibawa
+   rencana): bon dengan dua kelompok harga dalam satu valuta menghasilkan satu baris berkurs rata-rata,
+   dan **kwitansi cetak belum menyebut kelompoknya**.
+5. **Papan membaca kurs ACTIVE tanpa menyaring `effectiveAt`**, sementara `listPublicActiveRates`
+   menyaringnya. Kurs bertanggal maju akan terlihat "Berlaku" di papan sebelum tampil di halaman
+   publik. Aman selama aktivasi selalu menyetel `effectiveAt` saat draf dibuat; **perbaiki ini lebih
+   dahulu** bila penjadwalan kurs dibangun.
+6. **Toleransi satu angka untuk seluruh valuta, dua arah** (spec §B4). Batas berbeda per valuta dan
+   toleransi asimetris belum terlayani.
+7. **Bon lama tidak punya rujukan per pecahan.** Kolom `operationalRateId`/`referenceRateSnapshot`/
+   `rateDeviationPercent` kosong pada baris yang ditulis sebelum `0059`. Laporan mana pun yang
+   membacanya wajib memperlakukan NULL sebagai "tidak diketahui", bukan nol.
+8. **`saveRateTier` membaca baris yang baru disisipkan dengan `ORDER BY id DESC LIMIT 1`**, bukan
+   dari id yang dikembalikan penyisipannya. Beban nyatanya satu admin per papan, jadi dibiarkan —
+   tetapi jangan menyalin polanya ke jalur yang lebih ramai.
+9. **Belum ada uji yang membuktikan aktivasi berguling balik** ketika satu pernyataan di tengah
+   transaksi gagal. Penolakan sebelum transaksi dibuka **sudah** dibuktikan pada MySQL lewat peragaan
+   (dua draf tetap DRAFT, tidak ada kurs baru aktif).
+10. **Seri uang kertas (lama/baru) tetap di luar cakupan** — lihat butir 10 pada daftar pekerjaan
+    yang belum dirancang.
+11. **Sisi Rupiah bon tidak diubah sama sekali** oleh sub-proyek ini: `rateDeviationPercent` hanya
+    ada di sisi valuta asing. Peragaan membuktikan kedua kaki tetap bergerak seperti sebelumnya
+    (IDR 100k −163 lembar pada BELI, +82 lembar pada JUAL).
 
 ### Risiko residual Fondasi Desain (Tugas 1–12) yang masih terbuka
 
@@ -509,6 +541,19 @@ Data Paket M (11 September 2026), **jangan dibersihkan**:
   `relationshipEndedAt` `NULL`.
 - `audit_logs` **#193–#196**: dua `CUSTOMER_UPDATED` (perpindahan status), satu
   `COMPANY_PROFILE_DOCUMENT_DEACTIVATED`, satu `COMPANY_PROFILE_DOCUMENT_PURGED`.
+
+Data sub-proyek 1B (21 September 2026), **jangan dibersihkan**:
+
+- `rate_tiers` USD: **100** (urutan 1), **50** (urutan 2), **5–20** (urutan 3, memuat 5/10/20) —
+  dibuat lewat dialog kelompok, bukan SQL.
+- `operational_rates`: sepuluh kurs berlaku untuk AED, AUD, JPY, MYR, SAR, SGD, dan empat baris USD
+  (tiga kelompok + Pecahan lain), tersebar pada **empat batch aktivasi** hari itu beserta alasannya;
+  beberapa baris USD lama berstatus RETIRED dari aktivasi kedua dan ketiga.
+- Bon uji **`E2E-PK-B01`** (BELI, selesai, kedua kaki kas bergerak), **`E2E-PK-J01`** (JUAL, selesai),
+  **`E2E-PK-B02`** (di luar toleransi dengan alasan; **menunggu tinjauan**, sengaja dibiarkan),
+  **`E2E-PK-B03`** (dua rujukan berbeda dalam satu bon), **`E2E-PK-B04`** (kurs berubah saat bon
+  diisi). Seluruhnya atas nasabah uji **8** dan bertanda `E2E-PK-` pada nomor kwitansinya.
+- Stok kas lokal ikut berubah karenanya: IDR pecahan 100.000 dan 10.000, serta USD pecahan 100.
 
 **Membuat data uji pada basis data lokal diizinkan pada tahap mana pun tanpa bertanya lebih dulu.**
 Produksi tetap tidak boleh disentuh.
@@ -920,7 +965,7 @@ Urut sesuai usul pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`:
     kebenaran kas. Sampai diputuskan, selisih harga karena seri diketik pada bon dalam toleransi atau
     dengan alasan. **Butuh keputusan pengguna** sebelum dirancang.
 
-**Antrean migrasi produksi = 1 (`0059`)** per 16 September 2026: berkas 60, jurnal produksi masih 59.
+**Antrean migrasi produksi = 1 (`0059`)** per 21 September 2026: berkas 60, jurnal produksi masih 59.
 Sebelum `0059` antreannya kosong (jurnal 59 = berkas 59 sejak penerapan 12 September 2026). Migrasi
 berikutnya ikut penerapan manual `deploy.sh`, dan tetap tidak boleh diterapkan tanpa permintaan
 eksplisit pada giliran itu. Hook `~/.claude/hooks/aturan-keras.sh` dahulu menyuntikkan angka basi
