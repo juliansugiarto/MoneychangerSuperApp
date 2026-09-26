@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { handleCreateFailure } from "./transactions/createFailure";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CurrencyPicker, PickedCurrency } from "@/components/CurrencyPicker";
@@ -295,7 +296,7 @@ export default function TransactionCreate() {
         toast.error(error instanceof Error ? error.message : "Draft dibuat tetapi unggah underlying gagal.");
       }
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => handleCreateFailure(error, { notify: (message) => toast.error(message), invalidatePricing: () => utils.rates.pricing.invalidate() }),
   });
 
   const makeDraft = (event: FormEvent) => {
