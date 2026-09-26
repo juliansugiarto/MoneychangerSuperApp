@@ -317,14 +317,16 @@ sebagai tidak ditatausahakan di aplikasi ini.
 
 ---
 
-### Program Desain Ulang Antarmuka — **DIRANCANG 12 September 2026; tema Konter Tebal dan sub-proyek 1B ditambahkan 13 September; sub-proyek 1 SELESAI 16 September; sub-proyek 1B SELESAI 21 September (14 dari 14 tugas)**
+### Program Desain Ulang Antarmuka — **DIRANCANG 12 September 2026; tema Konter Tebal dan sub-proyek 1B ditambahkan 13 September; sub-proyek 1 SELESAI 16 September; sub-proyek 1B SELESAI 21 September (14 dari 14 tugas); sub-proyek 2 DIRANCANG 26 September**
 
 Spec: `specs/2026-09-12-desain-ulang-antarmuka-design.md` (disetujui pengguna 12 September 2026),
 **diperbarui** oleh `specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md` (disetujui pengguna
 13 September 2026). Rencana bertugas sub-proyek 1: `plans/2026-09-12-fondasi-desain.md` (kini 14 tugas:
 1–7, 7A, 7B, 8–12). Setiap sub-proyek lain mendapat spec dan rencananya sendiri pada awal sesinya.
 Rencana sub-proyek 1B: `plans/2026-09-16-papan-kurs.md` (14 tugas) — **seluruhnya selesai dan
-tercentang 21 September 2026**. Sub-proyek 2 **belum punya rencana**; mulai dari sesi rancangan.
+tercentang 21 September 2026**. Sub-proyek 2 **dirancang 26 September 2026**: spec
+`specs/2026-09-26-login-penyiapan-halaman-publik-design.md`, rencana
+`plans/2026-09-26-login-penyiapan-halaman-publik.md` (15 tugas, belum ada yang dikerjakan).
 
 Keputusan pengguna 12 September 2026 (lengkapnya di spec): produk mandiri lebih dulu; halaman kurs
 publik yang dapat dikonfigurasi; 1280–1440px lebih dulu; bahasa sehari-hari dengan istilah BI sebagai
@@ -337,7 +339,7 @@ Urutan: 1 → 1B → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9.
 
 - [x] Sub-proyek 1 — Fondasi desain (token, tema Konter Tebal dan enam palet, kepadatan, shell, ⌘K, enam pola, galeri, panduan bahasa, Playwright)
 - [x] Sub-proyek 1B — Papan kurs (seluruh valuta, kurs per kelompok pecahan, aktivasi atomik, toleransi harga bon) — **SELESAI 21 September 2026**, 14 dari 14 tugas, migrasi `0059`, diperagakan end-to-end di basis data lokal
-- [ ] Sub-proyek 2 — Login, penyiapan awal, kode pemulihan, halaman kurs publik, pemilih palet perusahaan
+- [ ] Sub-proyek 2 — Login, penyiapan awal, kode pemulihan, halaman kurs publik, pemilih palet perusahaan — **DIRANCANG 26 September 2026**, 0 dari 15 tugas; `plans/2026-09-26-login-penyiapan-halaman-publik.md`
 - [ ] Sub-proyek 3 — Penilaian risiko berbahasa manusia + penjelasan AI
 - [ ] Sub-proyek 4 — Kasir & transaksi
 - [ ] Sub-proyek 5 — Kas & stok (kurs pindah ke 1B)

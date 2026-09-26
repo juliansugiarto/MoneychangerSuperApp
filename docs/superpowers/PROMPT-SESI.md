@@ -70,7 +70,29 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 21 September 2026 (Sub-proyek 1B Papan Kurs SELESAI, 14 dari 14 tugas)
+## Sesi berikutnya — keadaan per 26 September 2026 (Sub-proyek 2 DIRANCANG, 0 dari 15 tugas; 1B SELESAI)
+
+**Sub-proyek 2 (login, penyiapan awal, kode pemulihan, halaman kurs publik, pemilih palet) DIRANCANG
+26 September 2026 — belum ada satu baris kode aplikasi pun.** Spec rincian:
+`specs/2026-09-26-login-penyiapan-halaman-publik-design.md` (`503e6e8`, dikoreksi di `f7b3406`).
+Rencana: `plans/2026-09-26-login-penyiapan-halaman-publik.md` (`f7b3406`), **15 tugas, 0 tercentang**,
+satu commit per tugas. Tugas berikutnya: **Tugas 1** (skema, migrasi `0060` + isian `0061`).
+
+**Keputusan pengguna 26 September 2026 — jangan ditanyakan ulang:**
+1. Wizard penyiapan dijaga **kode penyiapan sekali pakai** dari `node scripts/tenant.mjs setup-code`
+   (bukan dari log pm2), berlaku 24 jam, disimpan hash.
+2. **Autentikasi ulang tindakan sensitif ditunda** — dirancang bersama cara masuk SOLVINC.
+3. Halaman publik: bagian kontak/jam/peta yang kosong **disembunyikan**; FAQ dan peringatan penipuan
+   memakai teks produk netral. Migrasi **tidak** menyalin teks Ibukota Valasindo ke basis data mana pun.
+4. Eksekusi **langsung oleh sesi, tanpa subagen** (Prompt B / superpowers:executing-plans).
+
+**Koreksi terhadap spec program yang sudah dikunci di rencana — jangan "dikembalikan":**
+`setupCompletedAt` **tidak** di `company_profile` melainkan tabel satu baris baru `app_installation`,
+karena instalasi baru (dan mungkin produksi sesudah reset) **tidak punya baris profil** — diperiksa:
+`mc_t_abcvalas` 0 baris profil, 0 Pemegang Saham. `setupRequired` dibaca dari
+`publicContent.profile`, bukan `auth.me`. Langkah wizard **tidak** dipotret Playwright karena
+`mc_t_visual` harus ditandai sudah disiapkan.
+
 
 **Seluruh paket peta jalan asli sudah selesai:** K1, B, D, C, E, F1, F2, G, H, I, J (J1+J2), K2,
 K3, L, dan **M**. Dua belas temuan pemeriksaan BI 2026 sudah tertutup; pada
@@ -147,30 +169,26 @@ mingguan). Yang **belum** diperiksa siapa pun secara menyeluruh: mutu kode Fonda
 pemeriksaan arsitektur/keamanan lintas berkas, dan **seluruh sub-proyek 1B** — yang terakhir hanya
 lolos uji, perintah mutu, dan peragaan, belum pernah direviu kode oleh siapa pun.
 
-**Tugas berikutnya: sub-proyek 2 (Login, penyiapan awal, kode pemulihan, halaman kurs publik,
-pemilih palet perusahaan) — rencananya BELUM ditulis.** Mulai dari sesi rancangan (Prompt A) dengan
-`specs/2026-09-12-desain-ulang-antarmuka-design.md` dan
-`specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md` sebagai spec-nya.
+**Tugas berikutnya: sub-proyek 2 Tugas 1.** Rencananya sudah di-commit (`f7b3406`).
 
-**Prompt untuk sesi berikutnya — merancang sub-proyek 2:**
+**Prompt untuk sesi berikutnya — mengerjakan sub-proyek 2:**
 
 ```
-Rancang sub-proyek 2 Program Desain Ulang Antarmuka (login, penyiapan awal, kode
-pemulihan, halaman kurs publik, pemilih palet perusahaan) dengan
-superpowers:brainstorming lalu superpowers:writing-plans.
+Kerjakan rencana docs/superpowers/plans/2026-09-26-login-penyiapan-halaman-publik.md
+dengan superpowers:executing-plans, langsung oleh sesi ini — tanpa subagen.
+Spec-nya docs/superpowers/specs/2026-09-26-login-penyiapan-halaman-publik-design.md.
 
-Spec-nya: docs/superpowers/specs/2026-09-12-desain-ulang-antarmuka-design.md dan
-docs/superpowers/specs/2026-09-13-tema-konter-tebal-dan-papan-kurs-design.md.
-Sub-proyek 1 dan 1B sudah selesai; papan kurs jangan dirancang ulang.
-
-Rencananya ditulis ke docs/superpowers/plans/ dengan kode, uji, nomor baris, dan
-satu tugas per commit — bentuknya mengikuti plans/2026-09-16-papan-kurs.md.
-Kerjakan sendiri, tanpa subagen. Commit rencananya sebelum sesi ditutup.
+Mulai dari tugas pertama yang belum tercentang pada "Status Pengerjaan". Satu tugas =
+satu commit; centang langkah dan barisnya sesudah commit. Sebutkan angka uji yang benar-benar
+terlihat dan jelaskan selisihnya terhadap angka yang diramalkan rencana. Berhenti dan
+laporkan bila rencana ternyata salah terhadap kode — jangan diam-diam menyimpang.
+Kerjakan sebanyak yang muat; tutup sesi dengan skill serah-terima.
 
 Baseline uji: Test Files 189 passed (189), Tests 1603 passed | 2 skipped (1605).
 ```
 
-Bila ingin mengerjakan satu tugas per sesi dari sebuah rencana, Prompt B di atas tetap berlaku.
+Bila ingin satu tugas per sesi, pakai Prompt B di atas dengan
+`<RENCANA>` = `2026-09-26-login-penyiapan-halaman-publik` dan `<N>` = tugas berikutnya.
 
 **Produksi tidak disentuh sejak 12 September 2026** (kode produksi tetap `724de6b`). **Migrasi `0059`
 TIDAK diterapkan ke produksi** — hanya ke dua basis data lokal, sebagaimana dituntut rencananya.
@@ -186,6 +204,11 @@ impor ulang daftar DTTOT/DPPSPM, mengisi ulang Profil Perusahaan, menghapus bari
 `INITIAL_SHAREHOLDER_PASSWORD` dari `.env` produksi, dan mencabut aturan izin
 `Bash(ssh -o BatchMode=yes -o ConnectTimeout=10 deploy@187.53.128.14:*)`. Temuan 3 tetap menunggu
 keputusan pengguna.
+
+**Baseline diukur ulang 26 September 2026 pada `f7b3406`** (sesudah rencana sub-proyek 2, tanpa
+perubahan kode): `Test Files 189 passed (189)`, `Tests 1603 passed | 2 skipped (1605)`, tanpa `FAIL`.
+`tsc`, `vite build`, Playwright, dan `pnpm audit` **tidak dijalankan** sesi ini (tidak ada kode yang
+berubah). Rencana sub-proyek 2 meramalkan **215 berkas / 1700 lulus** sesudah Tugas 14.
 
 **Baseline uji terakhir yang benar-benar dijalankan, pada `884f45c`** (21 September 2026, dengan
 `.env` dan `TENANT_TEST_SECONDARY_URL` termuat): `Test Files 189 passed (189)`,
@@ -246,6 +269,19 @@ Bila sesi berikutnya melihat satu kegagalan tunggal pada jalan penuh, **catat na
 bukti, dan itulah sebabnya kejadian pertama tidak pernah teridentifikasi.
 
 ### Yang tidak perlu ditemukan ulang
+
+- **Instalasi baru tidak punya baris `company_profile`.** `updateCompanyProfile` meng-upsert; fakta apa
+  pun yang harus ada sejak awal instalasi tidak boleh ditaruh di tabel itu (alasan `app_installation`).
+- **Express tanpa `trust proxy`:** di belakang nginx setiap `req.ip` bernilai loopback. Pembatas atau
+  log per IP apa pun tidak berarti sampai `configureProxyTrust` (sub-proyek 2 Tugas 4) terpasang.
+- **Dasbor Pemegang Saham membuka `/operasional/pengguna?role=ADMIN|STAFF`**
+  (`OperationsDashboard.tsx:162`). Layar Pengguna yang dibangun ulang wajib tetap membaca parameter itu.
+- **`client/src/main.tsx` mengirim header Bearer dari `sessionStorage["manus-cookie"]` yang tidak pernah
+  dibaca server** — sesi hanya dari cookie httpOnly. Sisa Manus; dibuang di sub-proyek 2 Tugas 8.
+- **`mc_t_visual` yang dibuat baru tidak punya Pemegang Saham saat migrasi**, jadi sesudah `0061` ia
+  akan menampilkan wizard ke seluruh baseline. `scripts/visualDb.mjs` harus menandainya sudah disiapkan.
+- **Log uji selalu ditulis ke berkas** (`vitest run > /tmp/claude-501/….log 2>&1`) supaya kegagalan
+  tunggal yang flaky dapat dinamai sebelum diulang.
 
 - **Kasir (STAFF) tidak dapat membaca `rates.board` maupun `settings.reviewThreshold`** — keduanya
   `adminProcedure`. Formulir bon membaca `rates.pricing` (`staffProcedure`). Setiap fitur baru yang
