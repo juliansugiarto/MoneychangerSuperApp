@@ -24,4 +24,12 @@ describe("bagian Tampilan", () => {
     await userEvent.click(screen.getByRole("button", { name: "Simpan tampilan" }));
     expect(onSave).toHaveBeenCalledWith({ themePalette: "ZAMRUD", accentColor: null });
   });
+
+  it("kode warna yang diketik tampil huruf besar, tetapi kalimat petunjuk kosongnya tetap huruf biasa", () => {
+    render(<AppearanceSection initialPalette="MARUN" initialAccent={null} isPending={false} onSave={vi.fn()} />);
+    const field = screen.getByLabelText("Warna utama sendiri");
+    expect(field.className).toContain("uppercase");
+    expect(field.className).toContain("placeholder:normal-case");
+    expect(field.className).toContain("placeholder:font-sans");
+  });
 });

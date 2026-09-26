@@ -46,7 +46,7 @@ export function AppearanceSection({ initialPalette, initialAccent, isPending, on
       </div>
       <div className="mt-3 grid max-w-sm gap-1">
         <Label htmlFor="accent-color">Warna utama sendiri</Label>
-        <Input id="accent-color" placeholder="Kosongkan untuk memakai warna palet" className={`${QUIET_FIELD} font-mono uppercase`} value={accent} onChange={(event) => setAccent(event.target.value)} />
+        <Input id="accent-color" placeholder="Kosongkan untuk memakai warna palet" className={`${QUIET_FIELD} font-mono uppercase placeholder:font-sans placeholder:normal-case`} value={accent} onChange={(event) => setAccent(event.target.value)} />
         {result.ok
           ? <p className="text-label text-ink-subtle">Opsional. Hanya warna yang cukup kontras dengan teks di atasnya (minimal 4,5:1) yang dapat disimpan.</p>
           : <p className="text-label text-danger">{result.error}</p>}
