@@ -13,7 +13,7 @@
 ## Status Pengerjaan
 
 - [x] Tugas 1 — Sesi UTC pada setiap sambungan dan penjaga saat menyala
-- [ ] Tugas 2 — Bukti produksi (baca-saja), dokumentasi, serah terima
+- [x] Tugas 2 — Bukti produksi (baca-saja), dokumentasi, serah terima
 
 ## Global Constraints
 
@@ -217,7 +217,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Interfaces:**
 - Consumes: `UTC_SESSION_SQL`, `assertUtcSession` (Tugas 1).
 
-- [ ] **Step 1: Bukti produksi, baca-saja**
+- [x] **Step 1: Bukti produksi, baca-saja**
 
 ```bash
 ssh deploy@187.53.128.14 "mysql --defaults-file=\$HOME/.claude-readonly.cnf -e 'SELECT @@global.time_zone, @@system_time_zone, TIMESTAMPDIFF(MINUTE, UTC_TIMESTAMP(), NOW()) AS selisih'"
@@ -225,7 +225,7 @@ ssh deploy@187.53.128.14 "mysql --defaults-file=\$HOME/.claude-readonly.cnf -e '
 
 Expected: `SYSTEM`, `UTC`, `0`. Bila selisihnya bukan 0, **berhenti dan laporkan**: premis spec §Data yang sudah ada salah dan produksi perlu keputusan pengguna sebelum kode ini diterapkan. Bila SSH ditolak, catat bahwa bukti tidak dapat diambil — jangan menganggapnya benar.
 
-- [ ] **Step 2: Dokumentasi skema**
+- [x] **Step 2: Dokumentasi skema**
 
 Tambahkan baris pada tabel "Kontrol Data Penting" di `docs/SKEMA-DATABASE-PROJECT.md`:
 
@@ -233,12 +233,12 @@ Tambahkan baris pada tabel "Kontrol Data Penting" di `docs/SKEMA-DATABASE-PROJEC
 | Zona waktu sesi | Setiap sambungan pool menjalankan `SET time_zone = '+00:00'` (`server/utcSession.ts`, dipasang `server/db.ts`); `server/_core/index.ts` menolak menyala bila `TIMESTAMPDIFF(MINUTE, UTC_TIMESTAMP(), NOW())` ≠ 0 | Kolom `timestamp` (94 berbawaan `now()`) tersimpan dan terbaca sebagai UTC sungguhan di mesin ber-zona apa pun, termasuk laptop WIB. Zona proses Node dan opsi `timezone` mysql2 **sengaja tidak** diubah: penolong kolom `date` (`dateColumnBound`, `dbDate`) bergantung pada perilaku bawaan. Stempel lama di basis data pengembangan yang ditulis di bawah sesi WIB terbaca tujuh jam lebih awal; tidak dikoreksi. |
 ```
 
-- [ ] **Step 3: Perintah mutu dan centang**
+- [x] **Step 3: Perintah mutu dan centang**
 
 Run: `./node_modules/.bin/vitest run 2>&1 | tail -4`
 Expected: angka sama dengan Tugas 1 Step 7. Centang kedua baris Status Pengerjaan dan seluruh langkah.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/SKEMA-DATABASE-PROJECT.md docs/superpowers/PROMPT-SESI.md docs/superpowers/plans/2026-09-26-zona-waktu-utc.md

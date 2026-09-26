@@ -1115,10 +1115,9 @@ Urut sesuai usul pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`:
    11 September 2026); tidak satu pun mengubah Temuan 1, 2, 5, atau 7. Penjelasan pasal lain belum
    dibaca — **baca penjelasannya sebelum temuan mana pun menjadi rencana.**
 6. **BAB VI dan BAB IX–XI PBI 10/2024 belum dibaca terhadap kode.**
-7. **Kolom `defaultNow()` menyimpan jam dinding mesin basis data** (ditemukan 10 September 2026).
-   Benar di produksi yang berjalan UTC, salah di pengembangan WIB — dan salah pada mesin produksi
-   mana pun yang kelak tidak ber-zona UTC. Pekerjaan menyeluruhnya: menulis waktu dari penulis pada
-   seluruh tabel, bukan dari bawaan kolom. Belum dirancang.
+7. ~~**Kolom `defaultNow()` menyimpan jam dinding mesin basis data**~~ — **SELESAI 26 September 2026**
+   (`67eaf99`): setiap sambungan bersesi UTC dan server menolak menyala bila tidak; spec
+   `specs/2026-09-26-zona-waktu-utc-design.md`, rencana `plans/2026-09-26-zona-waktu-utc.md`.
 8. **Pengisian mundur `customers.relationshipEndedAt`** bagi nasabah yang sudah `INACTIVE` sebelum
    migrasi `0058` (ditemukan Paket M). Sampai itu diputuskan, nasabah tersebut tanpa jam retensi dan
    tampil pada kartu *Tidak aktif tanpa tanggal berakhir*. **Butuh keputusan pengguna**: tanggal
