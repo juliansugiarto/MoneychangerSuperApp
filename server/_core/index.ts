@@ -3,7 +3,7 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { ensureDevelopmentTestAccounts, ensureInitialShareholder } from "../internalAuth";
+import { ensureDevelopmentTestAccounts } from "../internalAuth";
 import { authenticateInternalRequest } from "../internalAuth";
 import { createFinancialFormExport, financialFormExportDenial } from "../financialFormExport";
 import { decodeOperationalDocumentData, getOperationalDocumentDownloadUrl, operationalDocumentUploadDenial, uploadOperationalDocument } from "../documentOperations";
@@ -55,7 +55,6 @@ async function startServer() {
     runWithTenant(binding, () => next());
   });
 
-  if (await ensureInitialShareholder()) console.log("[Auth] Initial Shareholder account provisioned.");
   if (await ensureDevelopmentTestAccounts()) console.log("[Auth] Development-only test accounts provisioned.");
   app.post("/api/scheduled/bi-rate-sync", handleScheduledBiRateSync);
   app.post("/api/operational-documents", async (req, res) => {

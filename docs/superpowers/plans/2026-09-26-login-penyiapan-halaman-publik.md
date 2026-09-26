@@ -21,7 +21,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 5 — Kode pemulihan pemilik di server
 - [x] Tugas 6 — Penyiapan awal di server (`setup.complete`)
 - [x] Tugas 7 — Profil publik dan penulis Tampilan/Halaman publik
-- [ ] Tugas 8 — Buang bootstrap `.env` dan sisa OAuth Manus
+- [x] Tugas 8 — Buang bootstrap `.env` dan sisa OAuth Manus
 - [ ] Tugas 9 — Layar masuk, pulihkan, dan ubah sandi
 - [ ] Tugas 10 — Wizard `/siapkan`
 - [ ] Tugas 11 — Kode pemulihan: layar, ajakan, dan menu pengguna
@@ -2151,7 +2151,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Consumes: `completeInstallationSetup` (Tugas 6) — penggantinya harus sudah ada sebelum bootstrap dibuang.
 - Produces: tidak ada simbol baru. `ENV` kehilangan `appId`, `ownerOpenId`, `initialShareholderUsername`, `initialShareholderPassword`.
 
-- [ ] **Step 1: Tulis uji penjaga yang gagal**
+- [x] **Step 1: Tulis uji penjaga yang gagal**
 
 `server/legacyAuthRemoval.test.ts`:
 
@@ -2183,7 +2183,7 @@ describe("bootstrap .env dan OAuth Manus sudah dibuang", () => {
 Run: `./node_modules/.bin/vitest run server/legacyAuthRemoval.test.ts`
 Expected: FAIL — simbol masih ada.
 
-- [ ] **Step 2: Buang bootstrap di server**
+- [x] **Step 2: Buang bootstrap di server**
 
 1. `server/internalAuth.ts`: hapus seluruh fungsi `ensureInitialShareholder` beserta komentar JSDoc di atasnya; ubah baris impor `./db` menjadi
    `import { createInternalUser, getInternalUserById, getInternalUserByUsername, touchLastSignedIn, updateInternalUserPassword } from "./db";`
@@ -2192,7 +2192,7 @@ Expected: FAIL — simbol masih ada.
 4. `server/_core/env.ts`: hapus baris `appId`, komentar `// Legacy: …`, `ownerOpenId`, `initialShareholderUsername`, `initialShareholderPassword`.
 5. `server/db.ts`: hapus `upsertUser`, `getUserByOpenId`, dan `hasShareholder`; ubah impor skema menjadi `import { users } from "../drizzle/schema";` bila `InsertUser` tidak dipakai lagi (periksa dengan `grep -n InsertUser server/db.ts`).
 
-- [ ] **Step 3: Buang sisa OAuth di klien dan shared**
+- [x] **Step 3: Buang sisa OAuth di klien dan shared**
 
 1. `git rm client/src/const.ts` (tidak ada yang mengimpor `@/const`; periksa dengan `grep -rn '"@/const"' client/src` — harus kosong).
 2. `shared/const.ts`: hapus semuanya mulai komentar `// One-time nonce cookie …` sampai akhir berkas (`OAUTH_STATE_COOKIE`, `OAuthState`, `encodeOAuthState`, `decodeOAuthState`). Sisakan lima konstanta pertama.
@@ -2200,7 +2200,7 @@ Expected: FAIL — simbol masih ada.
    `// Sesi habis atau dicabut: kosongkan data dan kembali ke halaman masuk internal.`;
    hapus seluruh opsi `headers() { … }` pada `httpBatchLink` (server tidak pernah membaca header Bearer; sesi hanya dari cookie httpOnly).
 
-- [ ] **Step 4: `.env.example`**
+- [x] **Step 4: `.env.example`**
 
 Ganti blok akun Shareholder awal (baris ±26–28) dengan:
 
@@ -2212,17 +2212,17 @@ Ganti blok akun Shareholder awal (baris ±26–28) dengan:
 
 Hapus blok `# --- Opsional / legacy …`, `VITE_APP_ID=`, dan `OWNER_OPEN_ID=` di akhir berkas.
 
-- [ ] **Step 5: Jalankan uji**
+- [x] **Step 5: Jalankan uji**
 
 Run: `./node_modules/.bin/vitest run server/legacyAuthRemoval.test.ts server/internalAuth.developmentAccounts.test.ts`
 Expected: PASS — 2 uji penjaga, uji akun pengembangan tetap lulus.
 
-- [ ] **Step 6: Perintah mutu**
+- [x] **Step 6: Perintah mutu**
 
 Run: `./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build`
 Expected: **`Test Files 200 passed`, `Tests 1662 passed | 2 skipped`** — berkas dan uji **tidak bertambah**: `internalAuth.bootstrap.test.ts` (1 berkas, 2 uji) dibuang, `legacyAuthRemoval.test.ts` (1 berkas, 2 uji) ditambah.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A server/internalAuth.ts server/internalAuth.bootstrap.test.ts server/_core/index.ts server/_core/env.ts server/db.ts client/src/const.ts shared/const.ts client/src/main.tsx .env.example server/legacyAuthRemoval.test.ts

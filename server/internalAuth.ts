@@ -6,7 +6,7 @@ import type { Request } from "express";
 import type { User } from "../drizzle/schema";
 import { COOKIE_NAME } from "../shared/const";
 import { ENV } from "./_core/env";
-import { createInternalUser, getInternalUserById, getInternalUserByUsername, hasShareholder, touchLastSignedIn, updateInternalUserPassword } from "./db";
+import { createInternalUser, getInternalUserById, getInternalUserByUsername, touchLastSignedIn, updateInternalUserPassword } from "./db";
 
 const scryptAsync = promisify(scrypt);
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
@@ -170,28 +170,6 @@ export async function verifyInternalCredentials(username: string, password: stri
   if (!valid) return null;
   await touchLastSignedIn(user.id);
   return user;
-}
-
-/**
- * Creates one root account only when no active or historical Shareholder exists.
- * Environment credentials are bootstrap-only and are never used to reset an
- * existing Shareholder account.
- */
-export async function ensureInitialShareholder() {
-  if (await hasShareholder()) return false;
-  const username = ENV.initialShareholderUsername;
-  const password = ENV.initialShareholderPassword;
-  if (!username || !password) return false;
-  const normalized = validateUsername(username);
-  const passwordHash = await hashPassword(password);
-  await createInternalUser({
-    username: normalized,
-    passwordHash,
-    name: "Initial Shareholder",
-    role: "SHAREHOLDER",
-    mustChangePassword: true,
-  });
-  return true;
 }
 
 /** Provisions fixed test roles only for development verification; production authentication rejects these accounts. */
