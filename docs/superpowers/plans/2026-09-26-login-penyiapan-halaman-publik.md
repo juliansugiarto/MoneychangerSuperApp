@@ -15,7 +15,7 @@
 Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tugas itu.**
 
 - [x] Tugas 1 — Skema, migrasi aditif `0060`, isian `0061`, dan basis data visual
-- [ ] Tugas 2 — Kode rahasia bersama dan perintah `tenant.mjs setup-code`
+- [x] Tugas 2 — Kode rahasia bersama dan perintah `tenant.mjs setup-code`
 - [ ] Tugas 3 — Pembatas percobaan masuk (`server/loginThrottle.ts`)
 - [ ] Tugas 4 — IP asli di balik nginx dan `auth.login` yang dibatasi
 - [ ] Tugas 5 — Kode pemulihan pemilik di server
@@ -333,7 +333,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `scripts/setupCode.mjs`: `generateSetupCode(): string`, `hashSetupCode(code: string): Promise<string>`, `writeSetupCode(connection): Promise<string>`
   - Perintah `node scripts/tenant.mjs setup-code [kode-tenant]`
 
-- [ ] **Step 1: Tulis uji `shared/secretCodes.test.ts` yang gagal**
+- [x] **Step 1: Tulis uji `shared/secretCodes.test.ts` yang gagal**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -377,7 +377,7 @@ describe("kode rahasia", () => {
 Run: `./node_modules/.bin/vitest run shared/secretCodes.test.ts`
 Expected: FAIL — `Failed to resolve import "./secretCodes"`.
 
-- [ ] **Step 2: Tulis `shared/secretCodes.ts`**
+- [x] **Step 2: Tulis `shared/secretCodes.ts`**
 
 ```ts
 /**
@@ -424,7 +424,7 @@ export function formatSecretCode(compact: string): string {
 Run: `./node_modules/.bin/vitest run shared/secretCodes.test.ts`
 Expected: PASS, 6 uji.
 
-- [ ] **Step 3: Ekspor `hashSecret` dari `server/internalAuth.ts`**
+- [x] **Step 3: Ekspor `hashSecret` dari `server/internalAuth.ts`**
 
 Ganti fungsi `hashPassword` dan `createScryptHash` (baris ±74–83) dengan:
 
@@ -444,7 +444,7 @@ export async function hashSecret(secret: string) {
 
 Ganti satu-satunya pemanggil lain, `ensureDevelopmentTestAccounts` (`const passwordHash = await createScryptHash(DEVELOPMENT_TEST_DEFAULT_PASSWORD);`), menjadi `await hashSecret(DEVELOPMENT_TEST_DEFAULT_PASSWORD)`.
 
-- [ ] **Step 4: Tulis uji `server/setupCodeScript.test.ts` yang gagal**
+- [x] **Step 4: Tulis uji `server/setupCodeScript.test.ts` yang gagal**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -471,7 +471,7 @@ describe("kode penyiapan dari skrip .mjs", () => {
 Run: `./node_modules/.bin/vitest run server/setupCodeScript.test.ts`
 Expected: FAIL — `Failed to resolve import "../scripts/setupCode.mjs"`.
 
-- [ ] **Step 5: Tulis `scripts/setupCode.mjs` dan deklarasinya**
+- [x] **Step 5: Tulis `scripts/setupCode.mjs` dan deklarasinya**
 
 `scripts/setupCode.mjs`:
 
@@ -532,7 +532,7 @@ export function writeSetupCode(connection: Connection): Promise<string>;
 Run: `./node_modules/.bin/vitest run server/setupCodeScript.test.ts`
 Expected: PASS, 2 uji.
 
-- [ ] **Step 6: Perintah `setup-code` di `scripts/tenant.mjs`**
+- [x] **Step 6: Perintah `setup-code` di `scripts/tenant.mjs`**
 
 Tambah impor di bawah impor yang ada:
 
@@ -586,12 +586,12 @@ Periksa di `moneychanger` (sudah disiapkan) bahwa perintahnya menolak:
 Run: `set -a; . ./.env; set +a; node scripts/tenant.mjs setup-code`
 Expected: `Penyiapan sudah selesai. Kode penyiapan tidak dapat dibuat lagi.` dan kode keluar 1. **Jangan** menjalankannya ke `mc_t_abcvalas` sekarang — itu langkah peragaan Tugas 15.
 
-- [ ] **Step 7: Perintah mutu**
+- [x] **Step 7: Perintah mutu**
 
 Run: `./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build`
 Expected: **`Test Files 192 passed`, `Tests 1614 passed | 2 skipped`** (+2 berkas, +8 uji).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add shared/secretCodes.ts shared/secretCodes.test.ts scripts/setupCode.mjs scripts/setupCode.d.mts scripts/tenant.mjs server/internalAuth.ts server/setupCodeScript.test.ts

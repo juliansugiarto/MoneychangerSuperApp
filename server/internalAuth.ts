@@ -74,12 +74,13 @@ export function assertPasswordPolicy(password: string) {
 
 export async function hashPassword(password: string) {
   assertPasswordPolicy(password);
-  return createScryptHash(password);
+  return hashSecret(password);
 }
 
-async function createScryptHash(password: string) {
+/** Hash scrypt tanpa kebijakan panjang — dipakai kata sandi, kode penyiapan, dan kode pemulihan. Formatnya dipaku `scripts/setupCode.mjs`. */
+export async function hashSecret(secret: string) {
   const salt = randomBytes(16).toString("base64url");
-  const hash = await scryptAsync(password, salt, 64) as Buffer;
+  const hash = await scryptAsync(secret, salt, 64) as Buffer;
   return `scrypt$v1$${salt}$${hash.toString("base64url")}`;
 }
 
@@ -181,7 +182,7 @@ export async function ensureInitialShareholder() {
 /** Provisions fixed test roles only for development verification; production authentication rejects these accounts. */
 export async function ensureDevelopmentTestAccounts() {
   if (ENV.isProduction) return false;
-  const passwordHash = await createScryptHash(DEVELOPMENT_TEST_DEFAULT_PASSWORD);
+  const passwordHash = await hashSecret(DEVELOPMENT_TEST_DEFAULT_PASSWORD);
   let synchronizedCount = 0;
 
   for (const account of DEVELOPMENT_TEST_ACCOUNTS) {

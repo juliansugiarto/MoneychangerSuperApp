@@ -10,6 +10,7 @@
  *   node scripts/tenant.mjs list
  *   node scripts/tenant.mjs provision <kode>
  *   node scripts/tenant.mjs migrate-all
+ *   node scripts/tenant.mjs setup-code [kode]   kode penyiapan wizard (tanpa kode: DATABASE_URL)
  *
  * Reads TENANT_REGISTRY ("kode=mysql://…;kode2=mysql://…") and ADMIN_DATABASE_URL, a connection
  * with rights to CREATE DATABASE. Never drops or overwrites anything.
@@ -21,6 +22,7 @@
 import { createConnection } from "mysql2/promise";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { writeSetupCode } from "./setupCode.mjs";
 
 const run = promisify(execFile);
 
@@ -134,13 +136,33 @@ async function migrateAll() {
   console.log(`Seluruh ${registry.size} tenant berada pada versi skema yang sama.`);
 }
 
+async function setupCode(code) {
+  const registry = parseRegistry(process.env.TENANT_REGISTRY);
+  const url = code ? registry.get(code) : process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error(code
+      ? `Tenant "${code}" tidak terdaftar di TENANT_REGISTRY.`
+      : "DATABASE_URL belum diatur. Sebutkan kode tenant, atau atur DATABASE_URL untuk instalasi satu perusahaan.");
+  }
+  const connection = await createConnection({ uri: url });
+  try {
+    const secret = await writeSetupCode(connection);
+    // Satu-satunya tempat kode ini tampil. Jangan menyalinnya ke tiket, obrolan, atau log.
+    console.log(`Kode penyiapan (berlaku 24 jam, tampil sekali ini saja):\n\n  ${secret}\n`);
+    console.log('Buka alamat aplikasi, lalu masukkan kode ini pada langkah pertama "Siapkan perusahaan Anda".');
+  } finally {
+    await connection.end();
+  }
+}
+
 const [command, argument] = process.argv.slice(2);
 try {
   if (command === "list") await list();
   else if (command === "provision") await provision(argument);
   else if (command === "migrate-all") await migrateAll();
+  else if (command === "setup-code") await setupCode(argument);
   else {
-    console.log("Perintah: list | provision <kode> | migrate-all");
+    console.log("Perintah: list | provision <kode> | migrate-all | setup-code [kode]");
     process.exitCode = 2;
   }
 } catch (error) {
