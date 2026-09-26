@@ -4,6 +4,7 @@ import { createPool } from "mysql2";
 import { users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { TenantResolutionError, currentTenantBinding } from "./tenantContext";
+import { applyUtcSession } from "./utcSession";
 
 /**
  * One connection per database URL, reused across requests. Keyed by URL rather than by tenant code
@@ -26,7 +27,10 @@ function poolFor(databaseUrl: string) {
   const existing = _pools.get(databaseUrl);
   if (existing) return existing;
   try {
-    const created = drizzle(createPool({ uri: databaseUrl, connectionLimit: CONNECTIONS_PER_TENANT }));
+    const pool = createPool({ uri: databaseUrl, connectionLimit: CONNECTIONS_PER_TENANT });
+    // Setiap sambungan baru — termasuk yang dibuka pool belakangan — bersesi UTC sebelum dipakai.
+    pool.on("connection", applyUtcSession);
+    const created = drizzle(pool);
     _pools.set(databaseUrl, created);
     return created;
   } catch (error) {

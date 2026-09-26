@@ -18,6 +18,8 @@ import { resolveTenant } from "../tenantRegistry";
 import { serveStatic, setupVite } from "./vite";
 import { isRoleAllowed } from "../../shared/backOfficeNavigation";
 import { configureProxyTrust } from "../proxyTrust";
+import { getDb } from "../db";
+import { assertUtcSession } from "../utcSession";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -55,6 +57,9 @@ async function startServer() {
     runWithTenant(binding, () => next());
   });
 
+  // Sebelum pekerjaan basis data pertama: sesi yang bukan UTC menyimpan waktu bergeser diam-diam.
+  const startupDb = await getDb();
+  if (startupDb) await assertUtcSession(startupDb);
   if (await ensureDevelopmentTestAccounts()) console.log("[Auth] Development-only test accounts provisioned.");
   app.post("/api/scheduled/bi-rate-sync", handleScheduledBiRateSync);
   app.post("/api/operational-documents", async (req, res) => {

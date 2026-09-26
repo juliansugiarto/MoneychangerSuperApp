@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import { migrate } from "drizzle-orm/mysql2/migrator";
 import { createConnection } from "mysql2/promise";
 import type { TenantBinding } from "../tenantContext";
+import { UTC_SESSION_SQL } from "../utcSession";
 
 /**
  * Basis data sekali pakai untuk uji hidup yang MENULIS — tidak pernah `moneychanger`,
@@ -26,6 +27,7 @@ export async function createScratchDatabase(name: `mc_uji_${string}`): Promise<{
   const url = target.toString();
   const migrationConnection = await createConnection({ uri: url });
   try {
+    await migrationConnection.query(UTC_SESSION_SQL);
     await migrate(drizzle(migrationConnection), { migrationsFolder: "drizzle" });
   } finally {
     await migrationConnection.end();

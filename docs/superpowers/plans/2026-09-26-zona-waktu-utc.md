@@ -12,7 +12,7 @@
 
 ## Status Pengerjaan
 
-- [ ] Tugas 1 — Sesi UTC pada setiap sambungan dan penjaga saat menyala
+- [x] Tugas 1 — Sesi UTC pada setiap sambungan dan penjaga saat menyala
 - [ ] Tugas 2 — Bukti produksi (baca-saja), dokumentasi, serah terima
 
 ## Global Constraints
@@ -51,7 +51,7 @@
   - `applyUtcSession(connection: { query(sql: string, callback: (error: Error | null) => void): unknown }): void` — untuk event `connection` pool callback mysql2
   - `assertUtcSession(db: { execute(query: SQL): Promise<unknown> }): Promise<void>` — melempar `Error` berisi `"bukan UTC"` bila `TIMESTAMPDIFF(MINUTE, UTC_TIMESTAMP(), NOW())` ≠ 0
 
-- [ ] **Step 1: Tulis uji hidup yang gagal**
+- [x] **Step 1: Tulis uji hidup yang gagal**
 
 `server/utcSession.live.test.ts`:
 
@@ -115,12 +115,12 @@ describe("sesi basis data selalu UTC", () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan dan lihat gagal**
+- [x] **Step 2: Jalankan dan lihat gagal**
 
 Run: `./node_modules/.bin/vitest run server/utcSession.live.test.ts`
 Expected: FAIL — `Failed to load url ./utcSession`. Sesudah Step 3 dibuat tetapi **sebelum** Step 4, jalankan lagi: uji pertama dan ketiga gagal pada Mac ber-zona WIB (selisih ± 25 200 000 ms; zona `SYSTEM`). Bila uji pertama lulus sebelum Step 4, zona sistem MySQL mesin ini ternyata UTC — catat, dan pastikan uji ketiga tetap gagal.
 
-- [ ] **Step 3: Tulis `server/utcSession.ts`**
+- [x] **Step 3: Tulis `server/utcSession.ts`**
 
 ```ts
 import { sql, type SQL } from "drizzle-orm";
@@ -150,7 +150,7 @@ export async function assertUtcSession(db: { execute(query: SQL): Promise<unknow
 }
 ```
 
-- [ ] **Step 4: Pasang pada pool dan sambungan migrasi**
+- [x] **Step 4: Pasang pada pool dan sambungan migrasi**
 
 `server/db.ts` — tambah impor `import { applyUtcSession } from "./utcSession";` dan ganti isi `try` di `poolFor`:
 
@@ -171,7 +171,7 @@ export async function assertUtcSession(db: { execute(query: SQL): Promise<unknow
     await migrationConnection.query(UTC_SESSION_SQL);
 ```
 
-- [ ] **Step 5: Penjaga saat menyala**
+- [x] **Step 5: Penjaga saat menyala**
 
 `server/_core/index.ts` — tambah impor `import { getDb } from "../db";` (bila belum ada) dan `import { assertUtcSession } from "../utcSession";`. Tepat **sebelum** baris `if (await ensureDevelopmentTestAccounts()) …`:
 
@@ -181,21 +181,21 @@ export async function assertUtcSession(db: { execute(query: SQL): Promise<unknow
   if (startupDb) await assertUtcSession(startupDb);
 ```
 
-- [ ] **Step 6: Jalankan uji**
+- [x] **Step 6: Jalankan uji**
 
 Run: `./node_modules/.bin/vitest run server/utcSession.live.test.ts server/ownerRecovery.live.test.ts server/installationSetup.live.test.ts server/customerWatchlistScreening`
 Expected: PASS — 4 uji baru, uji hidup lama tetap lulus.
 
-- [ ] **Step 7: Perintah mutu**
+- [x] **Step 7: Perintah mutu**
 
 Run: `./node_modules/.bin/vitest run > /tmp/claude-501/vitest-utc.log 2>&1; tail -5 /tmp/claude-501/vitest-utc.log; ./node_modules/.bin/tsc --noEmit; ./node_modules/.bin/vite build`
 Expected: `Test Files 222 passed (222)`, `Tests 1730 passed | 2 skipped (1732)` (+1 berkas, +4 uji); `tsc` tanpa keluaran; build `✓ built`. Bila uji lama yang membandingkan stempel `timestamp` basis data lokal gagal, itu data lama yang ditulis di bawah sesi WIB (spec §Data yang sudah ada) — sebutkan nama berkasnya dan jangan memperbaiki datanya.
 
-- [ ] **Step 8: Periksa server menyala**
+- [x] **Step 8: Periksa server menyala**
 
 Jalankan `PORT=3300 ./node_modules/.bin/tsx server/_core/index.ts` di latar dengan `.env` termuat; Expected: `Server running on http://localhost:3300/` tanpa galat zona. Hentikan.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add server/utcSession.ts server/utcSession.live.test.ts server/db.ts server/testing/scratchDatabase.ts server/_core/index.ts docs/superpowers/plans/2026-09-26-zona-waktu-utc.md
