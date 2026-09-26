@@ -29,7 +29,8 @@ export function RecoverForm({ onSubmit, isPending, errorMessage }: {
     <form onSubmit={submit} className="grid gap-3">
       <div className="grid gap-1">
         <Label htmlFor="recover-username">Username pemilik</Label>
-        <Input id="recover-username" autoComplete="username" className={QUIET_FIELD} value={username} onChange={(event) => setUsername(event.target.value)} />
+        <Input id="recover-username" autoComplete="username" aria-describedby="recover-username-hint" className={QUIET_FIELD} value={username} onChange={(event) => setUsername(event.target.value)} />
+        <p id="recover-username-hint" className="text-label text-ink-subtle">Nama yang Anda ketik saat masuk, mis. pemilik.abc — bukan nama peran seperti "Pemegang Saham".</p>
       </div>
       <div className="grid gap-1">
         <Label htmlFor="recover-code">Kode pemulihan</Label>

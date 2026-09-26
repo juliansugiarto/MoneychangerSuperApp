@@ -31,4 +31,12 @@ describe("formulir pulihkan akun pemilik", () => {
     await userEvent.click(screen.getByRole("button", { name: "Pulihkan akun" }));
     expect(onSubmit).toHaveBeenCalledWith({ username: "pemilik", code: "ABCD-EFGH", newPassword: "Kata-sandi-baru-1" });
   });
+
+  it("kolom username menjelaskan bahwa yang diminta nama masuk, bukan nama peran", () => {
+    render(<RecoverForm onSubmit={vi.fn()} isPending={false} errorMessage={null} />);
+    const field = screen.getByLabelText("Username pemilik");
+    const hint = document.getElementById(field.getAttribute("aria-describedby") ?? "");
+    expect(hint?.textContent).toContain("Nama yang Anda ketik saat masuk");
+    expect(hint?.textContent).toContain("bukan nama peran");
+  });
 });
