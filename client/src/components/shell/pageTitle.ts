@@ -14,6 +14,7 @@ for (const group of backOfficeNavigationGroups) {
 titles.set("/operasional/stock", { group: "Uang & Kurs", title: "Uang kas" });
 titles.set("/operasional/stock-opname", { group: "Uang & Kurs", title: "Hitung fisik uang" });
 titles.set("/operasional/pola", { group: "Pengaturan", title: "Galeri pola" });
+titles.set("/operasional/kode-pemulihan", { group: "Pengaturan", title: "Kode pemulihan" });
 
 export function pageTitleFor(path: string): { group: string; title: string } {
   return titles.get(path) ?? { group: "Operasional", title: "Back office" };

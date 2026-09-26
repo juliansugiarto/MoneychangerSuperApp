@@ -24,7 +24,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 8 — Buang bootstrap `.env` dan sisa OAuth Manus
 - [x] Tugas 9 — Layar masuk, pulihkan, dan ubah sandi
 - [x] Tugas 10 — Wizard `/siapkan`
-- [ ] Tugas 11 — Kode pemulihan: layar, ajakan, dan menu pengguna
+- [x] Tugas 11 — Kode pemulihan: layar, ajakan, dan menu pengguna
 - [ ] Tugas 12 — Pengguna & peran
 - [ ] Tugas 13 — Profil Perusahaan: Tampilan dan Halaman publik; tema dipasang shell
 - [ ] Tugas 14 — Halaman depan publik
@@ -3156,7 +3156,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `userMenuItems(role: BackOfficeRole): { label: string; path: string }[]` diekspor dari `AppSidebar.tsx`
   - `RegenerateRecoveryCodes({ brand, codes, errorMessage, isPending, onRegenerate, onDone })`
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 `client/src/components/shell/RecoveryCodeNotice.test.tsx`:
 
@@ -3231,7 +3231,7 @@ Tambahkan di akhir blok `describe("AppSidebar", …)` pada `client/src/component
 Run: `./node_modules/.bin/vitest run client/src/components/shell client/src/pages/setup/RegenerateRecoveryCodes.test.tsx`
 Expected: FAIL — `RecoveryCodeNotice`, `RegenerateRecoveryCodes`, dan `userMenuItems` belum ada.
 
-- [ ] **Step 2: `RecoveryCodeNotice`**
+- [x] **Step 2: `RecoveryCodeNotice`**
 
 ```tsx
 import { BOLD_BUTTON } from "@/components/patterns/tebal";
@@ -3259,7 +3259,7 @@ export function RecoveryCodeNotice({ role, remaining, onOpen }: { role: BackOffi
 }
 ```
 
-- [ ] **Step 3: `RegenerateRecoveryCodes` dan halamannya**
+- [x] **Step 3: `RegenerateRecoveryCodes` dan halamannya**
 
 `client/src/pages/setup/RegenerateRecoveryCodes.tsx`:
 
@@ -3340,7 +3340,7 @@ export default function RecoveryCodes() {
 }
 ```
 
-- [ ] **Step 4: Menu pengguna, ajakan di shell, judul, rute**
+- [x] **Step 4: Menu pengguna, ajakan di shell, judul, rute**
 
 Di `client/src/components/shell/AppSidebar.tsx`, tambahkan sebelum `export function AppSidebar`:
 
@@ -3385,17 +3385,17 @@ Tambahkan ke `FOUNDATION_FILES`:
   "client/src/pages/RecoveryCodes.tsx",
 ```
 
-- [ ] **Step 5: Jalankan uji**
+- [x] **Step 5: Jalankan uji**
 
 Run: `./node_modules/.bin/vitest run client/src/components/shell client/src/pages/setup server/backOfficeNavigation.test.ts`
 Expected: PASS — 3 + 2 + 1 uji baru; uji navigasi tetap lulus (rute baru tidak ada di sidebar, jadi tidak perlu dipetakan di `pageByPath`).
 
-- [ ] **Step 6: Perintah mutu**
+- [x] **Step 6: Perintah mutu**
 
 Run: `./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build`
 Expected: **`Test Files 207 passed`, `Tests 1681 passed | 2 skipped`** (+2 berkas, +6 uji).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add client/src/components/shell/RecoveryCodeNotice.tsx client/src/components/shell/RecoveryCodeNotice.test.tsx client/src/pages/setup/RegenerateRecoveryCodes.tsx client/src/pages/setup/RegenerateRecoveryCodes.test.tsx client/src/pages/RecoveryCodes.tsx client/src/components/shell/AppSidebar.tsx client/src/components/shell/AppSidebar.test.tsx client/src/components/DashboardLayout.tsx client/src/components/shell/pageTitle.ts client/src/App.tsx client/src/designFoundation.ts

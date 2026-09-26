@@ -8,6 +8,7 @@ import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { AccessPanel } from "./shell/AccessPanel";
 import { accessStateFor } from "./shell/accessState";
 import { AppHeader } from "./shell/AppHeader";
+import { RecoveryCodeNotice } from "./shell/RecoveryCodeNotice";
 import { AppSidebar } from "./shell/AppSidebar";
 import { brandName } from "./shell/brand";
 import { CommandPalette } from "./shell/CommandPalette";
@@ -60,6 +61,7 @@ export default function DashboardLayout({ children, minimumRole = "STAFF" }: { c
       />
       <SidebarInset className="min-w-0 bg-surface">
         <AppHeader group={page.group} title={page.title} onOpenSearch={() => setPaletteOpen(true)} />
+        <RecoveryCodeNotice role={user!.role as BackOfficeRole} remaining={user!.recoveryCodesRemaining ?? null} onOpen={() => goTo("/operasional/kode-pemulihan")} />
         <main className="min-w-0 flex-1 px-gutter py-4">{children}</main>
       </SidebarInset>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} role={user!.role as BackOfficeRole} onNavigate={goTo} />

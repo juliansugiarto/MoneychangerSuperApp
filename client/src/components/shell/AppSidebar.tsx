@@ -20,6 +20,13 @@ const activeItem = "border-2 border-transparent data-[active=true]:border-ink da
  */
 const parentItem = "border-2 border-transparent data-[active=true]:bg-transparent data-[active=true]:font-bold data-[active=true]:text-ink group-data-[collapsible=icon]:data-[active=true]:border-ink group-data-[collapsible=icon]:data-[active=true]:bg-brand group-data-[collapsible=icon]:data-[active=true]:text-brand-contrast group-data-[collapsible=icon]:data-[active=true]:shadow-hard";
 
+/** Butir menu pengguna. "Kode pemulihan" hanya bagi Pemegang Saham — rutenya sengaja tidak masuk sidebar. */
+export function userMenuItems(role: BackOfficeRole): { label: string; path: string }[] {
+  const items = [{ label: "Lihat halaman publik", path: "/" }];
+  if (role === "SHAREHOLDER") items.push({ label: "Kode pemulihan", path: "/operasional/kode-pemulihan" });
+  return items;
+}
+
 export function AppSidebar({ brand, role, userName, roleLabel, currentPath, onNavigate, onLogout }: {
   brand: string;
   role: BackOfficeRole;
@@ -64,7 +71,7 @@ export function AppSidebar({ brand, role, userName, roleLabel, currentPath, onNa
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => onNavigate("/")}>Lihat halaman publik</DropdownMenuItem>
+            {userMenuItems(role).map((item) => <DropdownMenuItem key={item.path} onClick={() => onNavigate(item.path)}>{item.label}</DropdownMenuItem>)}
             <DropdownMenuItem onClick={onLogout} className="text-danger focus:text-danger"><LogOut className="mr-2 size-4" />Keluar</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

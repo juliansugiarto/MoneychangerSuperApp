@@ -14,6 +14,7 @@ import ChangePassword from "./pages/ChangePassword";
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const Recover = lazy(() => import("./pages/Recover"));
 const Setup = lazy(() => import("./pages/Setup"));
+const RecoveryCodes = lazy(() => import("./pages/RecoveryCodes"));
 const OperationsDashboard = lazy(() => import("./pages/OperationsDashboard"));
 const Customers = lazy(() => import("./pages/Customers"));
 const CustomerList = lazy(() => import("./pages/CustomerList"));
@@ -73,6 +74,7 @@ function Router() {
       <Route path="/siapkan" component={Setup} />
       <Route path="/operasional"><OperationsRoute page={<OperationsDashboard />} /></Route>
       <Route path="/operasional/checklist"><OperationsRoute page={<DailyChecklist />} /></Route>
+      <Route path="/operasional/kode-pemulihan"><OperationsRoute minimumRole="SHAREHOLDER" page={<RecoveryCodes />} /></Route>
       <Route path="/operasional/monitoring"><OperationsRoute minimumRole="CONTROLLER" page={<Monitoring />} /></Route>
       <Route path="/operasional/transaksi"><OperationsRoute page={<GuidedTransactions />} /></Route>
       <Route path="/operasional/transaksi/daftar"><OperationsRoute page={<TransactionList />} /></Route>

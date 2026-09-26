@@ -43,4 +43,7 @@ export const FOUNDATION_FILES: readonly string[] = [
   "client/src/pages/setup/RecoveryCodeSheet.tsx",
   "client/src/pages/setup/SetupWizard.tsx",
   "client/src/pages/Setup.tsx",
+  "client/src/components/shell/RecoveryCodeNotice.tsx",
+  "client/src/pages/setup/RegenerateRecoveryCodes.tsx",
+  "client/src/pages/RecoveryCodes.tsx",
 ];

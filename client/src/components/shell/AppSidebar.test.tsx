@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FOCUS_RING } from "@/components/patterns/tebal";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "./AppSidebar";
+import { AppSidebar, userMenuItems } from "./AppSidebar";
 
 function renderSidebar(currentPath: string, open: boolean) {
   return render(
@@ -30,5 +30,10 @@ describe("AppSidebar", () => {
   it("butir daun aktif memakai aria-current", () => {
     renderSidebar("/kepatuhan/ira", true);
     expect(buttonLabelled("Penilaian Risiko (IRA)").getAttribute("aria-current")).toBe("page");
+  });
+
+  it("menu pengguna memuat Kode pemulihan hanya untuk Pemegang Saham", () => {
+    expect(userMenuItems("SHAREHOLDER").map((item) => item.path)).toContain("/operasional/kode-pemulihan");
+    expect(userMenuItems("CONTROLLER").map((item) => item.path)).not.toContain("/operasional/kode-pemulihan");
   });
 });
