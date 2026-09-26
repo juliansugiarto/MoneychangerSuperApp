@@ -36,16 +36,20 @@ describe("menyimpan kelompok pecahan", () => {
 
 describe("menonaktifkan kelompok pecahan", () => {
   it("mewajibkan alasan ketika kelompoknya masih memiliki kurs aktif", () => {
-    expect(() => planTierDeactivation({ tierLabel: "100", activeRateIds: [7], reason: "salah" }))
+    expect(() => planTierDeactivation({ tierLabel: "100", activeRateIds: [7], draftRateIds: [], reason: "salah" }))
       .toThrow(/alasan.*10 karakter/i);
   });
 
   it("me-RETIRE kurs aktif kelompok itu dalam rencana yang sama", () => {
-    expect(planTierDeactivation({ tierLabel: "100", activeRateIds: [7, 9], reason: "Kelompok 100 digabung ke kelompok besar." }))
-      .toEqual({ retireRateIds: [7, 9], reason: "Kelompok 100 digabung ke kelompok besar." });
+    expect(planTierDeactivation({ tierLabel: "100", activeRateIds: [7, 9], draftRateIds: [], reason: "Kelompok 100 digabung ke kelompok besar." }))
+      .toEqual({ retireRateIds: [7, 9], discardDraftIds: [], reason: "Kelompok 100 digabung ke kelompok besar." });
   });
 
   it("tidak menuntut alasan bila kelompoknya belum pernah punya kurs aktif", () => {
-    expect(planTierDeactivation({ tierLabel: "50", activeRateIds: [], reason: "" })).toEqual({ retireRateIds: [], reason: "" });
+    expect(planTierDeactivation({ tierLabel: "50", activeRateIds: [], draftRateIds: [], reason: "" })).toEqual({ retireRateIds: [], discardDraftIds: [], reason: "" });
+  });
+
+  it("membuang draf kelompok itu, supaya draf yang tidak terlihat di papan tidak ikut teraktifkan atau terhitung kelak", () => {
+    expect(planTierDeactivation({ tierLabel: "50", activeRateIds: [], draftRateIds: [11, 12], reason: "" }).discardDraftIds).toEqual([11, 12]);
   });
 });

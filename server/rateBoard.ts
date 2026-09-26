@@ -33,13 +33,17 @@ export function assertTierSaveValid(existing: readonly RateTierRow[], input: Tie
   return sortTiers(next);
 }
 
-/** Menonaktifkan kelompok berarti mencabut harganya juga — kurs yang menggantung tanpa kelompok tidak pernah dapat dibaca ulang oleh siapa pun. */
-export function planTierDeactivation(input: { tierLabel: string; activeRateIds: number[]; reason: string }) {
+/**
+ * Menonaktifkan kelompok berarti mencabut harganya juga — kurs yang menggantung tanpa kelompok tidak
+ * pernah dapat dibaca ulang oleh siapa pun. Drafnya dibuang: papan tidak lagi menampilkan kelompok
+ * itu, sehingga drafnya tak terlihat tetapi tetap ikut "Buang draf" dan aktivasi tanpa `rateIds`.
+ */
+export function planTierDeactivation(input: { tierLabel: string; activeRateIds: number[]; draftRateIds: number[]; reason: string }) {
   const reason = input.reason.trim();
   if (input.activeRateIds.length && reason.length < ACTIVATION_REASON_MIN_LENGTH) {
     throw new Error(`Kelompok "${input.tierLabel}" masih memiliki kurs aktif. Isi alasan minimal ${ACTIVATION_REASON_MIN_LENGTH} karakter — kurs itu akan ikut dinonaktifkan.`);
   }
-  return { retireRateIds: [...input.activeRateIds], reason: input.activeRateIds.length ? reason : input.reason.trim() };
+  return { retireRateIds: [...input.activeRateIds], discardDraftIds: [...input.draftRateIds], reason: input.activeRateIds.length ? reason : input.reason.trim() };
 }
 
 async function readTiers(db: Awaited<ReturnType<typeof databaseOrThrow>>, currencyId: number): Promise<RateTierRow[]> {
@@ -70,13 +74,17 @@ export async function deactivateRateTier(input: { tierId: number; reason: string
   if (!tier) throw new Error("Kelompok pecahan tidak ditemukan.");
   const activeRates = await db.select({ id: operationalRates.id }).from(operationalRates)
     .where(and(eq(operationalRates.rateTierId, input.tierId), eq(operationalRates.status, "ACTIVE"), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false)));
-  const plan = planTierDeactivation({ tierLabel: tier.label, activeRateIds: activeRates.map((row) => row.id), reason: input.reason });
+  const drafts = await db.select({ id: operationalRates.id }).from(operationalRates)
+    .where(and(eq(operationalRates.rateTierId, input.tierId), eq(operationalRates.status, "DRAFT"), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false)));
+  const plan = planTierDeactivation({ tierLabel: tier.label, activeRateIds: activeRates.map((row) => row.id), draftRateIds: drafts.map((row) => row.id), reason: input.reason });
   await db.transaction(async (tx) => {
     await tx.update(rateTiers).set({ active: false }).where(eq(rateTiers.id, input.tierId));
     if (plan.retireRateIds.length) await tx.update(operationalRates).set({ status: "RETIRED" }).where(inArray(operationalRates.id, plan.retireRateIds));
-    await tx.insert(auditLogs).values({ actorUserId, action: "RATE_TIER_DEACTIVATED", entityType: "rate_tier", entityId: String(input.tierId), beforeState: { active: true }, afterState: { active: false, retiredRateIds: plan.retireRateIds }, reason: plan.reason || null });
+    // Hanya baris yang masih DRAFT; draf yang diaktifkan orang lain di antaranya tidak ikut terhapus.
+    if (plan.discardDraftIds.length) await tx.delete(operationalRates).where(and(inArray(operationalRates.id, plan.discardDraftIds), eq(operationalRates.status, "DRAFT")));
+    await tx.insert(auditLogs).values({ actorUserId, action: "RATE_TIER_DEACTIVATED", entityType: "rate_tier", entityId: String(input.tierId), beforeState: { active: true }, afterState: { active: false, retiredRateIds: plan.retireRateIds, discardedDraftIds: plan.discardDraftIds }, reason: plan.reason || null });
   });
-  return { tierId: input.tierId, retiredRateIds: plan.retireRateIds };
+  return { tierId: input.tierId, retiredRateIds: plan.retireRateIds, discardedDraftIds: plan.discardDraftIds };
 }
 
 export type ActivationDraft = {
