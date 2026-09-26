@@ -6,12 +6,11 @@ import type { Request } from "express";
 import type { User } from "../drizzle/schema";
 import { COOKIE_NAME } from "../shared/const";
 import { ENV } from "./_core/env";
+import { PASSWORD_MIN_LENGTH, USERNAME_PATTERN } from "../shared/accountRules";
 import { createInternalUser, getInternalUserById, getInternalUserByUsername, touchLastSignedIn, updateInternalUserPassword } from "./db";
 
 const scryptAsync = promisify(scrypt);
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
-const PASSWORD_MIN_LENGTH = 12;
-const USERNAME_PATTERN = /^[a-z0-9._-]{3,48}$/;
 const SESSION_ISSUER = "ibukota-valasindo-internal";
 const SESSION_AUDIENCE = "ibukota-valasindo-backoffice";
 const MINIMUM_SESSION_SECRET_BYTES = 20;

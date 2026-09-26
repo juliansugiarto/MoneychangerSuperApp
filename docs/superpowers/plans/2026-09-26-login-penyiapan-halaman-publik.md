@@ -22,7 +22,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 6 — Penyiapan awal di server (`setup.complete`)
 - [x] Tugas 7 — Profil publik dan penulis Tampilan/Halaman publik
 - [x] Tugas 8 — Buang bootstrap `.env` dan sisa OAuth Manus
-- [ ] Tugas 9 — Layar masuk, pulihkan, dan ubah sandi
+- [x] Tugas 9 — Layar masuk, pulihkan, dan ubah sandi
 - [ ] Tugas 10 — Wizard `/siapkan`
 - [ ] Tugas 11 — Kode pemulihan: layar, ajakan, dan menu pengguna
 - [ ] Tugas 12 — Pengguna & peran
@@ -2258,7 +2258,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `SIGN_IN_METHODS`, `LoginForm({ onSubmit, isPending, errorMessage })`
   - `RecoverForm({ onSubmit, isPending, errorMessage })` → `onSubmit({ username, code: "XXXX-XXXX", newPassword })`
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 `client/src/lib/useCompanyTheme.test.tsx`:
 
@@ -2350,7 +2350,7 @@ describe("formulir pulihkan akun pemilik", () => {
 Run: `./node_modules/.bin/vitest run client/src/lib/useCompanyTheme.test.tsx client/src/pages/auth`
 Expected: FAIL — modul belum ada.
 
-- [ ] **Step 2: `shared/accountRules.ts` dan pemakaiannya di server**
+- [x] **Step 2: `shared/accountRules.ts` dan pemakaiannya di server**
 
 ```ts
 /** Aturan akun yang sama untuk server (penegak) dan layar (petunjuk sebelum dikirim). */
@@ -2365,7 +2365,7 @@ export function normalizeUsernameInput(value: string) {
 Di `server/internalAuth.ts`, hapus baris `const PASSWORD_MIN_LENGTH = 12;` dan `const USERNAME_PATTERN = …;`, lalu tambahkan
 `import { PASSWORD_MIN_LENGTH, USERNAME_PATTERN } from "../shared/accountRules";`. Perilaku tidak berubah.
 
-- [ ] **Step 3: `useCompanyTheme` dan `usePublicProfile`**
+- [x] **Step 3: `useCompanyTheme` dan `usePublicProfile`**
 
 `client/src/lib/useCompanyTheme.ts`:
 
@@ -2403,7 +2403,7 @@ export function usePublicProfile() {
 }
 ```
 
-- [ ] **Step 4: `AuthFrame`, `LoginForm`, `RecoverForm`**
+- [x] **Step 4: `AuthFrame`, `LoginForm`, `RecoverForm`**
 
 `client/src/pages/auth/AuthFrame.tsx`:
 
@@ -2557,7 +2557,7 @@ export function RecoverForm({ onSubmit, isPending, errorMessage }: {
 Run: `./node_modules/.bin/vitest run client/src/lib/useCompanyTheme.test.tsx client/src/pages/auth`
 Expected: PASS, 1 + 3 + 3 uji.
 
-- [ ] **Step 5: Halaman `Login`, `Recover`, `ChangePassword`**
+- [x] **Step 5: Halaman `Login`, `Recover`, `ChangePassword`**
 
 `client/src/pages/Login.tsx` (tulis ulang seluruhnya):
 
@@ -2686,7 +2686,7 @@ export default function ChangePassword() {
 }
 ```
 
-- [ ] **Step 6: Rute `/pulihkan` dan penjaga warna mentah**
+- [x] **Step 6: Rute `/pulihkan` dan penjaga warna mentah**
 
 Di `client/src/App.tsx`, tambah di daftar lazy: `const Recover = lazy(() => import("./pages/Recover"));` dan sesudah `<Route path="/ubah-sandi" component={ChangePassword} />`:
 
@@ -2707,16 +2707,16 @@ Tambahkan ke `FOUNDATION_FILES` di `client/src/designFoundation.ts`:
   "client/src/pages/ChangePassword.tsx",
 ```
 
-- [ ] **Step 7: Perintah mutu**
+- [x] **Step 7: Perintah mutu**
 
 Run: `./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build`
 Expected: **`Test Files 203 passed`, `Tests 1669 passed | 2 skipped`** (+3 berkas, +7 uji); `designFoundation.guard.test.ts` tetap lulus dengan delapan berkas baru di daftarnya.
 
-- [ ] **Step 8: Periksa di peramban**
+- [x] **Step 8: Periksa di peramban**
 
 Jalankan server pengembangan (`./node_modules/.bin/tsx server/_core/index.ts` dengan `.env` termuat), buka `/login` dan `/pulihkan` pada lebar 1280, 1440, dan 1920: kartu di tengah, logo/inisial dan nama dagang `moneychanger` tampil, Tab berpindah Username → Kata sandi → Masuk → tautan, tanpa gulir mendatar. Coba masuk dengan kata sandi salah lima kali dengan `test-staff` → pesan "Coba lagi dalam 30 detik." tampil sebagai `alert`. **Jangan mengetik kata sandi akun mana pun selain akun uji pengembangan**; bila perlu masuk sebagai pemilik sungguhan, minta pengguna melakukannya.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add shared/accountRules.ts server/internalAuth.ts client/src/lib/useCompanyTheme.ts client/src/lib/useCompanyTheme.test.tsx client/src/lib/publicProfile.ts client/src/pages/auth client/src/pages/Login.tsx client/src/pages/Recover.tsx client/src/pages/ChangePassword.tsx client/src/App.tsx client/src/designFoundation.ts

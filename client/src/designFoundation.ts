@@ -32,4 +32,12 @@ export const FOUNDATION_FILES: readonly string[] = [
   "client/src/pages/rates/RateTierDialog.tsx",
   "client/src/pages/rates/RateReferencePanel.tsx",
   "client/src/pages/Rates.tsx",
+  "client/src/lib/useCompanyTheme.ts",
+  "client/src/lib/publicProfile.ts",
+  "client/src/pages/auth/AuthFrame.tsx",
+  "client/src/pages/auth/LoginForm.tsx",
+  "client/src/pages/auth/RecoverForm.tsx",
+  "client/src/pages/Login.tsx",
+  "client/src/pages/Recover.tsx",
+  "client/src/pages/ChangePassword.tsx",
 ];
