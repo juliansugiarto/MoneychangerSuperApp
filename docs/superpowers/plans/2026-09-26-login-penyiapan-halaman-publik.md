@@ -14,7 +14,7 @@
 
 Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tugas itu.**
 
-- [ ] Tugas 1 — Skema, migrasi aditif `0060`, isian `0061`, dan basis data visual
+- [x] Tugas 1 — Skema, migrasi aditif `0060`, isian `0061`, dan basis data visual
 - [ ] Tugas 2 — Kode rahasia bersama dan perintah `tenant.mjs setup-code`
 - [ ] Tugas 3 — Pembatas percobaan masuk (`server/loginThrottle.ts`)
 - [ ] Tugas 4 — IP asli di balik nginx dan `auth.login` yang dibatasi
@@ -120,7 +120,7 @@ Lima keadaan yang tidak dijamin oleh bunyi spec tetapi paling mungkin melukai or
 - Consumes: —
 - Produces: `THEME_PALETTE_IDS: readonly ["MARUN","ZAMRUD","SAMUDRA","TERAKOTA","ANGGUR","ARANG"]`; tabel `app_installation` (`id`, `setupCompletedAt`, `setupCodeHash`, `setupCodeExpiresAt`, `updatedAt`); tabel `owner_recovery_codes` (`id`, `userId`, `codeHash`, `usedAt`, `createdAt`); kolom `company_profile.themePalette`, `.accentColor`, `.publicPageEnabled`, `.secondaryPhone`, `.openingHours`, `.mapUrl`, `.publicFaq`, `.fraudWarning`. Ekspor Drizzle `appInstallation`, `ownerRecoveryCodes`, tipe `CompanyProfile = typeof companyProfile.$inferSelect`.
 
-- [ ] **Step 1: Cadangkan kedua basis data lokal dan buktikan pemulihannya**
+- [x] **Step 1: Cadangkan kedua basis data lokal dan buktikan pemulihannya**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"
@@ -136,7 +136,7 @@ mysql -u root -e "DROP DATABASE mc_restore_probe;"
 
 Expected: `tabel_pulih` lebih besar dari nol. Bila pemulihannya gagal, **berhenti** — jangan menjalankan migrasi apa pun.
 
-- [ ] **Step 2: Tuple id palet di `shared/themePalettes.ts`**
+- [x] **Step 2: Tuple id palet di `shared/themePalettes.ts`**
 
 Ganti baris `export type ThemePaletteId = …` (baris 8) dengan:
 
@@ -146,7 +146,7 @@ export const THEME_PALETTE_IDS = ["MARUN", "ZAMRUD", "SAMUDRA", "TERAKOTA", "ANG
 export type ThemePaletteId = (typeof THEME_PALETTE_IDS)[number];
 ```
 
-- [ ] **Step 3: Kolom baru `companyProfile` di `drizzle/schema.ts`**
+- [x] **Step 3: Kolom baru `companyProfile` di `drizzle/schema.ts`**
 
 Tambahkan impor di blok impor `shared` bagian atas berkas:
 
@@ -206,7 +206,7 @@ export const ownerRecoveryCodes = mysqlTable("owner_recovery_codes", {
 }, (table) => [index("owner_recovery_codes_user_idx").on(table.userId)]);
 ```
 
-- [ ] **Step 4: Bangkitkan migrasi `0060` dan BACA SQL-nya**
+- [x] **Step 4: Bangkitkan migrasi `0060` dan BACA SQL-nya**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -216,7 +216,7 @@ cat drizzle/0060_*.sql
 
 Expected: hanya `CREATE TABLE \`app_installation\``, `CREATE TABLE \`owner_recovery_codes\``, delapan `ALTER TABLE \`company_profile\` ADD \`…\``, dan `CREATE INDEX`. Kolom `themePalette` muncul sebagai `ADD \`themePalette\` enum('MARUN',…) NOT NULL DEFAULT 'MARUN'` — itu kolom baru, bukan redefinisi. **Bila ada `DROP`, `MODIFY`, atau `CHANGE`, hapus berkasnya, kembalikan `drizzle/meta/`, dan perbaiki `schema.ts` — jangan menyunting SQL hasil bangkitan lalu menjalankannya.**
 
-- [ ] **Step 5: Bangkitkan migrasi custom `0061` dan tulis isiannya**
+- [x] **Step 5: Bangkitkan migrasi custom `0061` dan tulis isiannya**
 
 ```bash
 ./node_modules/.bin/drizzle-kit generate --custom --name isi_app_installation
@@ -233,7 +233,7 @@ SELECT 1, UTC_TIMESTAMP() FROM DUAL
 WHERE EXISTS (SELECT 1 FROM `users` WHERE `role` = 'SHAREHOLDER');
 ```
 
-- [ ] **Step 6: Tulis uji bentuk skema**
+- [x] **Step 6: Tulis uji bentuk skema**
 
 `server/installationSchema.test.ts`:
 
@@ -266,12 +266,12 @@ describe("skema sub-proyek 2", () => {
 });
 ```
 
-- [ ] **Step 7: Jalankan uji**
+- [x] **Step 7: Jalankan uji**
 
 Run: `./node_modules/.bin/vitest run server/installationSchema.test.ts`
 Expected: PASS, 3 uji.
 
-- [ ] **Step 8: Terapkan migrasi ke dua basis data lokal dan periksa isiannya**
+- [x] **Step 8: Terapkan migrasi ke dua basis data lokal dan periksa isiannya**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -281,7 +281,7 @@ mysql -u root -e "SELECT id, setupCompletedAt FROM moneychanger.app_installation
 
 Expected: `moneychanger.app_installation` satu baris (id 1, `setupCompletedAt` terisi, karena `test-shareholder` ada); `mc_t_abcvalas` **0 baris** (tanpa Pemegang Saham → wizard; basis data peragaan Tugas 15); profil `moneychanger` bernilai `MARUN`, `1`.
 
-- [ ] **Step 9: Basis data visual ditandai sudah disiapkan**
+- [x] **Step 9: Basis data visual ditandai sudah disiapkan**
 
 Tanpa ini `mc_t_visual` yang dibuat baru tidak punya Pemegang Saham saat migrasi, sehingga seluruh baseline Playwright akan memotret wizard. Pada `scripts/visualDb.mjs`, tepat sesudah blok sisip profil (sesudah baris `console.log("Profil Perusahaan contoh disisipkan.");` dan penutup `}`-nya), tambahkan:
 
@@ -293,12 +293,12 @@ await db.query("INSERT IGNORE INTO app_installation (id, setupCompletedAt) VALUE
 Run: `ADMIN_DATABASE_URL=mysql://root@127.0.0.1:3306/ node scripts/visualDb.mjs && mysql -u root -e "SELECT COUNT(*) FROM mc_t_visual.app_installation WHERE setupCompletedAt IS NOT NULL;"`
 Expected: `mc_t_visual siap.` dan hitungan `1`.
 
-- [ ] **Step 10: Perintah mutu**
+- [x] **Step 10: Perintah mutu**
 
 Run: `./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build`
 Expected: seluruhnya lolos; **`Test Files 190 passed`, `Tests 1606 passed | 2 skipped`** (+1 berkas, +3 uji).
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add shared/themePalettes.ts drizzle/schema.ts drizzle/0060_*.sql drizzle/0061_isi_app_installation.sql drizzle/meta scripts/visualDb.mjs server/installationSchema.test.ts

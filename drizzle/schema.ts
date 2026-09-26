@@ -23,6 +23,7 @@ import {
   IRA_LEGAL_FORM_VALUES,
   IRA_OCCUPATION_CATEGORY_VALUES,
 } from "../shared/iraVocabulary";
+import { THEME_PALETTE_IDS } from "../shared/themePalettes";
 
 export const staffRoles = ["STAFF", "ADMIN", "CONTROLLER", "SHAREHOLDER"] as const;
 
@@ -847,11 +848,54 @@ export const companyProfile = mysqlTable("company_profile", {
    * server, sehingga paket yang jatuh tempo hari ini tampil sebagai "mendatang".
    */
   timezone: varchar("timezone", { length: 64 }).default("Asia/Jakarta").notNull(),
+  /** Palet tema Konter Tebal pilihan pemilik (spec 2026-09-13 §A5). */
+  themePalette: mysqlEnum("themePalette", THEME_PALETTE_IDS).default("MARUN").notNull(),
+  /** Warna utama sendiri, `#RRGGBB`. Hanya disimpan bila lolos penjaga kontras; kosong = warna utama palet. */
+  accentColor: varchar("accentColor", { length: 7 }),
+  /** Mati → alamat `/` langsung membuka halaman masuk staf. */
+  publicPageEnabled: boolean("publicPageEnabled").default(true).notNull(),
+  secondaryPhone: varchar("secondaryPhone", { length: 60 }),
+  /** Teks bebas, mis. "Senin–Sabtu 08.00–17.00". */
+  openingHours: varchar("openingHours", { length: 500 }),
+  /** Hanya `https://`; ditegakkan `shared/publicPage.ts`. */
+  mapUrl: varchar("mapUrl", { length: 500 }),
+  /** Pasangan tanya-jawab halaman publik, maks. 12. Kosong = FAQ produk netral. */
+  publicFaq: json("publicFaq").$type<{ question: string; answer: string }[]>(),
+  /** Kosong = peringatan penipuan produk netral. */
+  fraudWarning: text("fraudWarning"),
   logoDocumentId: int("logoDocumentId"),
   updatedByUserId: int("updatedByUserId"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+export type CompanyProfile = typeof companyProfile.$inferSelect;
+
+/**
+ * Fakta "instalasi ini sudah disiapkan" — satu baris, id 1. Sengaja bukan kolom `company_profile`:
+ * instalasi baru dan produksi yang direset belum tentu punya baris profil, dan menandai penyiapan
+ * pada baris yang belum ada akan memaksa migrasi mengarang nama badan hukum (spec 2026-09-26).
+ */
+export const appInstallation = mysqlTable("app_installation", {
+  id: int("id").primaryKey().default(1),
+  setupCompletedAt: datetime("setupCompletedAt"),
+  /** Hash scrypt kode penyiapan yang dibuat `tenant.mjs setup-code`; dikosongkan begitu penyiapan selesai. */
+  setupCodeHash: varchar("setupCodeHash", { length: 200 }),
+  setupCodeExpiresAt: datetime("setupCodeExpiresAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/**
+ * Kode pemulihan sekali pakai milik Pemegang Saham — hanya hash-nya. Membuat ulang menghapus kode
+ * yang belum terpakai; baris yang sudah terpakai tetap sebagai riwayat.
+ */
+export const ownerRecoveryCodes = mysqlTable("owner_recovery_codes", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  codeHash: varchar("codeHash", { length: 200 }).notNull(),
+  usedAt: datetime("usedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [index("owner_recovery_codes_user_idx").on(table.userId)]);
 
 export const rateSyncConfigurations = mysqlTable("rate_sync_configurations", {
   id: int("id").autoincrement().primaryKey(),

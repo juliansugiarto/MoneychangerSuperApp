@@ -3,7 +3,9 @@
  * CSS yang diisi `applyTheme`, bukan heks ini, sehingga berkas ini sengaja tidak masuk `FOUNDATION_FILES`.
  * Setiap pasangan dijaga AA oleh `themePalettes.test.ts`; palet yang gagal diperbaiki nilainya.
  */
-export type ThemePaletteId = "MARUN" | "ZAMRUD" | "SAMUDRA" | "TERAKOTA" | "ANGGUR" | "ARANG";
+/** Urutan ini juga urutan nilai enum `company_profile.themePalette`. Menambah palet berarti melebarkan enum dengan pola lebar → UPDATE → sempit, bukan redefinisi satu langkah. */
+export const THEME_PALETTE_IDS = ["MARUN", "ZAMRUD", "SAMUDRA", "TERAKOTA", "ANGGUR", "ARANG"] as const;
+export type ThemePaletteId = (typeof THEME_PALETTE_IDS)[number];
 
 export type ThemePalette = {
   id: ThemePaletteId;

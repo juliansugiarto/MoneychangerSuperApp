@@ -39,5 +39,7 @@ if (!profiles.length) {
   await db.query("INSERT INTO company_profile (legalEntityName, tradingName, timezone) VALUES (?, ?, ?)", ["PT Contoh Valuta Nusantara", "Contoh Valuta", "Asia/Jakarta"]);
   console.log("Profil Perusahaan contoh disisipkan.");
 }
+// Basis data visual dianggap sudah disiapkan; wizard dipotret lewat uji komponen, bukan baseline.
+await db.query("INSERT IGNORE INTO app_installation (id, setupCompletedAt) VALUES (1, UTC_TIMESTAMP())");
 await db.end();
 console.log(`${DATABASE} siap.`);
