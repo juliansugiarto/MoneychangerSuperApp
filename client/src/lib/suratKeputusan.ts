@@ -49,7 +49,7 @@ export const PIC_ROLE_DECREE_CODES: Record<string, string> = {
   NASABAH_RISIKO_TINGGI: "NRT",
 };
 
-/** Inisial badan hukum untuk nomor surat: "PT Ibu Kota Valasindo" -> "IKV". */
+/** Inisial badan hukum untuk nomor surat: "PT Contoh Valuta Nusantara" -> "CVN". */
 export function companyInitials(legalEntityName: string): string {
   const words = legalEntityName.replace(/^PT\.?\s+/i, "").split(/\s+/).filter(Boolean);
   return words.map((word) => word[0]?.toUpperCase() ?? "").join("").slice(0, 4) || "SK";

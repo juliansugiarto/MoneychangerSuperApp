@@ -175,7 +175,7 @@ function BankAccountsPanel() {
       {adding && canManage ? <div className="space-y-3 rounded-xl border border-[#cbd9e7] bg-[#f8fbfe] p-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <div><Label className="text-xs">Nama bank</Label><Input className="mt-1" value={form.bankName} onChange={(e) => setForm({ ...form, bankName: e.target.value })} placeholder="Contoh: BCA" /></div>
-          <div><Label className="text-xs">Nama pemilik rekening</Label><Input className="mt-1" value={form.accountHolderName} onChange={(e) => setForm({ ...form, accountHolderName: e.target.value })} placeholder="PT Ibukota Valasindo" /></div>
+          <div><Label className="text-xs">Nama pemilik rekening</Label><Input className="mt-1" value={form.accountHolderName} onChange={(e) => setForm({ ...form, accountHolderName: e.target.value })} placeholder="PT Contoh Valuta Nusantara" /></div>
           <div><Label className="text-xs">Nomor rekening</Label><Input className="mt-1" value={form.accountNumber} onChange={(e) => setForm({ ...form, accountNumber: e.target.value })} placeholder="Nomor rekening" /></div>
           <div>
             <Label className="text-xs">Mata uang</Label>

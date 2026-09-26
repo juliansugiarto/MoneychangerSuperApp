@@ -126,7 +126,7 @@ async function fetchBiTransactionRates() {
   const timeout = setTimeout(() => controller.abort(), 20_000);
   try {
     const response = await fetch(BI_TRANSACTION_RATES_URL, {
-      headers: { "user-agent": "IbukotaValasindo-RateSync/1.0" },
+      headers: { "user-agent": "AplikasiValuta-RateSync/1.0" },
       signal: controller.signal,
     });
     if (!response.ok) throw new Error(`Sumber BI merespons HTTP ${response.status}.`);
@@ -141,7 +141,7 @@ async function fetchJisdorRate() {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20_000);
   try {
-    const response = await fetch(BI_JISDOR_URL, { headers: { "user-agent": "IbukotaValasindo-RateSync/1.0" }, signal: controller.signal });
+    const response = await fetch(BI_JISDOR_URL, { headers: { "user-agent": "AplikasiValuta-RateSync/1.0" }, signal: controller.signal });
     if (!response.ok) throw new Error(`Sumber JISDOR merespons HTTP ${response.status}.`);
     const body = await response.text();
     return { parsed: parseJisdorRate(body), payloadHash: createHash("sha256").update(body).digest("hex") };

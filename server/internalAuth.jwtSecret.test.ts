@@ -23,8 +23,8 @@ describe("assertSessionSigningSecret", () => {
       const configuredKey = new TextEncoder().encode(ENV.cookieSecret);
       const { payload } = await jwtVerify(token, configuredKey, {
         algorithms: ["HS256"],
-        issuer: "ibukota-valasindo-internal",
-        audience: "ibukota-valasindo-backoffice",
+        issuer: "aplikasi-valuta-internal",
+        audience: "aplikasi-valuta-backoffice",
       });
       expect(payload.sub).toBe("81");
       expect(payload.userId).toBe(81);
@@ -50,9 +50,11 @@ describe("assertSessionSigningSecret", () => {
           .setExpirationTime("1h")
           .sign(key);
 
-      await expect(verifyInternalSessionToken(await createTokenWith("issuer-lain", "ibukota-valasindo-backoffice", "81"))).resolves.toBeNull();
-      await expect(verifyInternalSessionToken(await createTokenWith("ibukota-valasindo-internal", "audience-lain", "81"))).resolves.toBeNull();
-      await expect(verifyInternalSessionToken(await createTokenWith("ibukota-valasindo-internal", "ibukota-valasindo-backoffice", "99"))).resolves.toBeNull();
+      await expect(verifyInternalSessionToken(await createTokenWith("issuer-lain", "aplikasi-valuta-backoffice", "81"))).resolves.toBeNull();
+      // Nama penerbit lama milik satu perusahaan (sebelum 26 September 2026): sesinya berakhir, pengguna masuk ulang sekali.
+      await expect(verifyInternalSessionToken(await createTokenWith("ibukota-valasindo-internal", "ibukota-valasindo-backoffice", "81"))).resolves.toBeNull();
+      await expect(verifyInternalSessionToken(await createTokenWith("aplikasi-valuta-internal", "audience-lain", "81"))).resolves.toBeNull();
+      await expect(verifyInternalSessionToken(await createTokenWith("aplikasi-valuta-internal", "aplikasi-valuta-backoffice", "99"))).resolves.toBeNull();
     } finally {
       ENV.cookieSecret = originalSecret;
     }

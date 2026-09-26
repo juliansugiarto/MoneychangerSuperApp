@@ -11,8 +11,8 @@ import { createInternalUser, getInternalUserById, getInternalUserByUsername, tou
 
 const scryptAsync = promisify(scrypt);
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
-const SESSION_ISSUER = "ibukota-valasindo-internal";
-const SESSION_AUDIENCE = "ibukota-valasindo-backoffice";
+const SESSION_ISSUER = "aplikasi-valuta-internal";
+const SESSION_AUDIENCE = "aplikasi-valuta-backoffice";
 const MINIMUM_SESSION_SECRET_BYTES = 20;
 const DEVELOPMENT_TEST_ACCOUNTS = [
   { username: "test-shareholder", name: "Development Shareholder", role: "SHAREHOLDER" as const },

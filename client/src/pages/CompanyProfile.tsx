@@ -195,8 +195,8 @@ export default function CompanyProfile() {
       <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Data badan usaha</CardTitle><CardDescription>Nama PT dan nama moneychanger wajib diisi; sisanya opsional tapi disarankan untuk pelaporan regulator.</CardDescription></CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div><Label className="text-xs">Nama PT (badan hukum)</Label><Input autoComplete="off" className="mt-1" value={form.legalEntityName} onChange={(e) => setForm({ ...form, legalEntityName: e.target.value })} placeholder="PT Ibukota Valasindo" /></div>
-          <div><Label className="text-xs">Nama moneychanger (dagang)</Label><Input autoComplete="off" className="mt-1" value={form.tradingName} onChange={(e) => setForm({ ...form, tradingName: e.target.value })} placeholder="Ibukota Valasindo" /></div>
+          <div><Label className="text-xs">Nama PT (badan hukum)</Label><Input autoComplete="off" className="mt-1" value={form.legalEntityName} onChange={(e) => setForm({ ...form, legalEntityName: e.target.value })} placeholder="PT Contoh Valuta Nusantara" /></div>
+          <div><Label className="text-xs">Nama moneychanger (dagang)</Label><Input autoComplete="off" className="mt-1" value={form.tradingName} onChange={(e) => setForm({ ...form, tradingName: e.target.value })} placeholder="Contoh Valuta" /></div>
           <div><Label className="text-xs">Nomor izin usaha (KUPVA BB)</Label><Input autoComplete="off" className="mt-1" value={form.licenseNumber} onChange={(e) => setForm({ ...form, licenseNumber: e.target.value })} /></div>
           <div><Label className="text-xs">Kode KUPVA</Label><Input autoComplete="off" className="mt-1" value={form.kupvaCode} onChange={(e) => setForm({ ...form, kupvaCode: e.target.value })} /></div>
           <div><Label className="text-xs">NPWP</Label><Input autoComplete="off" className="mt-1" value={form.npwp} onChange={(e) => setForm({ ...form, npwp: e.target.value })} /></div>

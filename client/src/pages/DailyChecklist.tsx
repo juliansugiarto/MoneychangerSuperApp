@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { printedCompany } from "@/lib/printedCompany";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,6 +43,7 @@ export default function DailyChecklist() {
   const utils = trpc.useUtils();
   const { data: checklist, isLoading } = trpc.dailyChecklist.today.useQuery();
   const { data: stockRows } = trpc.stockOpname.list.useQuery();
+  const { data: companyProfile } = trpc.companyProfile.get.useQuery();
   const [openingChecks, setOpeningChecks] = useState<Record<string, boolean>>({});
   const [closingChecks, setClosingChecks] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState("");
@@ -72,7 +74,7 @@ export default function DailyChecklist() {
     const opnameRows = todayOpnames.length ? todayOpnames.map(({ opname, currency }) => `<tr><td>${escapeHtml(currency.code)}</td><td>${escapeHtml(opname.closingSystemBalance)}</td><td>${escapeHtml(opname.physicalBalance)}</td><td>${escapeHtml(opname.variance)}</td><td>${escapeHtml(opname.reconciliationStatus)}</td></tr>`).join("") : `<tr><td colspan=5>Tidak ada stock opname pada tanggal ini.</td></tr>`;
     const win = window.open("", "_blank");
     if (!win) return toast.error("Izinkan pop-up browser untuk menyimpan PDF atau mencetak ringkasan penutupan.");
-    win.document.write(`<!doctype html><title>Penutupan outlet ${escapeHtml(formatBusinessDate(checklist.businessDate))}</title><style>body{font-family:Arial;color:#18395f;margin:34px;line-height:1.4}h1{margin:0 0 6px;font-size:22px}h2{margin:24px 0 8px;font-size:16px}p{font-size:12px}table{border-collapse:collapse;width:100%;margin-top:10px}td,th{border:1px solid #94a7b8;padding:8px;font-size:12px;text-align:left}.archive{margin:12px 0;padding:8px;border:1px dashed #55748e;font-size:10px;letter-spacing:.07em}.sign{display:flex;justify-content:space-between;margin:60px 60px 0;text-align:center;font-size:12px}</style><h1>PT IBU KOTA VALASINDO</h1><p>Jl. Mangun Sarkoro No 35, Cianjur, Jawa Barat 43214</p><div class=archive>ARSIP RINGKASAN PENUTUPAN OUTLET · ${escapeHtml(formatBusinessDate(checklist.businessDate))} · CETAK / SIMPAN PDF ${escapeHtml(new Date().toLocaleString("id-ID"))}</div><h2>Checklist penutupan</h2><table><tr><th>Langkah</th><th>Status</th></tr>${closingRows}</table><h2>Stock opname & rekonsiliasi</h2><table><tr><th>Valuta</th><th>Saldo sistem</th><th>Fisik</th><th>Varians</th><th>Status</th></tr>${opnameRows}</table><h2>Catatan operasional</h2><p>${escapeHtml(checklist.notes || "Tidak ada catatan.")}</p><div class=sign><span>Petugas penutupan<br><br><br>__________________</span><span>Supervisor / Direksi mengetahui<br><br><br>__________________</span></div><script>window.print()</script>`);
+    win.document.write(`<!doctype html><title>Penutupan outlet ${escapeHtml(formatBusinessDate(checklist.businessDate))}</title><style>body{font-family:Arial;color:#18395f;margin:34px;line-height:1.4}h1{margin:0 0 6px;font-size:22px}h2{margin:24px 0 8px;font-size:16px}p{font-size:12px}table{border-collapse:collapse;width:100%;margin-top:10px}td,th{border:1px solid #94a7b8;padding:8px;font-size:12px;text-align:left}.archive{margin:12px 0;padding:8px;border:1px dashed #55748e;font-size:10px;letter-spacing:.07em}.sign{display:flex;justify-content:space-between;margin:60px 60px 0;text-align:center;font-size:12px}</style><h1>${escapeHtml(printedCompany(companyProfile).legalName)}</h1><p>${escapeHtml(printedCompany(companyProfile).address)}</p><div class=archive>ARSIP RINGKASAN PENUTUPAN OUTLET · ${escapeHtml(formatBusinessDate(checklist.businessDate))} · CETAK / SIMPAN PDF ${escapeHtml(new Date().toLocaleString("id-ID"))}</div><h2>Checklist penutupan</h2><table><tr><th>Langkah</th><th>Status</th></tr>${closingRows}</table><h2>Stock opname & rekonsiliasi</h2><table><tr><th>Valuta</th><th>Saldo sistem</th><th>Fisik</th><th>Varians</th><th>Status</th></tr>${opnameRows}</table><h2>Catatan operasional</h2><p>${escapeHtml(checklist.notes || "Tidak ada catatan.")}</p><div class=sign><span>Petugas penutupan<br><br><br>__________________</span><span>Supervisor / Direksi mengetahui<br><br><br>__________________</span></div><script>window.print()</script>`);
     win.document.close();
   };
 

@@ -1,4 +1,5 @@
 import { formatIdrDecimal } from "@/lib/money";
+import { printedCompany } from "@/lib/printedCompany";
 import { formatNotaDate } from "./transactions/notaDate";
 import { toast } from "sonner";
 
@@ -45,10 +46,12 @@ export function printBon(transaction: any, customer: Customer | null, lines: Pri
   // Finding 4 of the 2026 examination: the nota did not show the identity of the penyelenggara
   // KUPVA BB. The legal entity name leads, with the trading name and the licence identifiers
   // beneath it, because those are what identify the licence holder rather than the shopfront.
-  const legalName = company?.legalEntityName || company?.tradingName || "IBUKOTA VALASINDO";
-  const companyName = company?.tradingName || legalName;
-  const companyAddress = company?.address || "Jl. Mangun Sarkoro No 35, Cianjur, Jawa Barat 43214";
-  const companyPhone = company?.phone || "+62 263-265500 / +62 263-265600";
+  // Hanya dari Profil Perusahaan; isian kosong dicetak "belum diisi", tidak pernah identitas perusahaan lain.
+  const companyIdentity = printedCompany(company);
+  const legalName = companyIdentity.legalName;
+  const companyName = companyIdentity.tradingName;
+  const companyAddress = companyIdentity.address;
+  const companyPhone = companyIdentity.phone;
   const hasLogo = Boolean(company?.logoUrl);
   const logoImg = hasLogo ? `<img id="bon-logo" src="${escapeHtml(company!.logoUrl)}" alt="Logo" onload="window.__bonPrint()" onerror="window.__bonPrint()">` : `<div class="logo-fallback">${escapeHtml(companyName.slice(0, 1))}</div>`;
   const isSell = transaction.operation === "SELL"; // SELL = kita jual valuta ke nasabah = KWITANSI JUAL
@@ -116,7 +119,7 @@ export function printBon(transaction: any, customer: Customer | null, lines: Pri
       <div class="doc"><p class="title">${title}</p><p class="subtitle">${subtitle} &middot; ${typeCode}</p></div>
       <div class="no-box"><span class="no-value">No: ${escapeHtml(transaction.receiptNumber ?? "-")}</span><span class="no-date">${escapeHtml(formatNotaDate(transaction.transactionAt, company?.timezone))}</span></div>
     </div>
-    <p class="contact">${escapeHtml(companyAddress)} &middot; ${escapeHtml(companyPhone)}${licenceBits ? ` &middot; ${licenceBits}` : ""}</p>
+    <p class="contact">${escapeHtml(companyAddress)}${companyPhone ? ` &middot; ${escapeHtml(companyPhone)}` : ""}${licenceBits ? ` &middot; ${licenceBits}` : ""}</p>
     <div class="details">
       <div>
         <div class="row"><span class="label">Nama</span><span class="value">${escapeHtml(name)}</span></div>
