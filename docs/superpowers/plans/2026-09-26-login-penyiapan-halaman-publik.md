@@ -28,7 +28,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 12 — Pengguna & peran
 - [x] Tugas 13 — Profil Perusahaan: Tampilan dan Halaman publik; tema dipasang shell
 - [x] Tugas 14 — Halaman depan publik
-- [ ] Tugas 15 — Peragaan end-to-end, Playwright, dokumentasi, penutupan
+- [ ] Tugas 15 — Peragaan end-to-end, Playwright, dokumentasi, penutupan *(Step 3 dan 7 menunggu: ajakan pemilik di `moneychanger` perlu pengguna masuk sendiri)*
 
 Urutan mengikat: 1 sebelum semuanya; 2 sebelum 5 dan 6; 3 sebelum 4; 4 sebelum 5 dan 6; 5 sebelum 6 dan 11; 6 sebelum 7 (`readPublicProfile` memakai `isSetupRequired`); 6 dan 7 sebelum 9; 9 sebelum 10, 11, 14; 7 sebelum 13 dan 14; 8 boleh kapan saja sesudah 6; 1–14 sebelum 15.
 
@@ -4498,7 +4498,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Consumes: seluruh tugas sebelumnya.
 - Produces: bukti peragaan, baseline visual, dokumentasi, serah terima.
 
-- [ ] **Step 1: Peragaan penyiapan di `mc_t_abcvalas`**
+- [x] **Step 1: Peragaan penyiapan di `mc_t_abcvalas`**
 
 `mc_t_abcvalas` tidak punya Pemegang Saham, jadi migrasi `0061` tidak menandainya (Tugas 1 Step 8). Seluruh data di bawah adalah **data uji lokal**, yang diizinkan tanpa bertanya; kata sandi uji dan kode yang tampil **tidak** ditulis ke dokumen, commit, maupun tangkapan layar.
 
@@ -4522,7 +4522,7 @@ mysql -u root mc_t_abcvalas -e "SELECT setupCompletedAt, setupCodeHash FROM app_
 
 Expected: `setupCompletedAt` terisi, `setupCodeHash` NULL; satu baris `pemilik.abc` (plus `test-shareholder` bila server pengembangan pernah membuatnya — itu akun pengembangan, bukan hasil wizard); sisa 8; satu `INSTALLATION_SETUP_COMPLETED`.
 
-- [ ] **Step 2: Peragaan pemulihan, pembatas, tampilan, dan halaman publik**
+- [x] **Step 2: Peragaan pemulihan, pembatas, tampilan, dan halaman publik**
 
 1. Keluar. `/pulihkan`: `pemilik.abc` + satu kode dari berkas yang tadi dibaca + kata sandi baru → masuk ke `/operasional`. Pakai kode yang sama sekali lagi → "…sudah pernah dipakai". SQL: sisa 7, satu `OWNER_RECOVERY_CODE_USED`.
 2. Keluar. Lima kali kata sandi salah untuk `pemilik.abc` → percobaan keenam menampilkan "Coba lagi dalam 30 detik." sebagai `alert`.
@@ -4535,7 +4535,7 @@ Expected: `setupCompletedAt` terisi, `setupCodeHash` NULL; satu baris `pemilik.a
 
 `test-shareholder` di `moneychanger` belum punya kode pemulihan — sama dengan pemilik produksi sesudah penerapan. **Minta pengguna masuk sendiri** sebagai Pemegang Saham (Claude tidak mengetik kata sandi akun pengembangan). Harapan: ajakan "Anda belum punya kode pemulihan…" tampil di atas isi; "Buat kode pemulihan" → `/operasional/kode-pemulihan` → kata sandi saat ini → delapan kode → "Selesai" → ajakan hilang. Menu pengguna memuat "Kode pemulihan"; untuk Controller tidak.
 
-- [ ] **Step 4: Baseline Playwright**
+- [x] **Step 4: Baseline Playwright**
 
 `e2e/masuk.spec.ts`:
 
@@ -4594,7 +4594,7 @@ ADMIN_DATABASE_URL=mysql://root@127.0.0.1:3306/ node scripts/visualDb.mjs
 
 Expected: jalan pertama membuat 12 baseline baru; jalan kedua **55 lulus** (42 `fondasi.spec.ts` + 13 `masuk.spec.ts`). Langkah-langkah wizard sendiri **tidak** dipotret: `mc_t_visual` sengaja sudah disiapkan (Tugas 1 Step 9) supaya baseline shell tidak berubah menjadi wizard; wizard dibuktikan uji komponen Tugas 10 dan peragaan Step 1 — penyimpangan sadar dari bunyi spec §Verifikasi, catat di serah terima. **Lihat** setiap tangkapan baru sebelum di-commit — bukan hanya jumlah lulusnya. Bila `fondasi.spec.ts` gagal, **jangan** memperbarui baselinenya otomatis: `test-controller` tidak melihat ajakan kode pemulihan dan palet `mc_t_visual` tetap Marun, jadi selisih apa pun adalah temuan yang harus diterangkan dulu.
 
-- [ ] **Step 5: Dokumentasi**
+- [x] **Step 5: Dokumentasi**
 
 `docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md`:
 - §3 "Sebelum Hari Pertama Penggunaan": instalasi baru — penginstal menjalankan `node scripts/tenant.mjs setup-code` di server; pemilik membuka alamat aplikasi, mengisi wizard tiga langkah, lalu **mencetak atau mengunduh delapan kode pemulihan** dan menyimpannya terpisah dari kata sandi. Instalasi yang sudah berjalan tidak melihat wizard; pemiliknya diajak membuat kode pemulihan saat masuk.
@@ -4604,7 +4604,7 @@ Expected: jalan pertama membuat 12 baseline baru; jalan kedua **55 lulus** (42 `
 
 `docs/SKEMA-DATABASE-PROJECT.md`: tabel `app_installation` dan `owner_recovery_codes` (kolom, arti, "hanya hash"), delapan kolom baru `company_profile`, migrasi `0060` (aditif) dan `0061` (isian bersyarat: hanya instalasi yang sudah punya Pemegang Saham).
 
-- [ ] **Step 6: Perintah mutu akhir**
+- [x] **Step 6: Perintah mutu akhir**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a; export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"

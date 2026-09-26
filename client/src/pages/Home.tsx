@@ -44,7 +44,7 @@ export default function Home() {
           <a href="/login" className={`inline-flex shrink-0 items-center ${OUTLINE_BUTTON}`}>Masuk staf</a>
         </div>
       </header>
-      <main className="mx-auto grid max-w-5xl gap-6 px-gutter py-6">
+      <main className="mx-auto grid max-w-5xl grid-cols-1 gap-6 px-gutter py-6">
         <section aria-labelledby="kurs-hari-ini">
           <h1 id="kurs-hari-ini" className="font-heading text-title font-extrabold tracking-tight">Kurs {brand} hari ini</h1>
           <p className="mt-1 text-body text-ink-muted">{latest ? `Diperbarui ${updatedFormat.format(latest)} WIB. ` : ""}Kurs bersifat indikatif; petugas mengonfirmasi harga dan ketersediaan sebelum transaksi.</p>

@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { createConnection } from "mysql2/promise";
 import { describe, expect, it } from "vitest";
 import { getDb } from "./db";
 import { TenantResolutionError, runWithTenant } from "./tenantContext";
@@ -24,6 +25,23 @@ describe.skipIf(!runnable)("isolasi tenant terhadap database sungguhan", () => {
     const rows = await db.execute(sql`SELECT COUNT(*) AS total FROM users`);
     return Number((rows[0] as unknown as Array<{ total: number }>)[0].total);
   };
+  const openDatabase = async () => {
+    const db = await getDb();
+    if (!db) throw new Error("database tidak tersedia");
+    const rows = await db.execute(sql`SELECT DATABASE() AS name`);
+    return String((rows[0] as unknown as Array<{ name: string }>)[0].name);
+  };
+  /** Hitungan lewat sambungan langsung, di luar ikatan tenant — pembanding yang tidak bergantung isi data. */
+  const directCount = async (url: string) => {
+    const connection = await createConnection({ uri: url });
+    try {
+      const [rows] = await connection.query("SELECT COUNT(*) AS total FROM users");
+      return Number((rows as Array<{ total: number }>)[0].total);
+    } finally {
+      await connection.end();
+    }
+  };
+  const databaseNameOf = (url: string) => new URL(url).pathname.slice(1);
 
   it("setiap ikatan hanya melihat database miliknya sendiri", async () => {
     const inPrimary = await runWithTenant(
@@ -36,10 +54,15 @@ describe.skipIf(!runnable)("isolasi tenant terhadap database sungguhan", () => {
     );
 
     // Query yang dijalankan identik — "SELECT COUNT(*) FROM users", tanpa penyaring tenant sama
-    // sekali — namun hasilnya berbeda karena database yang terbuka memang berbeda.
-    expect(inPrimary).toBeGreaterThan(0);
-    expect(inSecondary).toBe(0);
-    expect(inPrimary).not.toBe(inSecondary);
+    // sekali — namun tiap ikatan menjawab dari database miliknya sendiri. Dulu uji ini menuntut
+    // database kedua kosong; sejak sub-proyek 2, `mc_t_abcvalas` adalah basis data peragaan wizard
+    // dan punya akun, jadi yang dipaku kini nama database yang terbuka dan kecocokan hitungannya
+    // dengan sambungan langsung — tidak bergantung isi data.
+    expect(await runWithTenant({ kind: "resolved", tenantCode: "ibukota", databaseUrl: primary! }, openDatabase)).toBe(databaseNameOf(primary!));
+    expect(await runWithTenant({ kind: "resolved", tenantCode: "abcvalas", databaseUrl: secondary! }, openDatabase)).toBe(databaseNameOf(secondary!));
+    expect(databaseNameOf(primary!)).not.toBe(databaseNameOf(secondary!));
+    expect(inPrimary).toBe(await directCount(primary!));
+    expect(inSecondary).toBe(await directCount(secondary!));
   });
 
   it("ikatan kembali seperti semula setelah permintaan selesai", async () => {
@@ -57,12 +80,12 @@ describe.skipIf(!runnable)("isolasi tenant terhadap database sungguhan", () => {
 
   it("dua tenant yang berjalan bersamaan tidak saling tertukar", async () => {
     const [a, b, c] = await Promise.all([
-      runWithTenant({ kind: "resolved", tenantCode: "ibukota", databaseUrl: primary! }, countUsers),
-      runWithTenant({ kind: "resolved", tenantCode: "abcvalas", databaseUrl: secondary! }, countUsers),
-      runWithTenant({ kind: "resolved", tenantCode: "ibukota", databaseUrl: primary! }, countUsers),
+      runWithTenant({ kind: "resolved", tenantCode: "ibukota", databaseUrl: primary! }, openDatabase),
+      runWithTenant({ kind: "resolved", tenantCode: "abcvalas", databaseUrl: secondary! }, openDatabase),
+      runWithTenant({ kind: "resolved", tenantCode: "ibukota", databaseUrl: primary! }, openDatabase),
     ]);
-    expect(b).toBe(0);
-    expect(a).toBe(c);
-    expect(a).toBeGreaterThan(0);
+    expect(a).toBe(databaseNameOf(primary!));
+    expect(b).toBe(databaseNameOf(secondary!));
+    expect(c).toBe(a);
   });
 });

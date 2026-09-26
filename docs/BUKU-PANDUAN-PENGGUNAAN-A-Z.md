@@ -38,6 +38,41 @@ Sistem menerapkan urutan kewenangan **Staff → Admin → Controller → Shareho
 
 ## 3. Sebelum Hari Pertama Penggunaan
 
+**Instalasi baru — penyiapan oleh pemilik.** Akun pemilik tidak dibuat dari berkas `.env`. Penginstal
+menjalankan `node scripts/tenant.mjs setup-code` (atau `setup-code <kode-tenant>`) di server; perintah itu
+menampilkan **kode penyiapan** 12 huruf yang berlaku 24 jam dan hanya tampil sekali. Pemilik membuka
+alamat aplikasi — setiap alamat mengarah ke **Siapkan perusahaan Anda** (`/siapkan`) — lalu:
+
+1. memasukkan kode penyiapan (huruf kecil, spasi, dan strip tidak masalah);
+2. membuat akun pemilik (Pemegang Saham): nama, username, kata sandi minimal 12 karakter;
+3. mengisi nama badan hukum, nama dagang, dan (boleh nanti) nomor izin KUPVA;
+4. **mencetak atau mengunduh delapan kode pemulihan**, menyimpannya terpisah dari kata sandi, lalu
+   mencentang *"Saya sudah menyimpannya"*. Kode ini tidak dapat ditampilkan lagi.
+
+Sesudah itu wizard menolak dibuka ulang dan perintah `setup-code` menolak dijalankan. Instalasi yang
+sudah berjalan sebelum fitur ini tidak pernah melihat wizard; pemiliknya diajak membuat kode pemulihan
+saat masuk (lihat bagian berikut).
+
+### Masuk, lupa kata sandi, dan kode pemulihan
+
+- **Lima kegagalan masuk** dalam 15 menit untuk username atau alamat IP yang sama mengunci percobaan
+  berikutnya selama 30 detik; setiap penguncian berikutnya berlipat dua sampai paling lama 15 menit.
+  Pesannya menyebut sisa detiknya. Username yang tidak ada diperlakukan sama, sehingga pesan gagal tidak
+  membocorkan akun mana yang ada.
+- **Pemilik yang lupa kata sandi** membuka tautan *Lupa kata sandi pemilik?* (`/pulihkan`), mengisi
+  username pemilik, **satu** kode pemulihan, dan kata sandi baru. Kode itu langsung hangus, seluruh sesi
+  lama akun pemilik keluar, dan pemilik langsung masuk.
+- **Staf yang lupa kata sandi** meminta pemilik atau Controller mereset akunnya lewat **Pengguna & Hak
+  Akses**.
+- **Ajakan kode pemulihan.** Bila pemilik belum punya kode pemulihan, atau sisanya tinggal dua atau
+  kurang, bagian atas setiap layar menampilkan ajakan **Buat kode pemulihan**. Kode juga dapat dibuat
+  ulang kapan saja dari menu pengguna → **Kode pemulihan** (`/operasional/kode-pemulihan`, hanya
+  Pemegang Saham) dengan kata sandi saat ini. **Membuat ulang membatalkan seluruh kode lama** yang belum
+  terpakai.
+- Kehilangan seluruh kode pemulihan **dan** kata sandi pemilik tidak dapat dipulihkan dari aplikasi.
+
+### Pemeriksaan bersama sebelum data nyata
+
 Controller dan Shareholder harus melakukan pemeriksaan berikut bersama-sama sebelum data nyata dimasukkan. Lakukan pada browser desktop modern yang diperbarui, gunakan jaringan kantor yang stabil, dan pastikan tiap orang memiliki akun sendiri. Jangan berbagi username atau kata sandi.
 
 1. Masuk menggunakan akun internal yang diberikan oleh pengelola akses.
@@ -83,8 +118,8 @@ hanya mengembang (**Uang Kas**, **Kurs**) — ditulis `Kelompok → Induk → Me
 | Kepatuhan | Untuk Diketahui Direksi | Daftar informasi pengawasan yang perlu diakui Direksi (dahulu "Direksi Mengetahui"). | Controller |
 | Kepatuhan | Laporan ke Regulator | LKU, snapshot B0002/B0003/B0004, insidental, maker-checker, dan ekspor manual (dahulu "Pelaporan Regulator"). | Controller |
 | Kepatuhan | Arsip Dokumen | SOP, kebijakan internal, surat-menyurat BI, notulen rapat, dan korespondensi regulator, beserta riwayat versi dan masa berlakunya. | Controller |
-| Pengaturan | Pengguna & Hak Akses | Membuat, mengatur peran, menonaktifkan, mereset sandi, atau meninjau akun. Dashboard Shareholder menyediakan pintasan khusus untuk Admin dan Staff (dahulu "Akses Staf" di kelompok Pengawasan). | Controller |
-| Pengaturan | Profil Perusahaan | Nama PT, nama dagang, izin usaha, logo, dan lampiran sertifikat — tampil di kwitansi cetak. | Controller |
+| Pengaturan | Pengguna & Hak Akses | Layar "Siapa saja yang boleh masuk?": daftar akun dengan panel detail (pilih baris; `Esc` menutup), membuat akun, mengatur peran Admin/Staf, menonaktifkan lewat dialog yang menyebut nama akunnya, dan mereset sandi lewat dialog (sandi sementara diketik dua kali). Dashboard Shareholder menyediakan pintasan khusus untuk Admin dan Staff (dahulu "Akses Staf" di kelompok Pengawasan). | Controller |
+| Pengaturan | Profil Perusahaan | Nama PT, nama dagang, izin usaha, logo, dan lampiran sertifikat — tampil di kwitansi cetak. Juga bagian **Tampilan** (palet dan warna utama) dan **Halaman publik** (isi halaman kurs di alamat utama). | Controller |
 | Pengaturan | Langkah Persiapan Awal | Checklist kesiapan penggunaan produksi (dahulu "Mulai Go-Live" di kelompok Pengawasan). | Controller |
 
 ### Mencari halaman dengan cepat
@@ -214,6 +249,19 @@ Alasannya: kas awal **pertama** untuk sebuah mata uang tidak dijurnal — kalau 
    - Logo yang sedang dipakai tidak dapat dinonaktifkan maupun dihapus; ganti logonya lebih dulu.
    - Tidak ada lagi tombol tong sampah satu klik. Kedua tindakan selalu lewat dialog.
 5. Nama moneychanger, alamat, dan telepon di sini otomatis dipakai di kwitansi cetak (menggantikan header baku bila sudah diisi).
+6. **Tampilan.** Pilih satu dari enam palet (Marun, Zamrud, Samudra, Terakota, Anggur, Arang); contoh
+   warnanya dan pratinjau ubin serta tombol tampil sebelum disimpan. **Warna utama sendiri** (kode heks,
+   mis. `#7A1F2E`) boleh diisi, tetapi hanya disimpan bila kontrasnya dengan teks di atasnya minimal
+   **4,5:1**; bila kurang, layar menyebut rasio terbaiknya dan tombol **Simpan tampilan** tertahan.
+   Kosongkan untuk memakai warna palet. Palet dipakai seluruh aplikasi, halaman masuk, wizard, dan
+   halaman kurs publik. Perubahan tercatat di log audit (`COMPANY_APPEARANCE_UPDATED`).
+7. **Halaman publik.** Sakelar **Tampilkan halaman kurs publik** — selama mati, alamat `/` langsung
+   membuka halaman masuk staf. Isian: telepon kedua, jam buka, tautan peta (hanya `https://`), sampai
+   **12 pertanyaan umum** (tambah, naik/turun, hapus), dan peringatan penipuan. Alamat dan telepon utama
+   diambil dari isian di atas. **Bagian yang kosong disembunyikan**; FAQ dan peringatan yang kosong
+   memakai teks umum bawaan tanpa nama perusahaan. Halaman publik tidak pernah menampilkan nomor izin,
+   NPWP, kode BI/PPATK/goAML, maupun email. Perubahan tercatat di log audit
+   (`COMPANY_PUBLIC_PAGE_UPDATED`). Kedua bagian hanya dapat disimpan sesudah Data badan usaha disimpan.
 
 ### 5.9 Pencatatan Pengeluaran — Staff ke atas
 
@@ -749,7 +797,7 @@ Menu **Simulasi Aman** dirancang untuk latihan bon, guncangan kurs, penutupan, d
 Dashboard Shareholder memiliki bagian **Manajemen pengguna** untuk memudahkan pengelolaan akun **Admin** dan **Staff** tanpa mencari menu terlebih dahulu. Bagian ini menampilkan jumlah Admin, Staff, dan akun nonaktif; angka tersebut adalah ringkasan akses, bukan ukuran kinerja pegawai.
 
 1. Masuk memakai akun Shareholder pribadi. Jika sandi baru direset, selesaikan perubahan sandi wajib terlebih dahulu.
-2. Dari **Hari Ini**, gunakan **Buat akun Admin** atau **Buat akun Staff**. Halaman **Akses Staf** terbuka dengan peran yang dipilih sudah terisi.
+2. Dari **Hari Ini**, gunakan **Buat akun Admin** atau **Buat akun Staff**. Halaman **Pengguna & Hak Akses** terbuka dengan peran yang dipilih sudah terisi pada formulir **Buat akun baru**.
 3. Isi nama, username unik, dan sandi sementara minimal 12 karakter. Sampaikan sandi sementara melalui kanal internal yang aman.
 4. Akun baru wajib mengganti sandi sendiri pada login pertama sebelum dapat membuka back office.
 5. Gunakan **Kelola seluruh akun** untuk meninjau status, mengubah peran antara Admin dan Staff, menonaktifkan akun, atau mereset sandi akun kerja.
