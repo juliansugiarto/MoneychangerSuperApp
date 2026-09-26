@@ -17,7 +17,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 1 — Skema, migrasi aditif `0060`, isian `0061`, dan basis data visual
 - [x] Tugas 2 — Kode rahasia bersama dan perintah `tenant.mjs setup-code`
 - [x] Tugas 3 — Pembatas percobaan masuk (`server/loginThrottle.ts`)
-- [ ] Tugas 4 — IP asli di balik nginx dan `auth.login` yang dibatasi
+- [x] Tugas 4 — IP asli di balik nginx dan `auth.login` yang dibatasi
 - [ ] Tugas 5 — Kode pemulihan pemilik di server
 - [ ] Tugas 6 — Penyiapan awal di server (`setup.complete`)
 - [ ] Tugas 7 — Profil publik dan penulis Tampilan/Halaman publik
@@ -813,7 +813,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Consumes: `throttleKeys`, `authThrottle`, `assertThrottleAllows` (Tugas 3); `currentTenantCode()` dari `server/tenantContext.ts`.
 - Produces: `configureProxyTrust(app: Express): void`, `clientIpOf(req: { ip?: string }): string`; `LOGIN_FAILED_MESSAGE` di `server/routers.ts` (tidak diekspor). `verifyInternalCredentials` tidak lagi melempar untuk username berformat salah — ia mengembalikan `null`.
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 `server/proxyTrust.test.ts`:
 
@@ -912,7 +912,7 @@ describe("auth.login dibatasi", () => {
 Run: `./node_modules/.bin/vitest run server/proxyTrust.test.ts server/authThrottle.router.test.ts`
 Expected: FAIL — `./proxyTrust` tidak ada; uji router gagal karena login belum dibatasi dan format username menghasilkan pesan lain.
 
-- [ ] **Step 2: Tulis `server/proxyTrust.ts`**
+- [x] **Step 2: Tulis `server/proxyTrust.ts`**
 
 ```ts
 import type { Express } from "express";
@@ -939,7 +939,7 @@ Pada `server/_core/index.ts`, tambah impor `import { configureProxyTrust } from 
 
 Ini perubahan `server/_core` yang dituntut spec §3 (IP asli); dicatat di pesan commit.
 
-- [ ] **Step 3: Samakan pesan dan waktu `verifyInternalCredentials`**
+- [x] **Step 3: Samakan pesan dan waktu `verifyInternalCredentials`**
 
 Ganti fungsi `verifyInternalCredentials` di `server/internalAuth.ts` dengan:
 
@@ -970,7 +970,7 @@ export async function verifyInternalCredentials(username: string, password: stri
 }
 ```
 
-- [ ] **Step 4: Batasi `auth.login` di `server/routers.ts`**
+- [x] **Step 4: Batasi `auth.login` di `server/routers.ts`**
 
 Tambah impor:
 
@@ -1003,17 +1003,17 @@ Ganti prosedur `login`:
     }),
 ```
 
-- [ ] **Step 5: Jalankan uji**
+- [x] **Step 5: Jalankan uji**
 
 Run: `./node_modules/.bin/vitest run server/proxyTrust.test.ts server/authThrottle.router.test.ts server/internalAuth.developmentAccounts.test.ts server/internalAuth.bootstrap.test.ts`
 Expected: PASS — 3 + 4 uji baru, ditambah uji akun pengembangan dan bootstrap lama tetap lulus.
 
-- [ ] **Step 6: Perintah mutu**
+- [x] **Step 6: Perintah mutu**
 
 Run: `./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build`
 Expected: **`Test Files 195 passed`, `Tests 1628 passed | 2 skipped`** (+2 berkas, +7 uji).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add server/proxyTrust.ts server/proxyTrust.test.ts server/_core/index.ts server/internalAuth.ts server/routers.ts server/authThrottle.router.test.ts

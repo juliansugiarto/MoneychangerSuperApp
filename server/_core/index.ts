@@ -17,6 +17,7 @@ import { runWithTenant } from "../tenantContext";
 import { resolveTenant } from "../tenantRegistry";
 import { serveStatic, setupVite } from "./vite";
 import { isRoleAllowed } from "../../shared/backOfficeNavigation";
+import { configureProxyTrust } from "../proxyTrust";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -39,6 +40,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 async function startServer() {
   const app = express();
+  configureProxyTrust(app);
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));

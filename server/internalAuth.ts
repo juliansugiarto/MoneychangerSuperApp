@@ -147,10 +147,25 @@ export async function authenticateInternalRequest(req: Request): Promise<User> {
   return user;
 }
 
+let timingDummyHash: Promise<string> | null = null;
+
+/**
+ * Username yang tidak ada, berformat salah, atau nonaktif tetap menjalankan satu scrypt atas hash
+ * tiruan, supaya lamanya jawaban tidak membocorkan akun mana yang ada.
+ */
 export async function verifyInternalCredentials(username: string, password: string) {
-  const normalized = validateUsername(username);
-  const user = await getInternalUserByUsername(normalized);
-  if (!user || user.accountStatus !== "ACTIVE" || !user.passwordHash || (ENV.isProduction && isDevelopmentTestAccount(user))) return null;
+  let normalized: string | null = null;
+  try {
+    normalized = validateUsername(username);
+  } catch {
+    normalized = null;
+  }
+  const user = normalized ? await getInternalUserByUsername(normalized) : undefined;
+  if (!user || user.accountStatus !== "ACTIVE" || !user.passwordHash || (ENV.isProduction && isDevelopmentTestAccount(user))) {
+    timingDummyHash ??= hashSecret(randomBytes(16).toString("base64url"));
+    await verifyPassword(password, await timingDummyHash);
+    return null;
+  }
   const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) return null;
   await touchLastSignedIn(user.id);

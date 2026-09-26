@@ -174,7 +174,11 @@ import { createInternalUser, getInternalUserById, listInternalUsers, updateInter
 import type { TrpcContext } from "./_core/context";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { assertThrottleAllows, authThrottle, throttleKeys } from "./loginThrottle";
+import { clientIpOf } from "./proxyTrust";
+import { currentTenantCode } from "./tenantContext";
 
+const LOGIN_FAILED_MESSAGE = "Username atau kata sandi tidak valid.";
 const decimalString = z.string().trim().regex(/^\d+(\.\d+)?$/, "Masukkan angka desimal yang valid.");
 const workforceRole = z.enum(["ADMIN", "STAFF"]);
 const creatableRole = z.enum(["ADMIN", "STAFF", "CONTROLLER"]);
@@ -426,8 +430,14 @@ export const appRouter = router({
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user ? safeUser(opts.ctx.user) : null),
     login: publicProcedure.input(z.object({ username: z.string().trim(), password: z.string().min(1) })).mutation(async ({ input, ctx }) => {
+      const keys = throttleKeys("login", currentTenantCode(), input.username, clientIpOf(ctx.req));
+      assertThrottleAllows([keys.user, keys.ip]);
       const user = await verifyInternalCredentials(input.username, input.password);
-      if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Username atau kata sandi tidak valid." });
+      if (!user) {
+        authThrottle.recordFailure([keys.user, keys.ip]);
+        throw new TRPCError({ code: "UNAUTHORIZED", message: LOGIN_FAILED_MESSAGE });
+      }
+      authThrottle.recordSuccess(keys.user);
       await setInternalSession(ctx, user);
       return safeUser(user);
     }),
