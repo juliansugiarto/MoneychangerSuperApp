@@ -1,9 +1,9 @@
 import { and, count, eq, isNull, sql } from "drizzle-orm";
 import { auditLogs, ownerRecoveryCodes, users, type User } from "../drizzle/schema";
-import { RECOVERY_CODE_GROUPS, generateRecoveryCodes, normalizeSecretCode } from "../shared/secretCodes";
+import { RECOVERY_CODE_COUNT, RECOVERY_CODE_GROUPS, generateRecoveryCodes, normalizeSecretCode } from "../shared/secretCodes";
 import { ENV } from "./_core/env";
 import { getInternalUserById, getInternalUserByUsername } from "./db";
-import { assertPasswordPolicy, hashPassword, hashSecret, validateUsername, verifyPassword } from "./internalAuth";
+import { assertPasswordPolicy, hashPassword, hashSecret, timingDummySecretHash, validateUsername, verifyPassword } from "./internalAuth";
 import { databaseOrThrow } from "./operations";
 
 type Database = Awaited<ReturnType<typeof databaseOrThrow>>;
@@ -45,6 +45,27 @@ export async function regenerateRecoveryCodes(user: User, currentPassword: strin
  * `FOR UPDATE` di dalam transaksi, sehingga dua tab yang memakai kode yang sama bersamaan hanya
  * berhasil satu.
  */
+/**
+ * Hash yang diperiksa satu percobaan pemulihan: kode sungguhan yang belum terpakai, ditambah hash tiruan
+ * sampai genap delapan. Tanpa ini username yang bukan pemilik dijawab seketika sedangkan pemilik
+ * memakan sampai delapan scrypt — lamanya jawaban membocorkan siapa pemiliknya.
+ */
+export function paddedCodeCandidates(rows: readonly { id: number; codeHash: string }[], dummyHash: string): { id: number | null; codeHash: string }[] {
+  const candidates: { id: number | null; codeHash: string }[] = rows.map((row) => ({ id: row.id, codeHash: row.codeHash }));
+  while (candidates.length < RECOVERY_CODE_COUNT) candidates.push({ id: null, codeHash: dummyHash });
+  return candidates;
+}
+
+/** Memeriksa SEMUA kandidat tanpa berhenti di yang cocok, supaya jumlah scrypt selalu sama. */
+async function findMatchingCode(compact: string, candidates: { id: number | null; codeHash: string }[]): Promise<number | null> {
+  let matchedId: number | null = null;
+  for (const candidate of candidates) {
+    const matches = await verifyPassword(compact, candidate.codeHash);
+    if (matches && candidate.id !== null && matchedId === null) matchedId = candidate.id;
+  }
+  return matchedId;
+}
+
 export async function recoverOwnerAccount(input: { username: string; code: string; newPassword: string }): Promise<User | null> {
   assertPasswordPolicy(input.newPassword);
   let username: string;
@@ -53,21 +74,17 @@ export async function recoverOwnerAccount(input: { username: string; code: strin
   } catch {
     return null;
   }
-  const compact = normalizeSecretCode(input.code, RECOVERY_CODE_GROUPS);
-  if (!compact) return null;
+  // Kode berformat salah tetap diperiksa terhadap bentuk tiruan, bukan ditolak seketika.
+  const compact = normalizeSecretCode(input.code, RECOVERY_CODE_GROUPS) ?? "";
   const user = await getInternalUserByUsername(username);
-  if (!user || user.role !== "SHAREHOLDER" || user.accountStatus !== "ACTIVE" || (ENV.isProduction && user.loginMethod === "DEVELOPMENT_TEST")) return null;
+  const eligible = Boolean(compact && user && user.role === "SHAREHOLDER" && user.accountStatus === "ACTIVE" && !(ENV.isProduction && user.loginMethod === "DEVELOPMENT_TEST"));
 
   const db = await databaseOrThrow();
-  const unused = await db.select().from(ownerRecoveryCodes).where(and(eq(ownerRecoveryCodes.userId, user.id), isNull(ownerRecoveryCodes.usedAt)));
-  let matchedId: number | null = null;
-  for (const row of unused) {
-    if (await verifyPassword(compact, row.codeHash)) {
-      matchedId = row.id;
-      break;
-    }
-  }
-  if (matchedId === null) return null;
+  const unused = eligible
+    ? await db.select().from(ownerRecoveryCodes).where(and(eq(ownerRecoveryCodes.userId, user!.id), isNull(ownerRecoveryCodes.usedAt)))
+    : [];
+  const matchedId = await findMatchingCode(compact, paddedCodeCandidates(unused, await timingDummySecretHash()));
+  if (!eligible || !user || matchedId === null) return null;
   const codeId = matchedId;
 
   const passwordHash = await hashPassword(input.newPassword);

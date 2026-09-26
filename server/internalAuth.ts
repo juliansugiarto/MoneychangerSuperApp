@@ -148,6 +148,12 @@ export async function authenticateInternalRequest(req: Request): Promise<User> {
 
 let timingDummyHash: Promise<string> | null = null;
 
+/** Hash tiruan satu per proses, untuk menyamakan lamanya jawaban pada jalur yang tidak punya hash sungguhan. */
+export function timingDummySecretHash(): Promise<string> {
+  timingDummyHash ??= hashSecret(randomBytes(16).toString("base64url"));
+  return timingDummyHash;
+}
+
 /**
  * Username yang tidak ada, berformat salah, atau nonaktif tetap menjalankan satu scrypt atas hash
  * tiruan, supaya lamanya jawaban tidak membocorkan akun mana yang ada.
@@ -161,8 +167,7 @@ export async function verifyInternalCredentials(username: string, password: stri
   }
   const user = normalized ? await getInternalUserByUsername(normalized) : undefined;
   if (!user || user.accountStatus !== "ACTIVE" || !user.passwordHash || (ENV.isProduction && isDevelopmentTestAccount(user))) {
-    timingDummyHash ??= hashSecret(randomBytes(16).toString("base64url"));
-    await verifyPassword(password, await timingDummyHash);
+    await verifyPassword(password, await timingDummySecretHash());
     return null;
   }
   const valid = await verifyPassword(password, user.passwordHash);
