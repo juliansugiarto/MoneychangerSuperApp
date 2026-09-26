@@ -1,6 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { brandName } from "@/components/shell/brand";
-import { usePublicProfile } from "@/lib/publicProfile";
+import { authBrand, usePublicProfile } from "@/lib/publicProfile";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
 import { AuthFrame } from "./auth/AuthFrame";
@@ -23,7 +22,7 @@ export default function Login() {
   }, [profile.data?.setupRequired]);
 
   return (
-    <AuthFrame brand={brandName({ tradingName: profile.data?.tradingName })} logoUrl={profile.data?.logoUrl ?? null} title="Masuk" description="Pakai akun yang diberikan pemilik usaha Anda.">
+    <AuthFrame brand={authBrand(profile)} logoUrl={profile.data?.logoUrl ?? null} title="Masuk" description="Pakai akun yang diberikan pemilik usaha Anda.">
       <LoginForm onSubmit={(values) => { setError(null); login.mutate(values); }} isPending={login.isPending} errorMessage={error} />
     </AuthFrame>
   );

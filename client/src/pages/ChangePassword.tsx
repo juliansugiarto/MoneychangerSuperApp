@@ -1,10 +1,9 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { BOLD_BUTTON, OUTLINE_BUTTON, QUIET_FIELD } from "@/components/patterns/tebal";
-import { brandName } from "@/components/shell/brand";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { usePublicProfile } from "@/lib/publicProfile";
+import { authBrand, usePublicProfile } from "@/lib/publicProfile";
 import { trpc } from "@/lib/trpc";
 import { PASSWORD_MIN_LENGTH } from "@shared/accountRules";
 import { useEffect, useState, type FormEvent } from "react";
@@ -33,7 +32,7 @@ export default function ChangePassword() {
   }
 
   return (
-    <AuthFrame brand={brandName({ tradingName: profile.data?.tradingName })} logoUrl={profile.data?.logoUrl ?? null} title="Ganti kata sandi Anda" description="Akun baru atau akun yang direset wajib memakai kata sandi pribadi sebelum mulai bekerja.">
+    <AuthFrame brand={authBrand(profile)} logoUrl={profile.data?.logoUrl ?? null} title="Ganti kata sandi Anda" description="Akun baru atau akun yang direset wajib memakai kata sandi pribadi sebelum mulai bekerja.">
       <form onSubmit={submit} className="grid gap-3">
         <div className="grid gap-1">
           <Label htmlFor="current-password">Kata sandi saat ini</Label>

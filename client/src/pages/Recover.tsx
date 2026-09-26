@@ -1,5 +1,4 @@
-import { brandName } from "@/components/shell/brand";
-import { usePublicProfile } from "@/lib/publicProfile";
+import { authBrand, usePublicProfile } from "@/lib/publicProfile";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -17,7 +16,7 @@ export default function Recover() {
     onError: (failure) => setError(failure.message),
   });
   return (
-    <AuthFrame brand={brandName({ tradingName: profile.data?.tradingName })} logoUrl={profile.data?.logoUrl ?? null} title="Pulihkan akun pemilik" description="Hanya untuk Pemegang Saham. Seluruh sesi lama akun ini akan keluar.">
+    <AuthFrame brand={authBrand(profile)} logoUrl={profile.data?.logoUrl ?? null} title="Pulihkan akun pemilik" description="Hanya untuk Pemegang Saham. Seluruh sesi lama akun ini akan keluar.">
       <RecoverForm onSubmit={(values) => { setError(null); recover.mutate(values); }} isPending={recover.isPending} errorMessage={error} />
     </AuthFrame>
   );
