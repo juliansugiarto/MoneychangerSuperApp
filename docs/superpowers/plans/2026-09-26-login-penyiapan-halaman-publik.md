@@ -28,7 +28,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 12 — Pengguna & peran
 - [x] Tugas 13 — Profil Perusahaan: Tampilan dan Halaman publik; tema dipasang shell
 - [x] Tugas 14 — Halaman depan publik
-- [ ] Tugas 15 — Peragaan end-to-end, Playwright, dokumentasi, penutupan *(Step 3 dan 7 menunggu: ajakan pemilik di `moneychanger` perlu pengguna masuk sendiri)*
+- [x] Tugas 15 — Peragaan end-to-end, Playwright, dokumentasi, penutupan
 
 Urutan mengikat: 1 sebelum semuanya; 2 sebelum 5 dan 6; 3 sebelum 4; 4 sebelum 5 dan 6; 5 sebelum 6 dan 11; 6 sebelum 7 (`readPublicProfile` memakai `isSetupRequired`); 6 dan 7 sebelum 9; 9 sebelum 10, 11, 14; 7 sebelum 13 dan 14; 8 boleh kapan saja sesudah 6; 1–14 sebelum 15.
 
@@ -4531,7 +4531,7 @@ Expected: `setupCompletedAt` terisi, `setupCodeHash` NULL; satu baris `pemilik.a
 5. Matikan "Tampilkan halaman kurs publik" → `/` membuka `/login`. Nyalakan lagi.
 6. Hentikan server port 3200.
 
-- [ ] **Step 3: Peragaan ajakan pemilik di `moneychanger`**
+- [x] **Step 3: Peragaan ajakan pemilik di `moneychanger`**
 
 `test-shareholder` di `moneychanger` belum punya kode pemulihan — sama dengan pemilik produksi sesudah penerapan. **Minta pengguna masuk sendiri** sebagai Pemegang Saham (Claude tidak mengetik kata sandi akun pengembangan). Harapan: ajakan "Anda belum punya kode pemulihan…" tampil di atas isi; "Buat kode pemulihan" → `/operasional/kode-pemulihan` → kata sandi saat ini → delapan kode → "Selesai" → ajakan hilang. Menu pengguna memuat "Kode pemulihan"; untuk Controller tidak.
 
@@ -4617,7 +4617,7 @@ mysql -u root -e "SELECT COUNT(*) FROM moneychanger.__drizzle_migrations; SELECT
 
 Expected: **`Test Files 215 passed (215)`, `Tests 1700 passed | 2 skipped (1702)`** — +26 berkas dan +97 uji terhadap baseline 189/1603, dirinci per tugas di atas; `tsc` keluar 0 tanpa keluaran; build `✓ built`; **62 berkas SQL**, jurnal kedua basis data lokal **62**. Sebutkan angka yang benar-benar terlihat; setiap selisih diterangkan.
 
-- [ ] **Step 7: Centang, serah terima, commit**
+- [x] **Step 7: Centang, serah terima, commit**
 
 Centang seluruh baris Status Pengerjaan di rencana ini. Jalankan skill **`serah-terima`** untuk menulis ulang blok keadaan di `docs/superpowers/PROMPT-SESI.md` dari keadaan nyata, termasuk **risiko residual sub-proyek 2**:
 

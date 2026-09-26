@@ -70,13 +70,73 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 26 September 2026 (Sub-proyek 2 DIRANCANG, 0 dari 15 tugas; 1B SELESAI)
+## Sesi berikutnya — keadaan per 26 September 2026 (Sub-proyek 2 SELESAI, 15 dari 15 tugas)
 
-**Sub-proyek 2 (login, penyiapan awal, kode pemulihan, halaman kurs publik, pemilih palet) DIRANCANG
-26 September 2026 — belum ada satu baris kode aplikasi pun.** Spec rincian:
-`specs/2026-09-26-login-penyiapan-halaman-publik-design.md` (`503e6e8`, dikoreksi di `f7b3406`).
-Rencana: `plans/2026-09-26-login-penyiapan-halaman-publik.md` (`f7b3406`), **15 tugas, 0 tercentang**,
-satu commit per tugas. Tugas berikutnya: **Tugas 1** (skema, migrasi `0060` + isian `0061`).
+**Sub-proyek 2 (login, penyiapan awal, kode pemulihan, halaman kurs publik, pemilih palet)
+DIKERJAKAN 26 September 2026** — satu sesi langsung, tanpa subagen, satu commit per tugas:
+`f790379` (T1 skema + `0060`/`0061`), `e2daa9b` (T2 kode rahasia + `setup-code`), `103f812` (T3
+pembatas), `13f38f7` (T4 IP asli + login dibatasi), `2d718fa` (T5 kode pemulihan), `6bfdc92` (T6
+`setup.complete`), `fe0384c` (T7 profil publik + penulis), `7492cc9` (T8 buang bootstrap/OAuth),
+`88caa21` (T9 layar masuk/pulihkan/ubah sandi), `ee20162` (T10 wizard), `746b2dd` (T11 ajakan + menu),
+`07c25de` (T12 pengguna & peran), `476f2e9` (T13 Tampilan + Halaman publik), `8d06e7f` (T14 halaman
+depan), `ca315b2` (T15 sebagian: peragaan, Playwright, dokumentasi), `b856c0b` (perbaikan reviu akhir).
+Rencana: `plans/2026-09-26-login-penyiapan-halaman-publik.md` — **15 dari 15 tugas tercentang.**
+Tugas 15 Step 3 diperagakan **pengguna sendiri** di `moneychanger` (port 3000) sebagai
+`test-shareholder`: ajakan "belum punya kode pemulihan" tampil, 8 kode dibuat (17:03), pemulihan
+dengan satu kode berhasil (17:07, `OWNER_RECOVERY_CODE_USED`), kode dibuat ulang (17:08), ajakan hilang,
+menu pengguna memuat "Kode pemulihan". Menu Controller tanpa butir itu dibuktikan uji
+`userMenuItems`, bukan mata (pengguna tidak memegang sandi `test-controller`).
+**Catatan dari percobaan pengguna:** ia mula-mula mengetik peran (`SHAREHOLDER`) pada kolom "Username
+pemilik" dan mendapat pesan gagal yang sama dengan kode salah — disengaja (tidak membocorkan akun),
+tetapi labelnya membingungkan; petunjuk "nama yang Anda ketik saat masuk" belum ditambahkan.
+
+**Sesudah pemeriksaan pengguna, pola `ListDetailLayout` diubah (`0d1a039`)**: panel detail kini
+`Sheet` Radix mengambang dari kanan, bukan kolom kedua kisi — pengguna menilai panel samping
+"mixed with div … destroying the layout". Berlaku untuk Pengguna & peran dan Galeri pola; Esc di dialog
+yang dibuka dari panel hanya menutup dialog itu. Diperiksa Playwright tanpa kepala pada 1280 dan 1920:
+lebar tabel tidak berubah saat baris dipilih.
+
+**Tugas berikutnya: Sub-proyek 3** (penilaian risiko berbahasa manusia + penjelasan AI) — belum punya
+spec maupun rencana; mulai dengan Prompt A. Sebelum itu pengguna perlu meninjau penyimpangan 4 di bawah
+dan memutuskan penerapan produksi `0060`/`0061`.
+
+**Tujuh penyimpangan dari rencana yang sengaja diambil — jangan "dikembalikan":**
+1. `server/shareholderDashboardUserManagement.test.ts` memaku ekspresi lama `UserManagement.tsx`
+   (rencana tidak menyebutnya); pakuannya diganti ke `initialRole = requestedRole === "ADMIN" ? "ADMIN" : "STAFF"`,
+   perilaku sama.
+2. `PublicPageSection` `onSave` bertipe `Required<PublicPageInput>` (zod `updatePublicPage` menuntut
+   `string | null`, bukan opsional).
+3. Uji `PublicRateTable` mengharapkan **`Rp 16,290`** (koma), bukan `16.290`: `formatIdrDecimal` proyek
+   sengaja memakai pemisah koma di seluruh aplikasi. Pemformatnya tidak diubah.
+4. **`server/tenantIsolation.live.test.ts` diubah bentuknya.** Ia menuntut `mc_t_abcvalas` tanpa akun;
+   rencana justru menjadikannya basis data peragaan wizard. Data peragaan tidak dihapus; uji kini
+   memaku `SELECT DATABASE()` per ikatan dan hitungan = sambungan langsung. Dibuktikan tetap gagal
+   bila kedua URL menunjuk database yang sama. **Pengguna belum meninjau perubahan ini.**
+5. Halaman depan tergulir mendatar **206 px pada lebar 390** (kolom grid `main` ber-`min-width: auto`,
+   tabel `min-w-[36rem]` melebarkannya). `main` kini `grid-cols-1`. Uji Playwright 390 **tidak dapat**
+   menangkapnya karena `mc_t_visual` tanpa kurs aktif; buktinya peragaan port 3200.
+6. `PublicPageSection` semula dipasang ulang dengan kunci `updatedAt` — menyimpan Tampilan atau Data
+   badan usaha **membuang isian halaman publik yang belum disimpan**. Kini `publicPageKey` (isian
+   halaman publik tersimpan saja), +2 uji (reviu akhir, `b856c0b`).
+7. Peragaan peramban dijalankan dengan **skrip Playwright tanpa kepala** (ekstensi Chrome terputus di
+   tengah sesi); kurs uji diaktifkan lewat prosedur papan kurs (`rates.saveBoardDrafts` →
+   `rates.activateBoard`, alasan ≥ 10 karakter) sebagai `pemilik.abc`, bukan klik di kisi.
+
+**Peragaan end-to-end di `mc_t_abcvalas` (port 3200) SUDAH dijalankan:** `/` → `/siapkan`; kode
+penyiapan diketik huruf kecil berspasi diterima; wizard → 8 kode, unduhan `.txt` memuat kedelapannya
+dan nama usaha (berkasnya dihapus); `/operasional` tanpa ajakan (sisa 8); `/siapkan` lagi → "sudah
+disiapkan"; `setup-code` lagi ditolak (keluar 1). `/pulihkan` dengan kode 1 → masuk; kode yang sama
+lagi ditolak. Enam kata sandi salah → "Coba lagi dalam 30 detik." sebagai `alert`. Zamrud dipilih,
+`#777777` ditolak menyebut **4,48:1**, shell langsung Zamrud. Halaman publik diisi (telepon kedua,
+jam buka, peta, 2 FAQ, peringatan) dan satu kurs USD uji diaktifkan; `/` pada 1280/1440/1920/390:
+judul "Kurs ABC Valas hari ini", tautan `tel:` keduanya, FAQ dan peringatan milik perusahaan, luapan
+**0** (sesudah perbaikan 5). Sakelar publik mati → `/` membuka `/login`; dinyalakan lagi. SQL:
+`setupCompletedAt` terisi, `setupCodeHash` NULL, sisa kode 7, audit `INSTALLATION_SETUP_COMPLETED` 1,
+`OWNER_RECOVERY_CODE_USED` 1, `COMPANY_APPEARANCE_UPDATED` 1, `COMPANY_PUBLIC_PAGE_UPDATED` 3.
+**Data peragaan ini sengaja ditinggalkan** (akun `pemilik.abc`, profil "PT ABC Valas Uji", kurs USD
+16.200/16.290) — jangan dibersihkan. Kata sandi uji `pemilik.abc` **tidak** dicatat di repo; bila
+perlu masuk lagi, pakai `/pulihkan` dengan satu dari tujuh kode sisa, atau reset lewat basis data lokal.
+`mc_t_abcvalas` kini juga berisi akun pengembangan `test-*` (dibuat server pengembangan port 3200).
 
 **Keputusan pengguna 26 September 2026 — jangan ditanyakan ulang:**
 1. Wizard penyiapan dijaga **kode penyiapan sekali pakai** dari `node scripts/tenant.mjs setup-code`
@@ -186,28 +246,10 @@ formulir bon; bukan reviu arsitektur/keamanan menyeluruh). Satu temuan diperbaik
 5. **Terbuka:** `saveRateTier` membaca id kelompok baru lewat "id terbesar untuk valuta itu", bukan
    `$returningId()` — dapat salah pada dua penyimpanan bersamaan.
 
-**Tugas berikutnya: sub-proyek 2 Tugas 1.** Rencananya sudah di-commit (`f7b3406`).
-
-**Prompt untuk sesi berikutnya — mengerjakan sub-proyek 2:**
-
-```
-Kerjakan rencana docs/superpowers/plans/2026-09-26-login-penyiapan-halaman-publik.md
-dengan superpowers:executing-plans, langsung oleh sesi ini — tanpa subagen.
-Spec-nya docs/superpowers/specs/2026-09-26-login-penyiapan-halaman-publik-design.md.
-
-Mulai dari tugas pertama yang belum tercentang pada "Status Pengerjaan". Satu tugas =
-satu commit; centang langkah dan barisnya sesudah commit. Sebutkan angka uji yang benar-benar
-terlihat dan jelaskan selisihnya terhadap angka yang diramalkan rencana. Berhenti dan
-laporkan bila rencana ternyata salah terhadap kode — jangan diam-diam menyimpang.
-Kerjakan sebanyak yang muat; tutup sesi dengan skill serah-terima.
-
-Baseline uji: Test Files 189 passed (189), Tests 1606 passed | 2 skipped (1608).
-Angka yang diramalkan rencana dihitung dari 1603; tambahkan 3 pada setiap ramalan uji
-(perbaikan reviu 1B `6d4c567` menambah 3 uji ke berkas yang sudah ada, bukan berkas baru).
-```
-
-Bila ingin satu tugas per sesi, pakai Prompt B di atas dengan
-`<RENCANA>` = `2026-09-26-login-penyiapan-halaman-publik` dan `<N>` = tugas berikutnya.
+**Prompt untuk sesi berikutnya — merancang sub-proyek 3:** pakai **Prompt A** di atas dengan
+paket = "Sub-proyek 3 — Penilaian risiko berbahasa manusia + penjelasan AI" (spec program
+`specs/2026-09-12-desain-ulang-antarmuka-design.md`). Baseline uji:
+`Test Files 215 passed (215)`, `Tests 1706 passed | 2 skipped (1708)`.
 
 **Produksi DITERAPKAN 26 September 2026 atas permintaan pengguna: kode `6d4c567`, 60 migrasi
 (`0059` masuk), papan kurs 1B kini live.** Urutan: cadangan
@@ -219,8 +261,8 @@ pm2 `online`, `/`, `/login`, `/operasional/kurs`, `rates.activeRates` menjawab *
 `ECONNREFUSED` di `ibv-backoffice-error.log` bertanggal 11 September (reset), bukan dari penerapan ini.
 `appuser` produksi hanya berhak atas `moneychanger` dan `sudo` meminta sandi, jadi **bukti pemulihan
 tidak dapat dijalankan di server** — hanya lokal. Produksi berisi **0 baris `company_profile`**
-(premis `app_installation` sub-proyek 2 terbukti). Antrean migrasi produksi kini `0060`, `0061`
-(sesudah sub-proyek 2). Keadaan produksi sebelum hari ini:
+(premis `app_installation` sub-proyek 2 terbukti). Antrean migrasi produksi kini **`0060`, `0061`**
+— sub-proyek 2 sudah membuatnya, **belum diterapkan**. Keadaan produksi sebelum hari ini:
 
 **Produksi sudah diterapkan dan direset (11–12 September 2026).** Seluruh tabel produksi dihapus atas
 permintaan pengguna ("FRESHSTART"), lalu `deploy.sh` dijalankan manual: produksi kini `724de6b`,
@@ -233,10 +275,20 @@ impor ulang daftar DTTOT/DPPSPM, mengisi ulang Profil Perusahaan, menghapus bari
 `Bash(ssh -o BatchMode=yes -o ConnectTimeout=10 deploy@187.53.128.14:*)`. Temuan 3 tetap menunggu
 keputusan pengguna.
 
-**Baseline diukur ulang 26 September 2026 pada `f7b3406`** (sesudah rencana sub-proyek 2, tanpa
-perubahan kode): `Test Files 189 passed (189)`, `Tests 1603 passed | 2 skipped (1605)`, tanpa `FAIL`.
-`tsc`, `vite build`, Playwright, dan `pnpm audit` **tidak dijalankan** sesi ini (tidak ada kode yang
-berubah). Rencana sub-proyek 2 meramalkan **215 berkas / 1700 lulus** sesudah Tugas 14.
+**Baseline uji terakhir yang benar-benar dijalankan: 26 September 2026 pada `0d1a039`** (dengan
+`.env` dan `TENANT_TEST_SECONDARY_URL` termuat): `Test Files 215 passed (215)`,
+`Tests 1706 passed | 2 skipped (1708)`, tanpa `FAIL` (+1 uji pola panel mengambang; sebelumnya
+1705 pada `b856c0b`); `tsc --noEmit` keluar 0 tanpa keluaran;
+`vite build` `✓ built`. Selisih terhadap baseline sesi (189 / 1606): **+26 berkas, +99 uji** —
++97 persis ramalan rencana (1603 → 1700) ditambah +2 uji `publicPageKey` dari reviu akhir; Tugas 8
+membuang `internalAuth.bootstrap.test.ts` (1 berkas, 2 uji) dan menambah `legacyAuthRemoval.test.ts`
+(1 berkas, 2 uji). Tiap tugas mendarat tepat di ramalan+3. **Playwright dijalankan** (juga sesudah
+`0d1a039`): `55 passed`
+(42 `fondasi.spec.ts` tanpa perubahan baseline + 13 `masuk.spec.ts`, 12 baseline baru yang sudah
+dilihat). `pnpm audit` **tidak dijalankan** — dependensi tidak bertambah.
+
+**Baseline sebelum sub-proyek 2, pada `f7b3406`:** `189 passed`, `1603 passed | 2 skipped`
+(1606 sesudah `6d4c567`).
 
 **Baseline uji terakhir yang benar-benar dijalankan, pada `884f45c`** (21 September 2026, dengan
 `.env` dan `TENANT_TEST_SECONDARY_URL` termuat): `Test Files 189 passed (189)`,
@@ -263,7 +315,13 @@ sub-proyek 1B. Hasil terakhir (15 September): **9 kerentanan (3 tinggi, 6 sedang
 lewat `drizzle-orm@0.45.2 > mysql2@3.15.1`; terpatch `>=3.22.0`) — menaikkannya menyentuh backend,
 jadi ditunda ke paket tersendiri. **Jangan menyebut audit bersih.**
 
-**Migrasi terakhir tetap `0059`** (`0059_cuddly_saracen.sql`, Tugas 1) — **sub-proyek 1B Tugas 5–14
+**Migrasi terakhir kini `0061`** (`0060_stiff_joystick.sql` aditif: `app_installation`,
+`owner_recovery_codes`, delapan kolom `company_profile`; `0061_isi_app_installation.sql` isian
+bersyarat hanya bila sudah ada Pemegang Saham). Diukur 26 September: `ls drizzle/*.sql` = **62**,
+jurnal `moneychanger` = **62**, `mc_t_abcvalas` = **62**, `mc_t_visual` = **62**; cadangan sebelum
+migrasi di `/tmp/claude-501/backup-0060/` dipulihkan ke basis data sekali pakai (67 → 67 tabel).
+Rollback `0060`/`0061`: mengembalikan commit cukup; tabel dan kolom baru dibiarkan tanpa `DROP`.
+Sebelumnya: **`0059`** (`0059_cuddly_saracen.sql`, 1B Tugas 1) — **sub-proyek 1B Tugas 5–14
 tidak menambah migrasi satu pun**, seluruhnya memakai kolom yang sudah ada. Diukur 16 September
 sesudah penerapan: `ls drizzle/*.sql` = **60 berkas**, jurnal `moneychanger` = **60**, jurnal
 `mc_t_abcvalas` = **60**. **Jurnal produksi 60 sejak 26 September 2026.** **Rollback `0059`: mengembalikan commit sudah
@@ -283,7 +341,8 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 
 **Satu uji diketahui flaky dan bukan bagian paket mana pun:** `server/tenantIsolation.live.test.ts`
 > *"setiap ikatan hanya melihat database miliknya sendiri"*. Bila gagal sendirian di bawah beban,
-jalankan ulang berkas itu saja.
+jalankan ulang berkas itu saja. (Sejak 26 September ia tidak lagi menuntut `mc_t_abcvalas` kosong —
+kegagalan dua uji sekaligus dengan `expected N to be 0` berarti versi lamanya kembali.)
 
 **Kegagalan flaky KEDUA yang tidak dapat direproduksi (16 September 2026, sub-proyek 1B Tugas 3).**
 Satu jalan penuh menunjukkan `1 failed | 1535 passed | 2 skipped`; nama berkasnya **hilang dari
@@ -297,6 +356,24 @@ Bila sesi berikutnya melihat satu kegagalan tunggal pada jalan penuh, **catat na
 bukti, dan itulah sebabnya kejadian pertama tidak pernah teridentifikasi.
 
 ### Yang tidak perlu ditemukan ulang
+
+- **Uji hidup yang MENULIS memakai `server/testing/scratchDatabase.ts`** (`mc_uji_*`, dibuat ulang dan
+  dimigrasikan penuh tiap jalan, dibiarkan sesudahnya). Contoh: `ownerRecovery.live.test.ts`,
+  `installationSetup.live.test.ts`. Jangan menulis ke `moneychanger`/`mc_t_abcvalas` dari uji.
+- **`mc_t_abcvalas` bukan lagi basis data kosong.** Sejak peragaan sub-proyek 2 ia punya akun,
+  profil, kurs, dan tanda "sudah disiapkan". Uji apa pun yang mengandaikannya kosong salah premis.
+- **`mc_t_visual` tidak punya kurs aktif**, jadi baseline Playwright halaman depan memotret keadaan
+  kosong; masalah tata letak tabel kurs (mis. luapan di 390) harus diperiksa di basis data berisi kurs.
+- **Label `<FormSection>` menamai `section`-nya dengan judul yang sama dengan label input** di wizard;
+  `getByLabel` Playwright bertabrakan (strict mode). Batasi ke `input, textarea`.
+- **Server pengembangan (`NODE_ENV=development`) membuat akun `test-*` di basis data mana pun yang ia
+  buka**, termasuk `mc_t_abcvalas` bila dijalankan dengan `DATABASE_URL` itu.
+- **Ekstensi Claude di Chrome dapat terputus di tengah sesi**; skrip Playwright tanpa kepala
+  (`@playwright/test` → `chromium.launch()`) adalah jalan cadangan yang terbukti untuk peragaan.
+- **Jendela Chrome di mesin ini tertahan 1440 lebar** oleh ukuran layar — 1920 hanya dapat
+  diperiksa lewat Playwright.
+- **Skrip `task-start`/`task-done` superpowers mencari judul `### Task N`**; rencana proyek ini
+  berbahasa Indonesia (`### Tugas N`), jadi keduanya gagal — baca bagian rencananya langsung.
 
 - **Instalasi baru tidak punya baris `company_profile`.** `updateCompanyProfile` meng-upsert; fakta apa
   pun yang harus ada sejak awal instalasi tidak boleh ditaruh di tabel itu (alasan `app_installation`).
@@ -489,6 +566,33 @@ bukti, dan itulah sebabnya kejadian pertama tidak pernah teridentifikasi.
   `papan-kurs.html`) — rujukan visual yang disetujui pengguna. Sejak 16 September 2026 seluruh
   `.superpowers/` masuk `.gitignore`, jadi berkas ini **tidak ada cadangannya di git**; bila mesin ini
   hilang, mockup-nya ikut hilang dan yang tersisa hanya keputusan tertulis di spec.
+
+### Risiko residual Sub-proyek 2 yang masih terbuka
+
+1. Pembatas percobaan di memori proses — benar hanya selama produksi satu proses pm2 `fork`; petanya
+   dapat tumbuh oleh serangan tersebar sampai pembersihan 24 jam.
+2. Autentikasi ulang tindakan sensitif belum ada (keputusan pengguna 26 September 2026).
+3. **Produksi belum disentuh.** Antrean `0060`, `0061`. Sesudah penerapan: pemilik produksi wajib
+   membuat kode pemulihan (ajakan muncul sendiri), baris `INITIAL_SHAREHOLDER_*` dihapus dari `.env`
+   produksi (kodenya tidak lagi membacanya), dan kolom halaman publik diisi — sampai itu halaman depan
+   produksi **tanpa nomor telepon** (sebelumnya ditulis mati).
+4. Kode penyiapan menuntut akses shell ke server.
+5. Kehilangan seluruh kode pemulihan **dan** kata sandi pemilik hanya dapat dipulihkan lewat akses
+   basis data langsung.
+6. Kelas CSS situs publik lama `public-shell`, `ink-panel`, `section-kicker` kini tanpa pemakai
+   (`public-grid` masih dipakai tiga layar); definisinya masih di `index.css`.
+7. `PublicServicePlanner` dan sisa layar Profil Perusahaan masih bergaya lama sampai sub-proyek 9.
+8. **Reviu akhir sub-proyek 2 adalah reviu-sendiri oleh penulisnya** (pengguna meminta tanpa
+   subagen) — lebih lemah daripada peninjau segar. Sub-proyek 1B juga hanya direviu sesi langsung.
+9. Temuan reviu yang ditunda (minor): `auth.recover` tidak menyamakan waktu untuk username bukan
+   Pemegang Saham (username pemilik dapat ditebak dari lamanya jawaban); `ResetPasswordDialog` tidak
+   mengosongkan isian sesudah reset berhasil (membuka dialog untuk akun lain membawa kata sandi
+   sementara sebelumnya); `CreateUserForm` mengosongkan isian sebelum server menjawab; kolom "Per"
+   tabel kurs publik menampilkan `1.000000` mentah; placeholder "Warna utama sendiri" ikut huruf besar;
+   label "Username pemilik" di `/pulihkan` tidak menjelaskan bahwa yang diminta nama masuk, bukan peran;
+   nama produk "Aplikasi Valuta" berkedip sesaat di `/login` sebelum profil termuat.
+10. Langkah wizard sendiri tidak dipotret Playwright (penyimpangan sadar dari spec §Verifikasi);
+    dibuktikan uji komponen dan peragaan.
 
 ### Risiko residual Sub-proyek 1B (SELESAI) yang masih terbuka
 
