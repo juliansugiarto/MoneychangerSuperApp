@@ -23,7 +23,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 7 — Profil publik dan penulis Tampilan/Halaman publik
 - [x] Tugas 8 — Buang bootstrap `.env` dan sisa OAuth Manus
 - [x] Tugas 9 — Layar masuk, pulihkan, dan ubah sandi
-- [ ] Tugas 10 — Wizard `/siapkan`
+- [x] Tugas 10 — Wizard `/siapkan`
 - [ ] Tugas 11 — Kode pemulihan: layar, ajakan, dan menu pengguna
 - [ ] Tugas 12 — Pengguna & peran
 - [ ] Tugas 13 — Profil Perusahaan: Tampilan dan Halaman publik; tema dipasang shell
@@ -2745,7 +2745,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `type SetupPayload = { setupCode: string; owner: { name: string; username: string; password: string }; company: { legalEntityName: string; tradingName: string; licenseNumber?: string } }`
   - `SetupWizard({ onComplete: (payload: SetupPayload) => Promise<{ recoveryCodes: string[] }>; errorMessage: string | null; isPending: boolean; brand: string; onFinish: () => void })`
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 `client/src/pages/setup/RecoveryCodeSheet.test.tsx`:
 
@@ -2849,7 +2849,7 @@ describe("wizard penyiapan", () => {
 Run: `./node_modules/.bin/vitest run client/src/pages/setup`
 Expected: FAIL — modul belum ada.
 
-- [ ] **Step 2: `RecoveryCodeSheet`**
+- [x] **Step 2: `RecoveryCodeSheet`**
 
 `client/src/pages/setup/RecoveryCodeSheet.tsx`:
 
@@ -2916,7 +2916,7 @@ export function RecoveryCodeSheet({ brand, codes, continueLabel, onContinue }: {
 }
 ```
 
-- [ ] **Step 3: `SetupWizard`**
+- [x] **Step 3: `SetupWizard`**
 
 `client/src/pages/setup/SetupWizard.tsx`:
 
@@ -3056,7 +3056,7 @@ export function SetupWizard({ onComplete, errorMessage, isPending, brand, onFini
 Run: `./node_modules/.bin/vitest run client/src/pages/setup`
 Expected: PASS, 2 + 4 uji.
 
-- [ ] **Step 4: Halaman `/siapkan`**
+- [x] **Step 4: Halaman `/siapkan`**
 
 `client/src/pages/Setup.tsx`:
 
@@ -3120,12 +3120,12 @@ Tambahkan ke `FOUNDATION_FILES`:
   "client/src/pages/Setup.tsx",
 ```
 
-- [ ] **Step 5: Perintah mutu**
+- [x] **Step 5: Perintah mutu**
 
 Run: `./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build`
 Expected: **`Test Files 205 passed`, `Tests 1675 passed | 2 skipped`** (+2 berkas, +6 uji).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add client/src/pages/setup client/src/pages/Setup.tsx client/src/App.tsx client/src/designFoundation.ts

@@ -13,6 +13,7 @@ import ChangePassword from "./pages/ChangePassword";
 // the public landing page or login, so there's no reason to ship them in the main bundle upfront.
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const Recover = lazy(() => import("./pages/Recover"));
+const Setup = lazy(() => import("./pages/Setup"));
 const OperationsDashboard = lazy(() => import("./pages/OperationsDashboard"));
 const Customers = lazy(() => import("./pages/Customers"));
 const CustomerList = lazy(() => import("./pages/CustomerList"));
@@ -69,6 +70,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/ubah-sandi" component={ChangePassword} />
       <Route path="/pulihkan" component={Recover} />
+      <Route path="/siapkan" component={Setup} />
       <Route path="/operasional"><OperationsRoute page={<OperationsDashboard />} /></Route>
       <Route path="/operasional/checklist"><OperationsRoute page={<DailyChecklist />} /></Route>
       <Route path="/operasional/monitoring"><OperationsRoute minimumRole="CONTROLLER" page={<Monitoring />} /></Route>

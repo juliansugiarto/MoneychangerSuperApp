@@ -40,4 +40,7 @@ export const FOUNDATION_FILES: readonly string[] = [
   "client/src/pages/Login.tsx",
   "client/src/pages/Recover.tsx",
   "client/src/pages/ChangePassword.tsx",
+  "client/src/pages/setup/RecoveryCodeSheet.tsx",
+  "client/src/pages/setup/SetupWizard.tsx",
+  "client/src/pages/Setup.tsx",
 ];
