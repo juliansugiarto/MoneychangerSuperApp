@@ -17,6 +17,16 @@ type Initial = {
   fraudWarning: string | null;
 };
 
+/**
+ * Kunci pemasangan ulang dari isian halaman publik yang TERSIMPAN saja. Jangan memakai `updatedAt`:
+ * menyimpan Tampilan atau Data badan usaha ikut menggesernya, dan isian halaman publik yang sedang
+ * diketik akan hilang tanpa peringatan.
+ */
+export function publicPageKey(profile: Initial): string {
+  const { publicPageEnabled, secondaryPhone, openingHours, mapUrl, publicFaq, fraudWarning } = profile;
+  return JSON.stringify([publicPageEnabled, secondaryPhone, openingHours, mapUrl, publicFaq, fraudWarning]);
+}
+
 export function PublicPageSection({ initial, isPending, onSave }: { initial: Initial; isPending: boolean; onSave: (values: Required<PublicPageInput>) => void }) {
   const [enabled, setEnabled] = useState(initial.publicPageEnabled);
   const [secondaryPhone, setSecondaryPhone] = useState(initial.secondaryPhone ?? "");

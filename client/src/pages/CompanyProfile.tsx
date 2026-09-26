@@ -16,7 +16,7 @@ import { Archive, Building2, EyeOff, FileImage, Paperclip, ShieldCheck, Trash2, 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AppearanceSection } from "./company/AppearanceSection";
-import { PublicPageSection } from "./company/PublicPageSection";
+import { PublicPageSection, publicPageKey } from "./company/PublicPageSection";
 
 const fileToBase64 = (file: File) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
 
@@ -239,7 +239,7 @@ export default function CompanyProfile() {
     {profile ? (
       <>
         <AppearanceSection key={`${profile.themePalette}:${profile.accentColor ?? ""}`} initialPalette={profile.themePalette} initialAccent={profile.accentColor} isPending={updateAppearance.isPending} onSave={(values) => updateAppearance.mutate(values)} />
-        <PublicPageSection key={String(profile.updatedAt)} initial={profile} isPending={updatePublicPage.isPending} onSave={(values) => updatePublicPage.mutate(values)} />
+        <PublicPageSection key={publicPageKey(profile)} initial={profile} isPending={updatePublicPage.isPending} onSave={(values) => updatePublicPage.mutate(values)} />
       </>
     ) : (
       <p className="rounded-md border border-dashed px-3 py-2 text-sm">Simpan Data badan usaha lebih dulu; Tampilan dan Halaman publik disimpan pada profil yang sama.</p>
