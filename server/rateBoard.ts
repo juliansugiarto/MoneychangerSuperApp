@@ -109,6 +109,20 @@ export function planBoardActivation(drafts: readonly ActivationDraft[], reason: 
 }
 
 /**
+ * Dibaca ulang di dalam transaksi dengan `FOR UPDATE`. Perencanaan terjadi sebelum transaksi dibuka;
+ * di antaranya admin lain dapat membuang, mengganti, atau mengaktifkan draf yang sama. Tanpa
+ * pemeriksaan ini kurs lama tetap di-RETIRE sementara pembaruan ke ACTIVE mengenai nol baris — valuta
+ * itu tertinggal tanpa kurs berlaku, dan bon untuk pecahannya kehilangan pemeriksaan toleransi.
+ */
+export function assertDraftsStillPending(drafts: readonly ActivationDraft[], locked: readonly { id: number; status: string }[]) {
+  const statusById = new Map(locked.map((row) => [row.id, row.status]));
+  const changed = drafts.find((draft) => statusById.get(draft.id) !== "DRAFT");
+  if (changed) {
+    throw new Error(`Draf kurs ${changed.currencyCode} · ${changed.tierLabel} baru saja diubah, dibuang, atau diaktifkan orang lain, jadi tidak ada satu pun kurs dalam aktivasi ini yang diaktifkan. Muat ulang papan lalu ulangi.`);
+  }
+}
+
+/**
  * Satu transaksi basis data untuk seluruh batch. Menggantikan perulangan lama di `operations.ts`
  * yang dapat berhenti di tengah dan meninggalkan papan separuh aktif.
  */
@@ -135,6 +149,9 @@ export async function activateOperationalRateIds(rateIds: number[], actorUserId:
   const reason = approvalReason.trim();
   const activatedAt = new Date();
   await db.transaction(async (tx) => {
+    const locked = await tx.select({ id: operationalRates.id, status: operationalRates.status }).from(operationalRates)
+      .where(inArray(operationalRates.id, plan.activateRateIds)).for("update");
+    assertDraftsStillPending(drafts, locked);
     for (const key of plan.retireKeys) {
       await tx.update(operationalRates).set({ status: "RETIRED" }).where(and(
         eq(operationalRates.currencyId, key.currencyId),

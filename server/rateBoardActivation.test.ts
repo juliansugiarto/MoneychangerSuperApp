@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planBoardActivation, type ActivationDraft } from "./rateBoard";
+import { assertDraftsStillPending, planBoardActivation, type ActivationDraft } from "./rateBoard";
 
 const draft = (id: number, currencyId: number, rateTierId: number | null, over: Partial<ActivationDraft> = {}): ActivationDraft => ({
   id, currencyId, currencyCode: currencyId === 1 ? "USD" : "SGD", rateTierId, tierLabel: rateTierId ? String(rateTierId) : "Pecahan lain",
@@ -45,5 +45,21 @@ describe("rencana aktivasi papan", () => {
 
   it("menolak batch kosong", () => {
     expect(() => planBoardActivation([], ALASAN, "b")).toThrow(/setidaknya satu/i);
+  });
+});
+
+describe("pemeriksaan ulang di dalam transaksi aktivasi", () => {
+  const drafts = [draft(11, 1, 5, { tierLabel: "100" }), draft(12, 2, null)];
+
+  it("lolos bila seluruh draf masih DRAFT saat dikunci", () => {
+    expect(() => assertDraftsStillPending(drafts, [{ id: 11, status: "DRAFT" }, { id: 12, status: "DRAFT" }])).not.toThrow();
+  });
+
+  it("menolak seluruh batch bila satu draf dibuang atau diganti admin lain sesudah perencanaan — kurs lama tidak boleh pensiun tanpa pengganti", () => {
+    expect(() => assertDraftsStillPending(drafts, [{ id: 12, status: "DRAFT" }])).toThrow(/USD · 100/);
+  });
+
+  it("menolak draf yang sudah diaktifkan aktivasi lain yang berjalan bersamaan", () => {
+    expect(() => assertDraftsStillPending(drafts, [{ id: 11, status: "DRAFT" }, { id: 12, status: "ACTIVE" }])).toThrow(/SGD · Pecahan lain/);
   });
 });
