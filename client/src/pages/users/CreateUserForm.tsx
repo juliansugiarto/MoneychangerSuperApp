@@ -12,7 +12,8 @@ export function CreateUserForm({ isShareholder, isPending, onSubmit, initialRole
   isPending: boolean;
   /** Pintasan dasbor Pemegang Saham membuka layar ini dengan `?role=ADMIN` atau `?role=STAFF`. */
   initialRole?: "STAFF" | "ADMIN";
-  onSubmit: (values: { name: string; username: string; password: string; role: CreatableRole }) => void;
+  /** Selesai = akun dibuat; ditolak = isian dibiarkan supaya pengguna cukup memperbaiki yang salah. */
+  onSubmit: (values: { name: string; username: string; password: string; role: CreatableRole }) => Promise<unknown>;
 }) {
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -24,8 +25,11 @@ export function CreateUserForm({ isShareholder, isPending, onSubmit, initialRole
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!ready) return;
-    onSubmit({ name: name.trim(), username: normalized, password, role });
-    setName(""); setUsername(""); setPassword("");
+    onSubmit({ name: name.trim(), username: normalized, password, role }).then(
+      () => { setName(""); setUsername(""); setPassword(""); },
+      // Pesan galatnya sudah ditampilkan halaman (toast); di sini cukup tidak membuang isian.
+      () => undefined,
+    );
   }
 
   return (

@@ -57,7 +57,7 @@ export default function UserManagement() {
         ) : undefined}
       />
       <FormSection number={1} title="Buat akun baru" description="Pemegang Saham dapat membuat Controller; Controller dapat membuat Admin dan Staf.">
-        <CreateUserForm isShareholder={user?.role === "SHAREHOLDER"} initialRole={initialRole} isPending={create.isPending} onSubmit={(values) => create.mutate(values)} />
+        <CreateUserForm isShareholder={user?.role === "SHAREHOLDER"} initialRole={initialRole} isPending={create.isPending} onSubmit={(values) => create.mutateAsync(values)} />
       </FormSection>
       {selected ? <ResetPasswordDialog accountName={accountDisplayName(selected)} open={resetOpen} onOpenChange={setResetOpen} isPending={resetPassword.isPending} onConfirm={(newPassword) => resetPassword.mutate({ userId: selected.id, newPassword })} /> : null}
     </div>
