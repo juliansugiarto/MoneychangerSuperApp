@@ -165,9 +165,26 @@ agent because its burnt token so much?"*). **Kerjakan langsung, tanpa subagen**,
 meminta sebaliknya. Seluruh 14 tugas dikerjakan begitu dan memang cukup.
 
 **Reviu akhir cabang Fondasi Desain TIDAK pernah selesai** (reviewer mati karena batas pemakaian
-mingguan). Yang **belum** diperiksa siapa pun secara menyeluruh: mutu kode Fondasi Desain Tugas 1–7,
-pemeriksaan arsitektur/keamanan lintas berkas, dan **seluruh sub-proyek 1B** — yang terakhir hanya
-lolos uji, perintah mutu, dan peragaan, belum pernah direviu kode oleh siapa pun.
+mingguan). Yang **belum** diperiksa siapa pun secara menyeluruh: mutu kode Fondasi Desain Tugas 1–7
+dan pemeriksaan arsitektur/keamanan lintas berkas.
+
+**Sub-proyek 1B DIREVIU KODE 26 September 2026** (oleh sesi langsung, fokus jalur tulis server dan
+formulir bon; bukan reviu arsitektur/keamanan menyeluruh). Satu temuan diperbaiki, empat dibiarkan:
+1. **DIPERBAIKI `6d4c567`:** `activateOperationalRateIds` memeriksa status DRAFT *sebelum* transaksi;
+   draf yang dibuang/diganti/diaktifkan admin lain di antaranya membuat kurs lama di-RETIRE sementara
+   aktivasi mengenai nol baris — valuta tertinggal tanpa kurs berlaku. Kini dibaca ulang
+   `FOR UPDATE` di dalam transaksi (`assertDraftsStillPending`), +3 uji.
+2. **Terbuka:** formulir bon menilai toleransi dari `rates.pricing` yang mungkin basi; bila server
+   (kurs saat simpan) menemukan selisih yang tidak terlihat klien, bon ditolak tetapi kolom alasan
+   tidak muncul sampai jendela difokus ulang. Perbaikan kecil: `invalidate` `rates.pricing` saat
+   `transactions.create` gagal.
+3. **Terbuka:** `saveRateTier` dengan `tierId` tidak memeriksa bahwa kelompok itu milik `currencyId`
+   masukan, sehingga pemeriksaan tumpang tindih dijalankan terhadap valuta yang salah (ADMIN saja).
+4. **Terbuka:** draf milik kelompok yang dinonaktifkan tetap DRAFT dan tidak terlihat di papan;
+   "Buang draf" ikut menghitungnya. `activateBoard` tanpa `rateIds` akan mengaktifkannya (UI selalu
+   mengirim `rateIds`).
+5. **Terbuka:** `saveRateTier` membaca id kelompok baru lewat "id terbesar untuk valuta itu", bukan
+   `$returningId()` — dapat salah pada dua penyimpanan bersamaan.
 
 **Tugas berikutnya: sub-proyek 2 Tugas 1.** Rencananya sudah di-commit (`f7b3406`).
 
@@ -184,15 +201,26 @@ terlihat dan jelaskan selisihnya terhadap angka yang diramalkan rencana. Berhent
 laporkan bila rencana ternyata salah terhadap kode — jangan diam-diam menyimpang.
 Kerjakan sebanyak yang muat; tutup sesi dengan skill serah-terima.
 
-Baseline uji: Test Files 189 passed (189), Tests 1603 passed | 2 skipped (1605).
+Baseline uji: Test Files 189 passed (189), Tests 1606 passed | 2 skipped (1608).
+Angka yang diramalkan rencana dihitung dari 1603; tambahkan 3 pada setiap ramalan uji
+(perbaikan reviu 1B `6d4c567` menambah 3 uji ke berkas yang sudah ada, bukan berkas baru).
 ```
 
 Bila ingin satu tugas per sesi, pakai Prompt B di atas dengan
 `<RENCANA>` = `2026-09-26-login-penyiapan-halaman-publik` dan `<N>` = tugas berikutnya.
 
-**Produksi tidak disentuh sejak 12 September 2026** (kode produksi tetap `724de6b`). **Migrasi `0059`
-TIDAK diterapkan ke produksi** — hanya ke dua basis data lokal, sebagaimana dituntut rencananya.
-Keadaan terakhir produksi:
+**Produksi DITERAPKAN 26 September 2026 atas permintaan pengguna: kode `6d4c567`, 60 migrasi
+(`0059` masuk), papan kurs 1B kini live.** Urutan: cadangan
+`backups/sebelum-0059-20260926-083910.sql.gz` di server **dibuktikan dapat dipulihkan** (66 tabel →
+66 tabel, 59 migrasi, 1 pengguna; dipulihkan ke `mc_restore_probe` lokal lalu dihapus — aman karena
+produksi berisi 0 nasabah, 0 transaksi, 0 kurs), lalu `bash deploy.sh` (cadangan sendiri, pull,
+migrate, build, restart). Diukur sesudahnya: jurnal **60**, tabel `rate_tiers` ada, 4 kolom baru ada,
+pm2 `online`, `/`, `/login`, `/operasional/kurs`, `rates.activeRates` menjawab **200**. Baris
+`ECONNREFUSED` di `ibv-backoffice-error.log` bertanggal 11 September (reset), bukan dari penerapan ini.
+`appuser` produksi hanya berhak atas `moneychanger` dan `sudo` meminta sandi, jadi **bukti pemulihan
+tidak dapat dijalankan di server** — hanya lokal. Produksi berisi **0 baris `company_profile`**
+(premis `app_installation` sub-proyek 2 terbukti). Antrean migrasi produksi kini `0060`, `0061`
+(sesudah sub-proyek 2). Keadaan produksi sebelum hari ini:
 
 **Produksi sudah diterapkan dan direset (11–12 September 2026).** Seluruh tabel produksi dihapus atas
 permintaan pengguna ("FRESHSTART"), lalu `deploy.sh` dijalankan manual: produksi kini `724de6b`,
@@ -238,7 +266,7 @@ jadi ditunda ke paket tersendiri. **Jangan menyebut audit bersih.**
 **Migrasi terakhir tetap `0059`** (`0059_cuddly_saracen.sql`, Tugas 1) — **sub-proyek 1B Tugas 5–14
 tidak menambah migrasi satu pun**, seluruhnya memakai kolom yang sudah ada. Diukur 16 September
 sesudah penerapan: `ls drizzle/*.sql` = **60 berkas**, jurnal `moneychanger` = **60**, jurnal
-`mc_t_abcvalas` = **60**. **Jurnal produksi tetap 59.** **Rollback `0059`: mengembalikan commit sudah
+`mc_t_abcvalas` = **60**. **Jurnal produksi 60 sejak 26 September 2026.** **Rollback `0059`: mengembalikan commit sudah
 cukup** untuk aplikasinya; tabel dan kolom baru **dibiarkan** tanpa `DROP` kecuali pengguna
 menyetujui penghapusannya.
 
