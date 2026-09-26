@@ -20,7 +20,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 4 — IP asli di balik nginx dan `auth.login` yang dibatasi
 - [x] Tugas 5 — Kode pemulihan pemilik di server
 - [x] Tugas 6 — Penyiapan awal di server (`setup.complete`)
-- [ ] Tugas 7 — Profil publik dan penulis Tampilan/Halaman publik
+- [x] Tugas 7 — Profil publik dan penulis Tampilan/Halaman publik
 - [ ] Tugas 8 — Buang bootstrap `.env` dan sisa OAuth Manus
 - [ ] Tugas 9 — Layar masuk, pulihkan, dan ubah sandi
 - [ ] Tugas 10 — Wizard `/siapkan`
@@ -1659,7 +1659,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `server/companyPresentation.ts`: `updateCompanyAppearance(input, actor)`, `updateCompanyPublicPage(input, actor)`
   - Prosedur `publicContent.profile` (publik), `companyProfile.updateAppearance`, `companyProfile.updatePublicPage` (CONTROLLER+)
 
-- [ ] **Step 1: Tulis uji `shared/publicPage.test.ts` yang gagal**
+- [x] **Step 1: Tulis uji `shared/publicPage.test.ts` yang gagal**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -1717,7 +1717,7 @@ describe("isian halaman publik", () => {
 Run: `./node_modules/.bin/vitest run shared/publicPage.test.ts`
 Expected: FAIL — `./publicPage` tidak ada.
 
-- [ ] **Step 2: Tulis `shared/publicPage.ts`**
+- [x] **Step 2: Tulis `shared/publicPage.ts`**
 
 ```ts
 /**
@@ -1809,7 +1809,7 @@ export function normalizePublicPage(input: PublicPageInput): { ok: true; values:
 Run: `./node_modules/.bin/vitest run shared/publicPage.test.ts`
 Expected: PASS, 8 uji.
 
-- [ ] **Step 3: Tulis uji `shared/companyAppearance.test.ts` yang gagal**
+- [x] **Step 3: Tulis uji `shared/companyAppearance.test.ts` yang gagal**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -1838,7 +1838,7 @@ describe("tampilan perusahaan", () => {
 Run: `./node_modules/.bin/vitest run shared/companyAppearance.test.ts`
 Expected: FAIL — `./companyAppearance` tidak ada.
 
-- [ ] **Step 4: Tulis `bestTextContrast` dan `shared/companyAppearance.ts`**
+- [x] **Step 4: Tulis `bestTextContrast` dan `shared/companyAppearance.ts`**
 
 Tambahkan di akhir `shared/accentColor.ts`:
 
@@ -1891,7 +1891,7 @@ export function checkAppearance(input: AppearanceInput): AppearanceResult {
 Run: `./node_modules/.bin/vitest run shared/companyAppearance.test.ts shared/accentColor.test.ts`
 Expected: PASS — 4 uji baru, uji `accentColor` lama tetap lulus.
 
-- [ ] **Step 5: Tulis uji `server/publicProfile.test.ts` yang gagal**
+- [x] **Step 5: Tulis uji `server/publicProfile.test.ts` yang gagal**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -1947,7 +1947,7 @@ Catatan: uji pertama sengaja menaruh nama badan hukum di daftar rahasia — bila
 Run: `./node_modules/.bin/vitest run server/publicProfile.test.ts`
 Expected: FAIL — `./publicProfile` tidak ada.
 
-- [ ] **Step 6: Tulis `server/publicProfile.ts`**
+- [x] **Step 6: Tulis `server/publicProfile.ts`**
 
 ```ts
 import { eq } from "drizzle-orm";
@@ -2033,7 +2033,7 @@ export async function readPublicProfile(deps: {
 Run: `./node_modules/.bin/vitest run server/publicProfile.test.ts`
 Expected: PASS, 5 uji.
 
-- [ ] **Step 7: Tulis `server/companyPresentation.ts`**
+- [x] **Step 7: Tulis `server/companyPresentation.ts`**
 
 ```ts
 import { eq } from "drizzle-orm";
@@ -2078,7 +2078,7 @@ export async function updateCompanyPublicPage(input: PublicPageInput, actor: { i
 }
 ```
 
-- [ ] **Step 8: Prosedur di `server/routers.ts`**
+- [x] **Step 8: Prosedur di `server/routers.ts`**
 
 Tambah impor:
 
@@ -2116,12 +2116,12 @@ Di router `companyProfile`, sesudah `update`:
 
 `max(PUBLIC_FAQ_LIMIT + 1)` disengaja: 13 butir sampai ke `normalizePublicPage` dan mendapat pesan berbahasa manusia; di atas itu zod menolak muatan yang jelas bukan dari layar.
 
-- [ ] **Step 9: Perintah mutu**
+- [x] **Step 9: Perintah mutu**
 
 Run: `./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build`
 Expected: **`Test Files 200 passed`, `Tests 1662 passed | 2 skipped`** (+3 berkas, +17 uji).
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add shared/publicPage.ts shared/publicPage.test.ts shared/companyAppearance.ts shared/companyAppearance.test.ts shared/accentColor.ts server/publicProfile.ts server/publicProfile.test.ts server/companyPresentation.ts server/routers.ts

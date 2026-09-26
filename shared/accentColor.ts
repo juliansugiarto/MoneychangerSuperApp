@@ -77,3 +77,10 @@ export function resolveAccent(candidate: string | null | undefined, fallback: Ac
   if (best.ratio < MIN_CONTRAST) return { ...withRatio(fallback), usedFallback: true, reason: "LOW_CONTRAST" };
   return { accent: normalized, ...best, usedFallback: false, reason: null };
 }
+
+/** Kontras terbaik warna ini terhadap teks terang atau gelap — angka yang disebut layar saat menolak warna. Keputusannya sama dengan `resolveAccent`. */
+export function bestTextContrast(color: string): number | null {
+  const light = contrastRatio(color, LIGHT_TEXT);
+  const dark = contrastRatio(color, DARK_TEXT);
+  return light === null || dark === null ? null : Math.max(light, dark);
+}

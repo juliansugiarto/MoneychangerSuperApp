@@ -178,6 +178,9 @@ import { assertThrottleAllows, authThrottle, throttleKeys } from "./loginThrottl
 import { clientIpOf } from "./proxyTrust";
 import { currentTenantCode } from "./tenantContext";
 import { SetupRefusal, completeInstallationSetup } from "./installationSetup";
+import { readPublicProfile } from "./publicProfile";
+import { updateCompanyAppearance, updateCompanyPublicPage } from "./companyPresentation";
+import { PUBLIC_FAQ_LIMIT } from "../shared/publicPage";
 import { countRemainingRecoveryCodes, recoverOwnerAccount, regenerateRecoveryCodes } from "./recoveryCodes";
 
 const LOGIN_FAILED_MESSAGE = "Username atau kata sandi tidak valid.";
@@ -581,6 +584,7 @@ export const appRouter = router({
 
   publicContent: router({
     announcements: publicProcedure.query(() => listPublicAnnouncements()),
+    profile: publicProcedure.query(() => readPublicProfile()),
   }),
 
   serviceRequests: router({
@@ -1254,6 +1258,18 @@ export const appRouter = router({
       /** Provinsi tempat gerai beroperasi; sumber parameter Wilayah Geografis TPPU/TPPT 4a/4b. */
       province: z.enum(IRA_PROVINCE_VALUES).optional().nullable(),
     })).mutation(({ input, ctx }) => updateCompanyProfile(input, ctx.user)),
+    updateAppearance: controllerProcedure.input(z.object({
+      themePalette: z.string().trim().max(16),
+      accentColor: z.string().trim().max(16).nullable(),
+    })).mutation(({ input, ctx }) => updateCompanyAppearance(input, ctx.user)),
+    updatePublicPage: controllerProcedure.input(z.object({
+      publicPageEnabled: z.boolean(),
+      secondaryPhone: z.string().trim().max(60).nullable(),
+      openingHours: z.string().trim().max(500).nullable(),
+      mapUrl: z.string().trim().max(500).nullable(),
+      publicFaq: z.array(z.object({ question: z.string().max(200), answer: z.string().max(1000) })).max(PUBLIC_FAQ_LIMIT + 1),
+      fraudWarning: z.string().trim().max(1000).nullable(),
+    })).mutation(({ input, ctx }) => updateCompanyPublicPage(input, ctx.user)),
   }),
 
   complaints: router({
