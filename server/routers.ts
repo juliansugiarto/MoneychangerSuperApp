@@ -177,6 +177,7 @@ import { z } from "zod";
 import { assertThrottleAllows, authThrottle, throttleKeys } from "./loginThrottle";
 import { clientIpOf } from "./proxyTrust";
 import { currentTenantCode } from "./tenantContext";
+import { SetupRefusal, completeInstallationSetup } from "./installationSetup";
 import { countRemainingRecoveryCodes, recoverOwnerAccount, regenerateRecoveryCodes } from "./recoveryCodes";
 
 const LOGIN_FAILED_MESSAGE = "Username atau kata sandi tidak valid.";
@@ -474,6 +475,29 @@ export const appRouter = router({
       return {
         success: true,
       } as const;
+    }),
+  }),
+  setup: router({
+    complete: publicProcedure.input(z.object({
+      setupCode: z.string().trim().min(1).max(40),
+      owner: z.object({ name: z.string().trim().min(3).max(200), username: z.string().trim(), password: z.string().min(1) }),
+      company: z.object({ legalEntityName: z.string().trim().min(1).max(200), tradingName: z.string().trim().min(1).max(200), licenseNumber: z.string().trim().max(80).optional() }),
+    })).mutation(async ({ input, ctx }) => {
+      // Username pemilik belum ada; tebakan kode dibatasi per IP saja.
+      const keys = throttleKeys("setup", currentTenantCode(), "installation", clientIpOf(ctx.req));
+      assertThrottleAllows([keys.ip]);
+      try {
+        const result = await completeInstallationSetup(input);
+        authThrottle.recordSuccess(keys.ip);
+        await setInternalSession(ctx, result.user);
+        return { user: safeUser(result.user), recoveryCodes: result.recoveryCodes };
+      } catch (error) {
+        if (error instanceof SetupRefusal) {
+          if (error.countsAsFailure) authThrottle.recordFailure([keys.ip]);
+          throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+        }
+        throw error;
+      }
     }),
   }),
 

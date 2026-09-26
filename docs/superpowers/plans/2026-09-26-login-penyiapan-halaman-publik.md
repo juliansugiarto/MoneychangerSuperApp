@@ -19,7 +19,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 3 — Pembatas percobaan masuk (`server/loginThrottle.ts`)
 - [x] Tugas 4 — IP asli di balik nginx dan `auth.login` yang dibatasi
 - [x] Tugas 5 — Kode pemulihan pemilik di server
-- [ ] Tugas 6 — Penyiapan awal di server (`setup.complete`)
+- [x] Tugas 6 — Penyiapan awal di server (`setup.complete`)
 - [ ] Tugas 7 — Profil publik dan penulis Tampilan/Halaman publik
 - [ ] Tugas 8 — Buang bootstrap `.env` dan sisa OAuth Manus
 - [ ] Tugas 9 — Layar masuk, pulihkan, dan ubah sandi
@@ -1359,7 +1359,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `completeInstallationSetup(input: SetupInput, now?: Date): Promise<{ user: User; recoveryCodes: string[] }>`
   - Prosedur `setup.complete` (publik) → `{ user, recoveryCodes }` dan menyetel cookie sesi pemilik baru.
 
-- [ ] **Step 1: Tulis uji hidup yang gagal**
+- [x] **Step 1: Tulis uji hidup yang gagal**
 
 `server/installationSetup.live.test.ts` — berurutan dan saling bergantung keadaan:
 
@@ -1481,7 +1481,7 @@ describe("penyiapan awal", () => {
 Run: `./node_modules/.bin/vitest run server/installationSetup.live.test.ts`
 Expected: FAIL — `./installationSetup` tidak ada.
 
-- [ ] **Step 2: Tulis `server/installationSetup.ts`**
+- [x] **Step 2: Tulis `server/installationSetup.ts`**
 
 ```ts
 import { eq } from "drizzle-orm";
@@ -1583,7 +1583,7 @@ export async function completeInstallationSetup(input: SetupInput, now = new Dat
 }
 ```
 
-- [ ] **Step 3: Router `setup` di `server/routers.ts`**
+- [x] **Step 3: Router `setup` di `server/routers.ts`**
 
 Tambah impor:
 
@@ -1619,17 +1619,17 @@ Tambahkan tepat sesudah penutup router `auth`:
   }),
 ```
 
-- [ ] **Step 4: Jalankan uji**
+- [x] **Step 4: Jalankan uji**
 
 Run: `./node_modules/.bin/vitest run server/installationSetup.live.test.ts`
 Expected: PASS, 9 uji.
 
-- [ ] **Step 5: Perintah mutu**
+- [x] **Step 5: Perintah mutu**
 
 Run: `./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build`
 Expected: **`Test Files 197 passed`, `Tests 1645 passed | 2 skipped`** (+1 berkas, +9 uji).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add server/installationSetup.ts server/routers.ts server/installationSetup.live.test.ts
