@@ -37,10 +37,19 @@ describe("DataTable", () => {
 });
 
 describe("ListDetailLayout", () => {
+  it("detail terbuka sebagai panel mengambang di atas daftar, bukan menggeser tata letaknya", () => {
+    render(<ListDetailLayout list={<p>daftar</p>} detail={<p>isi</p>} detailTitle="Bon FX-001" onCloseDetail={vi.fn()} />);
+    const panel = screen.getByRole("dialog", { name: "Bon FX-001" });
+    expect(panel.textContent).toContain("isi");
+    // Daftar tetap di tempatnya dan tidak dibungkus kisi dua kolom.
+    const list = screen.getByText("daftar");
+    expect(panel.contains(list)).toBe(false);
+    expect(list.closest("[class*='grid-cols']")).toBeNull();
+  });
+
   it("Esc menutup panel detail yang terbuka", async () => {
     const onClose = vi.fn();
     render(<ListDetailLayout list={<p>daftar</p>} detail={<p>isi</p>} detailTitle="Bon FX-001" onCloseDetail={onClose} />);
-    expect(screen.getByRole("complementary", { name: "Bon FX-001" })).toBeTruthy();
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledOnce();
   });

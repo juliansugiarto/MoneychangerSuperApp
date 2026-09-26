@@ -19,7 +19,10 @@ describe("GaleriPola", () => {
     // Bon contoh muncul di tiga tabel galeri; klik yang berada di bagian daftar + detail.
     const bagian = container.querySelector("section#daftar-detail") as HTMLElement;
     await userEvent.click(within(bagian).getByText("FX-2026-0914-001"));
-    expect(screen.getByRole("complementary", { name: "Bon FX-2026-0914-001" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "Bon FX-2026-0914-001" })).toBeTruthy();
+    // Panel detail mengambang dan modal: ditutup dulu sebelum halaman di belakangnya dipakai lagi.
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Lanjut" }));
     expect(screen.getByText("Nasabah, produk, wilayah").closest("li")!.getAttribute("aria-current")).toBe("step");
   });
