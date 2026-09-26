@@ -18,6 +18,7 @@ describe("Shareholder dashboard user management", () => {
     expect(dashboardSource).toContain('goTo("/operasional/pengguna?role=ADMIN")');
     expect(dashboardSource).toContain('goTo("/operasional/pengguna?role=STAFF")');
     expect(userManagementSource).toContain('const requestedRole = new URLSearchParams(window.location.search).get("role")');
-    expect(userManagementSource).toContain('requestedRole === "ADMIN" || requestedRole === "STAFF"');
+    expect(userManagementSource).toContain('const initialRole = requestedRole === "ADMIN" ? "ADMIN" : "STAFF"');
+    expect(userManagementSource).toContain("initialRole={initialRole}");
   });
 });

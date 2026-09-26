@@ -25,7 +25,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 9 — Layar masuk, pulihkan, dan ubah sandi
 - [x] Tugas 10 — Wizard `/siapkan`
 - [x] Tugas 11 — Kode pemulihan: layar, ajakan, dan menu pengguna
-- [ ] Tugas 12 — Pengguna & peran
+- [x] Tugas 12 — Pengguna & peran
 - [ ] Tugas 13 — Profil Perusahaan: Tampilan dan Halaman publik; tema dipasang shell
 - [ ] Tugas 14 — Halaman depan publik
 - [ ] Tugas 15 — Peragaan end-to-end, Playwright, dokumentasi, penutupan
@@ -3423,7 +3423,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `ResetPasswordDialog({ accountName, open, onOpenChange, isPending, onConfirm })`
   - `UserDetail({ account, onRoleChange, onSuspend, onActivate, onResetPassword })`
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 `client/src/pages/users/CreateUserForm.test.tsx`:
 
@@ -3516,7 +3516,7 @@ describe("detail akun", () => {
 Run: `./node_modules/.bin/vitest run client/src/pages/users`
 Expected: FAIL — modul belum ada.
 
-- [ ] **Step 2: `accounts.ts`, `CreateUserForm`, `ResetPasswordDialog`, `UserDetail`**
+- [x] **Step 2: `accounts.ts`, `CreateUserForm`, `ResetPasswordDialog`, `UserDetail`**
 
 `client/src/pages/users/accounts.ts`:
 
@@ -3725,7 +3725,7 @@ export function UserDetail({ account, onRoleChange, onSuspend, onActivate, onRes
 Run: `./node_modules/.bin/vitest run client/src/pages/users`
 Expected: PASS, 2 + 2 + 2 uji.
 
-- [ ] **Step 3: Tulis ulang `client/src/pages/UserManagement.tsx`**
+- [x] **Step 3: Tulis ulang `client/src/pages/UserManagement.tsx`**
 
 ```tsx
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -3807,16 +3807,16 @@ Tambahkan ke `FOUNDATION_FILES`:
   "client/src/pages/UserManagement.tsx",
 ```
 
-- [ ] **Step 4: Perintah mutu**
+- [x] **Step 4: Perintah mutu**
 
 Run: `./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build`
 Expected: **`Test Files 210 passed`, `Tests 1687 passed | 2 skipped`** (+3 berkas, +6 uji).
 
-- [ ] **Step 5: Periksa di peramban**
+- [x] **Step 5: Periksa di peramban**
 
 **Minta pengguna masuk sendiri** sebagai Controller atau Pemegang Saham di `moneychanger` (Claude tidak mengetik kata sandi akun pengembangan), lalu buka `/operasional/pengguna` pada 1280/1440/1920: tabel akun, memilih baris membuka panel detail, `Esc` menutupnya, dialog reset menyebut nama akun, akun Controller menampilkan catatan "dilindungi". Buat satu akun Staf uji `uji.sp2.staf` (data uji lokal diizinkan) dan reset kata sandinya lewat dialog.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add client/src/pages/users client/src/pages/UserManagement.tsx client/src/designFoundation.ts
