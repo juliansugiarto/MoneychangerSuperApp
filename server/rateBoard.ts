@@ -61,8 +61,8 @@ export async function saveRateTier(input: TierSaveInput, actorUserId: number) {
     await writeAudit({ actorUserId, action: "RATE_TIER_UPDATED", entityType: "rate_tier", entityId: String(input.tierId), afterState: { label: input.label.trim(), denominationValues: values } });
     return { tierId: input.tierId };
   }
-  await db.insert(rateTiers).values({ currencyId: input.currencyId, label: input.label.trim(), denominationValues: values, sortOrder: input.sortOrder, createdByUserId: actorUserId });
-  const created = (await db.select({ id: rateTiers.id }).from(rateTiers).where(eq(rateTiers.currencyId, input.currencyId)).orderBy(desc(rateTiers.id)).limit(1))[0];
+  // Id diambil dari hasil sisip itu sendiri: "id terbesar valuta ini" tertukar antarpenyimpanan bersamaan.
+  const [created] = await db.insert(rateTiers).values({ currencyId: input.currencyId, label: input.label.trim(), denominationValues: values, sortOrder: input.sortOrder, createdByUserId: actorUserId }).$returningId();
   if (!created) throw new Error("Kelompok pecahan tidak dapat disimpan.");
   await writeAudit({ actorUserId, action: "RATE_TIER_CREATED", entityType: "rate_tier", entityId: String(created.id), afterState: { currencyId: input.currencyId, label: input.label.trim(), denominationValues: values } });
   return { tierId: created.id };
