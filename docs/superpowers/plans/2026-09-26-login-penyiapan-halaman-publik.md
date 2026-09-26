@@ -18,7 +18,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 2 — Kode rahasia bersama dan perintah `tenant.mjs setup-code`
 - [x] Tugas 3 — Pembatas percobaan masuk (`server/loginThrottle.ts`)
 - [x] Tugas 4 — IP asli di balik nginx dan `auth.login` yang dibatasi
-- [ ] Tugas 5 — Kode pemulihan pemilik di server
+- [x] Tugas 5 — Kode pemulihan pemilik di server
 - [ ] Tugas 6 — Penyiapan awal di server (`setup.complete`)
 - [ ] Tugas 7 — Profil publik dan penulis Tampilan/Halaman publik
 - [ ] Tugas 8 — Buang bootstrap `.env` dan sisa OAuth Manus
@@ -1044,7 +1044,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `recoverOwnerAccount(input: { username: string; code: string; newPassword: string }): Promise<User | null>`
   - Prosedur `auth.recover` (publik), `auth.regenerateRecoveryCodes` (`shareholderProcedure`), dan `auth.me` yang kini memuat `recoveryCodesRemaining: number | null`.
 
-- [ ] **Step 1: Tulis uji hidup yang gagal**
+- [x] **Step 1: Tulis uji hidup yang gagal**
 
 `server/ownerRecovery.live.test.ts` — satu berkas, uji berjalan **berurutan** dan saling bergantung keadaan:
 
@@ -1153,7 +1153,7 @@ describe("kode pemulihan pemilik", () => {
 Run: `./node_modules/.bin/vitest run server/ownerRecovery.live.test.ts`
 Expected: FAIL — `./testing/scratchDatabase` dan `./recoveryCodes` tidak ada.
 
-- [ ] **Step 2: Tulis `server/testing/scratchDatabase.ts`**
+- [x] **Step 2: Tulis `server/testing/scratchDatabase.ts`**
 
 ```ts
 import { drizzle } from "drizzle-orm/mysql2";
@@ -1192,7 +1192,7 @@ export async function createScratchDatabase(name: `mc_uji_${string}`): Promise<{
 }
 ```
 
-- [ ] **Step 3: Tulis `server/recoveryCodes.ts`**
+- [x] **Step 3: Tulis `server/recoveryCodes.ts`**
 
 ```ts
 import { and, count, eq, isNull, sql } from "drizzle-orm";
@@ -1280,7 +1280,7 @@ export async function recoverOwnerAccount(input: { username: string; code: strin
 }
 ```
 
-- [ ] **Step 4: Prosedur di `server/routers.ts`**
+- [x] **Step 4: Prosedur di `server/routers.ts`**
 
 Tambah impor:
 
@@ -1320,17 +1320,17 @@ Ganti `me` dan tambahkan dua prosedur di router `auth`:
 
 Kata sandi baru di bawah 12 karakter tetap melempar pesan kebijakan dari `assertPasswordPolicy` **sebelum** kode diperiksa — itu bukan kegagalan pemulihan dan tidak dihitung pembatas.
 
-- [ ] **Step 5: Jalankan uji**
+- [x] **Step 5: Jalankan uji**
 
 Run: `./node_modules/.bin/vitest run server/ownerRecovery.live.test.ts`
 Expected: PASS, 8 uji. Bila `migrate` gagal karena `ADMIN_DATABASE_URL` tidak berhak `CREATE DATABASE`, jalankan dengan `ADMIN_DATABASE_URL=mysql://root@127.0.0.1:3306/` — jangan melewati ujinya.
 
-- [ ] **Step 6: Perintah mutu**
+- [x] **Step 6: Perintah mutu**
 
 Run: `./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build`
 Expected: **`Test Files 196 passed`, `Tests 1636 passed | 2 skipped`** (+1 berkas, +8 uji).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add server/testing/scratchDatabase.ts server/recoveryCodes.ts server/routers.ts server/ownerRecovery.live.test.ts

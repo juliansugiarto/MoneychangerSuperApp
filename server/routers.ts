@@ -177,8 +177,10 @@ import { z } from "zod";
 import { assertThrottleAllows, authThrottle, throttleKeys } from "./loginThrottle";
 import { clientIpOf } from "./proxyTrust";
 import { currentTenantCode } from "./tenantContext";
+import { countRemainingRecoveryCodes, recoverOwnerAccount, regenerateRecoveryCodes } from "./recoveryCodes";
 
 const LOGIN_FAILED_MESSAGE = "Username atau kata sandi tidak valid.";
+const RECOVERY_FAILED_MESSAGE = "Username atau kode pemulihan tidak cocok, atau kode itu sudah pernah dipakai.";
 const decimalString = z.string().trim().regex(/^\d+(\.\d+)?$/, "Masukkan angka desimal yang valid.");
 const workforceRole = z.enum(["ADMIN", "STAFF"]);
 const creatableRole = z.enum(["ADMIN", "STAFF", "CONTROLLER"]);
@@ -428,7 +430,10 @@ export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user ? safeUser(opts.ctx.user) : null),
+    me: publicProcedure.query(async ({ ctx }) => {
+      if (!ctx.user) return null;
+      return { ...safeUser(ctx.user), recoveryCodesRemaining: ctx.user.role === "SHAREHOLDER" ? await countRemainingRecoveryCodes(ctx.user.id) : null };
+    }),
     login: publicProcedure.input(z.object({ username: z.string().trim(), password: z.string().min(1) })).mutation(async ({ input, ctx }) => {
       const keys = throttleKeys("login", currentTenantCode(), input.username, clientIpOf(ctx.req));
       assertThrottleAllows([keys.user, keys.ip]);
@@ -441,6 +446,21 @@ export const appRouter = router({
       await setInternalSession(ctx, user);
       return safeUser(user);
     }),
+    recover: publicProcedure.input(z.object({ username: z.string().trim(), code: z.string().trim().min(1).max(40), newPassword: z.string().min(1) })).mutation(async ({ input, ctx }) => {
+      const keys = throttleKeys("recover", currentTenantCode(), input.username, clientIpOf(ctx.req));
+      assertThrottleAllows([keys.user, keys.ip]);
+      const user = await recoverOwnerAccount(input);
+      if (!user) {
+        authThrottle.recordFailure([keys.user, keys.ip]);
+        throw new TRPCError({ code: "UNAUTHORIZED", message: RECOVERY_FAILED_MESSAGE });
+      }
+      authThrottle.recordSuccess(keys.user);
+      await setInternalSession(ctx, user);
+      return safeUser(user);
+    }),
+    regenerateRecoveryCodes: shareholderProcedure.input(z.object({ currentPassword: z.string().min(1) })).mutation(async ({ input, ctx }) => ({
+      codes: await regenerateRecoveryCodes(ctx.user, input.currentPassword),
+    })),
     changePassword: protectedProcedure.input(z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(1) })).mutation(async ({ input, ctx }) => {
       if (!await verifyPassword(input.currentPassword, ctx.user.passwordHash)) throw new Error("Kata sandi saat ini tidak valid.");
       const updated = await updateInternalUserPassword(ctx.user.id, await hashPassword(input.newPassword), false);
