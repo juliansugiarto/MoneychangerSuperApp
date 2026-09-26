@@ -19,6 +19,11 @@ export type TierSaveInput = { tierId?: number; currencyId: number; label: string
 export function assertTierSaveValid(existing: readonly RateTierRow[], input: TierSaveInput): RateTierRow[] {
   const values = Array.from(new Set(input.denominationValues.map(normalizeDenominationValue)));
   if (!values.length) throw new Error("Kelompok pecahan harus memuat minimal satu nilai pecahan.");
+  // `existing` adalah seluruh kelompok (aktif maupun tidak) milik valuta masukan. Kelompok yang diubah
+  // wajib ada di antaranya; bila tidak, pemeriksaan tumpang tindih berjalan terhadap valuta yang salah.
+  if (input.tierId && !existing.some((tier) => tier.id === input.tierId)) {
+    throw new Error("Kelompok pecahan itu bukan milik valuta ini. Muat ulang papan kurs, lalu ubah dari baris valutanya.");
+  }
   const candidate: RateTierRow = { id: input.tierId ?? -1, currencyId: input.currencyId, label: input.label.trim(), denominationValues: values, sortOrder: input.sortOrder, active: true };
   const next = [...existing.filter((tier) => tier.id !== candidate.id), candidate];
   const overlap = findTierOverlap(next);

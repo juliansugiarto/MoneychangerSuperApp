@@ -22,6 +22,12 @@ describe("menyimpan kelompok pecahan", () => {
     expect(next[0].denominationValues).toEqual(["5.000000", "10.000000", "20.000000"]);
   });
 
+  it("menolak mengubah kelompok yang bukan milik valuta masukan, supaya tumpang tindih tidak diperiksa terhadap valuta yang salah", () => {
+    // `existing` selalu kelompok milik currencyId masukan; tierId 9 milik valuta lain.
+    expect(() => assertTierSaveValid([tier(1, "100", ["100"])], { tierId: 9, currencyId: 1, label: "besar", denominationValues: ["50"], sortOrder: 2 }))
+      .toThrow(/bukan milik valuta ini/i);
+  });
+
   it("menolak kelompok tanpa satu pun nilai muka", () => {
     expect(() => assertTierSaveValid([], { currencyId: 1, label: "kosong", denominationValues: [], sortOrder: 1 }))
       .toThrow(/minimal satu nilai pecahan/i);
