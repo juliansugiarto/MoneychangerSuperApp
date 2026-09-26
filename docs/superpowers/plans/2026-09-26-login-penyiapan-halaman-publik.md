@@ -16,7 +16,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 
 - [x] Tugas 1 — Skema, migrasi aditif `0060`, isian `0061`, dan basis data visual
 - [x] Tugas 2 — Kode rahasia bersama dan perintah `tenant.mjs setup-code`
-- [ ] Tugas 3 — Pembatas percobaan masuk (`server/loginThrottle.ts`)
+- [x] Tugas 3 — Pembatas percobaan masuk (`server/loginThrottle.ts`)
 - [ ] Tugas 4 — IP asli di balik nginx dan `auth.login` yang dibatasi
 - [ ] Tugas 5 — Kode pemulihan pemilik di server
 - [ ] Tugas 6 — Penyiapan awal di server (`setup.complete`)
@@ -619,7 +619,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `assertThrottleAllows(keys: string[]): void` — melempar `TRPCError` `TOO_MANY_REQUESTS` dengan `lockedMessage(detik)`
   - `lockedMessage(seconds: number): string`
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -698,7 +698,7 @@ describe("pembatas percobaan masuk", () => {
 Run: `./node_modules/.bin/vitest run server/loginThrottle.test.ts`
 Expected: FAIL — `Failed to resolve import "./loginThrottle"`.
 
-- [ ] **Step 2: Tulis `server/loginThrottle.ts`**
+- [x] **Step 2: Tulis `server/loginThrottle.ts`**
 
 ```ts
 import { TRPCError } from "@trpc/server";
@@ -779,17 +779,17 @@ export function assertThrottleAllows(keys: string[]) {
 }
 ```
 
-- [ ] **Step 3: Jalankan uji**
+- [x] **Step 3: Jalankan uji**
 
 Run: `./node_modules/.bin/vitest run server/loginThrottle.test.ts`
 Expected: PASS, 7 uji.
 
-- [ ] **Step 4: Perintah mutu**
+- [x] **Step 4: Perintah mutu**
 
 Run: `./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build`
 Expected: **`Test Files 193 passed`, `Tests 1621 passed | 2 skipped`** (+1 berkas, +7 uji).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/loginThrottle.ts server/loginThrottle.test.ts
