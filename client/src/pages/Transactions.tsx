@@ -1,4 +1,5 @@
 import { formatIdrDecimal } from "@/lib/money";
+import { formatNotaDate } from "./transactions/notaDate";
 import { toast } from "sonner";
 
 /** Shared bon/kwitansi helpers used by both TransactionCreate.tsx (the form) and TransactionList.tsx (the archive). Kept in this file — not renamed — so existing tests that read Transactions.tsx source text for "printBon"/"window.print()" keep working. */
@@ -19,7 +20,7 @@ export const toBase64 = (file: File) => new Promise<string>((resolve, reject) =>
 export const escapeHtml = (value: unknown) => String(value ?? "-").replace(/[&<>\"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" })[character] ?? character);
 export const csvCell = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
 
-export type CompanyBranding = { legalEntityName?: string | null; tradingName?: string | null; kupvaCode?: string | null; licenseNumber?: string | null; address?: string | null; phone?: string | null; logoUrl?: string | null };
+export type CompanyBranding = { legalEntityName?: string | null; tradingName?: string | null; kupvaCode?: string | null; licenseNumber?: string | null; address?: string | null; phone?: string | null; logoUrl?: string | null; timezone?: string | null };
 
 /** Cara bayar as a customer reads it, rather than the stored enum. */
 const paymentMethodLabel: Record<string, string> = { CASH: "Tunai", BANK_TRANSFER: "Transfer bank", OTHER: "Lainnya" };
@@ -113,7 +114,7 @@ export function printBon(transaction: any, customer: Customer | null, lines: Pri
     <div class="head">
       <div class="brand"><div class="logo-box">${logoImg}</div><div><h2>${escapeHtml(legalName)}</h2><p class="tagline">${escapeHtml(companyName)} &middot; Penyelenggara KUPVA Bukan Bank</p></div></div>
       <div class="doc"><p class="title">${title}</p><p class="subtitle">${subtitle} &middot; ${typeCode}</p></div>
-      <div class="no-box"><span class="no-value">No: ${escapeHtml(transaction.receiptNumber ?? "-")}</span><span class="no-date">${escapeHtml(new Date(transaction.transactionAt).toLocaleDateString("id-ID"))}</span></div>
+      <div class="no-box"><span class="no-value">No: ${escapeHtml(transaction.receiptNumber ?? "-")}</span><span class="no-date">${escapeHtml(formatNotaDate(transaction.transactionAt, company?.timezone))}</span></div>
     </div>
     <p class="contact">${escapeHtml(companyAddress)} &middot; ${escapeHtml(companyPhone)}${licenceBits ? ` &middot; ${licenceBits}` : ""}</p>
     <div class="details">

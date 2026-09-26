@@ -30,7 +30,9 @@ describe("nota terhadap SE BI 18/42/DKSP huruf G angka 1", () => {
 
   it("b. mencetak tanggal transaksi", () => {
     expect(receipt).toContain("transaction.transactionAt");
-    expect(receipt).toContain('toLocaleDateString("id-ID")');
+    // Menurut zona operasional perusahaan, bukan zona peramban (risiko residual Paket K3, ditutup).
+    expect(receipt).toContain("formatNotaDate(transaction.transactionAt, company?.timezone)");
+    expect(receipt).not.toContain('toLocaleDateString("id-ID")');
   });
 
   it("c. mencetak nomor serial bukti transaksi", () => {

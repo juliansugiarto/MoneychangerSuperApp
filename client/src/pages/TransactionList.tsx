@@ -22,7 +22,7 @@ export default function TransactionList() {
   const companyBranding = async () => {
     if (!companyProfile) return null;
     const logoUrl = companyProfile.logoDocumentId ? await utils.documents.downloadUrl.fetch({ documentId: companyProfile.logoDocumentId }).catch(() => null) : null;
-    return { legalEntityName: companyProfile.legalEntityName, tradingName: companyProfile.tradingName, kupvaCode: companyProfile.kupvaCode, licenseNumber: companyProfile.licenseNumber, address: companyProfile.address, phone: companyProfile.phone, logoUrl };
+    return { legalEntityName: companyProfile.legalEntityName, tradingName: companyProfile.tradingName, kupvaCode: companyProfile.kupvaCode, licenseNumber: companyProfile.licenseNumber, address: companyProfile.address, phone: companyProfile.phone, logoUrl, timezone: companyProfile.timezone };
   };
 
   const submit = trpc.transactions.submit.useMutation({
