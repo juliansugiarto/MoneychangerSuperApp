@@ -43,8 +43,9 @@ Maka fakta itu pindah ke tabel satu baris baru **`app_installation`**.
 
 ### 2. Penyiapan
 
-- Selama `setupCompletedAt` kosong, `auth.me` mengembalikan tanda `setupRequired` dan setiap URL staf
-  serta `/login` mengarah ke **`/siapkan`**.
+- Selama `setupCompletedAt` kosong, `publicContent.profile` mengembalikan `setupRequired = true` dan
+  halaman depan serta `/login` mengarah ke **`/siapkan`** (instalasi baru belum punya akun, jadi
+  setiap URL staf berakhir di `/login`).
 - Langkah 0 kode penyiapan → 1 akun pemilik (nama, username, kata sandi ≥ 12) → 2 perusahaan (nama
   badan hukum, nama dagang, nomor izin) → 3 delapan kode pemulihan dengan centang wajib
   *"Saya sudah menyimpannya"*, cetak dan unduh `.txt`.
