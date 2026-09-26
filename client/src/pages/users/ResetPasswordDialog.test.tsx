@@ -20,4 +20,16 @@ describe("reset kata sandi", () => {
     await userEvent.click(screen.getByRole("button", { name: "Reset kata sandi" }));
     expect(onConfirm).toHaveBeenCalledWith("Sementara-2026");
   });
+
+  it("sesudah reset berhasil dan dialog ditutup induknya, kata sandi sementara tidak terbawa ke pembukaan berikutnya", async () => {
+    const props = { accountName: "Budi Kasir", onOpenChange: vi.fn(), isPending: false, onConfirm: vi.fn() };
+    const { rerender } = render(<ResetPasswordDialog {...props} open />);
+    await userEvent.type(screen.getByLabelText("Kata sandi sementara"), "Sementara-2026");
+    await userEvent.type(screen.getByLabelText("Ulangi kata sandi sementara"), "Sementara-2026");
+    // Induk menutup dialog lewat prop `open` sesudah mutasi berhasil — bukan lewat tombol Batal.
+    rerender(<ResetPasswordDialog {...props} accountName="Sari Admin" open={false} />);
+    rerender(<ResetPasswordDialog {...props} accountName="Sari Admin" open />);
+    expect((screen.getByLabelText("Kata sandi sementara") as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText("Ulangi kata sandi sementara") as HTMLInputElement).value).toBe("");
+  });
 });

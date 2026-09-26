@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PASSWORD_MIN_LENGTH } from "@shared/accountRules";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /** Pengganti `window.prompt`: kata sandi sementara diketik dua kali, tidak pernah tampil di layar. */
 export function ResetPasswordDialog({ accountName, open, onOpenChange, isPending, onConfirm }: {
@@ -17,7 +17,10 @@ export function ResetPasswordDialog({ accountName, open, onOpenChange, isPending
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const ready = password.length >= PASSWORD_MIN_LENGTH && password === confirmation;
-  const close = (next: boolean) => { if (!next) { setPassword(""); setConfirmation(""); } onOpenChange(next); };
+  // Dikosongkan setiap kali dialog tertutup — juga saat induk menutupnya sesudah reset berhasil —
+  // supaya kata sandi sementara satu akun tidak terbawa ke dialog akun berikutnya.
+  useEffect(() => { if (!open) { setPassword(""); setConfirmation(""); } }, [open]);
+  const close = (next: boolean) => onOpenChange(next);
 
   return (
     <Dialog open={open} onOpenChange={close}>
