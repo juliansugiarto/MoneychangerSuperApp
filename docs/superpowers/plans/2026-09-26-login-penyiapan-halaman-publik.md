@@ -26,7 +26,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 10 — Wizard `/siapkan`
 - [x] Tugas 11 — Kode pemulihan: layar, ajakan, dan menu pengguna
 - [x] Tugas 12 — Pengguna & peran
-- [ ] Tugas 13 — Profil Perusahaan: Tampilan dan Halaman publik; tema dipasang shell
+- [x] Tugas 13 — Profil Perusahaan: Tampilan dan Halaman publik; tema dipasang shell
 - [ ] Tugas 14 — Halaman depan publik
 - [ ] Tugas 15 — Peragaan end-to-end, Playwright, dokumentasi, penutupan
 
@@ -3842,7 +3842,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `FaqEditor({ items, onChange })`
   - `PublicPageSection({ initial, isPending, onSave })` → `onSave(PublicPageInput)` dengan nilai yang sudah dinormalkan
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 `client/src/pages/company/AppearanceSection.test.tsx`:
 
@@ -3948,7 +3948,7 @@ describe("bagian Halaman publik", () => {
 Run: `./node_modules/.bin/vitest run client/src/pages/company`
 Expected: FAIL — modul belum ada.
 
-- [ ] **Step 2: `AppearanceSection`**
+- [x] **Step 2: `AppearanceSection`**
 
 ```tsx
 import { StatTile } from "@/components/patterns/StatTile";
@@ -4016,7 +4016,7 @@ export function AppearanceSection({ initialPalette, initialAccent, isPending, on
 }
 ```
 
-- [ ] **Step 3: `FaqEditor`**
+- [x] **Step 3: `FaqEditor`**
 
 ```tsx
 import { OUTLINE_BUTTON, QUIET_FIELD } from "@/components/patterns/tebal";
@@ -4064,7 +4064,7 @@ export function FaqEditor({ items, onChange }: { items: PublicFaqItem[]; onChang
 }
 ```
 
-- [ ] **Step 4: `PublicPageSection`**
+- [x] **Step 4: `PublicPageSection`**
 
 ```tsx
 import { BOLD_BUTTON, QUIET_FIELD } from "@/components/patterns/tebal";
@@ -4139,7 +4139,7 @@ export function PublicPageSection({ initial, isPending, onSave }: { initial: Ini
 Run: `./node_modules/.bin/vitest run client/src/pages/company`
 Expected: PASS, 3 + 3 + 2 uji.
 
-- [ ] **Step 5: Rangkai di `CompanyProfile.tsx` dan pasang tema di shell**
+- [x] **Step 5: Rangkai di `CompanyProfile.tsx` dan pasang tema di shell**
 
 Di `client/src/pages/CompanyProfile.tsx`, tambah impor:
 
@@ -4191,12 +4191,12 @@ Tambahkan ke `FOUNDATION_FILES`:
   "client/src/pages/company/PublicPageSection.tsx",
 ```
 
-- [ ] **Step 6: Perintah mutu**
+- [x] **Step 6: Perintah mutu**
 
 Run: `./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build`
 Expected: **`Test Files 213 passed`, `Tests 1695 passed | 2 skipped`** (+3 berkas, +8 uji).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add client/src/pages/company client/src/pages/CompanyProfile.tsx client/src/components/DashboardLayout.tsx client/src/designFoundation.ts

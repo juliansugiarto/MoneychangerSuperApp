@@ -15,6 +15,8 @@ import { IRA_PROVINCE_LABELS } from "@shared/iraVocabulary";
 import { Archive, Building2, EyeOff, FileImage, Paperclip, ShieldCheck, Trash2, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { AppearanceSection } from "./company/AppearanceSection";
+import { PublicPageSection } from "./company/PublicPageSection";
 
 const fileToBase64 = (file: File) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
 
@@ -60,6 +62,15 @@ export default function CompanyProfile() {
 
   const update = trpc.companyProfile.update.useMutation({
     onSuccess: () => { toast.success("Profil perusahaan disimpan."); utils.companyProfile.get.invalidate(); },
+    onError: (error) => toast.error(error.message),
+  });
+  const refreshPresentation = () => { void utils.companyProfile.get.invalidate(); void utils.publicContent.profile.invalidate(); };
+  const updateAppearance = trpc.companyProfile.updateAppearance.useMutation({
+    onSuccess: () => { toast.success("Tampilan disimpan."); refreshPresentation(); },
+    onError: (error) => toast.error(error.message),
+  });
+  const updatePublicPage = trpc.companyProfile.updatePublicPage.useMutation({
+    onSuccess: () => { toast.success("Halaman publik disimpan."); refreshPresentation(); },
     onError: (error) => toast.error(error.message),
   });
 
@@ -224,6 +235,15 @@ export default function CompanyProfile() {
         <Button disabled={update.isPending} onClick={save} className="w-full bg-[#183f70] text-white hover:bg-[#12345d]">{update.isPending ? "Menyimpan…" : "Simpan profil"}</Button>
       </CardContent>
     </Card>
+
+    {profile ? (
+      <>
+        <AppearanceSection key={`${profile.themePalette}:${profile.accentColor ?? ""}`} initialPalette={profile.themePalette} initialAccent={profile.accentColor} isPending={updateAppearance.isPending} onSave={(values) => updateAppearance.mutate(values)} />
+        <PublicPageSection key={String(profile.updatedAt)} initial={profile} isPending={updatePublicPage.isPending} onSave={(values) => updatePublicPage.mutate(values)} />
+      </>
+    ) : (
+      <p className="rounded-md border border-dashed px-3 py-2 text-sm">Simpan Data badan usaha lebih dulu; Tampilan dan Halaman publik disimpan pada profil yang sama.</p>
+    )}
 
     <Card className="border-[#dce6f0]">
       <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">Logo</CardTitle><CardDescription>Tampil di kwitansi cetak. JPG, PNG, WEBP; maksimal 8 MB.</CardDescription></CardHeader>

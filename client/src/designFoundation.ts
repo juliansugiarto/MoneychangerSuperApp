@@ -51,4 +51,7 @@ export const FOUNDATION_FILES: readonly string[] = [
   "client/src/pages/users/ResetPasswordDialog.tsx",
   "client/src/pages/users/UserDetail.tsx",
   "client/src/pages/UserManagement.tsx",
+  "client/src/pages/company/AppearanceSection.tsx",
+  "client/src/pages/company/FaqEditor.tsx",
+  "client/src/pages/company/PublicPageSection.tsx",
 ];

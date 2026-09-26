@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { trpc } from "@/lib/trpc";
+import { useCompanyTheme } from "@/lib/useCompanyTheme";
 import type { BackOfficeRole } from "@shared/backOfficeNavigation";
 import type { CSSProperties, ReactNode } from "react";
 import { useState } from "react";
@@ -33,6 +34,7 @@ export default function DashboardLayout({ children, minimumRole = "STAFF" }: { c
   const { loading, user, logout } = useAuth();
   const access = accessStateFor({ loading, user }, minimumRole);
   const profile = trpc.companyProfile.get.useQuery(undefined, { enabled: access === "ALLOWED", staleTime: 5 * 60_000 });
+  useCompanyTheme(profile.data);
   const [paletteOpen, setPaletteOpen] = useState(false);
   useShortcuts({
     openPalette: () => { if (access === "ALLOWED") setPaletteOpen(true); },
