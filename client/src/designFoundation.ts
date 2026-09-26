@@ -54,4 +54,7 @@ export const FOUNDATION_FILES: readonly string[] = [
   "client/src/pages/company/AppearanceSection.tsx",
   "client/src/pages/company/FaqEditor.tsx",
   "client/src/pages/company/PublicPageSection.tsx",
+  "client/src/pages/home/PublicRateTable.tsx",
+  "client/src/pages/home/PublicSections.tsx",
+  "client/src/pages/Home.tsx",
 ];

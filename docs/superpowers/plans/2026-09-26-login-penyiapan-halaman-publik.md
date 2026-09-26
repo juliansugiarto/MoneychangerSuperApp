@@ -27,7 +27,7 @@ Dikerjakan satu tugas per commit. **Centang barisnya di sini setelah commit tuga
 - [x] Tugas 11 — Kode pemulihan: layar, ajakan, dan menu pengguna
 - [x] Tugas 12 — Pengguna & peran
 - [x] Tugas 13 — Profil Perusahaan: Tampilan dan Halaman publik; tema dipasang shell
-- [ ] Tugas 14 — Halaman depan publik
+- [x] Tugas 14 — Halaman depan publik
 - [ ] Tugas 15 — Peragaan end-to-end, Playwright, dokumentasi, penutupan
 
 Urutan mengikat: 1 sebelum semuanya; 2 sebelum 5 dan 6; 3 sebelum 4; 4 sebelum 5 dan 6; 5 sebelum 6 dan 11; 6 sebelum 7 (`readPublicProfile` memakai `isSetupRequired`); 6 dan 7 sebelum 9; 9 sebelum 10, 11, 14; 7 sebelum 13 dan 14; 8 boleh kapan saja sesudah 6; 1–14 sebelum 15.
@@ -4219,7 +4219,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Consumes: `usePublicProfile` (Tugas 9); `rates.activeRates` → `PublicRateRow[]`, `sortPublicRates`, `latestPublicRateEffectiveAt` (`shared/publicRates.ts`); `OTHER_TIER_LABEL` (`shared/rateTiers.ts`); `publicFaqOrDefault`, `fraudWarningOrDefault`, `hasContactSection`, `telHref` (Tugas 7); `formatIdrDecimal` (`client/src/lib/money.ts`); `PublicServicePlanner` (tetap); `LoadingState`, `EmptyState`, `ErrorState`.
 - Produces: `PublicRateTable({ rates, isLoading, isError, onRetry })`, `PublicContactSection({ profile })`, `PublicFaqSection({ faq })`, `FraudNotice({ text })`, `AnnouncementsSection({ items })`.
 
-- [ ] **Step 1: Tulis uji yang gagal**
+- [x] **Step 1: Tulis uji yang gagal**
 
 `client/src/pages/home/PublicRateTable.test.tsx`:
 
@@ -4272,7 +4272,7 @@ describe("bagian halaman publik", () => {
 Run: `./node_modules/.bin/vitest run client/src/pages/home`
 Expected: FAIL — modul belum ada.
 
-- [ ] **Step 2: `PublicRateTable`**
+- [x] **Step 2: `PublicRateTable`**
 
 ```tsx
 import { EmptyState, ErrorState, LoadingState } from "@/components/patterns/PageStates";
@@ -4319,7 +4319,7 @@ export function PublicRateTable({ rates, isLoading, isError, onRetry }: { rates:
 }
 ```
 
-- [ ] **Step 3: `PublicSections`**
+- [x] **Step 3: `PublicSections`**
 
 ```tsx
 import { OUTLINE_BUTTON } from "@/components/patterns/tebal";
@@ -4384,7 +4384,7 @@ export function AnnouncementsSection({ items }: { items: { id: number; title: st
 Run: `./node_modules/.bin/vitest run client/src/pages/home`
 Expected: PASS, 1 + 4 uji.
 
-- [ ] **Step 4: Tulis ulang `client/src/pages/Home.tsx`**
+- [x] **Step 4: Tulis ulang `client/src/pages/Home.tsx`**
 
 ```tsx
 import { PublicServicePlanner } from "@/components/PublicServicePlanner";
@@ -4467,12 +4467,12 @@ Tambahkan ke `FOUNDATION_FILES`:
   "client/src/pages/Home.tsx",
 ```
 
-- [ ] **Step 5: Perintah mutu**
+- [x] **Step 5: Perintah mutu**
 
 Run: `./node_modules/.bin/vitest run && ./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build`
 Expected: **`Test Files 215 passed`, `Tests 1700 passed | 2 skipped`** (+2 berkas, +5 uji).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add client/src/pages/home client/src/pages/Home.tsx client/src/designFoundation.ts
