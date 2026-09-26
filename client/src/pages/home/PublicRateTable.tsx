@@ -1,5 +1,5 @@
 import { EmptyState, ErrorState, LoadingState } from "@/components/patterns/PageStates";
-import { formatIdrDecimal } from "@/lib/money";
+import { formatIdrDecimal, formatPlainAmount } from "@/lib/money";
 import { sortPublicRates, type PublicRateRow } from "@shared/publicRates";
 import { OTHER_TIER_LABEL } from "@shared/rateTiers";
 
@@ -31,7 +31,7 @@ export function PublicRateTable({ rates, isLoading, isError, onRetry }: { rates:
               </th>
               <td className="px-3 py-1.5 text-right font-semibold tabular-nums text-ink">{formatIdrDecimal(rate.buyRate)}</td>
               <td className="px-3 py-1.5 text-right font-semibold tabular-nums text-ink">{formatIdrDecimal(rate.sellRate)}</td>
-              <td className="px-3 py-1.5 text-right tabular-nums text-ink-muted">{rate.quoteUnit}</td>
+              <td className="px-3 py-1.5 text-right tabular-nums text-ink-muted">{formatPlainAmount(rate.quoteUnit)}</td>
               <td className="px-3 py-1.5 text-label text-ink-muted">{effectiveFormat.format(new Date(rate.effectiveAt))}</td>
             </tr>
           ))}
