@@ -70,7 +70,73 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 26 September 2026 (Sub-proyek 2 SELESAI, 15 dari 15 tugas)
+## Sesi berikutnya — keadaan per 26 September 2026 malam (sisa pekerjaan sebelum aplikasi desktop)
+
+**Arah yang disepakati pengguna 26 September 2026 — jangan ditanyakan ulang:** aplikasi berpindah
+dari layanan web multi-tenant menjadi **aplikasi luring, satu toko satu instalasi**. Rinciannya:
+- **Hanya Windows untuk pelanggan**, paket portabel ala proyek `tokoEmas-IR` (zip ke `C:\…`, Node
+  dan MariaDB/MySQL portabel, peluncur membuka peramban; komputer lain di toko membuka
+  `http://<pc-server>:port`). Tanpa Electron, tanpa akun Apple Developer; Mac hanya pengembangan.
+- **Satu komputer bertindak server** bila toko punya lebih dari satu komputer.
+- **Laporan gabungan** hanya untuk pemilik yang punya beberapa gerai, lewat **berkas ekspor**
+  bertanda tangan dan terenkripsi (bukan sinkronisasi); SOLVINC tidak pernah melihat data toko.
+- **Lisensi hibrida:** berkas lisensi bertanda tangan, perpanjangan otomatis saat daring, kode
+  aktivasi lewat WhatsApp saat luring; bulanan/tahunan/sekali bayar; uji coba 30 hari; deteksi jam
+  dimundurkan. **Lisensi habis → mode baca-saja** (lihat, cari, cetak, ekspor regulator, cadangan
+  tetap jalan), sesuai kewajiban simpan 5 tahun.
+- Urutan program desktop yang diusulkan: (1) paket Windows portabel, (2) penyimpanan lokal +
+  cadangan, (3) lisensi, (4) ekspor cabang + aplikasi konsolidasi, (5) pembersihan tenancy/R2/halaman
+  publik. Keputusan 3 September (SaaS multi-tenant, login SOLVINC) **digantikan**; memori
+  *solvinc-saas-architecture* sudah basi untuk arah ini.
+
+**Pengguna meminta sisa pekerjaan yang penting diselesaikan dulu** sebelum pindah. Daftar yang
+disepakati dan keadaannya:
+
+| Butir | Keadaan |
+|---|---|
+| A1 tujuh sisa kecil sub-proyek 2 | **SELESAI** `c7dfcb8`…`a808ecb` |
+| A2 empat temuan reviu 1B | **SELESAI** `d3e433c`, `8acbd7c`, `701774a`, `dd6f98a` (id kelompok: 8 simpan serentak → 1–3 id berbeda sebelum perbaikan) |
+| A3 sesi basis data selalu UTC | **SELESAI** `67eaf99`, `3299394`; spec `specs/2026-09-26-zona-waktu-utc-design.md`, rencana `plans/2026-09-26-zona-waktu-utc.md` (2/2) |
+| A4 tanggal nota zona operasional | **SELESAI** `b7bf632` |
+| A5 mysql2 3.24.4 | **SELESAI** `1e4d883`; audit sesudahnya **7 (2 tinggi, 5 sedang)**, kedua tinggi `xlsx` — **belum bersih** |
+| A6 identitas IBV tertulis mati | **SELESAI** `7822f80` — 7 tempat, termasuk arsip penutupan yang *selalu* mencetak IBV; penjaga `server/noHardcodedCompany.test.ts` |
+| B1 bentuk baru uji isolasi tenant | **menunggu keputusan pengguna** |
+| B2 Temuan 3 — pemblokiran serta merta dan pencatatan percobaan | **menunggu keputusan pengguna**, butuh spec |
+| B3 Temuan 7 — penginian berkala klasifikasi risiko | **menunggu keputusan pengguna**, butuh spec |
+| B4 tanggal berakhir hubungan nasabah INACTIVE lama | **menunggu keputusan pengguna** |
+| B5 harga per seri uang kertas | **menunggu keputusan pengguna** (kerjakan atau buang) |
+| C sub-proyek 3–9, penerapan produksi `0060`/`0061`, GitHub Action penerapan | **sengaja sesudah pindah** — disepakati pengguna |
+
+**Akibat A6 yang perlu diketahui:** nama penerbit/audiens sesi berganti (`aplikasi-valuta-internal`/
+`-backoffice`), jadi **setiap sesi yang sedang berjalan berakhir sekali** — termasuk server
+pengembangan port 3000 dan produksi bila kelak diterapkan.
+
+**Baseline uji terakhir yang benar-benar dijalankan (26 September malam, `7822f80`):**
+`Test Files 224 passed (224)`, `Tests 1734 passed | 2 skipped (1736)`; `tsc` keluar 0; `vite build`
+`✓ built`; Playwright **55 passed (1.2m)** dengan `caffeinate`. Selisih terhadap 1706 (`c7baccf`):
++28 uji, +9 berkas — A1 +14, A2 +4, A4 +2, A3 +4, A6 +4.
+
+**Playwright yang "macet" 15–17 menit adalah Mac yang tidur, bukan kode.** `pmset -g log` menunjukkan
+siklus tidur ± 16 menit saat pengguna pergi; runner membeku sehingga batas 30 detik Playwright tidak
+pernah menyala. Jalankan `caffeinate -dimsu ./node_modules/.bin/playwright test`. Satu kegagalan
+tangkapan `galeri: #palet` @1280 muncul sekali lalu lulus 9 dari 9 ulangan — dicatat, tidak diubah.
+
+**Prompt untuk sesi berikutnya — keputusan B, satu per satu:**
+
+```
+Lanjutkan daftar "sisa pekerjaan sebelum aplikasi desktop" di docs/superpowers/PROMPT-SESI.md.
+A1–A6 sudah selesai. Bawa saya melalui B1–B5 SATU PER SATU: jelaskan singkat apa yang
+dipertaruhkan, beri pilihan dengan rekomendasi, tunggu jawaban saya. Butir yang saya putuskan
+dikerjakan diperlakukan sebagai pekerjaan arsitektural (spec → rencana → eksekusi langsung, tanpa
+subagen); yang saya putuskan dibuang dicatat di ROADMAP. Sesudah B selesai, mulai sesi rancangan
+program aplikasi desktop (paket Windows portabel dulu). Tutup sesi dengan skill serah-terima.
+
+Baseline uji: Test Files 224 passed (224), Tests 1734 passed | 2 skipped (1736).
+```
+
+---
+
+### Catatan penutupan Sub-proyek 2 (SELESAI, 15 dari 15 tugas)
 
 **Sub-proyek 2 (login, penyiapan awal, kode pemulihan, halaman kurs publik, pemilih palet)
 DIKERJAKAN 26 September 2026** — satu sesi langsung, tanpa subagen, satu commit per tugas:

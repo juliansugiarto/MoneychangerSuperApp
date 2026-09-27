@@ -317,6 +317,20 @@ sebagai tidak ditatausahakan di aplikasi ini.
 
 ---
 
+### Program Aplikasi Desktop (luring, satu toko satu instalasi) — **ARAH DISEPAKATI 26 September 2026, belum dirancang**
+
+Menggantikan arah SaaS multi-tenant 3 September. Windows saja untuk pelanggan (paket portabel ala
+`tokoEmas-IR`), satu PC server per toko, laporan gabungan pemilik lewat berkas ekspor, lisensi
+hibrida bulanan/tahunan/sekali bayar dengan uji coba 30 hari dan mode baca-saja saat habis. Dimulai
+**sesudah** butir B (keputusan pengguna) pada daftar sisa pekerjaan di `PROMPT-SESI.md`; butir A1–A6
+selesai 26 September 2026. Sub-proyek 3–9 program desain ulang **ditunda sampai sesudah pindah**.
+
+- [ ] 1 — Paket Windows portabel (Node + MariaDB/MySQL portabel, peluncur, mode server/klien LAN, CI Windows + uji asap)
+- [ ] 2 — Penyimpanan berkas lokal + cadangan/pemulihan (mengganti R2)
+- [ ] 3 — Lisensi (di aplikasi + alat penerbit SOLVINC)
+- [ ] 4 — Ekspor cabang + aplikasi konsolidasi pemilik
+- [ ] 5 — Pembersihan tenancy, R2, dan nasib halaman publik
+
 ### Program Desain Ulang Antarmuka — **DIRANCANG 12 September 2026; tema Konter Tebal dan sub-proyek 1B ditambahkan 13 September; sub-proyek 1 SELESAI 16 September; sub-proyek 1B SELESAI 21 September (14 dari 14 tugas); sub-proyek 2 SELESAI 26 September (15 dari 15 tugas)**
 
 Spec: `specs/2026-09-12-desain-ulang-antarmuka-design.md` (disetujui pengguna 12 September 2026),
