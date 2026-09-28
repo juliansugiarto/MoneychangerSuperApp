@@ -27,7 +27,7 @@ tersendiri (`server/watchlistBlocks.ts`, `server/iraClassificationReview.ts`), g
 - [x] Tugas 7 — Aturan murni tinjauan klasifikasi
 - [x] Tugas 8 — Pengesahan tinjauan, selang, dan layarnya
 - [x] Tugas 9 — B4 tanggal berakhir hubungan
-- [ ] Tugas 10 — Peragaan end-to-end, dokumentasi, perintah mutu
+- [x] Tugas 10 — Peragaan end-to-end, dokumentasi, perintah mutu
 
 ## Global Constraints
 
@@ -1274,7 +1274,7 @@ Impor `startOfOperationalDay`, `operationalDateKey` dari `../shared/regulatoryAc
 
 **Files:** `docs/BUKU-PANDUAN-PENGGUNAAN-A-Z.md`, `docs/SKEMA-DATABASE-PROJECT.md`, `docs/superpowers/ROADMAP-SISA-PEKERJAAN.md`, `docs/superpowers/specs/2026-09-09-pbi-10-2024-temuan-awal.md` (tandai Temuan 3 dan 7 dirancang/selesai), Playwright galeri/rute bila ada spec yang menangkap rute baru.
 
-- [ ] **Step 1: Peragaan di `moneychanger`** (server `./node_modules/.bin/tsx watch server/_core/index.ts`, pengguna masuk sendiri — Claude tidak mengetik sandi):
+- [x] **Step 1: Peragaan di `moneychanger`** (server `./node_modules/.bin/tsx watch server/_core/index.ts`, pengguna masuk sendiri — Claude tidak mengetik sandi):
   1. Impor daftar uji DTTOT kecil (`scripts/seedWatchlistDemo.mjs` bila sesuai, atau workbook uji buatan sendiri di scratchpad) berisi nama yang sama dengan satu nasabah uji lokal.
   2. Periksa `SELECT id,customerId,source,status,matchKeys FROM watchlist_blocks` → blokir OPEN untuk nasabah itu.
   3. Buat bon untuk nasabah itu di layar → pesan netral; `attempted_transactions` bertambah satu, `exchange_transactions`/`cash_denomination_balances` tidak berubah (bandingkan hitungan sebelum-sesudah).
@@ -1282,8 +1282,8 @@ Impor `startOfOperationalDay`, `operationalDateKey` dari `../shared/regulatoryAc
   5. Klasifikasi Risiko: N > 0 → tombol sahkan nonaktif; isi seluruh kode → sahkan → riwayat + unduh snapshot; Kesiapan Operasional "Tinjauan berikutnya …".
   6. Nasabah uji INACTIVE dengan `relationshipEndedAt` dikosongkan lewat SQL lokal → muncul di kartu → isi tanggal + sumber → kartu kosong, audit tercatat.
   Tangkapan layar tiap langkah disimpan di scratchpad (bukan di repo).
-- [ ] **Step 2: Dokumentasi** — Panduan A–Z: bagian Pemblokiran (alur, pesan kasir, keputusan, apa yang tidak dikirim aplikasi), Tinjauan klasifikasi, pengisian tanggal berakhir, dan **cara resmi harga seri uang kertas** (B5: harga diketik pada bon dalam toleransi atau dengan alasan). Skema: tiga tabel, satu kolom, migrasi `0062`. ROADMAP: B5 sebagai calon sesudah desktop; B1 diterima. Temuan awal: Temuan 3 dan 7 → selesai dengan rujukan rencana ini.
-- [ ] **Step 3: Perintah mutu**
+- [x] **Step 2: Dokumentasi** — Panduan A–Z: bagian Pemblokiran (alur, pesan kasir, keputusan, apa yang tidak dikirim aplikasi), Tinjauan klasifikasi, pengisian tanggal berakhir, dan **cara resmi harga seri uang kertas** (B5: harga diketik pada bon dalam toleransi atau dengan alasan). Skema: tiga tabel, satu kolom, migrasi `0062`. ROADMAP: B5 sebagai calon sesudah desktop; B1 diterima. Temuan awal: Temuan 3 dan 7 → selesai dengan rujukan rencana ini.
+- [x] **Step 3: Perintah mutu**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -1294,4 +1294,4 @@ export TENANT_TEST_SECONDARY_URL="mysql://root@127.0.0.1:3306/mc_t_abcvalas"
 caffeinate -dimsu ./node_modules/.bin/playwright test 2>&1 | tail -5
 ```
 Expected: seluruh berkas lulus, "dilewati" 2; sebutkan angka baru dan selisihnya terhadap 1734.
-- [ ] **Step 4: Commit** — `"Butir B: peragaan end-to-end, panduan A-Z, skema, ROADMAP"`
+- [x] **Step 4: Commit** — `"Butir B: peragaan end-to-end, panduan A-Z, skema, ROADMAP"`
