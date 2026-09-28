@@ -24,7 +24,7 @@ tersendiri (`server/watchlistBlocks.ts`, `server/iraClassificationReview.ts`), g
 - [x] Tugas 4 — Gerbang bon dan pencatatan percobaan
 - [x] Tugas 5 — Keputusan atas blokir dan router
 - [x] Tugas 6 — Register Pemblokiran dan Kesiapan Operasional
-- [ ] Tugas 7 — Aturan murni tinjauan klasifikasi
+- [x] Tugas 7 — Aturan murni tinjauan klasifikasi
 - [ ] Tugas 8 — Pengesahan tinjauan, selang, dan layarnya
 - [ ] Tugas 9 — B4 tanggal berakhir hubungan
 - [ ] Tugas 10 — Peragaan end-to-end, dokumentasi, perintah mutu
@@ -922,7 +922,7 @@ export function getWatchlistBlockActions(
 - `unclassifiedCodes(input: { currencyCodes: string[]; countryCodes: string[]; rows: { dimension: string; code: string; riskType: string }[] }): { dimension: string; code: string; riskType: string }[]`
 - `getIraClassificationReviewDue(lastReviewedAt: Date | string | null, intervalMonths: number, now?: Date, timeZone?: string): { due: boolean; dueDateKey: string | null; detail: string }`
 
-- [ ] **Step 1: Uji yang gagal**
+- [x] **Step 1: Uji yang gagal**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -961,9 +961,9 @@ describe("getIraClassificationReviewDue", () => {
 });
 ```
 
-- [ ] **Step 2:** `./node_modules/.bin/vitest run shared/iraClassificationReview.test.ts` → FAIL.
+- [x] **Step 2:** `./node_modules/.bin/vitest run shared/iraClassificationReview.test.ts` → FAIL.
 
-- [ ] **Step 3: Implementasi**
+- [x] **Step 3: Implementasi**
 
 ```ts
 import { DEFAULT_OPERATIONAL_TIMEZONE, operationalDateKey } from "./regulatoryActionQueue";
@@ -1011,7 +1011,7 @@ export function getIraClassificationReviewDue(lastReviewedAt: Date | string | nu
 }
 ```
 
-- [ ] **Step 4:** PASS. **Step 5: Commit** — `"Aturan murni tinjauan klasifikasi risiko"`
+- [x] **Step 4:** PASS. **Step 5: Commit** — `"Aturan murni tinjauan klasifikasi risiko"`
 
 ---
 
