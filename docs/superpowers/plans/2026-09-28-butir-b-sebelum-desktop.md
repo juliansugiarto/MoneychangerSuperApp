@@ -20,7 +20,7 @@ tersendiri (`server/watchlistBlocks.ts`, `server/iraClassificationReview.ts`), g
 
 - [x] Tugas 1 — Skema dan migrasi `0062`
 - [x] Tugas 2 — Aturan murni pemblokiran
-- [ ] Tugas 3 — Penulis blokir: penyaringan dan centang petugas
+- [x] Tugas 3 — Penulis blokir: penyaringan dan centang petugas
 - [ ] Tugas 4 — Gerbang bon dan pencatatan percobaan
 - [ ] Tugas 5 — Keputusan atas blokir dan router
 - [ ] Tugas 6 — Register Pemblokiran dan Kesiapan Operasional
@@ -394,7 +394,7 @@ Catatan: uji `summarizeAttemptLines` memakai `toEqual` tanpa `rate`; ringkasan t
   - `openOfficerBlock(customerId: number): Promise<boolean>`
   - `activeBlockFor(customerIds: number[]): Promise<Map<number, WatchlistBlock>>`
 
-- [ ] **Step 1: Uji yang gagal** — memakai pola `mockDb`/`makeReader` yang disalin dari `server/customerWatchlistScreening.test.ts` (salin fungsi `boundValues`, `makeReader`, `tableName`, `mockDb` apa adanya ke berkas uji ini; `mockDb` menangkap `inserted`).
+- [x] **Step 1: Uji yang gagal** — memakai pola `mockDb`/`makeReader` yang disalin dari `server/customerWatchlistScreening.test.ts` (salin fungsi `boundValues`, `makeReader`, `tableName`, `mockDb` apa adanya ke berkas uji ini; `mockDb` menangkap `inserted`).
 
 ```ts
 describe("openBlockFromScreening", () => {
@@ -449,9 +449,9 @@ describe("rescreenAllCustomers membuka blokir hanya bagi yang cocok", () => {
 
 (`mockDb` pada uji ini mengembalikan `values` yang mendukung larik: dorong satu entri `inserted` per baris bila `values` berupa larik.)
 
-- [ ] **Step 2:** `./node_modules/.bin/vitest run server/watchlistBlocks.test.ts` → FAIL.
+- [x] **Step 2:** `./node_modules/.bin/vitest run server/watchlistBlocks.test.ts` → FAIL.
 
-- [ ] **Step 3: `server/watchlistBlocks.ts`**
+- [x] **Step 3: `server/watchlistBlocks.ts`**
 
 ```ts
 import { and, eq, inArray } from "drizzle-orm";
@@ -514,7 +514,7 @@ export async function activeBlockFor(customerIds: number[]): Promise<Map<number,
 }
 ```
 
-- [ ] **Step 4: Kaitkan ke `screenCustomer`** — ganti `await db.insert(customerWatchlistScreenings).values({...})` dengan:
+- [x] **Step 4: Kaitkan ke `screenCustomer`** — ganti `await db.insert(customerWatchlistScreenings).values({...})` dengan:
 
 ```ts
   const insertResult = await db.insert(customerWatchlistScreenings).values({ /* isi yang sama */ });
@@ -538,12 +538,12 @@ dan di `rescreenAllCustomers`, simpan kunci per baris (`matchKeys: matches.map(m
 
 Tambahkan impor `inArray` dan `matchKeyOf`, `openBlockFromScreening`, `openBlocksForScreenings`.
 
-- [ ] **Step 5: Kaitkan ke centang petugas** — di `server/operations.ts`:
+- [x] **Step 5: Kaitkan ke centang petugas** — di `server/operations.ts`:
   - `createCustomer`, tepat sebelum `await screenCustomerAfterSave(created, ...)`: `if (created.dttotPpsdmMatch) await openOfficerBlock(created.id);`
   - `updateCustomer`, tepat sebelum `await screenCustomerAfterSave(updated, ...)`: `if (!existing.dttotPpsdmMatch && updated.dttotPpsdmMatch) await openOfficerBlock(updated.id);`
 
-- [ ] **Step 6:** `./node_modules/.bin/vitest run server/watchlistBlocks.test.ts server/customerWatchlistScreening.test.ts server/customerUpdate.test.ts server/customerRelationshipEnd.test.ts` → PASS (uji lama yang memalsukan `getDb` tanpa tabel `watchlist_blocks` membaca `[]` — tetap lulus).
-- [ ] **Step 7: Commit** — `"Blokir dibuka oleh penyaringan dan centang petugas"`
+- [x] **Step 6:** `./node_modules/.bin/vitest run server/watchlistBlocks.test.ts server/customerWatchlistScreening.test.ts server/customerUpdate.test.ts server/customerRelationshipEnd.test.ts` → PASS (uji lama yang memalsukan `getDb` tanpa tabel `watchlist_blocks` membaca `[]` — tetap lulus).
+- [x] **Step 7: Commit** — `"Blokir dibuka oleh penyaringan dan centang petugas"`
 
 ---
 

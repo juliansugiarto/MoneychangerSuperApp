@@ -145,7 +145,9 @@ describe("screenCustomer", () => {
 
     expect(hasil.matchCount).toBe(1);
     expect(updated).toEqual([]);
-    expect(inserted.every((row) => row.table === penyaringan)).toBe(true);
+    // Kecocokan membuka blokir (watchlist_blocks) — itu yang dituntut Pasal 47 ayat (1) huruf d —
+    // tetapi tabel nasabah tetap tidak tersentuh.
+    expect(inserted.every((row) => row.table === penyaringan || row.table === "watchlist_blocks")).toBe(true);
     expect(inserted.every((row) => !("dttotPpsdmMatch" in row.values))).toBe(true);
   });
 

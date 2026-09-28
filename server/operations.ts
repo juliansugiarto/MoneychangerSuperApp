@@ -56,6 +56,7 @@ import { buildGoAmlLtktReportXml, buildGoAmlLtkmReportXml, type GoAmlCustomer, t
 import { isKnownGoAmlReportIndicator } from "../shared/goAmlReportIndicators";
 import { decodeSanctionsWatchlistUpload, parseSanctionsWatchlistWorkbook, cleanSanctionsWatchlistFileName } from "./sanctionsWatchlistImport";
 import { matchWatchlistEntries, rescreenAllCustomers, screenCustomer, type SanctionsWatchlistMatch, type ScreeningTrigger } from "./customerWatchlistScreening";
+import { openOfficerBlock } from "./watchlistBlocks";
 import { customerHighRiskDenial, highRiskResetValues } from "./customerHighRiskApproval";
 import { relationshipEndValues } from "../shared/documentRetention";
 import { parseWatchlistNameList, scoreNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
@@ -938,6 +939,8 @@ export async function createCustomer(input: CustomerInput, actorUserId: number) 
     return row;
   });
   await writeAudit({ actorUserId, action: "CUSTOMER_CREATED", entityType: "customer", entityId: String(created.id), afterState: { cifNumber: created.cifNumber, fullName: created.fullName, riskLevel: created.riskLevel, profileStatus: created.profileStatus, hasBeneficialOwner: created.hasBeneficialOwner, pepStatus: created.pepStatus, dttotPpsdmMatch: created.dttotPpsdmMatch } });
+  // Centang petugas adalah kecocokan juga: blokir serta merta, sebelum nasabah sempat ke loket.
+  if (created.dttotPpsdmMatch) await openOfficerBlock(created.id);
   await screenCustomerAfterSave(created, "NASABAH_DIBUAT", actorUserId);
   if (createdBeneficialOwner) await screenCustomerAfterSave(createdBeneficialOwner, "NASABAH_DIBUAT", actorUserId);
   return created;
@@ -1059,6 +1062,7 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
   });
   const [updated] = await db.select().from(customers).where(eq(customers.id, input.customerId)).limit(1);
   if (!updated) throw new Error("Nasabah tidak dapat diperbarui.");
+  if (!existing.dttotPpsdmMatch && updated.dttotPpsdmMatch) await openOfficerBlock(updated.id);
   // Namanya boleh berubah pada penyuntingan ini, jadi yang disaring adalah nama sesudahnya.
   await screenCustomerAfterSave(updated, "NASABAH_DIUBAH", actor.id);
   return updated;

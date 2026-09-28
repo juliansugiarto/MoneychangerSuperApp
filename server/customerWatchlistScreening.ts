@@ -1,8 +1,10 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { customers, customerWatchlistScreenings, sanctionsWatchlistEntries, users } from "../drizzle/schema";
 import { isScreeningStale } from "../shared/customerHighRisk";
 import { findBestNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
+import { matchKeyOf } from "../shared/watchlistBlock";
 import { getDb } from "./db";
+import { openBlockFromScreening, openBlocksForScreenings } from "./watchlistBlocks";
 
 /**
  * Penulis jejak penyaringan nasabah terhadap DTTOT/DPPSPM — satu-satunya penulis
@@ -164,7 +166,7 @@ export async function screenCustomer(input: {
     listSnapshotAt,
   };
 
-  await db.insert(customerWatchlistScreenings).values({
+  const insertResult = await db.insert(customerWatchlistScreenings).values({
     // Waktunya ditetapkan di sini, bukan diserahkan kepada `DEFAULT CURRENT_TIMESTAMP`. MySQL
     // mengisi bawaan itu dari jam sesi basis data — pada mesin pengembangan WIB ia menyimpan jam
     // dinding setempat, sedangkan `listSnapshotAt` ditulis dari JS sebagai instan UTC. Dua
@@ -178,6 +180,11 @@ export async function screenCustomer(input: {
     summary: result.summary,
     listSnapshotAt: result.listSnapshotAt,
   });
+
+  // Pemblokiran serta merta (Pasal 47 ayat (1) huruf d): dibuka pada saat kecocokan, bukan di
+  // loket. mysql2 mengembalikan [ResultSetHeader]; basis data palsu uji tidak — id boleh null.
+  const screeningId = Number((insertResult as unknown as [{ insertId?: number }] | undefined)?.[0]?.insertId) || null;
+  await openBlockFromScreening({ customerId: result.customerId, screeningId, matchKeys: matches.map(matchKeyOf) });
 
   return result;
 }
@@ -202,10 +209,10 @@ export async function rescreenAllCustomers(): Promise<{ customerCount: number; l
 
   // Satu waktu untuk seluruh baris impor ini: mereka memang satu peristiwa.
   const screenedAt = new Date();
-  const rows = liveCustomers.map((customer) => {
+  const keyed = liveCustomers.map((customer) => {
     const fullName = customer.fullName?.trim() ?? "";
     const matches = fullName.length < MIN_SCREENABLE_NAME_LENGTH ? [] : matchWatchlistEntries(fullName, entries);
-    return {
+    return { customerId: customer.id, matchKeys: matches.map(matchKeyOf), row: {
       screenedAt,
       customerId: customer.id,
       screenedByUserId: null,
@@ -213,11 +220,27 @@ export async function rescreenAllCustomers(): Promise<{ customerCount: number; l
       matchCount: matches.length,
       summary: fullName.length < MIN_SCREENABLE_NAME_LENGTH ? TOO_SHORT_SUMMARY : summarizeScreeningMatches(matches),
       listSnapshotAt,
-    };
+    } };
   });
+  const rows = keyed.map((item) => item.row);
 
   for (let index = 0; index < rows.length; index += RESCREEN_INSERT_CHUNK) {
     await db.insert(customerWatchlistScreenings).values(rows.slice(index, index + RESCREEN_INSERT_CHUNK));
+  }
+
+  // Blokir hanya bagi yang cocok, dibaca sekali untuk seluruhnya. Id penyaringan diambil sebagai id
+  // terbesar per nasabah sesudah insert di atas — bukan lewat `screenedAt = ?`, karena kolom
+  // TIMESTAMP tanpa pecahan detik tidak pernah sama dengan instan JS bermilidetik.
+  const matched = keyed.filter((item) => item.matchKeys.length > 0);
+  if (matched.length) {
+    const screeningRows = await db.select({ id: customerWatchlistScreenings.id, customerId: customerWatchlistScreenings.customerId })
+      .from(customerWatchlistScreenings)
+      .where(inArray(customerWatchlistScreenings.customerId, matched.map((item) => item.customerId)));
+    const idByCustomer = new Map<number, number>();
+    for (const row of screeningRows) {
+      if ((idByCustomer.get(row.customerId) ?? 0) < row.id) idByCustomer.set(row.customerId, row.id);
+    }
+    await openBlocksForScreenings(matched.map((item) => ({ customerId: item.customerId, screeningId: idByCustomer.get(item.customerId) ?? null, matchKeys: item.matchKeys })));
   }
 
   return { customerCount: rows.length, listSnapshotAt };
