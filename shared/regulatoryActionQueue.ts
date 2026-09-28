@@ -210,3 +210,24 @@ export function getRegulatoryReportingReadiness(items: RegulatoryActionItem[], u
   const overdue = queue.overdue.length ? ` ${queue.overdue.length} melewati tenggat manual.` : "";
   return { ready: false, unavailable: false, queue, detail: `${parts.join(", ")}.${overdue}` };
 }
+
+/**
+ * Butir pemblokiran pada Kesiapan Operasional. Tenggat tembusan BI (Pasal 60 ayat (4) huruf d)
+ * **tidak dihitung**: 3 hari kerja menuntut kalender hari libur yang belum ada (Temuan 6), dan
+ * tenggat yang ditebak dari hari kalender tampak lebih longgar daripada kenyataannya.
+ */
+export function getWatchlistBlockActions(
+  blocks: { status: string; openedAt: Date | string; biCopySentAt: Date | string | null }[],
+  timeZone: string = DEFAULT_OPERATIONAL_TIMEZONE,
+) {
+  const open = blocks.filter((block) => block.status === "OPEN");
+  const unreported = blocks.filter((block) => block.status === "CONFIRMED" && !block.biCopySentAt);
+  const oldest = open.map((block) => new Date(block.openedAt)).sort((a, b) => a.getTime() - b.getTime())[0];
+  const oldestOpenDateKey = oldest ? operationalDateKey(oldest, timeZone) : null;
+  const ready = open.length === 0 && unreported.length === 0;
+  const parts: string[] = [];
+  if (open.length) parts.push(`${open.length} pemblokiran menunggu keputusan (tertua ${oldestOpenDateKey})`);
+  if (unreported.length) parts.push(`${unreported.length} pemblokiran dikonfirmasi belum ditembuskan ke BI`);
+  const detail = ready ? "Tidak ada pemblokiran yang menunggu tindakan." : `${parts.join("; ")}. Tembusan BI paling lambat 3 hari kerja sejak pemblokiran.`;
+  return { openCount: open.length, unreportedCount: unreported.length, oldestOpenDateKey, ready, detail };
+}

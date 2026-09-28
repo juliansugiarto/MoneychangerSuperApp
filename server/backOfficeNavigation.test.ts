@@ -40,6 +40,7 @@ const pageByPath: Record<string, string> = {
   "/operasional/profil-perusahaan": "CompanyProfile",
   "/operasional/go-live": "GoLiveSetup",
   "/kepatuhan/klasifikasi-risiko": "KlasifikasiRisiko",
+  "/kepatuhan/pemblokiran": "Pemblokiran",
   "/kepatuhan/ira": "PenilaianRisiko",
 };
 
@@ -118,6 +119,7 @@ describe("back-office navigation routes", () => {
       backOfficeNavigationGroups.find((group) => group.items.some((item) => (item.children ?? [item]).some((leaf) => leaf.path === path)))?.label;
     expect(groupOf("/kepatuhan/ira")).toBe("Risiko");
     expect(groupOf("/kepatuhan/klasifikasi-risiko")).toBe("Risiko");
+    expect(groupOf("/kepatuhan/pemblokiran")).toBe("Risiko");
     expect(groupOf("/operasional/pelaporan-regulator")).toBe("Kepatuhan");
     expect(groupOf("/kepatuhan/penatausahaan-dokumen")).toBe("Kepatuhan");
     expect(groupOf("/operasional/watchlist")).toBe("Nasabah");

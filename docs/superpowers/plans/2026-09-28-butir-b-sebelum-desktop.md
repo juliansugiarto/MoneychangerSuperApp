@@ -23,7 +23,7 @@ tersendiri (`server/watchlistBlocks.ts`, `server/iraClassificationReview.ts`), g
 - [x] Tugas 3 — Penulis blokir: penyaringan dan centang petugas
 - [x] Tugas 4 — Gerbang bon dan pencatatan percobaan
 - [x] Tugas 5 — Keputusan atas blokir dan router
-- [ ] Tugas 6 — Register Pemblokiran dan Kesiapan Operasional
+- [x] Tugas 6 — Register Pemblokiran dan Kesiapan Operasional
 - [ ] Tugas 7 — Aturan murni tinjauan klasifikasi
 - [ ] Tugas 8 — Pengesahan tinjauan, selang, dan layarnya
 - [ ] Tugas 9 — B4 tanggal berakhir hubungan
@@ -847,7 +847,7 @@ Impor tambahan: `desc` dari drizzle-orm; `attemptedTransactions`, `auditLogs`, `
 
 **Interfaces — Produces:** `getWatchlistBlockActions(blocks: { status: string; openedAt: Date | string; biCopySentAt: Date | string | null }[], timeZone?: string): { openCount: number; unreportedCount: number; oldestOpenDateKey: string | null; ready: boolean; detail: string }`
 
-- [ ] **Step 1: Uji yang gagal**
+- [x] **Step 1: Uji yang gagal**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -868,9 +868,9 @@ describe("getWatchlistBlockActions", () => {
 });
 ```
 
-- [ ] **Step 2:** `./node_modules/.bin/vitest run shared/watchlistBlockActions.test.ts` → FAIL.
+- [x] **Step 2:** `./node_modules/.bin/vitest run shared/watchlistBlockActions.test.ts` → FAIL.
 
-- [ ] **Step 3: `getWatchlistBlockActions`** di `shared/regulatoryActionQueue.ts`:
+- [x] **Step 3: `getWatchlistBlockActions`** di `shared/regulatoryActionQueue.ts`:
 
 ```ts
 /**
@@ -895,7 +895,7 @@ export function getWatchlistBlockActions(
 }
 ```
 
-- [ ] **Step 4: `client/src/pages/Pemblokiran.tsx`** — halaman dengan pola `KlasifikasiRisiko.tsx` (Card, Badge, Dialog, Textarea, Input, Skeleton, `toast`):
+- [x] **Step 4: `client/src/pages/Pemblokiran.tsx`** — halaman dengan pola `KlasifikasiRisiko.tsx` (Card, Badge, Dialog, Textarea, Input, Skeleton, `toast`):
   - `trpc.watchlistBlocks.list.useQuery()`; keadaan muat (`Skeleton`), galat (kartu merah "Register pemblokiran belum dapat dimuat" + tombol Coba lagi), kosong ("Belum ada pemblokiran. Blokir terbuka otomatis saat penyaringan menemukan kecocokan DTTOT/DPPSPM.").
   - Tab status: Menunggu keputusan (OPEN) · Dikonfirmasi · Salah sasaran · Dicabut; tiap baris: nasabah + CIF, dibuka (tanggal WIB), sumber, kunci kecocokan, jumlah percobaan; bagian yang dapat dibuka menampilkan percobaan (waktu, BUY/SELL, per valuta jumlah valas dan Rupiah, total).
   - Aksi OPEN: tombol **"Konfirmasi kecocokan"** dan **"Nyatakan salah sasaran"** membuka Dialog dengan `Textarea` catatan wajib; konfirmasi juga punya Input opsional rujukan LTKM dan tanggal tembusan.
@@ -903,14 +903,14 @@ export function getWatchlistBlockActions(
   - Tiap mutasi: `onSuccess` → `toast.success`, `utils.watchlistBlocks.list.invalidate()`; `onError` → `toast.error(error.message)`; tombol `disabled` selama `isPending`.
   - Teks pembuka: "Pemblokiran serta merta atas kecocokan nama DTTOT/DPPSPM (Pasal 47 ayat (1) huruf d PBI 10/2024). Aplikasi tidak mengirim LTKM atau tembusan; yang dicatat di sini rujukannya."
 
-- [ ] **Step 5: Kesiapan Operasional** — di `OperationalReadiness.tsx` tambahkan `const blocks = trpc.watchlistBlocks.list.useQuery(undefined, { retry: false });`, `const blockActions = getWatchlistBlockActions(blocks.data ?? [], companyTimezone);`, dan kontrol baru:
+- [x] **Step 5: Kesiapan Operasional** — di `OperationalReadiness.tsx` tambahkan `const blocks = trpc.watchlistBlocks.list.useQuery(undefined, { retry: false });`, `const blockActions = getWatchlistBlockActions(blocks.data ?? [], companyTimezone);`, dan kontrol baru:
 
 ```ts
     { label: "Pemblokiran DTTOT/DPPSPM", detail: blocks.isError ? "Status pemblokiran hanya terlihat oleh Controller ke atas." : blockActions.detail, ready: blockActions.ready, loading: blocks.isPending, unavailable: blocks.isError, icon: ShieldCheck, action: "Buka pemblokiran", path: "/kepatuhan/pemblokiran" },
 ```
 
-- [ ] **Step 6:** `./node_modules/.bin/vitest run shared/watchlistBlockActions.test.ts server/backOfficeNavigation.test.ts && ./node_modules/.bin/tsc --noEmit` → PASS / 0.
-- [ ] **Step 7: Commit** — `"Register Pemblokiran dan butirnya di Kesiapan Operasional"`
+- [x] **Step 6:** `./node_modules/.bin/vitest run shared/watchlistBlockActions.test.ts server/backOfficeNavigation.test.ts && ./node_modules/.bin/tsc --noEmit` → PASS / 0.
+- [x] **Step 7: Commit** — `"Register Pemblokiran dan butirnya di Kesiapan Operasional"`
 
 ---
 

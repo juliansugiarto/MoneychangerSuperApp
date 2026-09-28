@@ -42,6 +42,7 @@ const ArsipDokumen = lazy(() => import("./pages/ArsipDokumen"));
 const PenatausahaanDokumen = lazy(() => import("./pages/PenatausahaanDokumen"));
 const GaleriPola = lazy(() => import("./pages/GaleriPola"));
 const KlasifikasiRisiko = lazy(() => import("./pages/KlasifikasiRisiko"));
+const Pemblokiran = lazy(() => import("./pages/Pemblokiran"));
 const PenilaianRisiko = lazy(() => import("./pages/PenilaianRisiko"));
 const PenilaianRisikoDetail = lazy(() => import("./pages/PenilaianRisikoDetail"));
 const PenilaianRisikoKpmr = lazy(() => import("./pages/PenilaianRisikoKpmr"));
@@ -110,6 +111,7 @@ function Router() {
       <Route path="/kepatuhan/penatausahaan-dokumen"><OperationsRoute minimumRole="CONTROLLER" page={<PenatausahaanDokumen />} /></Route>
       <Route path="/operasional/pola"><OperationsRoute minimumRole="CONTROLLER" page={<GaleriPola />} /></Route>
       <Route path="/kepatuhan/klasifikasi-risiko"><OperationsRoute minimumRole="CONTROLLER" page={<KlasifikasiRisiko />} /></Route>
+      <Route path="/kepatuhan/pemblokiran"><OperationsRoute minimumRole="CONTROLLER" page={<Pemblokiran />} /></Route>
       <Route path="/kepatuhan/ira"><OperationsRoute minimumRole="ADMIN" page={<PenilaianRisiko />} /></Route>
       <Route path="/kepatuhan/ira/:id/kpmr"><OperationsRoute minimumRole="ADMIN" page={<PenilaianRisikoKpmr />} /></Route>
       <Route path="/kepatuhan/ira/:id"><OperationsRoute minimumRole="ADMIN" page={<PenilaianRisikoDetail />} /></Route>

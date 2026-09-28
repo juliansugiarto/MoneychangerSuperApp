@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { calculateOperationalReadiness } from "@shared/operationalReadiness";
-import { DEFAULT_OPERATIONAL_TIMEZONE, getIraAssessmentDue, getRegulatoryReportingReadiness } from "@shared/regulatoryActionQueue";
+import { DEFAULT_OPERATIONAL_TIMEZONE, getIraAssessmentDue, getRegulatoryReportingReadiness, getWatchlistBlockActions } from "@shared/regulatoryActionQueue";
 import { ArrowRight, CheckCircle2, CircleAlert, ClipboardCheck, FileLock2, FileText, Landmark, RefreshCcw, ShieldCheck, WalletCards } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -17,7 +17,7 @@ export default function OperationalReadiness() {
   const acknowledgements = trpc.directorAcknowledgements.list.useQuery();
   const regulatoryPackages = trpc.regulatoryReports.list.useQuery();
   const isLoading = dashboard.isLoading || checklist.isLoading || comparison.isLoading || acknowledgements.isLoading || regulatoryPackages.isLoading;
-  const refresh = () => void Promise.all([dashboard.refetch(), checklist.refetch(), comparison.refetch(), acknowledgements.refetch(), regulatoryPackages.refetch()]);
+  const refresh = () => void Promise.all([dashboard.refetch(), checklist.refetch(), comparison.refetch(), acknowledgements.refetch(), regulatoryPackages.refetch(), blocks.refetch()]);
 
   const activeRateRows = (comparison.data ?? []).filter((row) => row.outlet.midpointPerUnit !== null);
   const referenceRows = (comparison.data ?? []).filter((row) => Boolean(row.bi || row.jisdor || row.market));
@@ -27,6 +27,8 @@ export default function OperationalReadiness() {
   const reportingReadiness = getRegulatoryReportingReadiness(regulatoryPackages.data ?? [], regulatoryPackages.isError, new Date(), companyTimezone);
   // Penilaian risiko tahunan: keterangan saja, tidak pernah membuat penilaian sendiri.
   const iraDue = getIraAssessmentDue((iraAssessments.data ?? []) as never, new Date(), companyTimezone);
+  const blocks = trpc.watchlistBlocks.list.useQuery(undefined, { retry: false });
+  const blockActions = getWatchlistBlockActions(blocks.data ?? [], companyTimezone);
   const reportingReady = reportingReadiness.ready;
   const readiness = calculateOperationalReadiness({ openingChecks: checklist.data?.openingChecks, closingChecks: checklist.data?.closingChecks, closingCompletedAt: checklist.data?.closingCompletedAt, cashBalanceCount: dashboard.data?.cashBalances.length ?? 0, activeRateCount: activeRateRows.length, referenceRateCount: referenceRows.length, pendingReviewCount: dashboard.data?.pendingReview.length ?? 0, varianceCount: dashboard.data?.variances.length ?? 0, directorOpenCount: directorOpen });
   const { openingReady, closingReady, cashReady, rateReady, pendingReviews, oversightReady, readyCount } = readiness; const totalReady = readyCount + (reportingReady ? 1 : 0);
@@ -40,6 +42,7 @@ export default function OperationalReadiness() {
     { label: "Paket pelaporan", detail: reportingReadiness.detail, ready: reportingReady, loading: regulatoryPackages.isLoading, unavailable: reportingReadiness.unavailable, icon: FileLock2, action: "Buka pelaporan", path: "/operasional/pelaporan-regulator" },
     // Siklus tahunan: barisnya hanya memberitahu, tidak pernah membuat penilaian sendiri.
     { label: "Penilaian risiko (IRA)", detail: iraAssessments.isError ? "Status penilaian belum tersedia. Buka Penilaian Risiko untuk pemeriksaan." : iraDue.detail, ready: !iraDue.overdue && iraDue.currentApproved, loading: iraAssessments.isPending, unavailable: iraAssessments.isError, icon: ShieldCheck, action: "Buka penilaian", path: "/kepatuhan/ira" },
+    { label: "Pemblokiran DTTOT/DPPSPM", detail: blocks.isError ? "Status pemblokiran hanya terlihat oleh Controller ke atas." : blockActions.detail, ready: blockActions.ready, loading: blocks.isPending, unavailable: blocks.isError, icon: ShieldCheck, action: "Buka pemblokiran", path: "/kepatuhan/pemblokiran" },
   ];
 
   return <div className="mx-auto max-w-7xl space-y-6">
