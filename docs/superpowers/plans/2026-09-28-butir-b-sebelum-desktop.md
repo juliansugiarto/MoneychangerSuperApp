@@ -22,7 +22,7 @@ tersendiri (`server/watchlistBlocks.ts`, `server/iraClassificationReview.ts`), g
 - [x] Tugas 2 — Aturan murni pemblokiran
 - [x] Tugas 3 — Penulis blokir: penyaringan dan centang petugas
 - [x] Tugas 4 — Gerbang bon dan pencatatan percobaan
-- [ ] Tugas 5 — Keputusan atas blokir dan router
+- [x] Tugas 5 — Keputusan atas blokir dan router
 - [ ] Tugas 6 — Register Pemblokiran dan Kesiapan Operasional
 - [ ] Tugas 7 — Aturan murni tinjauan klasifikasi
 - [ ] Tugas 8 — Pengesahan tinjauan, selang, dan layarnya
@@ -680,7 +680,7 @@ Impor `activeBlockFor`, `recordAttempt` dari `./watchlistBlocks` dan `WATCHLIST_
 - `listWatchlistBlocks(): Promise<Array<WatchlistBlock & { customerName: string; cifNumber: string | null; attempts: AttemptedTransaction[] }>>`
 - tRPC: `watchlistBlocks.list` (query), `.resolve`, `.recordReporting`, `.revoke` (mutation) — semuanya `controllerProcedure` + `watchlistBlockDenial`.
 
-- [ ] **Step 1: Uji yang gagal**
+- [x] **Step 1: Uji yang gagal**
 
 ```ts
 describe("watchlistBlockDenial", () => {
@@ -721,9 +721,9 @@ describe("revokeWatchlistBlock", () => {
 
 (`mockDb` di sini mencatat `updates: { table, set }[]` dari `update(table).set(values).where()`.)
 
-- [ ] **Step 2:** `./node_modules/.bin/vitest run server/watchlistBlockDecision.test.ts` → FAIL.
+- [x] **Step 2:** `./node_modules/.bin/vitest run server/watchlistBlockDecision.test.ts` → FAIL.
 
-- [ ] **Step 3: Implementasi di `server/watchlistBlocks.ts`**
+- [x] **Step 3: Implementasi di `server/watchlistBlocks.ts`**
 
 ```ts
 const MIN_NOTE = 3;
@@ -799,7 +799,7 @@ export async function listWatchlistBlocks() {
 
 Impor tambahan: `desc` dari drizzle-orm; `attemptedTransactions`, `auditLogs`, `currencies`, `customers` dari skema; `isRoleAllowed`, `BackOfficeRole` dari `../shared/backOfficeNavigation`; `summarizeAttemptLines` dari `../shared/watchlistBlock`.
 
-- [ ] **Step 4: Router** — di `server/routers.ts`, sesudah `sanctionsWatchlist`:
+- [x] **Step 4: Router** — di `server/routers.ts`, sesudah `sanctionsWatchlist`:
 
 ```ts
   /** Pemblokiran atas kecocokan DTTOT/DPPSPM — Pasal 47 ayat (1) huruf d PBI 10/2024. */
@@ -833,8 +833,8 @@ Impor tambahan: `desc` dari drizzle-orm; `attemptedTransactions`, `auditLogs`, `
   }),
 ```
 
-- [ ] **Step 5:** `./node_modules/.bin/vitest run server/watchlistBlockDecision.test.ts && ./node_modules/.bin/tsc --noEmit` → PASS / keluar 0.
-- [ ] **Step 6: Commit** — `"Keputusan pemblokiran: konfirmasi, salah sasaran, pelaporan, pencabutan"`
+- [x] **Step 5:** `./node_modules/.bin/vitest run server/watchlistBlockDecision.test.ts && ./node_modules/.bin/tsc --noEmit` → PASS / keluar 0.
+- [x] **Step 6: Commit** — `"Keputusan pemblokiran: konfirmasi, salah sasaran, pelaporan, pencabutan"`
 
 ---
 

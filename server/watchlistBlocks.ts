@@ -1,5 +1,6 @@
-import { inArray } from "drizzle-orm";
-import { attemptedTransactions, currencies, watchlistBlocks, type WatchlistBlock } from "../drizzle/schema";
+import { desc, eq, inArray } from "drizzle-orm";
+import { attemptedTransactions, auditLogs, currencies, customers, watchlistBlocks, type WatchlistBlock } from "../drizzle/schema";
+import { isRoleAllowed, type BackOfficeRole } from "../shared/backOfficeNavigation";
 import { hasActiveBlock, shouldOpenScreeningBlock, summarizeAttemptLines, type BlockLite } from "../shared/watchlistBlock";
 import { getDb } from "./db";
 
@@ -75,4 +76,74 @@ export async function recordAttempt(input: {
     blockedParty: input.blockedParty, tellerUserId: input.tellerUserId, attemptedAt: new Date(),
     operation: input.operation, linesSummary: JSON.stringify(summary.lines), totalIdr: summary.totalIdr,
   });
+}
+
+const MIN_NOTE = 3;
+const requireNote = (value: string | null | undefined, label: string) => {
+  const trimmed = value?.trim() ?? "";
+  if (trimmed.length < MIN_NOTE) throw new Error(`${label} wajib diisi.`);
+  return trimmed;
+};
+
+export function watchlistBlockDenial(user: { role: BackOfficeRole }) {
+  return isRoleAllowed(user.role, "CONTROLLER") ? null : { message: "Keputusan pemblokiran hanya untuk Controller ke atas." };
+}
+
+async function loadBlock(blockId: number) {
+  const db = await databaseOrThrow();
+  const [block] = await db.select().from(watchlistBlocks).where(eq(watchlistBlocks.id, blockId)).limit(1);
+  if (!block) throw new Error("Pemblokiran tidak ditemukan.");
+  return { db, block };
+}
+
+async function audit(db: Awaited<ReturnType<typeof databaseOrThrow>>, actorUserId: number, action: string, block: WatchlistBlock, afterState: Record<string, unknown>) {
+  await db.insert(auditLogs).values({ actorUserId, action, entityType: "watchlist_block", entityId: String(block.id), beforeState: { status: block.status }, afterState });
+}
+
+export async function resolveWatchlistBlock(input: { blockId: number; decision: "CONFIRMED" | "FALSE_POSITIVE"; notes: string; ltkmReference?: string | null; biCopySentAt?: Date | null }, actor: { id: number }) {
+  const notes = requireNote(input.notes, "Catatan keputusan");
+  const { db, block } = await loadBlock(input.blockId);
+  if (block.status !== "OPEN") throw new Error("Pemblokiran ini sudah diputuskan.");
+  const resolvedAt = new Date();
+  const next = { status: input.decision, resolvedByUserId: actor.id, resolvedAt, resolutionNotes: notes,
+    ...(input.decision === "CONFIRMED" ? { ltkmReference: input.ltkmReference?.trim() || null, biCopySentAt: input.biCopySentAt ?? null } : {}) };
+  await db.update(watchlistBlocks).set(next).where(eq(watchlistBlocks.id, block.id));
+  if (input.decision === "CONFIRMED") {
+    await db.update(customers).set({ dttotPpsdmMatch: true, dttotPpsdmNotes: `Dikonfirmasi pada pemblokiran #${block.id}: ${notes}` }).where(eq(customers.id, block.customerId));
+  } else if (block.source === "PETUGAS") {
+    await db.update(customers).set({ dttotPpsdmMatch: false, dttotPpsdmNotes: null }).where(eq(customers.id, block.customerId));
+  }
+  await audit(db, actor.id, input.decision === "CONFIRMED" ? "WATCHLIST_BLOCK_CONFIRMED" : "WATCHLIST_BLOCK_FALSE_POSITIVE", block, next);
+  return { ...block, ...next } as WatchlistBlock;
+}
+
+export async function recordWatchlistBlockReporting(input: { blockId: number; ltkmReference: string; biCopySentAt: Date }, actor: { id: number }) {
+  const ltkmReference = requireNote(input.ltkmReference, "Rujukan LTKM");
+  const { db, block } = await loadBlock(input.blockId);
+  if (block.status !== "CONFIRMED") throw new Error("Pelaporan hanya dicatat pada blokir yang dikonfirmasi.");
+  if (input.biCopySentAt.getTime() > Date.now()) throw new Error("Tanggal tembusan tidak boleh di masa depan.");
+  const next = { ltkmReference, biCopySentAt: input.biCopySentAt };
+  await db.update(watchlistBlocks).set(next).where(eq(watchlistBlocks.id, block.id));
+  await audit(db, actor.id, "WATCHLIST_BLOCK_REPORTED", block, next);
+  return { ...block, ...next } as WatchlistBlock;
+}
+
+export async function revokeWatchlistBlock(input: { blockId: number; revocationReference: string; notes: string }, actor: { id: number }) {
+  const revocationReference = requireNote(input.revocationReference, "Rujukan surat pencabutan");
+  const notes = requireNote(input.notes, "Catatan");
+  const { db, block } = await loadBlock(input.blockId);
+  if (block.status !== "CONFIRMED") throw new Error("Hanya blokir yang dikonfirmasi yang dapat dicabut.");
+  const next = { status: "DICABUT" as const, revocationReference, resolutionNotes: `${block.resolutionNotes ?? ""}\n[Dicabut] ${notes}`.trim(), resolvedByUserId: actor.id, resolvedAt: new Date() };
+  await db.update(watchlistBlocks).set(next).where(eq(watchlistBlocks.id, block.id));
+  await audit(db, actor.id, "WATCHLIST_BLOCK_REVOKED", block, next);
+  return { ...block, ...next } as WatchlistBlock;
+}
+
+export async function listWatchlistBlocks() {
+  const db = await databaseOrThrow();
+  const rows = await db.select({ block: watchlistBlocks, customerName: customers.fullName, cifNumber: customers.cifNumber })
+    .from(watchlistBlocks).innerJoin(customers, eq(watchlistBlocks.customerId, customers.id)).orderBy(desc(watchlistBlocks.openedAt));
+  const ids = rows.map((row) => row.block.id);
+  const attempts = ids.length ? await db.select().from(attemptedTransactions).where(inArray(attemptedTransactions.blockId, ids)).orderBy(desc(attemptedTransactions.attemptedAt)) : [];
+  return rows.map((row) => ({ ...row.block, customerName: row.customerName, cifNumber: row.cifNumber, attempts: attempts.filter((attempt) => attempt.blockId === row.block.id) }));
 }

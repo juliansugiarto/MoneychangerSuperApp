@@ -146,6 +146,7 @@ import { OPERATIONAL_TIMEZONE_VALUES } from "../shared/regulatoryActionQueue";
 import { simulateArchiveReadiness, simulateClosing, simulateExchange, simulateRateShock } from "./simulation";
 import { decideHighRisk, highRiskDecisionDenial } from "./customerHighRiskApproval";
 import { listCustomerScreenings, rescreenCustomerNow } from "./customerWatchlistScreening";
+import { listWatchlistBlocks, recordWatchlistBlockReporting, resolveWatchlistBlock, revokeWatchlistBlock, watchlistBlockDenial } from "./watchlistBlocks";
 import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedure, router, shareholderProcedure, staffProcedure } from "./_core/trpc";
 import { classifyRisk, iraClassificationDenial, listClassifications, listParameterThresholds, resetParameterThresholds, setParameterThresholds } from "./iraRiskClassification";
 import {
@@ -1444,6 +1445,35 @@ export const appRouter = router({
     summary: staffProcedure.query(() => listSanctionsWatchlistSummary()),
     // Bulk SIPENDAR watchlist paste — a mutation (not query) since pasted lists can be long and shouldn't ride in a URL query string.
     checkSipendarNames: staffProcedure.input(z.object({ names: z.string().trim().min(1).max(50000) })).mutation(({ input }) => checkSipendarWatchlistNames(input)),
+  }),
+  /** Pemblokiran atas kecocokan DTTOT/DPPSPM — Pasal 47 ayat (1) huruf d PBI 10/2024. */
+  watchlistBlocks: router({
+    list: controllerProcedure.query(({ ctx }) => {
+      const denial = watchlistBlockDenial(ctx.user);
+      if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+      return listWatchlistBlocks();
+    }),
+    resolve: controllerProcedure
+      .input(z.object({ blockId: z.number().int().positive(), decision: z.enum(["CONFIRMED", "FALSE_POSITIVE"]), notes: z.string().trim().min(3).max(2000), ltkmReference: z.string().trim().max(200).nullish(), biCopySentAt: z.coerce.date().nullish() }))
+      .mutation(({ input, ctx }) => {
+        const denial = watchlistBlockDenial(ctx.user);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        return resolveWatchlistBlock(input, ctx.user);
+      }),
+    recordReporting: controllerProcedure
+      .input(z.object({ blockId: z.number().int().positive(), ltkmReference: z.string().trim().min(3).max(200), biCopySentAt: z.coerce.date() }))
+      .mutation(({ input, ctx }) => {
+        const denial = watchlistBlockDenial(ctx.user);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        return recordWatchlistBlockReporting(input, ctx.user);
+      }),
+    revoke: controllerProcedure
+      .input(z.object({ blockId: z.number().int().positive(), revocationReference: z.string().trim().min(3).max(200), notes: z.string().trim().min(3).max(2000) }))
+      .mutation(({ input, ctx }) => {
+        const denial = watchlistBlockDenial(ctx.user);
+        if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
+        return revokeWatchlistBlock(input, ctx.user);
+      }),
   }),
 
   // TODO: add feature routers here, e.g.
