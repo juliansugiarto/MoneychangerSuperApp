@@ -70,7 +70,7 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 28 September 2026 (butir B diputuskan; rencana siap dieksekusi)
+## Sesi berikutnya — keadaan per 28 September 2026 (butir B SELESAI; berikutnya rancangan paket Windows portabel)
 
 **Arah yang disepakati pengguna 26 September 2026 — jangan ditanyakan ulang:** aplikasi berpindah
 dari layanan web multi-tenant menjadi **aplikasi luring, satu toko satu instalasi**. Rinciannya:
@@ -84,84 +84,91 @@ dari layanan web multi-tenant menjadi **aplikasi luring, satu toko satu instalas
   aktivasi lewat WhatsApp saat luring; bulanan/tahunan/sekali bayar; uji coba 30 hari; deteksi jam
   dimundurkan. **Lisensi habis → mode baca-saja** (lihat, cari, cetak, ekspor regulator, cadangan
   tetap jalan), sesuai kewajiban simpan 5 tahun.
-- Urutan program desktop yang diusulkan: (1) paket Windows portabel, (2) penyimpanan lokal +
-  cadangan, (3) lisensi, (4) ekspor cabang + aplikasi konsolidasi, (5) pembersihan tenancy/R2/halaman
-  publik. Keputusan 3 September (SaaS multi-tenant, login SOLVINC) **digantikan**; memori
-  *solvinc-saas-architecture* sudah basi untuk arah ini.
+- Urutan program desktop: (1) paket Windows portabel, (2) penyimpanan lokal + cadangan, (3) lisensi,
+  (4) ekspor cabang + aplikasi konsolidasi, (5) pembersihan tenancy/R2/halaman publik. Keputusan 3
+  September (SaaS multi-tenant, login SOLVINC) **digantikan**; memori *solvinc-saas-architecture* basi.
 
-**Daftar "sisa pekerjaan sebelum aplikasi desktop" dan keadaannya:**
+**Daftar "sisa pekerjaan sebelum aplikasi desktop" — SELURUHNYA SELESAI/DIPUTUSKAN:**
 
 | Butir | Keadaan |
 |---|---|
-| A1 tujuh sisa kecil sub-proyek 2 | **SELESAI** `c7dfcb8`…`a808ecb` |
-| A2 empat temuan reviu 1B | **SELESAI** `d3e433c`, `8acbd7c`, `701774a`, `dd6f98a` (id kelompok: 8 simpan serentak → 1–3 id berbeda sebelum perbaikan) |
-| A3 sesi basis data selalu UTC | **SELESAI** `67eaf99`, `3299394`; spec `specs/2026-09-26-zona-waktu-utc-design.md`, rencana `plans/2026-09-26-zona-waktu-utc.md` (2/2) |
-| A4 tanggal nota zona operasional | **SELESAI** `b7bf632` |
-| A5 mysql2 3.24.4 | **SELESAI** `1e4d883`; audit sesudahnya **7 (2 tinggi, 5 sedang)**, kedua tinggi `xlsx` — **belum bersih** |
-| A6 identitas IBV tertulis mati | **SELESAI** `7822f80` — 7 tempat, termasuk arsip penutupan yang *selalu* mencetak IBV; penjaga `server/noHardcodedCompany.test.ts` |
-| B1 bentuk baru uji isolasi tenant | **DITERIMA pengguna 28 September** apa adanya. Tanpa kode. Uji ikut terhapus bersama tenancy di program desktop langkah 5 |
-| B2 Temuan 3 — pemblokiran serta merta dan percobaan transaksi | **Dibangun: hentikan + catat** — rencana Tugas 1–6 |
-| B3 Temuan 7 — penginian berkala klasifikasi risiko | **Dibangun: klasifikasi saja** (tanpa tinjauan per nasabah) — rencana Tugas 7–8 |
-| B4 tanggal berakhir hubungan nasabah INACTIVE lama | **Dibangun: Controller mengisi** dengan sumber wajib — rencana Tugas 9 |
-| B5 harga per seri uang kertas | **DIBUANG ke ROADMAP** sebagai calon sesudah desktop; dicatat di ROADMAP pada rencana Tugas 10 |
-| C sub-proyek 3–9, penerapan produksi `0060`/`0061`, GitHub Action penerapan | **sengaja sesudah pindah** — disepakati pengguna |
+| A1–A6 | **SELESAI** 26 September (lihat riwayat git `c7dfcb8`…`7822f80`) |
+| B1 bentuk baru uji isolasi tenant | **Diterima** apa adanya; terhapus bersama tenancy pada langkah 5 |
+| B2 Temuan 3 — pemblokiran + percobaan transaksi | **SELESAI 28 September** `2e0691e`…`edcc276`, perbaikan reviu `42caa90` |
+| B3 Temuan 7 — tinjauan berkala klasifikasi | **SELESAI 28 September** `b3e24b9`, `9c3645a` |
+| B4 tanggal berakhir nasabah INACTIVE lama | **SELESAI 28 September** `57d1009` (tanpa migrasi) |
+| B5 harga per seri uang kertas | Dibuang ke ROADMAP (calon sesudah desktop); cara resmi di Panduan A–Z §5.4 langkah 5a |
+| C sub-proyek 3–9, produksi `0060`–`0062`, GitHub Action penerapan | **sengaja sesudah pindah** |
 
-**Akibat A6 yang perlu diketahui:** nama penerbit/audiens sesi berganti (`aplikasi-valuta-internal`/
-`-backoffice`), jadi **setiap sesi yang sedang berjalan berakhir sekali** — termasuk server
-pengembangan port 3000 dan produksi bila kelak diterapkan.
+**Rencana:** `plans/2026-09-28-butir-b-sebelum-desktop.md` — **10 dari 10 tugas tercentang**,
+dieksekusi langsung oleh sesi (tanpa subagen), satu commit per tugas, lalu satu reviu akhir segar
+(model opus): 0 kritis, 5 penting (semua diperbaiki `42caa90` dengan uji RED→GREEN), 9 minor ditunda
+(di bawah). Keenam butir Review Focus rencana dinyatakan LULUS oleh peninjau.
 
-**Playwright yang "macet" 15–17 menit adalah Mac yang tidur, bukan kode.** `pmset -g log` menunjukkan
-siklus tidur ± 16 menit saat pengguna pergi; runner membeku sehingga batas 30 detik Playwright tidak
-pernah menyala. Jalankan `caffeinate -dimsu ./node_modules/.bin/playwright test`. Satu kegagalan
-tangkapan `galeri: #palet` @1280 muncul sekali lalu lulus 9 dari 9 ulangan — dicatat, tidak diubah.
-Playwright terakhir yang dijalankan: **55 passed (1.2m)** pada `7822f80` (26 September).
+**Baseline uji (dijalankan 28 September sesudah `42caa90`):** `Test Files 234 passed (234)`,
+`Tests 1793 passed | 2 skipped (1795)` — +10 berkas, +59 uji terhadap 1734, semuanya milik butir B.
+`tsc --noEmit` keluar 0; `vite build` lulus. **Playwright `55 passed (1.0m)`** dijalankan pada
+`6ad0dc6` (sebelum perbaikan reviu; perbaikan itu hanya menambah satu kotak ringkasan di
+`Pemblokiran.tsx`, diperiksa mata). Migrasi terakhir **`0062`**, hanya di `moneychanger` dan
+`mc_t_abcvalas`. **Antrean produksi: `0059`–`0062` belum diterapkan** (produksi di 60 migrasi).
 
-**Spec:** `specs/2026-09-28-butir-b-sebelum-desktop-design.md` (`98033ce`, disetujui per bagian dalam
-percakapan). **Rencana:** `plans/2026-09-28-butir-b-sebelum-desktop.md` (`9acaf59`, **10 tugas, 0
-tercentang**). Eksekusi **langsung oleh sesi, tanpa subagen** (keputusan pengguna).
+**Peragaan end-to-end di `moneychanger` (28 September) — data uji yang sengaja ditinggalkan:**
+- Blokir #1 nasabah 11 CONFIRMED + LTKM `LTKM-UJI/2026/001` + tembusan 28 Sep; 1 percobaan (USD 500).
+- Blokir #2 nasabah 12 FALSE_POSITIVE (diputuskan lewat layar); blokir #4 nasabah 8 FALSE_POSITIVE
+  (kunci `DTTOT:UJI-B2-001`), 1 percobaan KUASA (nasabah 10 dengan kuasa 8).
+- Entri DTTOT sintetis `UJI-B2-001` (`sourceFileName = peragaan-butir-b.xlsx`) masih di daftar.
+- 230 klasifikasi uji RENDAH bersumber "Data uji lokal peragaan butir B"; satu tinjauan disahkan
+  (237 baris). Nasabah 9 dijadikan INACTIVE dan diisi tanggal berakhir 15 Agustus 2026 lewat layar.
+- Skrip `scripts/peragaanButirB.mts` (subperintah `hitung`, `entri-uji`, `saring`, `bon`, `putus`,
+  `lapor`, `klasifikasi-isi`, `berakhir`) memanggil penulis sungguhan; pakai untuk peragaan ulang.
 
-**Keputusan rancangan yang tidak boleh ditanyakan ulang:**
-- Blokir dibuka pada saat **kecocokan** (penyaringan atau centang petugas), bukan di loket; hanya
-  CONTROLLER ke atas yang menutupnya (CONFIRMED / FALSE_POSITIVE / DICABUT dengan surat otoritas).
-- **Layar bon sengaja TIDAK memperingatkan lebih awal** saat nasabah terblokir dipilih, supaya
-  percobaan tercatat dengan rincian jumlahnya. Pesan kasir netral, persis:
-  *"Transaksi tidak dapat diproses. Hubungi Controller. Jangan sampaikan alasannya kepada nasabah."*
-- Tenggat tembusan BI 3 hari kerja **tidak dihitung** sampai kalender hari kerja (Temuan 6) ada.
-- Tinjauan klasifikasi = pengesahan seluruh tabel dengan snapshot JSON; ditolak selama ada kode belum
-  diklasifikasi; rumus IRA tidak berubah (tetap membaca RENDAH).
+**Keputusan rancangan butir B yang tidak boleh ditanyakan ulang:** blokir dibuka saat kecocokan,
+ditutup hanya CONTROLLER ke atas; layar bon sengaja tidak memperingatkan lebih awal; tenggat 3 hari
+kerja tidak dihitung (menunggu Temuan 6); tinjauan klasifikasi = pengesahan seluruh tabel dengan
+snapshot; rumus IRA tidak berubah.
 
-**Temuan sesi ini yang harus diingat saat eksekusi:**
-- **Celah nyata hari ini:** nasabah yang dicentang cocok DTTOT/DPPSPM menjadi HIGH, dan
-  `customerHighRiskDenial` **meloloskannya begitu Pemegang Saham menyetujui**. `createTransaction`
-  juga tidak pernah membaca `customer_watchlist_screenings`. Rencana Tugas 4 menaruh gerbang blokir
-  **sebelum** gerbang risiko tinggi.
-- **Impor daftar sanksi menghapus lalu menyisipkan ulang entri** — id entri berganti setiap impor.
-  Kunci kecocokan blokir karena itu `listType:referenceCode` (atau nama ternormalisasi).
-- `KlasifikasiRisiko.tsx` **sudah** menghitung kode belum diklasifikasi di klien, tetapi semesta
-  negaranya hanya negara yang sudah diklasifikasi (jadi negara tidak pernah "belum"). Rencana Tugas
-  7–8 memindahkan definisinya ke `shared/` dan memakai `customers.nationality`.
-- B4: hitungan INACTIVE tanpa `relationshipEndedAt` = **0** di kedua basis data lokal. Pembacaan
-  produksi (baca-saja) **ditolak pengklasifikasi izin** sesi ini dan tidak dijalankan; pengguna dapat
-  menjalankannya sendiri dengan `!`.
+**Keputusan yang diambil sesi eksekusi (jangan "dikembalikan"):**
+1. Ringkasan percobaan membagi dengan `quoteUnit` baris seperti bon (tanpa itu JPY per 100 tercatat
+   100 kali lipat); kurs per baris tidak disimpan (spec diperbarui).
+2. Id penyaringan sesudah penyaringan massal = id terbesar per nasabah, bukan `screenedAt = ?`
+   (kolom TIMESTAMP tanpa pecahan detik tidak pernah sama dengan instan JS bermilidetik).
+3. Semesta negara klasifikasi tidak memuat nasabah demo; pengisian tanggal berakhir menolak nasabah
+   demo/historis.
+4. Keputusan CONFIRMED menjadikan nasabah HIGH/RESTRICTED (INACTIVE tetap) dan keputusan risiko
+   tinggi kembali BELUM — sama dengan centang saat nasabah dibuat (temuan reviu I3).
+5. Centang DTTOT/DPPSPM tidak dapat dicabut lewat Edit nasabah selama ada blokir CONFIRMED (I4).
+6. Kecocokan pada **pemilik manfaat** tidak menahan bon nasabahnya — spec hanya menyebut nasabah dan
+   kuasa/wakil. Bila ini keliru, nasabah ber-BO cocok tetap bertransaksi sampai Controller bertindak.
+7. Hitungan "N/9 KONTROL SIAP" pada Kesiapan Operasional kini dihitung dari kartunya (sebelumnya
+   kartu IRA pun tidak pernah terhitung).
 
-**Baseline uji (dijalankan 28 September, `9acaf59`, tanpa perubahan kode sejak `7822f80`):**
-`Test Files 224 passed (224)`, `Tests 1734 passed | 2 skipped (1736)`. `tsc`, `vite build`, dan
-Playwright **tidak dijalankan** sesi ini. Migrasi terakhir `0061`; rencana menambah `0062` (lokal
-saja). Antrean produksi tetap `0059`–`0061` belum diterapkan.
+**Sembilan temuan minor reviu akhir yang DITUNDA (belum dikerjakan):**
+- M1 dua penyaringan serentak dapat membuka dua blokir OPEN untuk satu nasabah (gagal-aman).
+- M2 gerbang blokir di luar transaksi basis data bon — jendela satu bon.
+- M3 FALSE_POSITIVE atas blokir PENGISIAN_AWAL membiarkan centang lama `dttotPpsdmMatch` (spec diam).
+- M4 `biCopySentAt` saat konfirmasi tanpa periksa masa depan di server (hanya `max` di layar).
+- M5 tinjauan klasifikasi jatuh tempo pada hari jatuh temponya; spec berbunyi sehari sesudahnya.
+- M6 kartu Kesiapan menampilkan "hanya terlihat oleh Controller" untuk galat apa pun.
+- M7 penyaringan massal membaca seluruh riwayat penyaringan nasabah cocok hanya demi id terbesar.
+- M8 `recordRelationshipEnd` periksa-lalu-tulis tidak atomik.
+- M9 `referenceCode` tidak dinormalkan (huruf besar/spasi) pada kunci kecocokan.
+
+**Tugas berikutnya: sesi rancangan program desktop langkah 1 — paket Windows portabel.** Belum
+punya spec maupun rencana. Pakai prompt di bawah.
 
 **Prompt untuk sesi berikutnya:**
 
 ```
-Eksekusi docs/superpowers/plans/2026-09-28-butir-b-sebelum-desktop.md (spec
-docs/superpowers/specs/2026-09-28-butir-b-sebelum-desktop-design.md) mulai Tugas 1, langsung oleh
-sesi ini tanpa subagen (superpowers:executing-plans). Baca bagian "Sesi berikutnya" di
-docs/superpowers/PROMPT-SESI.md dulu — keputusan rancangan di sana jangan ditanyakan ulang.
-Centang tiap tugas pada Status Pengerjaan rencana sesudah perintah mutunya lulus, commit per tugas.
-Migrasi 0062 hanya ke moneychanger dan mc_t_abcvalas lewat scripts/tenant.mjs migrate-all.
-Sesudah Tugas 10 selesai, mulai sesi rancangan program aplikasi desktop (paket Windows portabel
-dulu). Tutup sesi dengan skill serah-terima.
+Mulai sesi rancangan program aplikasi desktop langkah 1: paket Windows portabel
+(superpowers:brainstorming, lalu writing-plans). Baca dulu bagian "Sesi berikutnya" di
+docs/superpowers/PROMPT-SESI.md dan "Program Aplikasi Desktop" di
+docs/superpowers/ROADMAP-SISA-PEKERJAAN.md — arah 26 September jangan ditanyakan ulang.
+Telusuri proyek tokoEmas-IR sebagai rujukan paket portabel bila tersedia di mesin ini, dan
+telusuri server/_core, scripts/tenant.mjs, serta ketergantungan R2/tenancy yang akan tersentuh.
+Pertanyaan kebijakan (port, lokasi instalasi, MariaDB vs MySQL, pembaruan versi) tanyakan satu
+per satu. Hasilkan spec dan rencana bertugas, commit keduanya. Tutup dengan skill serah-terima.
 
-Baseline uji: Test Files 224 passed (224), Tests 1734 passed | 2 skipped (1736).
+Baseline uji: Test Files 234 passed (234), Tests 1793 passed | 2 skipped (1795).
 ```
 
 ---
@@ -452,6 +459,24 @@ Bila sesi berikutnya melihat satu kegagalan tunggal pada jalan penuh, **catat na
 bukti, dan itulah sebabnya kejadian pertama tidak pernah teridentifikasi.
 
 ### Yang tidak perlu ditemukan ulang
+
+- **Playwright yang "macet" 15–17 menit adalah Mac yang tidur**, bukan kode — jalankan
+  `caffeinate -dimsu ./node_modules/.bin/playwright test`. Bila Playwright gagal seketika dengan
+  `browserType.launch: Executable doesn't exist … chromium_headless_shell-1243`, peramban
+  Playwright-nya hilang dari `~/Library/Caches/ms-playwright`: `./node_modules/.bin/playwright install chromium`
+  (± 280 MB, minta izin pengguna dulu). Itu bukan kegagalan uji — jangan dilaporkan sebagai lulus.
+- **Akibat A6:** nama penerbit/audiens sesi berganti, jadi setiap sesi yang sedang berjalan berakhir
+  sekali — termasuk produksi bila kelak diterapkan.
+- **Server pengembangan yang dijalankan `tsx server/_core/index.ts` (tanpa `watch`) tidak memuat
+  ulang perubahan server** — hentikan dan jalankan lagi sebelum verifikasi layar, atau pakai `tsx watch`.
+- **Klik tetikus Claude-in-Chrome kadang tidak sampai ke React pada tab baru** (tombol menyala
+  tetapi state tidak berubah, tanpa galat konsol). Sebelum menyimpulkan ada bug, uji dengan
+  `element.click()` lewat `javascript_tool`; pada 28 September aplikasinya benar, alatnya yang tidak.
+  `Input type="date"` juga tidak menerima ketikan — isi dengan `form_input` nilai `YYYY-MM-DD`.
+- **Celah id pada tabel yang diisi migrasi `INSERT … SELECT`** (mis. `watchlist_blocks` langsung
+  lompat ke #4) adalah InnoDB memesan blok id — bukan baris yang terhapus.
+- **Kolom TIMESTAMP (`audit_logs.createdAt`) tampil dalam WIB di klien `mysql`, kolom DATETIME dalam
+  UTC** — dua baris yang ditulis bersamaan tampak berselisih 7 jam. Itu cara tampil, bukan salah tulis.
 
 - **Uji hidup yang MENULIS memakai `server/testing/scratchDatabase.ts`** (`mc_uji_*`, dibuat ulang dan
   dimigrasikan penuh tiap jalan, dibiarkan sesudahnya). Contoh: `ownerRecovery.live.test.ts`,
