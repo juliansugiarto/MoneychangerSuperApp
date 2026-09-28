@@ -119,7 +119,7 @@ export default function KlasifikasiRisiko() {
    *  adalah negara yang sudah pernah diklasifikasikan ditambah kewarganegaraan nasabah yang belum
    *  (dari server, definisi yang sama dengan penolakan pengesahan). */
   const codesFor = (key: Dimension): { code: string; label: string }[] => {
-    if (key === "CURRENCY") return (currencies.data ?? []).map((currency: { code: string; name: string }) => ({ code: currency.code, label: currency.name }));
+    if (key === "CURRENCY") return (currencies.data ?? []).filter((currency: { code: string }) => currency.code !== "IDR").map((currency: { code: string; name: string }) => ({ code: currency.code, label: currency.name }));
     if (key === "OCCUPATION") return Object.entries(IRA_OCCUPATION_CATEGORY_LABELS).map(([code, label]) => ({ code, label }));
     if (key === "LEGAL_FORM") return Object.entries(IRA_LEGAL_FORM_LABELS).map(([code, label]) => ({ code, label }));
     if (key === "PROVINCE") return Object.entries(IRA_PROVINCE_LABELS).map(([code, label]) => ({ code, label }));
@@ -129,7 +129,9 @@ export default function KlasifikasiRisiko() {
   };
 
   const codes = codesFor(dimension);
-  const isClassified = (code: string) => RISK_TYPES.some((riskType) => byKey.has(`${dimension}|${code}|${riskType}`));
+  // Sama dengan `unclassifiedCodes` di server: satu kode baru dianggap selesai bila ketiga jenis risikonya
+  // terisi, dan IDR (mata uang pelaporan) tidak ikut semesta.
+  const isClassified = (code: string) => RISK_TYPES.every((riskType) => byKey.has(`${dimension}|${code}|${riskType}`));
   // Yang belum diklasifikasikan lebih dulu: itu pekerjaan yang menunggu, bukan keadaan sah.
   const ordered = [...codes].sort((left, right) => Number(isClassified(left.code)) - Number(isClassified(right.code)) || left.code.localeCompare(right.code));
   const unclassifiedCount = codes.filter((entry) => !isClassified(entry.code)).length;
