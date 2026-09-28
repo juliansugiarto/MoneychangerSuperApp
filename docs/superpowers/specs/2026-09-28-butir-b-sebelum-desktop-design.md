@@ -89,7 +89,7 @@ setiap nasabah non-demo non-historis yang `dttotPpsdmMatch = true` atau penyarin
 | `blockedParty` | `NASABAH` · `KUASA` — pihak mana yang terblokir |
 | `tellerUserId`, `attemptedAt` | siapa dan kapan (instan UTC dari JS) |
 | `operation` | `BUY` · `SELL` |
-| `linesSummary` | JSON: per baris kode valuta, jumlah valas, kurs, jumlah Rupiah — dari masukan bon |
+| `linesSummary` | JSON: per baris kode valuta, jumlah valas, jumlah Rupiah — dari masukan bon (kurs tidak disimpan per baris karena satu baris dapat memuat beberapa kurs per pecahan; kurs rata-rata terbaca dari kedua jumlah) |
 | `totalIdr` | decimal |
 
 **Penulisnya satu:** `createTransaction`. Urutan gerbang: nasabah ada → aktif → **blokir** →

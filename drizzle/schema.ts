@@ -635,7 +635,7 @@ export const attemptedTransactions = mysqlTable("attempted_transactions", {
   tellerUserId: int("tellerUserId").notNull(),
   attemptedAt: datetime("attemptedAt").notNull(),
   operation: mysqlEnum("operation", ["BUY", "SELL"]).notNull(),
-  /** JSON: [{ currencyId, currencyCode, foreignAmount, rate, idrAmount }] dari masukan bon. */
+  /** JSON: [{ currencyId, currencyCode, foreignAmount, idrAmount }] dari masukan bon. */
   linesSummary: text("linesSummary").notNull(),
   totalIdr: decimal("totalIdr", { precision: 24, scale: 2 }).notNull(),
 }, (table) => [

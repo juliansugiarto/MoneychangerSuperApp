@@ -19,7 +19,7 @@ tersendiri (`server/watchlistBlocks.ts`, `server/iraClassificationReview.ts`), g
 ## Status Pengerjaan
 
 - [x] Tugas 1 — Skema dan migrasi `0062`
-- [ ] Tugas 2 — Aturan murni pemblokiran
+- [x] Tugas 2 — Aturan murni pemblokiran
 - [ ] Tugas 3 — Penulis blokir: penyaringan dan centang petugas
 - [ ] Tugas 4 — Gerbang bon dan pencatatan percobaan
 - [ ] Tugas 5 — Keputusan atas blokir dan router
@@ -222,7 +222,7 @@ Expected: tabel ada di keduanya, hitungan blokir = jumlah nasabah cocok (catat a
 - `hasActiveBlock(existing: BlockLite[]): boolean`
 - `summarizeAttemptLines(lines: { currencyId: number; denominations: { value: string; quantity: number; rate: string }[] }[], codeById: Map<number, string>): { lines: AttemptLineSummary[]; totalIdr: string }`
 
-- [ ] **Step 1: Uji yang gagal**
+- [x] **Step 1: Uji yang gagal**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -291,9 +291,9 @@ it("pesan kasir netral", () => {
 });
 ```
 
-- [ ] **Step 2:** `./node_modules/.bin/vitest run shared/watchlistBlock.test.ts` → FAIL.
+- [x] **Step 2:** `./node_modules/.bin/vitest run shared/watchlistBlock.test.ts` → FAIL.
 
-- [ ] **Step 3: Implementasi**
+- [x] **Step 3: Implementasi**
 
 ```ts
 /**
