@@ -56,7 +56,8 @@ import { buildGoAmlLtktReportXml, buildGoAmlLtkmReportXml, type GoAmlCustomer, t
 import { isKnownGoAmlReportIndicator } from "../shared/goAmlReportIndicators";
 import { decodeSanctionsWatchlistUpload, parseSanctionsWatchlistWorkbook, cleanSanctionsWatchlistFileName } from "./sanctionsWatchlistImport";
 import { matchWatchlistEntries, rescreenAllCustomers, screenCustomer, type SanctionsWatchlistMatch, type ScreeningTrigger } from "./customerWatchlistScreening";
-import { openOfficerBlock } from "./watchlistBlocks";
+import { activeBlockFor, openOfficerBlock, recordAttempt } from "./watchlistBlocks";
+import { WATCHLIST_BLOCK_TELLER_MESSAGE } from "../shared/watchlistBlock";
 import { customerHighRiskDenial, highRiskResetValues } from "./customerHighRiskApproval";
 import { relationshipEndValues } from "../shared/documentRetention";
 import { parseWatchlistNameList, scoreNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
@@ -1518,6 +1519,22 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   if (!customer) throw new Error("Nasabah tidak ditemukan.");
   if (customer.isDemo || customer.isHistorical) throw new Error("Nasabah demo atau historis tidak dapat digunakan pada transaksi operasional.");
   if (customer.profileStatus === "INACTIVE") throw new Error("Nasabah tidak aktif dan tidak dapat digunakan pada transaksi.");
+  // Pemblokiran serta merta — Pasal 47 ayat (1) huruf d PBI 10/2024. Diperiksa sebelum gerbang
+  // risiko tinggi: persetujuan Pemegang Saham tidak dapat meloloskan kecocokan nama. Percobaannya
+  // dicatat lebih dulu, di luar transaksi basis data bon, supaya tetap ada walau bon ditolak.
+  const representativeId = input.customerActingAs === "REPRESENTATIVE" ? input.representativeCustomerId ?? null : null;
+  const activeBlocks = await activeBlockFor(representativeId ? [customer.id, representativeId] : [customer.id]);
+  const heldBy = activeBlocks.get(customer.id) ? { block: activeBlocks.get(customer.id)!, party: "NASABAH" as const }
+    : representativeId && activeBlocks.get(representativeId) ? { block: activeBlocks.get(representativeId)!, party: "KUASA" as const } : null;
+  if (heldBy) {
+    try {
+      await recordAttempt({ block: heldBy.block, blockedParty: heldBy.party, customerId: customer.id, representativeCustomerId: representativeId, tellerUserId, operation: input.operation, lines: input.lines ?? [] });
+    } catch (error) {
+      // Galat penulisan dicatat ke log server, tidak ditelan menjadi keberhasilan: bon tetap ditolak.
+      console.error("[pemblokiran] percobaan transaksi gagal dicatat", error);
+    }
+    throw new Error(WATCHLIST_BLOCK_TELLER_MESSAGE);
+  }
   // Gerbang persetujuan nasabah berisiko tinggi — Pasal 32 ayat (5) dan (6) PBI 10/2024. Ditegakkan
   // di penulisnya, bukan hanya disembunyikan di layar: bon yang dibuat lewat jalur lain mana pun
   // tetap tertahan.

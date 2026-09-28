@@ -52,6 +52,10 @@ describe("summarizeAttemptLines", () => {
     expect(result.lines).toEqual([{ currencyId: 2, currencyCode: "USD", foreignAmount: "350.00", idrAmount: "5595000.00" }]);
     expect(result.totalIdr).toBe("5595000.00");
   });
+  it("membagi dengan quoteUnit seperti bon (JPY per 100)", () => {
+    const result = summarizeAttemptLines([{ currencyId: 3, quoteUnit: "100", denominations: [{ value: "10000", quantity: 2, rate: "10500" }] }], new Map([[3, "JPY"]]));
+    expect(result.lines[0]).toMatchObject({ foreignAmount: "20000.00", idrAmount: "2100000.00" });
+  });
   it("baris cacat dicatat apa adanya dengan nol, tidak menggagalkan pencatatan", () => {
     const result = summarizeAttemptLines([{ currencyId: 9, denominations: [{ value: "abc", quantity: 1, rate: "x" }] }], new Map());
     expect(result.lines[0]).toMatchObject({ currencyId: 9, currencyCode: null, idrAmount: "0.00" });

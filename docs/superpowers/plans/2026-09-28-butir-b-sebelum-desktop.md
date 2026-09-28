@@ -21,7 +21,7 @@ tersendiri (`server/watchlistBlocks.ts`, `server/iraClassificationReview.ts`), g
 - [x] Tugas 1 — Skema dan migrasi `0062`
 - [x] Tugas 2 — Aturan murni pemblokiran
 - [x] Tugas 3 — Penulis blokir: penyaringan dan centang petugas
-- [ ] Tugas 4 — Gerbang bon dan pencatatan percobaan
+- [x] Tugas 4 — Gerbang bon dan pencatatan percobaan
 - [ ] Tugas 5 — Keputusan atas blokir dan router
 - [ ] Tugas 6 — Register Pemblokiran dan Kesiapan Operasional
 - [ ] Tugas 7 — Aturan murni tinjauan klasifikasi
@@ -553,7 +553,7 @@ Tambahkan impor `inArray` dan `matchKeyOf`, `openBlockFromScreening`, `openBlock
 
 **Interfaces — Produces:** `recordAttempt(input: { block: WatchlistBlock; blockedParty: "NASABAH" | "KUASA"; customerId: number; representativeCustomerId: number | null; tellerUserId: number; operation: "BUY" | "SELL"; lines: CreateTransactionInput["lines"] }): Promise<void>`
 
-- [ ] **Step 1: Uji yang gagal** — pola `mockTopLevelDb` dari `server/createTransactionValidation.test.ts`, diperluas dengan `insert` yang mencatat:
+- [x] **Step 1: Uji yang gagal** — pola `mockTopLevelDb` dari `server/createTransactionValidation.test.ts`, diperluas dengan `insert` yang mencatat:
 
 ```ts
 import { describe, expect, it, vi } from "vitest";
@@ -619,9 +619,9 @@ describe("createTransaction — nasabah terblokir", () => {
 
 Catatan: `chain(...).where` pada mock ini mengabaikan klausa; baris kuasa dipilih lewat `representativeCustomerId`. Bila mock `customers` mengembalikan kedua baris untuk pemilihan nasabah utama, `[0]` = nasabah — urutan larik di atas sudah benar.
 
-- [ ] **Step 2:** `./node_modules/.bin/vitest run server/watchlistBlockGate.test.ts` → FAIL.
+- [x] **Step 2:** `./node_modules/.bin/vitest run server/watchlistBlockGate.test.ts` → FAIL.
 
-- [ ] **Step 3: `recordAttempt` di `server/watchlistBlocks.ts`**
+- [x] **Step 3: `recordAttempt` di `server/watchlistBlocks.ts`**
 
 ```ts
 export async function recordAttempt(input: {
@@ -641,7 +641,7 @@ export async function recordAttempt(input: {
 }
 ```
 
-- [ ] **Step 4: Gerbang di `createTransaction`** — tepat sesudah `if (customer.profileStatus === "INACTIVE") ...` dan **sebelum** `customerHighRiskDenial`:
+- [x] **Step 4: Gerbang di `createTransaction`** — tepat sesudah `if (customer.profileStatus === "INACTIVE") ...` dan **sebelum** `customerHighRiskDenial`:
 
 ```ts
   // Pemblokiran serta merta — Pasal 47 ayat (1) huruf d PBI 10/2024. Diperiksa sebelum gerbang
@@ -663,8 +663,8 @@ export async function recordAttempt(input: {
 
 Impor `activeBlockFor`, `recordAttempt` dari `./watchlistBlocks` dan `WATCHLIST_BLOCK_TELLER_MESSAGE` dari `../shared/watchlistBlock`.
 
-- [ ] **Step 5:** `./node_modules/.bin/vitest run server/watchlistBlockGate.test.ts server/createTransactionValidation.test.ts` lalu seluruh berkas yang memanggil `createTransaction` (`grep -l createTransaction server/*.test.ts`) → PASS.
-- [ ] **Step 6: Commit** — `"Bon nasabah terblokir ditolak netral dan percobaannya dicatat"`
+- [x] **Step 5:** `./node_modules/.bin/vitest run server/watchlistBlockGate.test.ts server/createTransactionValidation.test.ts` lalu seluruh berkas yang memanggil `createTransaction` (`grep -l createTransaction server/*.test.ts`) → PASS.
+- [x] **Step 6: Commit** — `"Bon nasabah terblokir ditolak netral dan percobaannya dicatat"`
 
 ---
 

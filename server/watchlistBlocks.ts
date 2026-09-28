@@ -1,6 +1,6 @@
 import { inArray } from "drizzle-orm";
-import { watchlistBlocks, type WatchlistBlock } from "../drizzle/schema";
-import { hasActiveBlock, shouldOpenScreeningBlock, type BlockLite } from "../shared/watchlistBlock";
+import { attemptedTransactions, currencies, watchlistBlocks, type WatchlistBlock } from "../drizzle/schema";
+import { hasActiveBlock, shouldOpenScreeningBlock, summarizeAttemptLines, type BlockLite } from "../shared/watchlistBlock";
 import { getDb } from "./db";
 
 /**
@@ -55,4 +55,24 @@ export async function activeBlockFor(customerIds: number[]): Promise<Map<number,
     if (!current || current.id < block.id) result.set(block.customerId, block);
   }
   return result;
+}
+
+/**
+ * Satu baris percobaan transaksi yang ditahan blokir — Pasal 47 ayat (1) huruf d ("termasuk
+ * percobaan Transaksi"). Satu-satunya pemanggilnya `createTransaction`, sebelum bon apa pun ditulis.
+ */
+export async function recordAttempt(input: {
+  block: WatchlistBlock; blockedParty: "NASABAH" | "KUASA"; customerId: number; representativeCustomerId: number | null;
+  tellerUserId: number; operation: "BUY" | "SELL";
+  lines: { currencyId: number; quoteUnit?: string; denominations: { value: string; quantity: number; rate: string }[] }[];
+}): Promise<void> {
+  const db = await databaseOrThrow();
+  const currencyIds = Array.from(new Set((input.lines ?? []).map((line) => line.currencyId).filter((id) => Number.isInteger(id))));
+  const currencyRows = currencyIds.length ? await db.select({ id: currencies.id, code: currencies.code }).from(currencies).where(inArray(currencies.id, currencyIds)) : [];
+  const summary = summarizeAttemptLines(input.lines ?? [], new Map(currencyRows.map((row) => [row.id, row.code])));
+  await db.insert(attemptedTransactions).values({
+    blockId: input.block.id, customerId: input.customerId, representativeCustomerId: input.representativeCustomerId,
+    blockedParty: input.blockedParty, tellerUserId: input.tellerUserId, attemptedAt: new Date(),
+    operation: input.operation, linesSummary: JSON.stringify(summary.lines), totalIdr: summary.totalIdr,
+  });
 }

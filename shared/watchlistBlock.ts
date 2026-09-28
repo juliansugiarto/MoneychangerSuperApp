@@ -55,17 +55,20 @@ const fromCents = (cents: number) => (cents / 100).toFixed(2);
  * mencatat percobaan karena masukannya cacat berarti justru percobaan itulah yang hilang.
  */
 export function summarizeAttemptLines(
-  lines: { currencyId: number; denominations: { value: string; quantity: number; rate: string }[] }[],
+  lines: { currencyId: number; quoteUnit?: string; denominations: { value: string; quantity: number; rate: string }[] }[],
   codeById: Map<number, string>,
 ): { lines: AttemptLineSummary[]; totalIdr: string } {
   let totalCents = 0;
   const summaries = lines.map((line) => {
     let foreignCents = 0;
     let idrCents = 0;
+    // Sama dengan `calculateRupiahAmount`: kurs dikutip per `quoteUnit` satuan (mis. JPY per 100).
+    const quoteUnit = Number(line.quoteUnit ?? "1");
+    const unit = Number.isFinite(quoteUnit) && quoteUnit > 0 ? quoteUnit : 1;
     for (const denomination of line.denominations ?? []) {
       const foreign = Number(denomination.value) * Number(denomination.quantity);
       foreignCents += toCents(foreign);
-      idrCents += toCents(foreign * Number(denomination.rate));
+      idrCents += toCents((foreign * Number(denomination.rate)) / unit);
     }
     totalCents += idrCents;
     return { currencyId: line.currencyId, currencyCode: codeById.get(line.currencyId) ?? null, foreignAmount: fromCents(foreignCents), idrAmount: fromCents(idrCents) };
