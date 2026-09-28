@@ -26,7 +26,7 @@ tersendiri (`server/watchlistBlocks.ts`, `server/iraClassificationReview.ts`), g
 - [x] Tugas 6 — Register Pemblokiran dan Kesiapan Operasional
 - [x] Tugas 7 — Aturan murni tinjauan klasifikasi
 - [x] Tugas 8 — Pengesahan tinjauan, selang, dan layarnya
-- [ ] Tugas 9 — B4 tanggal berakhir hubungan
+- [x] Tugas 9 — B4 tanggal berakhir hubungan
 - [ ] Tugas 10 — Peragaan end-to-end, dokumentasi, perintah mutu
 
 ## Global Constraints
@@ -1164,7 +1164,7 @@ export async function setClassificationReviewInterval(input: { months: number },
 - `recordRelationshipEnd(input: { customerId: number; dateKey: string; source: string }, actor: { id: number }): Promise<{ relationshipEndedAt: Date }>`
 - overview: `customers.inactiveWithoutEndDateCustomers: { id: number; fullName: string; cifNumber: string | null }[]`
 
-- [ ] **Step 1: Uji yang gagal**
+- [x] **Step 1: Uji yang gagal**
 
 ```ts
 import { relationshipEndDenial } from "../shared/documentRetention";
@@ -1203,9 +1203,9 @@ describe("recordRelationshipEnd", () => {
 
 (Periksa nama kolom alasan pada `auditLogs` — `writeAudit` memakai `reason`; bila kolomnya bernama lain, sesuaikan uji dengan nama sebenarnya.)
 
-- [ ] **Step 2:** FAIL.
+- [x] **Step 2:** FAIL.
 
-- [ ] **Step 3: `relationshipEndDenial`** di `shared/documentRetention.ts`:
+- [x] **Step 3: `relationshipEndDenial`** di `shared/documentRetention.ts`:
 
 ```ts
 /** Validasi tanggal berakhir hubungan yang diisi Controller — dibandingkan per hari operasional. */
@@ -1217,7 +1217,7 @@ export function relationshipEndDenial(input: { dateKey: string; todayKey: string
 }
 ```
 
-- [ ] **Step 4: `recordRelationshipEnd`** di `server/documentRetentionQueries.ts`:
+- [x] **Step 4: `recordRelationshipEnd`** di `server/documentRetentionQueries.ts`:
 
 ```ts
 /**
@@ -1249,13 +1249,13 @@ export async function recordRelationshipEnd(input: { customerId: number; dateKey
 
 Impor `startOfOperationalDay`, `operationalDateKey` dari `../shared/regulatoryActionQueue`, `relationshipEndDenial` dari `../shared/documentRetention`, `auditLogs` dari skema. `latest` sudah ada di berkas.
 
-- [ ] **Step 5: Overview** — pilih juga `fullName`, `cifNumber` pada `customerRows`, dan tambahkan ke hasil:
+- [x] **Step 5: Overview** — pilih juga `fullName`, `cifNumber` pada `customerRows`, dan tambahkan ke hasil:
 
 ```ts
       inactiveWithoutEndDateCustomers: customerRows.filter((row) => row.profileStatus === "INACTIVE" && !row.relationshipEndedAt).map((row) => ({ id: row.id, fullName: row.fullName, cifNumber: row.cifNumber })),
 ```
 
-- [ ] **Step 6: Router** — di router yang memuat `retentionOverview`:
+- [x] **Step 6: Router** — di router yang memuat `retentionOverview`:
 
 ```ts
     recordRelationshipEnd: controllerProcedure
@@ -1263,10 +1263,10 @@ Impor `startOfOperationalDay`, `operationalDateKey` dari `../shared/regulatoryAc
       .mutation(({ input, ctx }) => recordRelationshipEnd(input, ctx.user)),
 ```
 
-- [ ] **Step 7: Layar** — di `PenatausahaanDokumen.tsx`, kartu *Tidak aktif tanpa tanggal berakhir* menampilkan daftar `inactiveWithoutEndDateCustomers` (nama + CIF) bila tidak kosong; tiap baris tombol **"Isi tanggal berakhir"** membuka Dialog: `Input type="date"` (maks hari ini), `Textarea` sumber wajib, keterangan "Tanggal ini memulai jam simpan 5 tahun (Pasal 48 ayat (1) huruf a angka 1). Isi hanya dari sumber yang dapat ditunjukkan." Mutasi → `toast`, invalidasi overview. Keadaan kosong tetap kalimat yang ada.
+- [x] **Step 7: Layar** — di `PenatausahaanDokumen.tsx`, kartu *Tidak aktif tanpa tanggal berakhir* menampilkan daftar `inactiveWithoutEndDateCustomers` (nama + CIF) bila tidak kosong; tiap baris tombol **"Isi tanggal berakhir"** membuka Dialog: `Input type="date"` (maks hari ini), `Textarea` sumber wajib, keterangan "Tanggal ini memulai jam simpan 5 tahun (Pasal 48 ayat (1) huruf a angka 1). Isi hanya dari sumber yang dapat ditunjukkan." Mutasi → `toast`, invalidasi overview. Keadaan kosong tetap kalimat yang ada.
 
-- [ ] **Step 8:** `./node_modules/.bin/vitest run server/relationshipEndRecord.test.ts server/documentRetentionQueries.test.ts shared/documentRetention.test.ts && ./node_modules/.bin/tsc --noEmit` → PASS / 0.
-- [ ] **Step 9: Commit** — `"Controller mengisi tanggal berakhir hubungan nasabah INACTIVE lama, bersumber dan teraudit"`
+- [x] **Step 8:** `./node_modules/.bin/vitest run server/relationshipEndRecord.test.ts server/documentRetentionQueries.test.ts shared/documentRetention.test.ts && ./node_modules/.bin/tsc --noEmit` → PASS / 0.
+- [x] **Step 9: Commit** — `"Controller mengisi tanggal berakhir hubungan nasabah INACTIVE lama, bersumber dan teraudit"`
 
 ---
 

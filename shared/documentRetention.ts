@@ -150,3 +150,11 @@ export function relationshipEndValues(
   if (nextStatus !== "INACTIVE" && previousStatus === "INACTIVE") return { relationshipEndedAt: null };
   return null;
 }
+
+/** Validasi tanggal berakhir hubungan yang diisi Controller — dibandingkan per hari operasional. */
+export function relationshipEndDenial(input: { dateKey: string; todayKey: string; lastTransactionDateKey: string | null }): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dateKey)) return "Tanggal harus berformat YYYY-MM-DD.";
+  if (input.dateKey > input.todayKey) return "Tanggal berakhir hubungan tidak boleh di masa depan.";
+  if (input.lastTransactionDateKey && input.dateKey < input.lastTransactionDateKey) return `Tanggal berakhir tidak boleh sebelum transaksi terakhir nasabah (${input.lastTransactionDateKey}).`;
+  return null;
+}

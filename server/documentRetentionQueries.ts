@@ -1,5 +1,6 @@
 import { and, eq, inArray, or } from "drizzle-orm";
 import {
+  auditLogs,
   companyProfile,
   customerProfileReviews,
   customers,
@@ -10,15 +11,17 @@ import {
 import {
   companyProfileDocumentRetention,
   customerDocumentRetention,
+  relationshipEndDenial,
   transactionDocumentRetention,
   type CustomerProfileStatus,
   type RetentionVerdict,
 } from "../shared/documentRetention";
-import { DEFAULT_OPERATIONAL_TIMEZONE } from "../shared/regulatoryActionQueue";
+import { DEFAULT_OPERATIONAL_TIMEZONE, operationalDateKey, startOfOperationalDay } from "../shared/regulatoryActionQueue";
 import { databaseOrThrow } from "./operations";
 
 /**
- * Pembacaan penatausahaan dokumen — Pasal 48 PBI 10/2024. **Hanya membaca.**
+ * Pembacaan penatausahaan dokumen — Pasal 48 PBI 10/2024. **Hanya membaca**, kecuali satu penulis:
+ * `recordRelationshipEnd`, yang mengisi tanggal berakhir hubungan atas keputusan Controller.
  *
  * Yang sudah lewat tenggat TIDAK dihapus dan tidak diusulkan dihapus: Pasal 48 menetapkan batas
  * PALING SINGKAT, dan ayat (6) justru membolehkan penatausahaan lebih lama. Aturan retensinya
@@ -171,6 +174,8 @@ export async function documentRetentionOverview({ asOf = new Date() }: { asOf?: 
 
   const customerRows = await db.select({
     id: customers.id,
+    fullName: customers.fullName,
+    cifNumber: customers.cifNumber,
     profileStatus: customers.profileStatus,
     relationshipEndedAt: customers.relationshipEndedAt,
   })
@@ -225,6 +230,8 @@ export async function documentRetentionOverview({ asOf = new Date() }: { asOf?: 
       pastRetention,
       /** INACTIVE yang dinonaktifkan sebelum migrasi 0058: jamnya tidak tercatat, jadi tidak dianggap berdetak. */
       inactiveWithoutEndDate: customerRows.filter((row) => row.profileStatus === "INACTIVE" && !row.relationshipEndedAt).length,
+      /** Daftarnya, supaya Controller dapat mengisi tanggalnya dari sumber yang dapat ditunjukkan. */
+      inactiveWithoutEndDateCustomers: customerRows.filter((row) => row.profileStatus === "INACTIVE" && !row.relationshipEndedAt).map((row) => ({ id: row.id, fullName: row.fullName, cifNumber: row.cifNumber })),
     },
     companyProfileDocuments: {
       total: companyRows.length,
@@ -232,4 +239,31 @@ export async function documentRetentionOverview({ asOf = new Date() }: { asOf?: 
       pastHouseRule,
     },
   };
+}
+
+/**
+ * Mengisi `relationshipEndedAt` bagi nasabah INACTIVE yang dinonaktifkan sebelum migrasi 0058.
+ * Tidak pernah otomatis — tanggalnya berasal dari sumber yang disebut Controller dan disimpan di
+ * audit. Sampai diisi, nasabahnya tanpa jam retensi: disimpan tanpa batas.
+ */
+export async function recordRelationshipEnd(input: { customerId: number; dateKey: string; source: string }, actor: { id: number }) {
+  const source = input.source?.trim() ?? "";
+  if (source.length < 3) throw new Error("Sumber tanggal berakhir wajib diisi.");
+  const db = await databaseOrThrow();
+  const [customer] = await db.select({ id: customers.id, profileStatus: customers.profileStatus, relationshipEndedAt: customers.relationshipEndedAt }).from(customers)
+    .where(and(eq(customers.id, input.customerId), eq(customers.isDemo, false), eq(customers.isHistorical, false))).limit(1);
+  if (!customer) throw new Error("Nasabah tidak ditemukan.");
+  if (customer.profileStatus !== "INACTIVE") throw new Error("Hanya nasabah INACTIVE yang dapat diisi tanggal berakhir hubungannya.");
+  if (customer.relationshipEndedAt) throw new Error("Tanggal berakhir hubungan nasabah ini sudah tercatat.");
+  const timeZone = await operationalTimeZone(db);
+  const transactions = await db.select({ transactionAt: exchangeTransactions.transactionAt }).from(exchangeTransactions)
+    .where(and(eq(exchangeTransactions.customerId, input.customerId), eq(exchangeTransactions.status, "COMPLETED"), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false)));
+  const lastAt = latest(transactions.map((row) => row.transactionAt));
+  const denial = relationshipEndDenial({ dateKey: input.dateKey, todayKey: operationalDateKey(new Date(), timeZone), lastTransactionDateKey: lastAt ? operationalDateKey(lastAt, timeZone) : null });
+  if (denial) throw new Error(denial);
+  // Tengah hari UTC pada tanggal itu jatuh di hari kalender yang sama untuk zona mana pun dalam daftar.
+  const relationshipEndedAt = startOfOperationalDay(new Date(`${input.dateKey}T12:00:00Z`), timeZone);
+  await db.update(customers).set({ relationshipEndedAt }).where(eq(customers.id, input.customerId));
+  await db.insert(auditLogs).values({ actorUserId: actor.id, action: "CUSTOMER_RELATIONSHIP_END_RECORDED", entityType: "customer", entityId: String(input.customerId), beforeState: { relationshipEndedAt: null }, afterState: { relationshipEndedAt }, reason: source });
+  return { relationshipEndedAt };
 }

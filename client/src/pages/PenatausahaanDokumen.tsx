@@ -2,17 +2,22 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { DEFAULT_OPERATIONAL_TIMEZONE } from "@shared/regulatoryActionQueue";
+import { DEFAULT_OPERATIONAL_TIMEZONE, operationalDateKey } from "@shared/regulatoryActionQueue";
 import { Archive, FileSearch, MessageSquareOff, Scale, UserRoundCheck, UserRoundX } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 /**
- * Penatausahaan dokumen — Pasal 48 PBI 10/2024. Halaman pemeriksa, **hanya membaca**.
+ * Penatausahaan dokumen — Pasal 48 PBI 10/2024. Halaman pemeriksa, **hanya membaca** — kecuali
+ * satu isian: tanggal berakhir hubungan nasabah INACTIVE lama, diisi Controller dari sumber yang
+ * dapat ditunjukkan (tidak pernah ditebak aplikasi).
  *
  * Tidak ada tombol hapus di sini dan tidak akan pernah ada: yang lewat tenggat tidak dihapus dan
  * tidak diusulkan dihapus, karena Pasal 48 menetapkan batas paling singkat dan ayat (6) justru
@@ -76,6 +81,25 @@ export default function PenatausahaanDokumen() {
     { customerId: selectedCustomerId ?? 0 },
     { enabled: Boolean(user) && selectedCustomerId !== null },
   );
+  const utils = trpc.useUtils();
+  const companyTimezone = trpc.companyProfile.get.useQuery(undefined, { enabled: Boolean(user) }).data?.timezone ?? DEFAULT_OPERATIONAL_TIMEZONE;
+  const [endDialog, setEndDialog] = useState<{ id: number; fullName: string } | null>(null);
+  const [endDate, setEndDate] = useState("");
+  const [endSource, setEndSource] = useState("");
+  const recordEnd = trpc.documents.recordRelationshipEnd.useMutation({
+    onSuccess: () => {
+      toast.success("Tanggal berakhir hubungan dicatat.");
+      setEndDialog(null);
+      void utils.documents.retentionOverview.invalidate();
+      void utils.documents.retentionStatement.invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const openEndDialog = (row: { id: number; fullName: string }) => {
+    setEndDialog(row);
+    setEndDate("");
+    setEndSource("");
+  };
 
   // Daftar nasabah dibaca utuh, bukan lewat pencarian transaksi: pencarian itu hanya memuat nasabah
   // ACTIVE, padahal yang paling perlu ditunjukkan kepada pemeriksa justru nasabah yang tidak aktif.
@@ -149,6 +173,20 @@ export default function PenatausahaanDokumen() {
                 <p className="mt-1 text-sm text-[#33506f]">Nonaktif: <strong>{overview.data.companyProfileDocuments.deactivated}</strong> · lewat aturan rumah: <strong>{overview.data.companyProfileDocuments.pastHouseRule}</strong></p>
               </SummaryCard>
             </div>
+          ) : null}
+          {overview.data && overview.data.customers.inactiveWithoutEndDateCustomers.length > 0 ? (
+            <section className="mt-4 rounded-2xl border border-[#e4dcc4] bg-[#fdfaf0] p-4">
+              <h3 className="text-sm font-semibold text-[#7a6626]">Tidak aktif tanpa tanggal berakhir</h3>
+              <p className="mt-1 text-xs text-[#7a6626]">Sampai tanggalnya diisi, data nasabah ini ditahan tanpa batas. Isi hanya dari sumber yang dapat ditunjukkan.</p>
+              <ul className="mt-3 divide-y divide-[#efe6cc]">
+                {overview.data.customers.inactiveWithoutEndDateCustomers.map((row) => (
+                  <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                    <span className="text-sm text-[#33506f]"><strong className="text-[#18395f]">{row.fullName}</strong> · {row.cifNumber ?? "tanpa CIF"}</span>
+                    <Button type="button" size="sm" variant="outline" onClick={() => openEndDialog(row)}>Isi tanggal berakhir</Button>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ) : null}
         </CardContent>
       </Card>
@@ -277,6 +315,41 @@ export default function PenatausahaanDokumen() {
           ) : null}
         </CardContent>
       </Card>
+
+      <Dialog open={Boolean(endDialog)} onOpenChange={(open) => { if (!open && !recordEnd.isPending) setEndDialog(null); }}>
+        <DialogContent className="max-w-lg">
+          {endDialog ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display text-xl text-[#18395f]">Isi tanggal berakhir hubungan</DialogTitle>
+                <DialogDescription>
+                  {endDialog.fullName}. Tanggal ini memulai jam simpan 5 tahun (Pasal 48 ayat (1) huruf a angka 1). Isi hanya dari sumber yang dapat ditunjukkan.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="relationship-end-date" className="text-xs">Tanggal berakhir hubungan (wajib)</Label>
+                  <Input id="relationship-end-date" type="date" className="mt-1 w-48" max={operationalDateKey(new Date(), companyTimezone)} value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+                  <p className="mt-1 text-xs text-[#718398]">Tidak boleh di masa depan dan tidak boleh sebelum transaksi selesai terakhir nasabah.</p>
+                </div>
+                <div>
+                  <Label htmlFor="relationship-end-source" className="text-xs">Sumber tanggal (wajib)</Label>
+                  <Textarea id="relationship-end-source" className="mt-1" rows={3} value={endSource} onChange={(event) => setEndSource(event.target.value)} placeholder="Contoh: berkas fisik nasabah, surat penutupan tertanggal …" />
+                  <p className="mt-1 text-xs text-[#718398]">Disimpan pada jejak audit.</p>
+                </div>
+                <Button
+                  type="button"
+                  className="w-full bg-[#183f70]"
+                  disabled={recordEnd.isPending || !endDate || endSource.trim().length < 3}
+                  onClick={() => recordEnd.mutate({ customerId: endDialog.id, dateKey: endDate, source: endSource.trim() })}
+                >
+                  {recordEnd.isPending ? "Menyimpan…" : "Simpan tanggal berakhir"}
+                </Button>
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

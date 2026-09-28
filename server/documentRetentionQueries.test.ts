@@ -144,7 +144,7 @@ describe("documentRetentionOverview", () => {
     customers: [
       { id: 1, profileStatus: "INACTIVE", relationshipEndedAt: wib("2019-01-01T10:00:00") },
       { id: 2, profileStatus: "INACTIVE", relationshipEndedAt: wib("2024-01-01T10:00:00") },
-      { id: 3, profileStatus: "INACTIVE", relationshipEndedAt: null },
+      { id: 3, fullName: "NASABAH LAMA", cifNumber: "CIF-3", profileStatus: "INACTIVE", relationshipEndedAt: null },
       { id: 4, profileStatus: "ACTIVE", relationshipEndedAt: null },
       { id: 5, profileStatus: "RESTRICTED", relationshipEndedAt: null },
     ],
@@ -159,7 +159,7 @@ describe("documentRetentionOverview", () => {
   it("menghitung yang lewat tenggat terhadap asOf yang disuntikkan", async () => {
     mockDb(tables());
     const overview = await documentRetentionOverview({ asOf: wib("2026-09-11T12:00:00") });
-    expect(overview.customers).toEqual({ relationshipOngoing: 2, relationshipEnded: 2, pastRetention: 1, inactiveWithoutEndDate: 1 });
+    expect(overview.customers).toEqual({ relationshipOngoing: 2, relationshipEnded: 2, pastRetention: 1, inactiveWithoutEndDate: 1, inactiveWithoutEndDateCustomers: [{ id: 3, fullName: "NASABAH LAMA", cifNumber: "CIF-3" }] });
     expect(overview.companyProfileDocuments).toEqual({ total: 2, deactivated: 1, pastHouseRule: 1 });
   });
 

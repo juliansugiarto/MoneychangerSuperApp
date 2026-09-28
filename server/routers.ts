@@ -111,7 +111,7 @@ import {
   deactivateCompanyProfileDocument,
   purgeCompanyProfileDocument,
 } from "./companyProfileDocuments";
-import { customerRetentionStatement, documentRetentionOverview } from "./documentRetentionQueries";
+import { customerRetentionStatement, documentRetentionOverview, recordRelationshipEnd } from "./documentRetentionQueries";
 import { companyDocumentCategories, expenseCategories } from "../drizzle/schema";
 import { candidateDecisions, competencyTracks, employmentStatuses, jobLevels, picRoles, screeningResults } from "../drizzle/schema";
 import { journalSourceTypes } from "../drizzle/schema";
@@ -941,6 +941,10 @@ export const appRouter = router({
       .input(z.object({ customerId: z.number().int().positive() }))
       .query(({ input }) => customerRetentionStatement(input.customerId)),
     retentionOverview: controllerProcedure.query(() => documentRetentionOverview()),
+    /** B4: tanggal berakhir hubungan nasabah INACTIVE lama — tidak pernah otomatis, sumber wajib, diaudit. */
+    recordRelationshipEnd: controllerProcedure
+      .input(z.object({ customerId: z.number().int().positive(), dateKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), source: z.string().trim().min(3).max(1000) }))
+      .mutation(({ input, ctx }) => recordRelationshipEnd(input, ctx.user)),
   }),
 
   sdm: router({
