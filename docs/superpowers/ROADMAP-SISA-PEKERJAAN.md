@@ -324,6 +324,14 @@ Menggantikan arah SaaS multi-tenant 3 September. Windows saja untuk pelanggan (p
 hibrida bulanan/tahunan/sekali bayar dengan uji coba 30 hari dan mode baca-saja saat habis. Dimulai
 **sesudah** butir B (keputusan pengguna) pada daftar sisa pekerjaan di `PROMPT-SESI.md`; butir A1–A6
 selesai 26 September 2026. Sub-proyek 3–9 program desain ulang **ditunda sampai sesudah pindah**.
+Butir B **diputuskan 28 September 2026**: B1 diterima, B2/B3/B4 dirancang dan direncanakan
+(`plans/2026-09-28-butir-b-sebelum-desktop.md`, 10 tugas), B5 dibuang ke daftar sesudah desktop di bawah.
+
+**Calon sesudah desktop (dibuang dari daftar sebelum pindah):**
+- Harga per seri uang kertas (lama/baru) — butir B5, diputuskan pengguna 28 September 2026. Menambah
+  dimensi seri pada `cash_denomination_balances` (sumber kebenaran kas), opname, kedua kaki bon, kelompok
+  kurs, dan laporan. Dibuka hanya bila toko pengguna aplikasi desktop memintanya. Cara resmi sampai
+  itu: harga diketik pada bon, dalam toleransi atau dengan alasan.
 
 - [ ] 1 — Paket Windows portabel (Node + MariaDB/MySQL portabel, peluncur, mode server/klien LAN, CI Windows + uji asap)
 - [ ] 2 — Penyimpanan berkas lokal + cadangan/pemulihan (mengganti R2)

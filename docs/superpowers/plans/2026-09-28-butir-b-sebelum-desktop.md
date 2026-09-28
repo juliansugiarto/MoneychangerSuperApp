@@ -16,6 +16,19 @@ tersendiri (`server/watchlistBlocks.ts`, `server/iraClassificationReview.ts`), g
 
 **Spec:** `docs/superpowers/specs/2026-09-28-butir-b-sebelum-desktop-design.md`
 
+## Status Pengerjaan
+
+- [ ] Tugas 1 — Skema dan migrasi `0062`
+- [ ] Tugas 2 — Aturan murni pemblokiran
+- [ ] Tugas 3 — Penulis blokir: penyaringan dan centang petugas
+- [ ] Tugas 4 — Gerbang bon dan pencatatan percobaan
+- [ ] Tugas 5 — Keputusan atas blokir dan router
+- [ ] Tugas 6 — Register Pemblokiran dan Kesiapan Operasional
+- [ ] Tugas 7 — Aturan murni tinjauan klasifikasi
+- [ ] Tugas 8 — Pengesahan tinjauan, selang, dan layarnya
+- [ ] Tugas 9 — B4 tanggal berakhir hubungan
+- [ ] Tugas 10 — Peragaan end-to-end, dokumentasi, perintah mutu
+
 ## Global Constraints
 
 - `pnpm` tidak ada: `./node_modules/.bin/{vitest,tsc,vite,drizzle-kit,playwright}`; klien MySQL di `/opt/homebrew/opt/mysql/bin`.

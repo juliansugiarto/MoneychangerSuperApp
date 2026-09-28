@@ -70,7 +70,7 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 26 September 2026 malam (sisa pekerjaan sebelum aplikasi desktop)
+## Sesi berikutnya — keadaan per 28 September 2026 (butir B diputuskan; rencana siap dieksekusi)
 
 **Arah yang disepakati pengguna 26 September 2026 — jangan ditanyakan ulang:** aplikasi berpindah
 dari layanan web multi-tenant menjadi **aplikasi luring, satu toko satu instalasi**. Rinciannya:
@@ -89,8 +89,7 @@ dari layanan web multi-tenant menjadi **aplikasi luring, satu toko satu instalas
   publik. Keputusan 3 September (SaaS multi-tenant, login SOLVINC) **digantikan**; memori
   *solvinc-saas-architecture* sudah basi untuk arah ini.
 
-**Pengguna meminta sisa pekerjaan yang penting diselesaikan dulu** sebelum pindah. Daftar yang
-disepakati dan keadaannya:
+**Daftar "sisa pekerjaan sebelum aplikasi desktop" dan keadaannya:**
 
 | Butir | Keadaan |
 |---|---|
@@ -100,36 +99,67 @@ disepakati dan keadaannya:
 | A4 tanggal nota zona operasional | **SELESAI** `b7bf632` |
 | A5 mysql2 3.24.4 | **SELESAI** `1e4d883`; audit sesudahnya **7 (2 tinggi, 5 sedang)**, kedua tinggi `xlsx` — **belum bersih** |
 | A6 identitas IBV tertulis mati | **SELESAI** `7822f80` — 7 tempat, termasuk arsip penutupan yang *selalu* mencetak IBV; penjaga `server/noHardcodedCompany.test.ts` |
-| B1 bentuk baru uji isolasi tenant | **menunggu keputusan pengguna** |
-| B2 Temuan 3 — pemblokiran serta merta dan pencatatan percobaan | **menunggu keputusan pengguna**, butuh spec |
-| B3 Temuan 7 — penginian berkala klasifikasi risiko | **menunggu keputusan pengguna**, butuh spec |
-| B4 tanggal berakhir hubungan nasabah INACTIVE lama | **menunggu keputusan pengguna** |
-| B5 harga per seri uang kertas | **menunggu keputusan pengguna** (kerjakan atau buang) |
+| B1 bentuk baru uji isolasi tenant | **DITERIMA pengguna 28 September** apa adanya. Tanpa kode. Uji ikut terhapus bersama tenancy di program desktop langkah 5 |
+| B2 Temuan 3 — pemblokiran serta merta dan percobaan transaksi | **Dibangun: hentikan + catat** — rencana Tugas 1–6 |
+| B3 Temuan 7 — penginian berkala klasifikasi risiko | **Dibangun: klasifikasi saja** (tanpa tinjauan per nasabah) — rencana Tugas 7–8 |
+| B4 tanggal berakhir hubungan nasabah INACTIVE lama | **Dibangun: Controller mengisi** dengan sumber wajib — rencana Tugas 9 |
+| B5 harga per seri uang kertas | **DIBUANG ke ROADMAP** sebagai calon sesudah desktop; dicatat di ROADMAP pada rencana Tugas 10 |
 | C sub-proyek 3–9, penerapan produksi `0060`/`0061`, GitHub Action penerapan | **sengaja sesudah pindah** — disepakati pengguna |
 
 **Akibat A6 yang perlu diketahui:** nama penerbit/audiens sesi berganti (`aplikasi-valuta-internal`/
 `-backoffice`), jadi **setiap sesi yang sedang berjalan berakhir sekali** — termasuk server
 pengembangan port 3000 dan produksi bila kelak diterapkan.
 
-**Baseline uji terakhir yang benar-benar dijalankan (26 September malam, `7822f80`):**
-`Test Files 224 passed (224)`, `Tests 1734 passed | 2 skipped (1736)`; `tsc` keluar 0; `vite build`
-`✓ built`; Playwright **55 passed (1.2m)** dengan `caffeinate`. Selisih terhadap 1706 (`c7baccf`):
-+28 uji, +9 berkas — A1 +14, A2 +4, A4 +2, A3 +4, A6 +4.
-
 **Playwright yang "macet" 15–17 menit adalah Mac yang tidur, bukan kode.** `pmset -g log` menunjukkan
 siklus tidur ± 16 menit saat pengguna pergi; runner membeku sehingga batas 30 detik Playwright tidak
 pernah menyala. Jalankan `caffeinate -dimsu ./node_modules/.bin/playwright test`. Satu kegagalan
 tangkapan `galeri: #palet` @1280 muncul sekali lalu lulus 9 dari 9 ulangan — dicatat, tidak diubah.
+Playwright terakhir yang dijalankan: **55 passed (1.2m)** pada `7822f80` (26 September).
 
-**Prompt untuk sesi berikutnya — keputusan B, satu per satu:**
+**Spec:** `specs/2026-09-28-butir-b-sebelum-desktop-design.md` (`98033ce`, disetujui per bagian dalam
+percakapan). **Rencana:** `plans/2026-09-28-butir-b-sebelum-desktop.md` (`9acaf59`, **10 tugas, 0
+tercentang**). Eksekusi **langsung oleh sesi, tanpa subagen** (keputusan pengguna).
+
+**Keputusan rancangan yang tidak boleh ditanyakan ulang:**
+- Blokir dibuka pada saat **kecocokan** (penyaringan atau centang petugas), bukan di loket; hanya
+  CONTROLLER ke atas yang menutupnya (CONFIRMED / FALSE_POSITIVE / DICABUT dengan surat otoritas).
+- **Layar bon sengaja TIDAK memperingatkan lebih awal** saat nasabah terblokir dipilih, supaya
+  percobaan tercatat dengan rincian jumlahnya. Pesan kasir netral, persis:
+  *"Transaksi tidak dapat diproses. Hubungi Controller. Jangan sampaikan alasannya kepada nasabah."*
+- Tenggat tembusan BI 3 hari kerja **tidak dihitung** sampai kalender hari kerja (Temuan 6) ada.
+- Tinjauan klasifikasi = pengesahan seluruh tabel dengan snapshot JSON; ditolak selama ada kode belum
+  diklasifikasi; rumus IRA tidak berubah (tetap membaca RENDAH).
+
+**Temuan sesi ini yang harus diingat saat eksekusi:**
+- **Celah nyata hari ini:** nasabah yang dicentang cocok DTTOT/DPPSPM menjadi HIGH, dan
+  `customerHighRiskDenial` **meloloskannya begitu Pemegang Saham menyetujui**. `createTransaction`
+  juga tidak pernah membaca `customer_watchlist_screenings`. Rencana Tugas 4 menaruh gerbang blokir
+  **sebelum** gerbang risiko tinggi.
+- **Impor daftar sanksi menghapus lalu menyisipkan ulang entri** — id entri berganti setiap impor.
+  Kunci kecocokan blokir karena itu `listType:referenceCode` (atau nama ternormalisasi).
+- `KlasifikasiRisiko.tsx` **sudah** menghitung kode belum diklasifikasi di klien, tetapi semesta
+  negaranya hanya negara yang sudah diklasifikasi (jadi negara tidak pernah "belum"). Rencana Tugas
+  7–8 memindahkan definisinya ke `shared/` dan memakai `customers.nationality`.
+- B4: hitungan INACTIVE tanpa `relationshipEndedAt` = **0** di kedua basis data lokal. Pembacaan
+  produksi (baca-saja) **ditolak pengklasifikasi izin** sesi ini dan tidak dijalankan; pengguna dapat
+  menjalankannya sendiri dengan `!`.
+
+**Baseline uji (dijalankan 28 September, `9acaf59`, tanpa perubahan kode sejak `7822f80`):**
+`Test Files 224 passed (224)`, `Tests 1734 passed | 2 skipped (1736)`. `tsc`, `vite build`, dan
+Playwright **tidak dijalankan** sesi ini. Migrasi terakhir `0061`; rencana menambah `0062` (lokal
+saja). Antrean produksi tetap `0059`–`0061` belum diterapkan.
+
+**Prompt untuk sesi berikutnya:**
 
 ```
-Lanjutkan daftar "sisa pekerjaan sebelum aplikasi desktop" di docs/superpowers/PROMPT-SESI.md.
-A1–A6 sudah selesai. Bawa saya melalui B1–B5 SATU PER SATU: jelaskan singkat apa yang
-dipertaruhkan, beri pilihan dengan rekomendasi, tunggu jawaban saya. Butir yang saya putuskan
-dikerjakan diperlakukan sebagai pekerjaan arsitektural (spec → rencana → eksekusi langsung, tanpa
-subagen); yang saya putuskan dibuang dicatat di ROADMAP. Sesudah B selesai, mulai sesi rancangan
-program aplikasi desktop (paket Windows portabel dulu). Tutup sesi dengan skill serah-terima.
+Eksekusi docs/superpowers/plans/2026-09-28-butir-b-sebelum-desktop.md (spec
+docs/superpowers/specs/2026-09-28-butir-b-sebelum-desktop-design.md) mulai Tugas 1, langsung oleh
+sesi ini tanpa subagen (superpowers:executing-plans). Baca bagian "Sesi berikutnya" di
+docs/superpowers/PROMPT-SESI.md dulu — keputusan rancangan di sana jangan ditanyakan ulang.
+Centang tiap tugas pada Status Pengerjaan rencana sesudah perintah mutunya lulus, commit per tugas.
+Migrasi 0062 hanya ke moneychanger dan mc_t_abcvalas lewat scripts/tenant.mjs migrate-all.
+Sesudah Tugas 10 selesai, mulai sesi rancangan program aplikasi desktop (paket Windows portabel
+dulu). Tutup sesi dengan skill serah-terima.
 
 Baseline uji: Test Files 224 passed (224), Tests 1734 passed | 2 skipped (1736).
 ```
@@ -1173,9 +1203,10 @@ Urut sesuai usul pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`:
 
 1. ~~**Temuan 4 — `deleteCompanyDocument`**~~ — **SELESAI 11 September 2026 sebagai Paket M.**
 2. **Temuan 3 — pemblokiran serta merta dan pencatatan percobaan transaksi** (Pasal 47 ayat 1
-   huruf d). **Menunggu keputusan pengguna**, dan menuntut penulis data yang belum ada sama sekali.
+   huruf d). **DIRANCANG 28 September 2026** — rencana `plans/2026-09-28-butir-b-sebelum-desktop.md` Tugas 1–6. ~~Menunggu keputusan pengguna~~, dan menuntut penulis data yang belum ada sama sekali.
 3. **Temuan 7 — penginian berkala klasifikasi risiko** (Pasal 9 ayat 6) — menaikkan risiko residual
-   Paket J2 nomor 3 menjadi kewajiban.
+   Paket J2 nomor 3 menjadi kewajiban. **DIRANCANG 28 September 2026** — rencana butir B Tugas 7–8
+   (klasifikasi saja; tinjauan berkala per nasabah tidak dibangun).
 4. **Tanggal nota memakai zona waktu peramban** (risiko residual Paket K3).
 5. **Penjelasan Pasal 9, 32, 47, dan 48 PBI 10/2024 sudah dibaca** (sesi rancangan Paket M,
    11 September 2026); tidak satu pun mengubah Temuan 1, 2, 5, atau 7. Penjelasan pasal lain belum
@@ -1184,7 +1215,8 @@ Urut sesuai usul pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`:
 7. ~~**Kolom `defaultNow()` menyimpan jam dinding mesin basis data**~~ — **SELESAI 26 September 2026**
    (`67eaf99`): setiap sambungan bersesi UTC dan server menolak menyala bila tidak; spec
    `specs/2026-09-26-zona-waktu-utc-design.md`, rencana `plans/2026-09-26-zona-waktu-utc.md`.
-8. **Pengisian mundur `customers.relationshipEndedAt`** bagi nasabah yang sudah `INACTIVE` sebelum
+8. **DIPUTUSKAN 28 September 2026: Controller mengisi dengan sumber wajib** (rencana butir B Tugas 9;
+   tidak pernah diisi otomatis). **Pengisian mundur `customers.relationshipEndedAt`** bagi nasabah yang sudah `INACTIVE` sebelum
    migrasi `0058` (ditemukan Paket M). Sampai itu diputuskan, nasabah tersebut tanpa jam retensi dan
    tampil pada kartu *Tidak aktif tanpa tanggal berakhir*. **Butuh keputusan pengguna**: tanggal
    mana yang sah dipakai — menebak dari `updatedAt` sudah ditolak.
@@ -1193,7 +1225,8 @@ Urut sesuai usul pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`:
    rahasia `SSH_*`/`DEPLOY_PATH` pada environment `production` belum benar atau firewall menolak
    GitHub. Log galatnya hanya terlihat oleh pemilik repo di tab Actions. Sampai diperbaiki, setiap
    push ke `main` menghasilkan satu run gagal dan penerapan dilakukan manual.
-10. **Harga per seri uang kertas (lama/baru)** — dikeluarkan dari sub-proyek 1B (spec 2026-09-13 §B4).
+10. **DIBUANG ke ROADMAP 28 September 2026** (calon sesudah desktop, dibuka hanya bila toko memintanya).
+    **Harga per seri uang kertas (lama/baru)** — dikeluarkan dari sub-proyek 1B (spec 2026-09-13 §B4).
     Seri tidak tercatat di skema mana pun; menambahkannya mengubah `cash_denomination_balances`, sumber
     kebenaran kas. Sampai diputuskan, selisih harga karena seri diketik pada bon dalam toleransi atau
     dengan alasan. **Butuh keputusan pengguna** sebelum dirancang.
