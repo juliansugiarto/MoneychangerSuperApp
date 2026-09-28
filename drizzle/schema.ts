@@ -6,6 +6,7 @@ import {
   index,
   int,
   json,
+  longtext,
   mysqlEnum,
   mysqlTable,
   text,
@@ -594,6 +595,56 @@ export const customerWatchlistScreenings = mysqlTable("customer_watchlist_screen
   index("customer_watchlist_screening_customer_idx").on(table.customerId, table.screenedAt),
 ]);
 
+export const watchlistBlockStatuses = ["OPEN", "CONFIRMED", "FALSE_POSITIVE", "DICABUT"] as const;
+export const watchlistBlockSources = ["PENYARINGAN", "PETUGAS", "PENGISIAN_AWAL"] as const;
+
+/**
+ * Pemblokiran serta merta atas kecocokan DTTOT/DPPSPM — Pasal 47 ayat (1) huruf d PBI 10/2024.
+ *
+ * Dibuka pada saat kecocokan (penyaringan atau centang petugas), bukan di loket; hanya manusia
+ * (CONTROLLER ke atas) yang menutupnya. `matchKeys` memakai `listType:referenceCode` atau nama
+ * ternormalisasi, **bukan** id entri — impor daftar menghapus lalu menyisipkan ulang entri.
+ */
+export const watchlistBlocks = mysqlTable("watchlist_blocks", {
+  id: int("id").autoincrement().primaryKey(),
+  customerId: int("customerId").notNull(),
+  openedAt: datetime("openedAt").notNull(),
+  source: mysqlEnum("source", watchlistBlockSources).notNull(),
+  screeningId: int("screeningId"),
+  /** JSON larik string; null bila kuncinya tidak diketahui (pengisian awal, centang petugas). */
+  matchKeys: text("matchKeys"),
+  status: mysqlEnum("status", watchlistBlockStatuses).default("OPEN").notNull(),
+  resolvedByUserId: int("resolvedByUserId"),
+  resolvedAt: datetime("resolvedAt"),
+  resolutionNotes: text("resolutionNotes"),
+  ltkmReference: varchar("ltkmReference", { length: 200 }),
+  biCopySentAt: datetime("biCopySentAt"),
+  revocationReference: varchar("revocationReference", { length: 200 }),
+}, (table) => [
+  index("watchlist_blocks_customer_idx").on(table.customerId, table.status),
+  index("watchlist_blocks_status_idx").on(table.status, table.openedAt),
+]);
+
+/** Percobaan transaksi yang ditahan pemblokiran — satu-satunya penulisnya `createTransaction`. */
+export const attemptedTransactions = mysqlTable("attempted_transactions", {
+  id: int("id").autoincrement().primaryKey(),
+  blockId: int("blockId").notNull(),
+  customerId: int("customerId").notNull(),
+  representativeCustomerId: int("representativeCustomerId"),
+  blockedParty: mysqlEnum("blockedParty", ["NASABAH", "KUASA"]).notNull(),
+  tellerUserId: int("tellerUserId").notNull(),
+  attemptedAt: datetime("attemptedAt").notNull(),
+  operation: mysqlEnum("operation", ["BUY", "SELL"]).notNull(),
+  /** JSON: [{ currencyId, currencyCode, foreignAmount, rate, idrAmount }] dari masukan bon. */
+  linesSummary: text("linesSummary").notNull(),
+  totalIdr: decimal("totalIdr", { precision: 24, scale: 2 }).notNull(),
+}, (table) => [
+  index("attempted_transactions_block_idx").on(table.blockId, table.attemptedAt),
+]);
+
+export type WatchlistBlock = typeof watchlistBlocks.$inferSelect;
+export type AttemptedTransaction = typeof attemptedTransactions.$inferSelect;
+
 /** Every review/approval/return decision becomes a standalone immutable record. */
 export const transactionReviewActions = mysqlTable("transaction_review_actions", {
   id: int("id").autoincrement().primaryKey(),
@@ -800,6 +851,8 @@ export const operationalSettings = mysqlTable("operational_settings", {
   rateShockThresholdPercent: decimal("rateShockThresholdPercent", { precision: 8, scale: 4 }).default("1.5000").notNull(),
   /** Batas selisih harga bon terhadap kurs papan, dua arah. Di luar batas ini kasir wajib mengisi alasan dan bonnya masuk antrean tinjauan. */
   rateDeviationTolerancePercent: decimal("rateDeviationTolerancePercent", { precision: 8, scale: 4 }).default("0.5000").notNull(),
+  /** Selang tinjauan klasifikasi risiko IRA, bulan (1–36). */
+  iraClassificationReviewMonths: int("iraClassificationReviewMonths").default(12).notNull(),
   updatedByUserId: int("updatedByUserId"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [uniqueIndex("operational_settings_code_uq").on(table.settingCode)]);
@@ -1934,6 +1987,21 @@ export const iraRiskClassifications = mysqlTable("ira_risk_classifications", {
   uniqueIndex("ira_risk_classifications_key_uq").on(table.dimension, table.code, table.riskType),
   index("ira_risk_classifications_dimension_idx").on(table.dimension, table.riskType),
 ]);
+
+/**
+ * Pengesahan berkala atas seluruh klasifikasi risiko — Pasal 9 ayat (6) PBI 10/2024. Hanya
+ * ditambah, tidak pernah diubah. `snapshot` adalah bukti bagi otoritas: isi tabel saat disahkan.
+ */
+export const iraClassificationReviews = mysqlTable("ira_classification_reviews", {
+  id: int("id").autoincrement().primaryKey(),
+  reviewedAt: datetime("reviewedAt").notNull(),
+  reviewedByUserId: int("reviewedByUserId").notNull(),
+  notes: text("notes").notNull(),
+  snapshot: longtext("snapshot").notNull(),
+  classificationCount: int("classificationCount").notNull(),
+}, (table) => [index("ira_classification_reviews_at_idx").on(table.reviewedAt)]);
+
+export type IraClassificationReview = typeof iraClassificationReviews.$inferSelect;
 
 /**
  * Ambang pita penilaian per parameter — lima pita untuk tiap parameter Form C1.

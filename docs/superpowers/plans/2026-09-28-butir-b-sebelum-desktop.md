@@ -18,7 +18,7 @@ tersendiri (`server/watchlistBlocks.ts`, `server/iraClassificationReview.ts`), g
 
 ## Status Pengerjaan
 
-- [ ] Tugas 1 — Skema dan migrasi `0062`
+- [x] Tugas 1 — Skema dan migrasi `0062`
 - [ ] Tugas 2 — Aturan murni pemblokiran
 - [ ] Tugas 3 — Penulis blokir: penyaringan dan centang petugas
 - [ ] Tugas 4 — Gerbang bon dan pencatatan percobaan
@@ -63,7 +63,7 @@ tersendiri (`server/watchlistBlocks.ts`, `server/iraClassificationReview.ts`), g
 
 **Interfaces — Produces:** `watchlistBlocks`, `attemptedTransactions`, `iraClassificationReviews`, `operationalSettings.iraClassificationReviewMonths`; tipe `WatchlistBlock`, `AttemptedTransaction`, `IraClassificationReview`; konstanta `watchlistBlockStatuses`, `watchlistBlockSources`.
 
-- [ ] **Step 1: Uji skema yang gagal**
+- [x] **Step 1: Uji skema yang gagal**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -91,9 +91,9 @@ describe("skema butir B", () => {
 });
 ```
 
-- [ ] **Step 2:** `./node_modules/.bin/vitest run server/butirBSchema.test.ts` → FAIL (ekspor tidak ada).
+- [x] **Step 2:** `./node_modules/.bin/vitest run server/butirBSchema.test.ts` → FAIL (ekspor tidak ada).
 
-- [ ] **Step 3: Tambahkan ke `drizzle/schema.ts`**
+- [x] **Step 3: Tambahkan ke `drizzle/schema.ts`**
 
 Sesudah `customerWatchlistScreenings`:
 
@@ -177,9 +177,9 @@ Di `operationalSettings`, sesudah `rateDeviationTolerancePercent`:
 
 (Periksa `longtext` sudah diimpor dari `drizzle-orm/mysql-core`; bila belum, tambahkan.)
 
-- [ ] **Step 4:** `./node_modules/.bin/vitest run server/butirBSchema.test.ts` → PASS.
+- [x] **Step 4:** `./node_modules/.bin/vitest run server/butirBSchema.test.ts` → PASS.
 
-- [ ] **Step 5: Hasilkan migrasi dan tambahkan pengisian awal**
+- [x] **Step 5: Hasilkan migrasi dan tambahkan pengisian awal**
 
 Run: `./node_modules/.bin/drizzle-kit generate --name butir_b_pemblokiran_tinjauan`
 Baca SQL-nya: harus hanya `CREATE TABLE` ×3, `ALTER TABLE operational_settings ADD`, dan `CREATE INDEX`. Lalu tambahkan di akhir berkas:
@@ -197,7 +197,7 @@ WHERE c.`isDemo` = false AND c.`isHistorical` = false
   AND (c.`dttotPpsdmMatch` = true OR s.`matchCount` > 0);
 ```
 
-- [ ] **Step 6: Terapkan ke kedua basis data lokal dan periksa**
+- [x] **Step 6: Terapkan ke kedua basis data lokal dan periksa**
 
 ```bash
 export PATH="/opt/homebrew/opt/mysql/bin:$PATH"; set -a; . ./.env; set +a
@@ -206,7 +206,7 @@ for d in moneychanger mc_t_abcvalas; do mysql -uroot -N $d -e "SHOW TABLES LIKE 
 ```
 Expected: tabel ada di keduanya, hitungan blokir = jumlah nasabah cocok (catat angkanya), kolom ada.
 
-- [ ] **Step 7: Commit** — `git add drizzle server/butirBSchema.test.ts && git commit -m "Skema butir B: pemblokiran, percobaan transaksi, tinjauan klasifikasi (0062)"`
+- [x] **Step 7: Commit** — `git add drizzle server/butirBSchema.test.ts && git commit -m "Skema butir B: pemblokiran, percobaan transaksi, tinjauan klasifikasi (0062)"`
 
 ---
 

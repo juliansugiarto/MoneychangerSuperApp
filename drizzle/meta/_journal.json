@@ -435,6 +435,13 @@
       "when": 1790412753312,
       "tag": "0061_isi_app_installation",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "5",
+      "when": 1790577857635,
+      "tag": "0062_butir_b_pemblokiran_tinjauan",
+      "breakpoints": true
     }
   ]
 }
