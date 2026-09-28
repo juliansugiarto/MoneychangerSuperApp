@@ -56,7 +56,7 @@ import { buildGoAmlLtktReportXml, buildGoAmlLtkmReportXml, type GoAmlCustomer, t
 import { isKnownGoAmlReportIndicator } from "../shared/goAmlReportIndicators";
 import { decodeSanctionsWatchlistUpload, parseSanctionsWatchlistWorkbook, cleanSanctionsWatchlistFileName } from "./sanctionsWatchlistImport";
 import { matchWatchlistEntries, rescreenAllCustomers, screenCustomer, type SanctionsWatchlistMatch, type ScreeningTrigger } from "./customerWatchlistScreening";
-import { activeBlockFor, openOfficerBlock, recordAttempt } from "./watchlistBlocks";
+import { activeBlockFor, hasConfirmedBlock, openOfficerBlock, recordAttempt } from "./watchlistBlocks";
 import { WATCHLIST_BLOCK_TELLER_MESSAGE } from "../shared/watchlistBlock";
 import { customerHighRiskDenial, highRiskResetValues } from "./customerHighRiskApproval";
 import { relationshipEndValues } from "../shared/documentRetention";
@@ -904,6 +904,9 @@ export async function createCustomer(input: CustomerInput, actorUserId: number) 
     });
     const [row] = await tx.select().from(customers).where(eq(customers.cifNumber, cifNumber)).limit(1);
     if (!row) throw new Error("Data nasabah tidak dapat dibuat.");
+    // Centang petugas adalah kecocokan juga: blokir serta merta, di transaksi yang sama — nasabah
+    // bercentang tanpa blokir adalah nasabah yang tetap dapat bertransaksi.
+    if (isHighRisk) await openOfficerBlock(row.id, tx);
 
     if (input.hasBeneficialOwner && input.beneficialOwner) {
       const bo = input.beneficialOwner;
@@ -940,8 +943,6 @@ export async function createCustomer(input: CustomerInput, actorUserId: number) 
     return row;
   });
   await writeAudit({ actorUserId, action: "CUSTOMER_CREATED", entityType: "customer", entityId: String(created.id), afterState: { cifNumber: created.cifNumber, fullName: created.fullName, riskLevel: created.riskLevel, profileStatus: created.profileStatus, hasBeneficialOwner: created.hasBeneficialOwner, pepStatus: created.pepStatus, dttotPpsdmMatch: created.dttotPpsdmMatch } });
-  // Centang petugas adalah kecocokan juga: blokir serta merta, sebelum nasabah sempat ke loket.
-  if (created.dttotPpsdmMatch) await openOfficerBlock(created.id);
   await screenCustomerAfterSave(created, "NASABAH_DIBUAT", actorUserId);
   if (createdBeneficialOwner) await screenCustomerAfterSave(createdBeneficialOwner, "NASABAH_DIBUAT", actorUserId);
   return created;
@@ -1041,6 +1042,14 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
     ...(relationshipEndValues(existing.profileStatus, input.profileStatus, new Date()) ?? {}),
   };
 
+  // Centang hanya dicabut lewat keputusan atas blokirnya (salah sasaran/pencabutan), bukan lewat
+  // penyuntingan profil — kalau tidak, profil nasabah membantah keputusan yang sudah diaudit.
+  if (existing.dttotPpsdmMatch && !input.dttotPpsdmMatch && await hasConfirmedBlock(existing.id)) {
+    throw new Error("Kecocokan DTTOT/DPPSPM nasabah ini sudah dikonfirmasi pada Register Pemblokiran; centangnya tidak dapat dicabut dari sini.");
+  }
+  // Blokir dibuka SEBELUM centangnya tersimpan: bila pembukaan gagal, centang tidak tersimpan dan
+  // penyimpanan ulang membukanya lagi. Urutan sebaliknya meninggalkan centang tanpa blokir.
+  if (!existing.dttotPpsdmMatch && input.dttotPpsdmMatch) await openOfficerBlock(existing.id);
   await db.update(customers).set(nextValues).where(eq(customers.id, input.customerId));
   await writeAudit({
     actorUserId: actor.id, action: "CUSTOMER_UPDATED", entityType: "customer", entityId: String(input.customerId),
@@ -1063,7 +1072,6 @@ export async function updateCustomer(input: { customerId: number; changeReason: 
   });
   const [updated] = await db.select().from(customers).where(eq(customers.id, input.customerId)).limit(1);
   if (!updated) throw new Error("Nasabah tidak dapat diperbarui.");
-  if (!existing.dttotPpsdmMatch && updated.dttotPpsdmMatch) await openOfficerBlock(updated.id);
   // Namanya boleh berubah pada penyuntingan ini, jadi yang disaring adalah nama sesudahnya.
   await screenCustomerAfterSave(updated, "NASABAH_DIUBAH", actor.id);
   return updated;

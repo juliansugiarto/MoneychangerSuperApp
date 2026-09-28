@@ -61,9 +61,10 @@ function mockDb(rowsByTable: Record<string, unknown[]>) {
       values: async (values: Record<string, unknown>) => { inserted.push({ table: tableName(table), values }); },
     })),
     update: vi.fn((table: unknown) => ({
-      set: (set: Record<string, unknown>) => ({ where: async () => { updates.push({ table: tableName(table), set }); } }),
+      set: (set: Record<string, unknown>) => ({ where: async () => { updates.push({ table: tableName(table), set }); return [{ affectedRows: 1 }]; } }),
     })),
   };
+  (fakeDb as Record<string, unknown>).transaction = vi.fn((run: (tx: unknown) => Promise<unknown>) => run(fakeDb));
   vi.spyOn(db, "getDb").mockResolvedValue(fakeDb as never);
   return { inserted, updates };
 }

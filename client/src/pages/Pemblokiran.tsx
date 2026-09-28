@@ -204,6 +204,15 @@ export default function Pemblokiran() {
                     </div>
                     {isOpen ? (
                       <div className="mt-3 space-y-3 pl-6 text-sm">
+                        <div className="rounded-lg border border-[#e2eaf2] bg-[#f8fbfe] px-3 py-2 text-xs leading-5 text-[#475569]">
+                          <p className="font-semibold text-[#18395f]">Penyaringan pemicu</p>
+                          <p>
+                            {block.screeningSummary
+                              ? `${block.screeningMatchCount ?? 0} kecocokan — ${block.screeningSummary}`
+                              : block.source === "PETUGAS" ? "Dibuka oleh centang petugas pada profil nasabah; tidak ada penyaringan pemicu." : "Ringkasan penyaringan tidak tersedia."}
+                          </p>
+                          <p className="text-[#94a7bb]">Bandingkan tanggal lahir, nomor identitas, dan kewarganegaraan dengan entri daftar sebelum memutuskan.</p>
+                        </div>
                         {block.status !== "OPEN" ? (
                           <div className="rounded-lg border border-[#e2eaf2] bg-[#fbfdff] px-3 py-2 text-xs leading-5 text-[#475569]">
                             <p>Diputuskan {formatDateTime(block.resolvedAt)}{block.resolutionNotes ? ` — ${block.resolutionNotes}` : ""}</p>
