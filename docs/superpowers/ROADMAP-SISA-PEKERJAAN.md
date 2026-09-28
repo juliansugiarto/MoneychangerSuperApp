@@ -326,6 +326,10 @@ hibrida bulanan/tahunan/sekali bayar dengan uji coba 30 hari dan mode baca-saja 
 selesai 26 September 2026. Sub-proyek 3–9 program desain ulang **ditunda sampai sesudah pindah**.
 Butir B **diputuskan 28 September 2026**: B1 diterima, B2/B3/B4 dirancang dan direncanakan
 (`plans/2026-09-28-butir-b-sebelum-desktop.md`, 10 tugas), B5 dibuang ke daftar sesudah desktop di bawah.
+**Butir B SELESAI 28 September 2026** (`2e0691e`…): pemblokiran + percobaan transaksi (Temuan 3),
+tinjauan berkala klasifikasi (Temuan 7), dan pengisian tanggal berakhir nasabah INACTIVE lama; migrasi
+`0062` hanya di kedua basis data lokal. B1 (bentuk baru `server/tenantIsolation.live.test.ts`) diterima
+apa adanya — ujinya ikut terhapus bersama tenancy pada langkah 5 program ini.
 
 **Calon sesudah desktop (dibuang dari daftar sebelum pindah):**
 - Harga per seri uang kertas (lama/baru) — butir B5, diputuskan pengguna 28 September 2026. Menambah

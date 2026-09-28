@@ -177,6 +177,7 @@ isian dialog yang belum disimpan; ⌘K/Ctrl+K tetap berlaku di mana pun.
 3. Cari dan pilih nasabah.
 4. Tambahkan satu **baris mata uang**: ketik kode atau nama mata uang di kotak pencarian (mis. "GBP") — semua mata uang di dunia bisa dicari dan otomatis terdaftar begitu dipilih, tidak dibatasi hanya mata uang yang sudah punya kurs otomatis. **Rupiah tidak bisa dipilih sebagai baris** — Rupiah selalu sisi pembayaran (langkah 6a/6b), bukan mata uang yang ditransaksikan.
 5. Isi **rincian pecahan** pada baris tsb — wajib diisi, minimal satu baris pecahan (nilai pecahan, jumlah lembar/keping, dan **harga khusus pecahan itu**). Harga ditulis manual oleh teller per kelompok pecahan, karena pecahan besar dan kecil sering dihargai berbeda: misalnya transaksi 1.000 USD dengan pecahan 100×5 seharga 17.800, pecahan 50×5 seharga 17.500, dan pecahan 10×25 seharga 17.000 — tambahkan tiga baris pecahan seperti itu di baris mata uang yang sama. Harga tiap baris pecahan kini **terisi otomatis dari papan kurs** sesuai kelompok pecahannya (pecahan tanpa kelompok memakai kurs "Pecahan lain"; kurs yang dikutip per 100 unit, seperti JPY, sudah disesuaikan ke harga per unit). Harga isian itu boleh diubah; harga yang Anda ketik sendiri tidak pernah ditimpa. Di bawah tiap pecahan tertera selisihnya terhadap kurs papan. Bila selisihnya melampaui **toleransi** yang ditetapkan Admin, isi **Alasan selisih harga** (minimal 10 karakter) — tanpa alasan, bon ditolak dengan pesan yang menyebut valuta, pecahan, kurs papan, dan batasnya; dengan alasan, bon tersimpan dan masuk antrean tinjauan Controller. Valuta yang belum punya kurs papan tetap diisi manual seperti sebelumnya. Untuk transaksi **JUAL**, isi "Jumlah [mata uang] yang akan dijual" lalu tekan **Auto-isi dari stok** untuk mengisi nilai dan jumlah lembar otomatis dari stok yang benar-benar tersedia (harga terisi dari papan kurs bila ada; selain itu diisi manual per baris); bila komposisi belum pas, sistem menawarkan **Tukar Pecahan** yang sama seperti di sisi Rupiah.
+5a. **Harga per seri/tahun terbit uang kertas** (mis. USD seri lama dihargai lebih rendah) tidak punya tabel harga tersendiri di aplikasi. Cara resminya: ketik harganya pada baris pecahan bon — dalam toleransi, atau dengan **Alasan selisih harga** bila melampauinya (mis. "USD seri 2006, dihargai lebih rendah"), sehingga tercatat dan masuk tinjauan Controller.
 6. Tambah baris mata uang lagi bila nasabah menukar lebih dari satu mata uang sekaligus.
 6a. Bila cara bayar **Tunai**, isi juga **rincian pecahan Rupiah** yang diterima/dibayarkan (wajib, total harus sama dengan nilai Rupiah transaksi) — ini sisi Rupiah dari bon, terpisah dari rincian pecahan valuta asing di langkah 5. Transfer bank/lainnya tidak memerlukan ini karena tidak ada uang fisik yang berpindah. Untuk transaksi **BELI**, tombol **Auto-isi dari stok** mengisi rincian ini otomatis dari pecahan Rupiah yang benar-benar tersedia di kas; bila komposisi belum pas (mis. kas hanya berisi pecahan besar), sistem menawarkan **Tukar Pecahan** senilai sama persis (mis. 1×100.000 → 1×50.000+2×20.000+2×5.000, tidak ada nilai yang hilang) — konfirmasi untuk mencatatnya, lalu rincian terisi otomatis.
 6b. Bila cara bayar **Transfer bank**, pilih **rekening perusahaan** yang menerima/mengirim transfer tsb (wajib) — daftar rekening dikelola Controller ke atas di tab Kas Awal. Saldo rekening bergerak otomatis saat bon diselesaikan, arah sama seperti kas (BELI: uang keluar dari rekening; JUAL: uang masuk ke rekening). Isi juga **rekening lawan transaksi** (nama bank, nomor rekening, atas nama) — untuk BELI ini rekening tujuan (milik nasabah), untuk JUAL ini rekening pengirim; **bukan** dipilih dari daftar rekening kita sendiri. Atas nama rekening ini seharusnya sama dengan nama nasabah; bila berbeda, sistem mewajibkan keterangan alasan yang otomatis tercetak di kwitansi.
@@ -273,7 +274,7 @@ Alasannya: kas awal **pertama** untuk sebuah mata uang tidak dijurnal — kalau 
 ### 5.10 Cek Watchlist DTTOT/DPPSPM — Staff ke atas (impor: Controller ke atas)
 
 1. Buka **Nasabah → Cek Daftar DTTOT/DPPSPM** untuk mencocokkan nama secara fuzzy (toleran typo/urutan kata) terhadap Daftar Terduga Teroris dan Organisasi Teroris (DTTOT) dan Daftar Pendanaan Proliferasi Senjata Pemusnah Massal (DPPSPM) — data resmi PPATK/DK PBB. Tombol "Cek sekarang di DTTOT/DPPSPM" pada formulir Tambah/Edit Nasabah (§5.3) menjalankan pencarian yang sama secara inline.
-2. **Ini murni alat bantu penyaringan** — hasil pencarian tidak pernah menandai nasabah secara otomatis. Petugas tetap wajib memeriksa setiap kandidat kecocokan secara manual (nama, tanggal lahir, kewarganegaraan, alamat) sebelum mencentang kolom Cocok DTTOT/DPPSPM di profil nasabah dan mengisi catatannya.
+2. **Ini murni alat bantu penyaringan** — hasil pencarian tidak pernah mencentang kolom Cocok DTTOT/DPPSPM secara otomatis. (Penyaringan otomatis yang menemukan kecocokan memang membuka **pemblokiran** — lihat §5.11 — tetapi keputusan tetap di tangan Controller.) Petugas tetap wajib memeriksa setiap kandidat kecocokan secara manual (nama, tanggal lahir, kewarganegaraan, alamat) sebelum mencentang kolom Cocok DTTOT/DPPSPM di profil nasabah dan mengisi catatannya.
 3. Halaman menampilkan daftar yang **sedang dimuat** (DTTOT dan setiap sub-daftar DPPSPM seperti DPRK/Iran, jumlah entri, sumber berkas, serta kapan dan oleh siapa terakhir diimpor) — periksa tanggal impor untuk menilai seberapa terkini datanya sebelum mengandalkan hasil pencarian.
 4. **Controller/Shareholder** dapat mengimpor atau memperbarui daftar dengan mengunggah workbook resmi PPATK/DK PBB (XLSX/XLS, maksimal 5 MB). Sistem mendeteksi otomatis jenis berkas (DTTOT atau DPPSPM) dan, untuk DPPSPM, sumbernya (dari pola kode referensi seperti `DPRKi.001`/`IRe.003`) dari struktur kolom — tidak perlu memilih jenis secara manual. Mengunggah ulang daftar DTTOT menggantikan **seluruh** entri DTTOT lama; mengunggah DPPSPM untuk satu sumber (mis. DPRK) hanya menggantikan entri sumber tersebut, sub-daftar DPPSPM lain (mis. Iran) tidak terpengaruh.
 5. **Batasan yang perlu diketahui**: skor kecocokan adalah kesamaan nama berbasis kata (bukan pencocokan biometrik/dokumen), sehingga bisa saja melewatkan variasi ejaan ekstrem atau memunculkan nama yang mirip tapi bukan orang yang sama — selalu verifikasi detail lengkap kandidat, jangan hanya mengandalkan skor persentase. Aplikasi ini tidak menarik pembaruan daftar secara otomatis dari sumber mana pun; perbarui secara berkala mengikuti rilis resmi PPATK.
@@ -282,6 +283,49 @@ Alasannya: kas awal **pertama** untuk sebuah mata uang tidak dijurnal — kalau 
    - Sistem mencocokkan setiap nama terhadap seluruh nasabah aktif (bukan data latihan/arsip) memakai mesin pencocokan yang sama dengan DTTOT/DPPSPM, menampilkan hingga 10 kandidat nasabah teratas per nama watchlist beserta skornya.
    - **Menemukan kecocokan di sini bukan berarti wajib memblokir nasabah atau melapor LTKM secara otomatis** (Pasal 19 Peraturan PPATK Nomor 11 Tahun 2021) — petugas tetap menilai setiap kandidat secara manual sebelum bertindak.
    - Proses "pengayaan" (submit hasil pemadanan) tetap dilakukan langsung di portal SIPENDAR milik PPATK sesuai prosedur resmi — aplikasi ini **tidak pernah** mengirim data ke SIPENDAR maupun menyimpan daftar nama yang ditempel (dihitung sekali pakai, tidak persisten).
+
+
+### 5.11 Pemblokiran DTTOT/DPPSPM dan Percobaan Transaksi — Controller ke atas
+
+Dasar: **Pasal 47 ayat (1) huruf d PBI 10/2024** — bila ada kesamaan nama dengan DTTOT/DPPSPM,
+pemblokiran dilakukan **serta merta dan tanpa pemberitahuan**, dan dilaporkan sebagai LTKM
+**termasuk percobaan transaksinya**.
+
+**Kapan blokir terbuka (otomatis, bukan di loket).**
+- Penyaringan nasabah (saat nasabah dibuat/diubah, saat daftar diimpor, atau saring ulang manual)
+  yang menemukan kecocokan membuka blokir **Menunggu keputusan**. Kuncinya kode referensi daftar
+  (mis. `DTTOT:IDN-001`), bukan nomor baris — impor ulang daftar tidak membuka ulang kecocokan yang
+  sudah diputuskan *salah sasaran*. Kecocokan dengan kode **baru** tetap membuka blokir baru.
+- Mencentang **Cocok DTTOT/DPPSPM** pada profil nasabah juga membuka blokir.
+- Penyaringan yang nihil **tidak pernah menutup** blokir. Hanya Controller ke atas yang menutupnya.
+- Nasabah demo dan historis tidak disaring dan tidak diblokir.
+
+**Di loket.** Bon untuk nasabah terblokir — atau yang pihak kuasa/wakilnya terblokir — ditolak
+**sebelum** apa pun ditulis (tidak ada bon, kas, pecahan kedua sisi, jurnal, atau stok). Kasir hanya
+melihat pesan netral:
+
+> *Transaksi tidak dapat diproses. Hubungi Controller. Jangan sampaikan alasannya kepada nasabah.*
+
+Layar bon **sengaja tidak memperingatkan lebih awal** saat nasabah dipilih, supaya percobaannya
+tercatat lengkap: waktu, kasir, beli/jual, per valuta jumlah valas dan Rupiah, dan totalnya.
+Persetujuan nasabah berisiko tinggi oleh Pemegang Saham **tidak** meloloskan nasabah terblokir.
+
+**Register Pemblokiran** (**Risiko → Pemblokiran**). Tab per status; buka satu baris untuk melihat
+percobaan transaksinya.
+- **Konfirmasi kecocokan** — orangnya memang sama. Blokir permanen dan centang DTTOT/DPPSPM nasabah
+  diset. Rujukan LTKM dan tanggal tembusan boleh diisi saat itu atau kemudian lewat **Catat pelaporan
+  LTKM/tembusan BI**.
+- **Nyatakan salah sasaran** — bukan orang yang sama (bandingkan tanggal lahir, NIK, kewarganegaraan).
+  Nasabah lepas untuk kunci kecocokan itu saja. Bila blokirnya dari centang petugas, centangnya
+  dibersihkan.
+- **Catat pencabutan oleh otoritas** — satu-satunya jalan keluar dari blokir yang dikonfirmasi, hanya
+  dengan rujukan surat pencabutan.
+- Setiap keputusan mewajibkan catatan dan tercatat pada jejak audit.
+
+**Yang tidak dilakukan aplikasi:** mengirim LTKM ke PPATK atau tembusan ke BI — keduanya tetap di luar
+aplikasi; yang dicatat hanya rujukan dan tanggalnya. Tenggat tembusan **3 hari kerja** (Pasal 60 ayat
+(4) huruf d) **belum dihitung** karena kalender hari kerja belum ada; Kesiapan Operasional menampilkan
+jumlah blokir yang menunggu keputusan dan yang dikonfirmasi tetapi belum ditembuskan.
 
 ## 6. Pelaporan dan Pengawasan
 
@@ -511,6 +555,22 @@ Selama ini angka laporan keuangan **diketik ulang** ke berkas Excel BI. Pengetik
 
 Buka **Risiko › Klasifikasi Risiko**. Halaman ini **tidak menilai apa pun** — ia menyimpan
 keputusan manusia beserta rujukannya, yang kemudian dipakai penilaian risiko individual (IRA).
+
+**Tinjauan berkala** (kartu teratas; Pasal 9 ayat (6) PBI 10/2024 — hasil manajemen risiko dikinikan
+berkala dan didokumentasikan).
+- Kartu menunjukkan **N kode belum diklasifikasi — saat ini dibaca RENDAH**, per dimensi. Semestanya:
+  valuta aktif (tanpa IDR), kosakata tertutup pekerjaan/badan hukum/provinsi/jalur distribusi, dan
+  **kewarganegaraan nasabah yang benar-benar tercatat** untuk dimensi Negara — negara nasabah yang belum
+  diklasifikasi kini muncul sendiri di tab Negara. Dihitung per jenis risiko TPPU/TPPT/PPSPM.
+- **Sahkan tinjauan klasifikasi** mengesahkan **seluruh tabel sekaligus**, dengan catatan wajib.
+  Pengesahan **ditolak selama N > 0** (juga di server). Tinjauan tanpa perubahan tetap dicatat —
+  justru itu buktinya. Rumus IRA tidak berubah.
+- Setiap pengesahan menyimpan **salinan (snapshot) seluruh baris** saat itu. Riwayat tinjauan
+  menampilkan waktu, peninjau, catatan, dan jumlah baris; **Unduh snapshot (JSON)** menyerahkan
+  salinan itu apa adanya kepada pemeriksa.
+- **Selang tinjauan** (bawaan 12 bulan, 1–36) diubah di kartu yang sama. Jatuh temponya (tanggal
+  tinjauan terakhir + selang, pada zona operasional) tampil di Kesiapan Operasional sebagai
+  *Tinjauan klasifikasi risiko*.
 
 **Klasifikasi risiko inheren.** Enam dimensi dalam bentuk tab: mata uang, kategori pekerjaan,
 bentuk badan hukum, negara, provinsi, dan **jalur distribusi**. Klik satu baris untuk menetapkan tingkatnya pada
@@ -773,6 +833,17 @@ Tanggalnya diisi **saat status nasabah berpindah menjadi Nonaktif** lewat **Edit
 (§5.3), dan dikosongkan kembali bila nasabah diaktifkan lagi. Menyunting nasabah yang sudah Nonaktif
 tanpa mengubah statusnya **tidak** memundurkan tanggalnya. Perubahannya tercatat di log audit
 `CUSTOMER_UPDATED`, sebelum dan sesudahnya.
+
+### Mengisi tanggal berakhir nasabah Nonaktif lama
+
+Nasabah yang dinonaktifkan sebelum 11 September 2026 tidak punya tanggal berakhir hubungan. Bila ada,
+daftarnya tampil di bawah kartu Ringkasan dengan tombol **Isi tanggal berakhir** (Controller ke atas):
+- Isi **tanggal** (hari, zona operasional) dan **sumber** yang dapat ditunjukkan (mis. berkas fisik
+  nasabah, surat penutupan). Sumbernya disimpan pada jejak audit `CUSTOMER_RELATIONSHIP_END_RECORDED`.
+- Tanggal **tidak boleh di masa depan** dan **tidak boleh sebelum transaksi selesai terakhir** nasabah
+  itu — keduanya dibandingkan per hari operasional, jadi bon pukul 00.30 dihitung pada harinya sendiri.
+- Hanya untuk nasabah Nonaktif yang tanggalnya masih kosong. Tidak pernah diisi otomatis: sampai diisi,
+  data nasabahnya ditahan tanpa batas (arah yang aman).
 
 ## 8. Keluhan Nasabah
 
