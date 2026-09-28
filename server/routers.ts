@@ -149,6 +149,7 @@ import { listCustomerScreenings, rescreenCustomerNow } from "./customerWatchlist
 import { listWatchlistBlocks, recordWatchlistBlockReporting, resolveWatchlistBlock, revokeWatchlistBlock, watchlistBlockDenial } from "./watchlistBlocks";
 import { adminProcedure, controllerProcedure, protectedProcedure, publicProcedure, router, shareholderProcedure, staffProcedure } from "./_core/trpc";
 import { classifyRisk, iraClassificationDenial, listClassifications, listParameterThresholds, resetParameterThresholds, setParameterThresholds } from "./iraRiskClassification";
+import { listClassificationReviews, listUnclassifiedCodes, setClassificationReviewInterval, signClassificationReview } from "./iraClassificationReview";
 import {
   approveAssessment,
   createAssessment,
@@ -772,6 +773,10 @@ export const appRouter = router({
       if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message });
       return listClassifications();
     }),
+    unclassified: controllerProcedure.query(({ ctx }) => { const denial = iraClassificationDenial(ctx.user); if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message }); return listUnclassifiedCodes(); }),
+    reviews: controllerProcedure.query(({ ctx }) => { const denial = iraClassificationDenial(ctx.user); if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message }); return listClassificationReviews(); }),
+    review: controllerProcedure.input(z.object({ notes: z.string().trim().min(3).max(2000) })).mutation(({ input, ctx }) => { const denial = iraClassificationDenial(ctx.user); if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message }); return signClassificationReview(input, ctx.user); }),
+    setReviewInterval: controllerProcedure.input(z.object({ months: z.number().int().min(1).max(36) })).mutation(({ input, ctx }) => { const denial = iraClassificationDenial(ctx.user); if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message }); return setClassificationReviewInterval(input, ctx.user); }),
     set: controllerProcedure
       .input(z.object({
         dimension: z.enum(iraRiskDimensions),

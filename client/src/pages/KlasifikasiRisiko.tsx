@@ -8,14 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
+import { getIraClassificationReviewDue } from "@shared/iraClassificationReview";
 import { IRA_PARAMETERS } from "@shared/iraParameters";
+import { DEFAULT_OPERATIONAL_TIMEZONE } from "@shared/regulatoryActionQueue";
 import {
   IRA_DISTRIBUTION_CHANNEL_LABELS,
   IRA_LEGAL_FORM_LABELS,
   IRA_OCCUPATION_CATEGORY_LABELS,
   IRA_PROVINCE_LABELS,
 } from "@shared/iraVocabulary";
-import { AlertTriangle, RotateCcw, ShieldAlert, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, ClipboardCheck, Download, RotateCcw, ShieldAlert, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -73,11 +75,32 @@ export default function KlasifikasiRisiko() {
   const [sourceNote, setSourceNote] = useState("");
   const [newCountry, setNewCountry] = useState("");
 
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [intervalDraft, setIntervalDraft] = useState<string | null>(null);
+
   const classifications = trpc.iraClassification.list.useQuery();
   const thresholds = trpc.iraClassification.thresholds.useQuery();
   const currencies = trpc.currencies.list.useQuery();
+  const unclassified = trpc.iraClassification.unclassified.useQuery();
+  const reviews = trpc.iraClassification.reviews.useQuery();
+  const timeZone = trpc.companyProfile.get.useQuery().data?.timezone ?? DEFAULT_OPERATIONAL_TIMEZONE;
 
   const setClassification = trpc.iraClassification.set.useMutation({
+    onError: (error) => toast.error(error.message),
+  });
+  const signReview = trpc.iraClassification.review.useMutation({
+    onSuccess: () => {
+      toast.success("Tinjauan klasifikasi disahkan.");
+      setReviewOpen(false);
+      setReviewNotes("");
+      void utils.iraClassification.reviews.invalidate();
+      void utils.iraClassification.unclassified.invalidate();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+  const setReviewInterval = trpc.iraClassification.setReviewInterval.useMutation({
+    onSuccess: (result) => { toast.success(`Selang tinjauan disimpan: ${result.months} bulan.`); setIntervalDraft(null); void utils.iraClassification.reviews.invalidate(); },
     onError: (error) => toast.error(error.message),
   });
   const setThresholds = trpc.iraClassification.setThresholds.useMutation({
@@ -93,14 +116,16 @@ export default function KlasifikasiRisiko() {
   const byKey = new Map(rows.map((row) => [`${row.dimension}|${row.code}|${row.riskType}`, row]));
 
   /** Kode yang berlaku pada dimensi terpilih. Negara tidak punya kosakata tertutup — yang tampil
-   *  adalah negara yang sudah pernah diklasifikasikan, ditambah yang diketik petugas. */
+   *  adalah negara yang sudah pernah diklasifikasikan ditambah kewarganegaraan nasabah yang belum
+   *  (dari server, definisi yang sama dengan penolakan pengesahan). */
   const codesFor = (key: Dimension): { code: string; label: string }[] => {
     if (key === "CURRENCY") return (currencies.data ?? []).map((currency: { code: string; name: string }) => ({ code: currency.code, label: currency.name }));
     if (key === "OCCUPATION") return Object.entries(IRA_OCCUPATION_CATEGORY_LABELS).map(([code, label]) => ({ code, label }));
     if (key === "LEGAL_FORM") return Object.entries(IRA_LEGAL_FORM_LABELS).map(([code, label]) => ({ code, label }));
     if (key === "PROVINCE") return Object.entries(IRA_PROVINCE_LABELS).map(([code, label]) => ({ code, label }));
     if (key === "DISTRIBUTION_CHANNEL") return Object.entries(IRA_DISTRIBUTION_CHANNEL_LABELS).map(([code, label]) => ({ code, label }));
-    return [...new Set(rows.filter((row) => row.dimension === "COUNTRY").map((row) => row.code))].map((code) => ({ code, label: code }));
+    const customerCountries = (unclassified.data ?? []).filter((item) => item.dimension === "COUNTRY").map((item) => item.code);
+    return [...new Set([...rows.filter((row) => row.dimension === "COUNTRY").map((row) => row.code), ...customerCountries])].map((code) => ({ code, label: code }));
   };
 
   const codes = codesFor(dimension);
@@ -129,9 +154,29 @@ export default function KlasifikasiRisiko() {
       toast.success(`Klasifikasi ${editing.code} disimpan.`);
       setEditing(null);
       void utils.iraClassification.list.invalidate();
+      void utils.iraClassification.unclassified.invalidate();
     } catch {
       // Pesannya sudah ditampilkan onError; dialognya sengaja dibiarkan terbuka agar isian tidak hilang.
     }
+  };
+
+  const missing = unclassified.data ?? [];
+  const missingByDimension = DIMENSIONS.map((entry) => ({ ...entry, count: missing.filter((item) => item.dimension === entry.key).length })).filter((entry) => entry.count > 0);
+  const reviewRows = reviews.data?.reviews ?? [];
+  const intervalMonths = reviews.data?.intervalMonths ?? 12;
+  const reviewDue = getIraClassificationReviewDue(reviewRows[0]?.reviewedAt ?? null, intervalMonths, new Date(), timeZone);
+  const formatWib = (value: string | Date | null | undefined) =>
+    value ? new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone }).format(new Date(value)) : "—";
+
+  /** Snapshot adalah bukti bagi otoritas: diunduh apa adanya, persis isi yang disahkan. */
+  const downloadSnapshot = (review: { reviewedAt: string | Date; snapshot: string }) => {
+    const blob = new Blob([review.snapshot], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `klasifikasi-risiko-${new Date(review.reviewedAt).toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -143,6 +188,87 @@ export default function KlasifikasiRisiko() {
           memutuskannya.
         </p>
       </section>
+
+      <Card className="border-[#dce6f0] shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 font-display text-xl text-[#18395f]"><ClipboardCheck className="size-5 text-[#5c8f53]" /> Tinjauan berkala</CardTitle>
+          <CardDescription>
+            Pasal 9 ayat (6) PBI 10/2024: hasil manajemen risiko dikinikan berkala dan didokumentasikan. Pengesahan
+            berlaku atas seluruh tabel dan menyimpan salinannya sebagai bukti bagi otoritas.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {unclassified.isPending || reviews.isPending ? (
+            <div className="space-y-2">{[0, 1].map((row) => <Skeleton key={row} className="h-12 w-full" />)}</div>
+          ) : unclassified.isError || reviews.isError ? (
+            <div className="rounded-2xl border border-[#f0d6d6] bg-[#fdf6f6] px-5 py-6 text-sm leading-6 text-[#9a4b4b]">
+              <p className="flex items-center gap-2 font-semibold"><AlertTriangle className="size-4" /> Status tinjauan gagal dimuat.</p>
+              <p className="mt-1">{unclassified.error?.message ?? reviews.error?.message}</p>
+              <Button type="button" size="sm" variant="outline" className="mt-3" onClick={() => { void unclassified.refetch(); void reviews.refetch(); }}>Coba lagi</Button>
+            </div>
+          ) : (
+            <>
+              <div className={`rounded-xl border px-4 py-3 text-sm ${missing.length ? "border-[#f0e2c4] bg-[#fdf9f0] text-[#8a6d2f]" : "border-[#cfe3cb] bg-[#f2f8f1] text-[#4a7a43]"}`}>
+                {missing.length ? (
+                  <>
+                    <p className="font-semibold">{missing.length} kode belum diklasifikasi — saat ini dibaca RENDAH</p>
+                    <p className="mt-1 text-xs">{missingByDimension.map((entry) => `${entry.label}: ${entry.count}`).join(" · ")} (dihitung per jenis risiko TPPU/TPPT/PPSPM)</p>
+                  </>
+                ) : (
+                  <p className="font-semibold">Seluruh kode sudah diklasifikasi.</p>
+                )}
+              </div>
+              <div className="grid gap-3 text-sm sm:grid-cols-2">
+                <div className="rounded-xl border border-[#e2eaf2] bg-[#fbfdff] px-4 py-3">
+                  <p className="text-xs tracking-[0.12em] text-[#94a7bb] uppercase">Tinjauan terakhir</p>
+                  {reviewRows[0] ? (
+                    <>
+                      <p className="mt-1 font-semibold text-[#18395f]">{formatWib(reviewRows[0].reviewedAt)} — {reviewRows[0].reviewerName ?? `pengguna #${reviewRows[0].reviewedByUserId}`}</p>
+                      <p className="text-xs text-[#475569]">{reviewRows[0].notes}</p>
+                    </>
+                  ) : <p className="mt-1 text-[#475569]">Belum pernah ditinjau.</p>}
+                  <p className={`mt-2 text-xs ${reviewDue.due ? "font-semibold text-[#9a4b4b]" : "text-[#475569]"}`}>{reviewDue.detail}</p>
+                </div>
+                <div className="rounded-xl border border-[#e2eaf2] bg-[#fbfdff] px-4 py-3">
+                  <Label htmlFor="review-interval" className="text-xs tracking-[0.12em] text-[#94a7bb] uppercase">Selang tinjauan (bulan, 1–36)</Label>
+                  <div className="mt-1 flex items-center gap-2">
+                    <Input id="review-interval" className="w-24" inputMode="numeric" value={intervalDraft ?? String(intervalMonths)} onChange={(event) => setIntervalDraft(event.target.value)} />
+                    <Button type="button" size="sm" variant="outline" disabled={intervalDraft === null || setReviewInterval.isPending} onClick={() => setReviewInterval.mutate({ months: Number(intervalDraft) })}>
+                      Simpan selang
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button type="button" className="bg-[#183f70]" disabled={missing.length > 0} onClick={() => setReviewOpen(true)}>Sahkan tinjauan klasifikasi</Button>
+                {missing.length > 0 ? <span className="text-xs text-[#8a6d2f]">Klasifikasikan seluruh kode lebih dahulu — pengesahan ditolak selama masih ada yang belum.</span> : null}
+              </div>
+              {reviewRows.length ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[640px] text-left text-sm">
+                    <thead className="text-xs tracking-[0.12em] text-[#94a7bb] uppercase">
+                      <tr><th className="px-3 py-2">Disahkan</th><th className="px-3 py-2">Peninjau</th><th className="px-3 py-2">Catatan</th><th className="px-3 py-2">Baris</th><th className="px-3 py-2" /></tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#edf0f5]">
+                      {reviewRows.map((review) => (
+                        <tr key={review.id} className="align-top">
+                          <td className="px-3 py-2 text-xs whitespace-nowrap">{formatWib(review.reviewedAt)}</td>
+                          <td className="px-3 py-2 text-xs">{review.reviewerName ?? `#${review.reviewedByUserId}`}</td>
+                          <td className="px-3 py-2 text-xs text-[#475569]">{review.notes}</td>
+                          <td className="px-3 py-2 text-xs">{review.classificationCount}</td>
+                          <td className="px-3 py-2">
+                            <Button type="button" size="sm" variant="outline" onClick={() => downloadSnapshot(review)}><Download className="mr-1 size-3" />Unduh snapshot (JSON)</Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="border-[#dce6f0] shadow-sm">
         <CardHeader>
@@ -345,6 +471,24 @@ export default function KlasifikasiRisiko() {
               </div>
             </>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={reviewOpen} onOpenChange={(open) => { if (!signReview.isPending) setReviewOpen(open); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl text-[#18395f]">Sahkan tinjauan klasifikasi</DialogTitle>
+            <DialogDescription>Seluruh {rows.length} baris klasifikasi saat ini disimpan sebagai salinan. Tinjauan tanpa perubahan tetap dicatat — justru itu buktinya.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="review-notes" className="text-xs">Catatan tinjauan (wajib)</Label>
+              <Textarea id="review-notes" className="mt-1" rows={3} value={reviewNotes} onChange={(event) => setReviewNotes(event.target.value)} placeholder="Contoh: dibandingkan dengan SRA 2026; tidak ada perubahan tingkat." />
+            </div>
+            <Button type="button" className="w-full bg-[#183f70]" disabled={signReview.isPending || reviewNotes.trim().length < 3} onClick={() => signReview.mutate({ notes: reviewNotes.trim() })}>
+              {signReview.isPending ? "Menyimpan…" : "Sahkan tinjauan"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

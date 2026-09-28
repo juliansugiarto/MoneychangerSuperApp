@@ -25,7 +25,7 @@ tersendiri (`server/watchlistBlocks.ts`, `server/iraClassificationReview.ts`), g
 - [x] Tugas 5 — Keputusan atas blokir dan router
 - [x] Tugas 6 — Register Pemblokiran dan Kesiapan Operasional
 - [x] Tugas 7 — Aturan murni tinjauan klasifikasi
-- [ ] Tugas 8 — Pengesahan tinjauan, selang, dan layarnya
+- [x] Tugas 8 — Pengesahan tinjauan, selang, dan layarnya
 - [ ] Tugas 9 — B4 tanggal berakhir hubungan
 - [ ] Tugas 10 — Peragaan end-to-end, dokumentasi, perintah mutu
 
@@ -1028,7 +1028,7 @@ export function getIraClassificationReviewDue(lastReviewedAt: Date | string | nu
 - `listClassificationReviews(): Promise<{ reviews: IraClassificationReview[]; intervalMonths: number }>`
 - `setClassificationReviewInterval(input: { months: number }, actor: { id: number }): Promise<{ months: number }>`
 
-- [ ] **Step 1: Uji yang gagal** (pola `mockDb` Tugas 3/5)
+- [x] **Step 1: Uji yang gagal** (pola `mockDb` Tugas 3/5)
 
 ```ts
 describe("signClassificationReview", () => {
@@ -1062,9 +1062,9 @@ describe("setClassificationReviewInterval", () => {
 
 `fullClassificationRows()` dibangun dari `IRA_OCCUPATION_CATEGORIES`, `IRA_LEGAL_FORMS`, `Object.keys(IRA_PROVINCE_LABELS)`, `IRA_DISTRIBUTION_CHANNELS`, dan `["USD"]` × `["TPPU","TPPT","PPSPM"]`, masing-masing `{ dimension, code, riskType, level: "RENDAH", sourceNote: "SRA 2026", updatedAt: new Date() }`.
 
-- [ ] **Step 2:** FAIL.
+- [x] **Step 2:** FAIL.
 
-- [ ] **Step 3: `server/iraClassificationReview.ts`**
+- [x] **Step 3: `server/iraClassificationReview.ts`**
 
 ```ts
 import { desc, eq, isNotNull } from "drizzle-orm";
@@ -1129,7 +1129,7 @@ export async function setClassificationReviewInterval(input: { months: number },
 }
 ```
 
-- [ ] **Step 4: Router** — di `iraClassification: router({...})` tambahkan (semuanya memeriksa `iraClassificationDenial` seperti `list`):
+- [x] **Step 4: Router** — di `iraClassification: router({...})` tambahkan (semuanya memeriksa `iraClassificationDenial` seperti `list`):
 
 ```ts
     unclassified: controllerProcedure.query(({ ctx }) => { const denial = iraClassificationDenial(ctx.user); if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message }); return listUnclassifiedCodes(); }),
@@ -1138,7 +1138,7 @@ export async function setClassificationReviewInterval(input: { months: number },
     setReviewInterval: controllerProcedure.input(z.object({ months: z.number().int().min(1).max(36) })).mutation(({ input, ctx }) => { const denial = iraClassificationDenial(ctx.user); if (denial) throw new TRPCError({ code: "FORBIDDEN", message: denial.message }); return setClassificationReviewInterval(input, ctx.user); }),
 ```
 
-- [ ] **Step 5: Layar `KlasifikasiRisiko.tsx`** — kartu baru "Tinjauan berkala" di atas pemilih dimensi:
+- [x] **Step 5: Layar `KlasifikasiRisiko.tsx`** — kartu baru "Tinjauan berkala" di atas pemilih dimensi:
   - `trpc.iraClassification.unclassified.useQuery()` dan `.reviews.useQuery()`; tampilkan *"N kode belum diklasifikasi — saat ini dibaca RENDAH"* (N dari server, per dimensi dikelompokkan), tinjauan terakhir (tanggal WIB, peninjau id, catatan), dan "Tinjauan berikutnya …" dari `getIraClassificationReviewDue`.
   - Tombol **"Sahkan tinjauan klasifikasi"** membuka Dialog dengan `Textarea` catatan; `disabled` bila N > 0 dengan keterangan alasannya. Mutasi `review` → `toast`, invalidasi `reviews` dan `unclassified`.
   - Input selang (bulan, 1–36) + tombol **"Simpan selang"**.
@@ -1146,10 +1146,10 @@ export async function setClassificationReviewInterval(input: { months: number },
   - Setelah `setClassification` berhasil, invalidasi juga `unclassified`.
   - Negara: kode dari server `unclassified` (dimensi COUNTRY) ikut ditampilkan pada `codesFor("COUNTRY")` supaya negara nasabah yang belum diklasifikasi dapat dipilih.
 
-- [ ] **Step 6: Kesiapan Operasional** — `const classificationReviews = trpc.iraClassification.reviews.useQuery(undefined, { retry: false });`, `const reviewDue = getIraClassificationReviewDue(classificationReviews.data?.reviews[0]?.reviewedAt ?? null, classificationReviews.data?.intervalMonths ?? 12, new Date(), companyTimezone);` dan kontrol `{ label: "Tinjauan klasifikasi risiko", detail: classificationReviews.isError ? "Status tinjauan hanya terlihat oleh Controller ke atas." : reviewDue.detail, ready: !reviewDue.due, loading: classificationReviews.isPending, unavailable: classificationReviews.isError, icon: ShieldCheck, action: "Buka klasifikasi", path: "/kepatuhan/klasifikasi-risiko" }`.
+- [x] **Step 6: Kesiapan Operasional** — `const classificationReviews = trpc.iraClassification.reviews.useQuery(undefined, { retry: false });`, `const reviewDue = getIraClassificationReviewDue(classificationReviews.data?.reviews[0]?.reviewedAt ?? null, classificationReviews.data?.intervalMonths ?? 12, new Date(), companyTimezone);` dan kontrol `{ label: "Tinjauan klasifikasi risiko", detail: classificationReviews.isError ? "Status tinjauan hanya terlihat oleh Controller ke atas." : reviewDue.detail, ready: !reviewDue.due, loading: classificationReviews.isPending, unavailable: classificationReviews.isError, icon: ShieldCheck, action: "Buka klasifikasi", path: "/kepatuhan/klasifikasi-risiko" }`.
 
-- [ ] **Step 7:** `./node_modules/.bin/vitest run server/iraClassificationReview.test.ts shared/iraClassificationReview.test.ts && ./node_modules/.bin/tsc --noEmit` → PASS / 0.
-- [ ] **Step 8: Commit** — `"Tinjauan berkala klasifikasi risiko: pengesahan bersnapshot, selang, jatuh tempo"`
+- [x] **Step 7:** `./node_modules/.bin/vitest run server/iraClassificationReview.test.ts shared/iraClassificationReview.test.ts && ./node_modules/.bin/tsc --noEmit` → PASS / 0.
+- [x] **Step 8: Commit** — `"Tinjauan berkala klasifikasi risiko: pengesahan bersnapshot, selang, jatuh tempo"`
 
 ---
 
