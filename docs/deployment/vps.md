@@ -47,7 +47,7 @@ git clone -b deploy/docker-vps /tmp/mc.bundle ~/moneychanger && cd ~/moneychange
 nano .env                                       # APP_VERSION=$(git rev-parse --short HEAD), R2_*, BACKUP_*
 docker compose build
 docker compose up -d mysql
-docker compose run --rm ops node scripts/migrate.mjs     # "Migrasi tercatat: 67 (baru diterapkan: 67)" per 12 Nov 2026
+docker compose run --rm ops node scripts/migrate.mjs     # "Migrasi tercatat: 68" per 12 Nov 2026 sore (0067 jadwal buka)
 docker compose up -d web backup
 docker compose ps                                # web (healthy), mysql (healthy)
 ```

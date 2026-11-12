@@ -75,14 +75,18 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 **Halaman publik "Paspor & cap" SELESAI DIBANGUN di cabang `deploy/docker-vps`** (`95625dd`…`b3741cf`). Rencana `plans/2026-11-12-halaman-publik-paspor.md`: irisan 1–4 tercentang,
 irisan 5 tinggal butir terakhir (pemilik melihat → deploy produksi, keputusan pemilik).
 
+**PRODUKSI SUDAH DIPERBARUI 12 Nov ±17.30 WIB** atas perintah pemilik ("okay lanjut aja"): pemilik menjalankan bundle +
+`git merge --ff-only` di VPS; cadangan `moneychanger-20261112T103024Z.sql.zst.enc` diambil sebelum migrasi; image
+`moneychanger-app:00a0788`; `Migrasi tercatat: 68 (baru diterapkan: 1)`; `DEPLOY-OK`. Diperiksa Claude lewat peramban:
+`/` dan `/papan` tampil (1440 dan 390, tanpa gulir mendatar, 0 galat konsol), keadaan kosong jujur (belum ada kurs,
+"Jam belum tersedia", ketentuan uang umum, judul "Periksa izin dan kontak kami" karena nomor izin kosong).
+Langkah VPS (scp/ssh) ditolak pengklasifikasi untuk Claude → selalu beri pemilik `!` satu baris.
+
 **Tugas sesi berikutnya:**
-1. `git push` cabang `deploy/docker-vps` bila belum; minta pemilik melihat di lokal/pratinjau, lalu **deploy produksi
-   hanya atas perintah pemilik**: build image baru + **migrasi `0067` di produksi** (hanya menambah 2 kolom JSON
-   nullable di `company_profile`; produksi kini di 67 migrasi, sesudahnya 68).
-2. Sesudah deploy: pemilik mengisi di Profil Perusahaan → Halaman publik: **jadwal buka** (Sen–Sab 09–17, Minggu tutup),
-   **Nomor WhatsApp** 0811-260-269, telepon (0263) 265-500, alamat, tautan peta, **nomor izin + kode KUPVA** (kini tampil
-   di halaman), dan ketentuan uang sendiri bila ada (kosong = 3 ketentuan umum). Tanpa jadwal, chip menulis "Jam belum tersedia".
-3. Pertanyaan untuk pemilik (lihat bawah), lalu lanjut ke pekerjaan berikutnya di daftar "belum dirancang".
+1. Pemilik mengisi Profil Perusahaan produksi (di back office): Data badan usaha (telepon (0263) 265-500, alamat,
+   **nomor izin + kode KUPVA**), lalu Halaman publik: **jadwal buka** (Sen–Sab 09–17, Minggu tutup), **Nomor WhatsApp**
+   0811-260-269, tautan peta, ketentuan uang sendiri bila ada (kosong = 3 ketentuan umum). Lalu aktifkan kurs pertama.
+2. Pertanyaan untuk pemilik (lihat bawah), lalu lanjut ke pekerjaan berikutnya di daftar "belum dirancang".
 
 **Keadaan terukur (dijalankan sesi ini, pada `b3741cf`):**
 - Vitest `Test Files 247 passed | 1 skipped (248)`, `Tests 1869 passed | 6 skipped (1875)` (naik dari 1849: uji
@@ -91,7 +95,7 @@ irisan 5 tinggal butir terakhir (pemilik melihat → deploy produksi, keputusan 
 - Kinerja kirim tiket (CPU 4×, `node scripts/ukur-kinerja-publik.mjs`, hanya server lokal): 59–60 fps, frame terburuk
   17–33 ms, 0 long-animation-frame > 50 ms (3 putaran).
 - Migrasi terakhir `0067_jadwal_buka_ketentuan_uang` — diterapkan di `moneychanger`, `mc_t_abcvalas`, `mc_t_visual`
-  (68 migrasi). **Produksi belum** (67).
+  **dan produksi** (semua 68 migrasi).
 - Peragaan end-to-end lokal (`moneychanger`): profil diisi data uji lokal (izin `KEP-UJI-LOKAL/2026`, ketentuan uang
   berawalan "Uji lokal:"), permintaan `LNY-20261112-JGVX0D` (+ beberapa "Uji Kinerja Lokal") dari tiket publik,
   kurs SAR +10 diaktifkan lewat `activateBoardDrafts` (alasan "Uji lokal halaman publik: peristiwa KURS BARU") →
