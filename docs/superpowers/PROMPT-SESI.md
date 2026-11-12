@@ -176,7 +176,14 @@ USD 10.000 (`b0fd469`); kalimat kwitansi (`d512d11`); pembulatan Rp 100 (`f74f07
 `Tests 1834 passed | 6 skipped (1840)`, tsc 0, build, Playwright `56 passed`. Migrasi `0063` hanya di
 moneychanger, mc_t_abcvalas, mc_t_visual.
 
-**Berikutnya (urut):** (1) alur DTTOT (celah c) + uji pengimpor terhadap daftar P-25 (celah d);
+**Laporan DTTOT ke Densus 88 SELESAI 12 November** (`3032a5d`, migrasi `0064`): Kepatuhan > Laporan DTTOT —
+catat surel BI, saring, cetak Laporan Nihil / Laporan Pemblokiran + Berita Acara (format Lampiran I–III Pedoman
+BI), lima pengiriman. Gerbang: `Tests 1840 passed | 6 skipped (1846)`, tsc 0, build, Playwright `57 passed`.
+**Menunggu pemilik:** dua lampiran surel BI 15 Okt 2026 — `DTTOT OKTOBER.xlsx` (uji pengimpor P-25) dan
+`Lamp 2_Form Berita Acara Pembukaan Pemblokiran DTTOT.docx` (berita acara pembukaan); konektor Gmail tidak bisa
+mengunduh lampiran, halaman PPATK kosong bagi peramban otomatis.
+
+**Berikutnya (urut):** (1) uji pengimpor P-25 + berita acara pembukaan begitu berkasnya ada; DPPSPM ke PPATK;
 (2) paket Docker ala tokoemas + cadangan terenkripsi ke R2 + `deploy.yml` baru; (3) penyederhanaan layar
 Kasir & transaksi (sub-proyek 4); (4) CSP `script-src` sesudah jendela cetak berhenti memakai skrip sebaris.
 
