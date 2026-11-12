@@ -1888,7 +1888,12 @@ export async function cancelTransaction(transactionId: number, reason: string, a
   if (actor.role === "STAFF" && transaction.tellerUserId !== actor.id) throw new Error("Staff hanya dapat membatalkan transaksi miliknya sendiri.");
   assertTransactionCanBeCancelled(transaction.status);
   const cancelledAt = new Date();
-  await db.update(exchangeTransactions).set({ status: "CANCELLED", cancelledByUserId: actor.id, cancelledAt, cancellationReason: reason }).where(eq(exchangeTransactions.id, transactionId));
+  // Bersyarat pada status yang tadi dibaca: bila bon baru saja diselesaikan (kasnya sudah terposting), batal ditolak.
+  const updated = await db.update(exchangeTransactions).set({ status: "CANCELLED", cancelledByUserId: actor.id, cancelledAt, cancellationReason: reason })
+    .where(and(eq(exchangeTransactions.id, transactionId), eq(exchangeTransactions.status, transaction.status)));
+  if (Number((updated as unknown as [{ affectedRows?: number }])[0]?.affectedRows ?? 0) !== 1) {
+    throw new Error("Bon ini baru saja berubah status di layar lain. Muat ulang lalu periksa lagi.");
+  }
   await writeAudit({ actorUserId: actor.id, action: "TRANSACTION_CANCELLED", entityType: "exchange_transaction", entityId: String(transactionId), beforeState: { status: transaction.status }, afterState: { status: "CANCELLED", cancelledAt }, reason });
   return { ...transaction, status: "CANCELLED" as const, cancelledByUserId: actor.id, cancelledAt, cancellationReason: reason };
 }
@@ -2128,7 +2133,8 @@ function nextBusinessDate(date: Date) {
 export async function completeTransaction(transactionId: number, actor: { id: number; role: StaffRole }) {
   const db = await databaseOrThrow();
   const result = await db.transaction(async (tx) => {
-    const transaction = (await tx.select().from(exchangeTransactions).where(and(eq(exchangeTransactions.id, transactionId), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false))).limit(1))[0];
+    // Baris bon dikunci lebih dulu: pembatalan yang datang bersamaan menunggu, lalu melihat status COMPLETED.
+    const transaction = (await tx.select().from(exchangeTransactions).where(and(eq(exchangeTransactions.id, transactionId), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false))).limit(1).for("update"))[0];
     if (!transaction) throw new Error("Transaksi tidak ditemukan.");
     if (transaction.isDemo || transaction.isHistorical) throw new Error("Transaksi demo atau historis tidak dapat diproses pada operasi live.");
     if (actor.role === "STAFF" && transaction.tellerUserId !== actor.id) throw new Error("Staff hanya dapat menyelesaikan transaksi miliknya sendiri.");

@@ -15,6 +15,7 @@ function queryResult<T>(rows: T[]) {
     where: () => query,
     orderBy: () => query,
     limit: () => query,
+    for: () => query,
     then: (onfulfilled, onrejected) => Promise.resolve(rows).then(onfulfilled, onrejected),
   };
   return query;
