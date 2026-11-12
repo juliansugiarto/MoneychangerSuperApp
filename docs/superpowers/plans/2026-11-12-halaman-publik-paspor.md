@@ -15,8 +15,8 @@ kurs tetap diaktifkan manual (halaman hanya membaca); tidak ada data uji di prod
 - [x] `publicContent.profile` mengirim jadwal, ketentuan, telepon, WhatsApp (telepon kedua), nomor izin, kode KUPVA.
 
 ## Irisan 2 — data kurs publik
-- [ ] Perubahan dibanding kurs sebelumnya (kurs RETIRED terakhir untuk valuta + kelompok pecahan yang sama); "Belum ada pembanding" bila tidak ada; uji.
-- [ ] Pembangun teks bagikan WhatsApp (4 valuta teratas urutan papan) di `shared/`, dengan uji.
+- [x] Perubahan dibanding kurs sebelumnya (kurs RETIRED terakhir untuk valuta + kelompok pecahan yang sama); "Belum ada pembanding" bila tidak ada; uji. *`server/publicRatePrevious.ts` (ROW_NUMBER per valuta+kelompok; satuan kutipan beda = tanpa pembanding). Sekalian `activeRates` publik dipersempit: catatan/alasan aktivasi/id petugas tidak lagi keluar. Urutan papan tetap abjad kode valuta (uji lama); kelompok mengikuti `sortOrder`.*
+- [x] Pembangun teks bagikan WhatsApp (4 valuta teratas urutan papan) di `shared/`, dengan uji.
 
 ## Irisan 3 — halaman publik React
 - [ ] Folder fitur `client/src/pages/publik/` (≤ ~400 baris per berkas): kepala, §1 kurs (meja desktop + daftar ponsel, saklar jual/beli), §2 pas naik hitung tukar, §3 tiket konfirmasi, §4 bagikan, §5 ketentuan, §6 lokasi, §7 resmi + penipuan, §8 pengumuman, §9 FAQ, kaki MRZ.

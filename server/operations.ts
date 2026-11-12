@@ -43,6 +43,7 @@ import {
 } from "../drizzle/schema";
 import type { IraCustomerType, IraDistributionChannel, IraLegalForm, IraOccupationCategory } from "../shared/iraVocabulary";
 import { getDb } from "./db";
+import { previousFor, readPreviousRetiredRates } from "./publicRatePrevious";
 import { knownDenominationsFor } from "../shared/currencyDenominations";
 import { DEFAULT_RATE_DEVIATION_TOLERANCE_PERCENT, RATE_DEVIATION_REVIEW_REASON } from "../shared/rateDeviation";
 import type { RateTierRow } from "../shared/rateTiers";
@@ -1282,7 +1283,16 @@ export async function listPublicActiveRates() {
       .leftJoin(rateTiers, eq(operationalRates.rateTierId, rateTiers.id))
       .where(and(eq(operationalRates.status, "ACTIVE"), eq(operationalRates.isDemo, false), eq(operationalRates.isHistorical, false), eq(currencies.active, true), lte(operationalRates.effectiveAt, new Date())))
       .orderBy(desc(operationalRates.effectiveAt), currencies.code);
-    return selectPublicActiveRateRows(rows).map(({ rate, currency, tier }) => ({ rate, currency, tier: tier ? { id: tier.id, label: tier.label } : null, isDemo: false }));
+    const selected = selectPublicActiveRateRows(rows);
+    const previous = await readPreviousRetiredRates(db, Array.from(new Set(selected.map(({ rate }) => rate.currencyId))));
+    // Hanya kolom yang memang untuk publik: catatan, alasan aktivasi, dan id petugas tidak ikut keluar.
+    return selected.map(({ rate, currency, tier }) => ({
+      rate: { id: rate.id, buyRate: rate.buyRate, sellRate: rate.sellRate, quoteUnit: rate.quoteUnit, effectiveAt: rate.effectiveAt },
+      currency: { id: currency.id, code: currency.code, name: currency.name },
+      tier: tier ? { id: tier.id, label: tier.label, sortOrder: tier.sortOrder } : null,
+      previous: previousFor(previous, rate),
+      isDemo: false,
+    }));
   });
 }
 
