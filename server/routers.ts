@@ -176,7 +176,7 @@ import { createInternalUser, getInternalUserById, listInternalUsers, updateInter
 import type { TrpcContext } from "./_core/context";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { assertThrottleAllows, authThrottle, throttleKeys } from "./loginThrottle";
+import { authThrottle, throttleKeys, withThrottle } from "./loginThrottle";
 import { clientIpOf } from "./proxyTrust";
 import { currentTenantCode } from "./tenantContext";
 import { SetupRefusal, completeInstallationSetup } from "./installationSetup";
@@ -442,24 +442,22 @@ export const appRouter = router({
     }),
     login: publicProcedure.input(z.object({ username: z.string().trim(), password: z.string().min(1) })).mutation(async ({ input, ctx }) => {
       const keys = throttleKeys("login", currentTenantCode(), input.username, clientIpOf(ctx.req));
-      assertThrottleAllows([keys.user, keys.ip]);
-      const user = await verifyInternalCredentials(input.username, input.password);
-      if (!user) {
-        authThrottle.recordFailure([keys.user, keys.ip]);
-        throw new TRPCError({ code: "UNAUTHORIZED", message: LOGIN_FAILED_MESSAGE });
-      }
+      const user = await withThrottle([keys.user, keys.ip], async () => {
+        const verified = await verifyInternalCredentials(input.username, input.password);
+        return { failed: !verified, value: verified };
+      });
+      if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: LOGIN_FAILED_MESSAGE });
       authThrottle.recordSuccess(keys.user);
       await setInternalSession(ctx, user);
       return safeUser(user);
     }),
     recover: publicProcedure.input(z.object({ username: z.string().trim(), code: z.string().trim().min(1).max(40), newPassword: z.string().min(1) })).mutation(async ({ input, ctx }) => {
       const keys = throttleKeys("recover", currentTenantCode(), input.username, clientIpOf(ctx.req));
-      assertThrottleAllows([keys.user, keys.ip]);
-      const user = await recoverOwnerAccount(input);
-      if (!user) {
-        authThrottle.recordFailure([keys.user, keys.ip]);
-        throw new TRPCError({ code: "UNAUTHORIZED", message: RECOVERY_FAILED_MESSAGE });
-      }
+      const user = await withThrottle([keys.user, keys.ip], async () => {
+        const recovered = await recoverOwnerAccount(input);
+        return { failed: !recovered, value: recovered };
+      });
+      if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: RECOVERY_FAILED_MESSAGE });
       authThrottle.recordSuccess(keys.user);
       await setInternalSession(ctx, user);
       return safeUser(user);
@@ -490,19 +488,19 @@ export const appRouter = router({
     })).mutation(async ({ input, ctx }) => {
       // Username pemilik belum ada; tebakan kode dibatasi per IP saja.
       const keys = throttleKeys("setup", currentTenantCode(), "installation", clientIpOf(ctx.req));
-      assertThrottleAllows([keys.ip]);
-      try {
-        const result = await completeInstallationSetup(input);
-        authThrottle.recordSuccess(keys.ip);
-        await setInternalSession(ctx, result.user);
-        return { user: safeUser(result.user), recoveryCodes: result.recoveryCodes };
-      } catch (error) {
-        if (error instanceof SetupRefusal) {
-          if (error.countsAsFailure) authThrottle.recordFailure([keys.ip]);
-          throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+      type SetupOutcome = { result: Awaited<ReturnType<typeof completeInstallationSetup>> } | { refusal: SetupRefusal };
+      const outcome = await withThrottle<SetupOutcome>([keys.ip], async () => {
+        try {
+          return { failed: false, value: { result: await completeInstallationSetup(input) } };
+        } catch (error) {
+          if (error instanceof SetupRefusal) return { failed: error.countsAsFailure, value: { refusal: error } };
+          throw error;
         }
-        throw error;
-      }
+      });
+      if ("refusal" in outcome) throw new TRPCError({ code: "BAD_REQUEST", message: outcome.refusal.message });
+      authThrottle.recordSuccess(keys.ip);
+      await setInternalSession(ctx, outcome.result.user);
+      return { user: safeUser(outcome.result.user), recoveryCodes: outcome.result.recoveryCodes };
     }),
   }),
 

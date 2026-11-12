@@ -48,4 +48,12 @@ describe("auth.login dibatasi", () => {
     for (let i = 0; i < 4; i += 1) await expect(fromElsewhere({ username: "test-admin", password: "salah-salah" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     await expect(caller("198.51.100.12").auth.login({ username: "test-admin", password: "123456" })).resolves.toMatchObject({ username: "test-admin" });
   }, 20000);
+
+  it("tebakan yang dikirim bersamaan (satu batch tRPC) tetap hanya mendapat lima kesempatan", async () => {
+    const login = caller("198.51.100.13").auth.login;
+    const results = await Promise.allSettled(Array.from({ length: 20 }, () => login({ username: "test-controller", password: "salah-salah" })));
+    const codes = results.map((result) => (result.status === "rejected" ? (result.reason as { code?: string }).code : "OK"));
+    expect(codes.filter((code) => code === "UNAUTHORIZED")).toHaveLength(5);
+    expect(codes.filter((code) => code === "TOO_MANY_REQUESTS")).toHaveLength(15);
+  }, 30000);
 });
