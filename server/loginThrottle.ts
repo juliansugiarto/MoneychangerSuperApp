@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 
 /**
  * Pembatas percobaan masuk, pemulihan, dan penyiapan (spec 2026-09-26 §3). Disimpan di memori proses:
- * benar selama produksi berjalan sebagai SATU proses pm2 `fork`. Bila kelak berkelompok, pembatas ini
+ * benar selama produksi berjalan sebagai SATU proses (satu kontainer `web`, tanpa replika). Bila kelak berkelompok, pembatas ini
  * harus pindah ke basis data — dicatat sebagai risiko residual.
  *
  * Kuncinya membawa kode tenant karena username hanya unik di dalam satu basis data tenant, dan

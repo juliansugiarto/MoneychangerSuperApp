@@ -1,0 +1,124 @@
+# Tumpukan Docker satu money changer di VPS bersama tokoemas (187.77.148.118). Panduan: docs/deployment/vps.md.
+# Rahasia hanya di deploy/vps/.env (mode 600, dibuat init-env.sh, tidak di repo/image); nama variabel di .env.example.
+# Satu tumpukan = satu perusahaan (white-label): perusahaan lain → salinan folder + COMPOSE_PROJECT_NAME/.env sendiri.
+name: ${COMPOSE_PROJECT_NAME:-moneychanger}
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "5" }
+
+x-app-env: &app-env
+  # Kata sandi hanya heksadesimal (init-env.sh), jadi aman di dalam URL.
+  DATABASE_URL: mysql://moneychanger_app:${DB_APP_PASSWORD:?}@mysql:3306/moneychanger
+  JWT_SECRET: ${JWT_SECRET:?}
+  CRON_SECRET: ${CRON_SECRET:?}
+  # Caddy tokoemas berada di kontainer lain; ia mengganti X-Forwarded-For dengan satu nilai (IP pengunjung asli).
+  TRUST_PROXY: "loopback, uniquelocal"
+  # Dokumen KYC/operasional (opsional sampai bucket dibuat; unggah dokumen gagal dengan pesan jelas bila kosong).
+  R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+  R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+  R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+  R2_BUCKET_NAME: ${R2_BUCKET_NAME:-}
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?}
+      MYSQL_DATABASE: moneychanger
+      MYSQL_USER: moneychanger_app
+      MYSQL_PASSWORD: ${DB_APP_PASSWORD:?}
+      TZ: UTC
+    # Server UTC (aturan mesin: tanggal operasional dihitung aplikasi dalam WIB, bukan oleh basis data).
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+      - --innodb-buffer-pool-size=${MYSQL_BUFFER_POOL:-1G}
+      - --max-connections=60
+      - --skip-name-resolve
+    # Batas keras: MySQL tidak boleh menghimpit tokoemas di VPS yang sama (buffer pool + koneksi < 2 GB).
+    mem_limit: ${MYSQL_MEM_LIMIT:-2g}
+    volumes:
+      - mysqldata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # Ikut jaringan Caddy tokoemas, jadi namanya tidak boleh `app` (akan ikut menjawab `reverse_proxy app:3000` tokoemas).
+  # Caddy menuju NAMA KONTAINER `<COMPOSE_PROJECT_NAME>-web`, unik per perusahaan; nama layanan `web` dipakai bersama
+  # tumpukan money changer lain di jaringan itu, jadi jangan pernah dirujuk dari Caddy.
+  web:
+    container_name: ${COMPOSE_PROJECT_NAME:-moneychanger}-web
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: moneychanger-app:${APP_VERSION:-latest}
+    restart: unless-stopped
+    logging: *logging
+    environment: *app-env
+    mem_limit: 1g
+    networks: [default, edge]
+    depends_on:
+      mysql: { condition: service_healthy }
+
+  # Cadangan harian 01.00 WIB: mysqldump → zstd → openssl AES-256 → volume lokal (7 terakhir) + R2 (bila diisi).
+  backup:
+    build: ./backup
+    image: moneychanger-backup:8.4
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PWD: ${MYSQL_ROOT_PASSWORD:?}
+      BACKUP_CIPHER_PASS: ${BACKUP_CIPHER_PASS:?}
+      BACKUP_KEEP_LOCAL: ${BACKUP_KEEP_LOCAL:-7}
+      BACKUP_REMOTE: ${BACKUP_REMOTE:-}
+      RCLONE_CONFIG_R2_TYPE: s3
+      RCLONE_CONFIG_R2_PROVIDER: Cloudflare
+      RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${BACKUP_R2_ACCESS_KEY_ID:-}
+      RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${BACKUP_R2_SECRET_ACCESS_KEY:-}
+      RCLONE_CONFIG_R2_ENDPOINT: https://${R2_ACCOUNT_ID:-none}.r2.cloudflarestorage.com
+      RCLONE_CONFIG_R2_NO_CHECK_BUCKET: "true"
+    volumes:
+      - backups:/backups
+    depends_on:
+      mysql: { condition: service_healthy }
+
+  # Skrip operator di image aplikasi yang sama:
+  #   docker compose run --rm ops node scripts/migrate.mjs
+  #   docker compose run --rm ops node scripts/tenant.mjs setup-code
+  ops:
+    image: moneychanger-app:${APP_VERSION:-latest}
+    profiles: [ops]
+    logging: *logging
+    environment: *app-env
+    depends_on:
+      mysql: { condition: service_healthy }
+
+  # Uji pulih (restore-test.sh): MySQL kosong sendiri, tidak pernah menyentuh volume data live.
+  restore-check:
+    image: mysql:8.4
+    profiles: [ops]
+    logging: *logging
+    environment:
+      MYSQL_ROOT_PASSWORD: restore-check-only
+      MYSQL_DATABASE: restore_check
+    # Ringan: hanya memuat cadangan dan menghitung baris.
+    command: ["--innodb-buffer-pool-size=128M", "--performance-schema=OFF", "--skip-name-resolve"]
+    mem_limit: 768m
+    tmpfs: [/var/lib/mysql]
+
+volumes:
+  mysqldata:
+  backups:
+
+networks:
+  # Jaringan tempat Caddy tokoemas berada (lihat docs/deployment/vps.md). Gladi lokal menimpanya lewat compose.local.yaml.
+  edge:
+    name: ${EDGE_NETWORK:-tokoemas_default}
+    external: true

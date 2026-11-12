@@ -1,0 +1,20 @@
+# Konteks build image: hanya kode dan konfigurasi build. Rahasia, data, dan hasil uji tidak pernah masuk image.
+.git
+.github
+node_modules
+dist
+backups
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+test-results
+playwright-report
+e2e
+.agents
+.claude
+.superpowers
+docs
+deploy
+coverage

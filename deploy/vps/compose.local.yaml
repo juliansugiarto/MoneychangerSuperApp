@@ -1,0 +1,10 @@
+# Gladi di Mac/laptop: tanpa Caddy tokoemas. Aplikasi di http://127.0.0.1:3200, jaringan "edge" dibuat sendiri.
+#   docker compose -f compose.yaml -f compose.local.yaml up -d
+services:
+  web:
+    ports:
+      - "127.0.0.1:${LOCAL_PORT:-3200}:3000"
+networks:
+  edge:
+    name: moneychanger_local_edge
+    external: false

@@ -1,7 +1,7 @@
 import express from "express";
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
-import { clientIpOf, configureProxyTrust } from "./proxyTrust";
+import { clientIpOf, configureProxyTrust, trustProxySetting } from "./proxyTrust";
 
 let close: (() => void) | null = null;
 afterEach(() => { close?.(); close = null; });
@@ -25,6 +25,12 @@ describe("IP klien di balik nginx", () => {
 
   it("tanpa pengaturan itu setiap permintaan terlihat dari loopback — satu penyerang akan mengunci semua orang", async () => {
     expect(await ipSeenBy(false)).not.toBe("203.0.113.9");
+  });
+
+  it("TRUST_PROXY kosong tetap loopback; tumpukan Docker memakai nilai dari lingkungan", () => {
+    expect(trustProxySetting(undefined)).toBe("loopback");
+    expect(trustProxySetting("  ")).toBe("loopback");
+    expect(trustProxySetting("loopback, uniquelocal")).toBe("loopback, uniquelocal");
   });
 
   it("permintaan tanpa IP (pemanggil uji) memakai kunci 'unknown'", () => {
