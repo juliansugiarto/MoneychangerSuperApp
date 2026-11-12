@@ -95,7 +95,7 @@ Langkah VPS (scp/ssh) ditolak pengklasifikasi untuk Claude → selalu beri pemil
 - Kinerja kirim tiket (CPU 4×, `node scripts/ukur-kinerja-publik.mjs`, hanya server lokal): 59–60 fps, frame terburuk
   17–33 ms, 0 long-animation-frame > 50 ms (3 putaran).
 - Migrasi terakhir `0067_jadwal_buka_ketentuan_uang` — diterapkan di `moneychanger`, `mc_t_abcvalas`, `mc_t_visual`
-  **dan produksi** (semua 68 migrasi).
+  **dan produksi** (68 migrasi; sesudah `0068` urutan valuta, semuanya 69).
 - Peragaan end-to-end lokal (`moneychanger`): profil diisi data uji lokal (izin `KEP-UJI-LOKAL/2026`, ketentuan uang
   berawalan "Uji lokal:"), permintaan `LNY-20261112-JGVX0D` (+ beberapa "Uji Kinerja Lokal") dari tiket publik,
   kurs SAR +10 diaktifkan lewat `activateBoardDrafts` (alasan "Uji lokal halaman publik: peristiwa KURS BARU") →
@@ -110,8 +110,9 @@ yang disetujui hanya WhatsApp/telepon). Label "Telepon kedua" → "Nomor WhatsAp
 **Urutan valuta (diputuskan pemilik 12 Nov: "yeah okay"):** kolom `currencies.boardOrder` (migrasi `0068`) + layar Kurs →
 **Atur urutan** (ADMIN+, audit `CURRENCY_BOARD_ORDER_UPDATED`); papan staf, halaman publik, `/papan`, dan pesan WhatsApp
 memakai `shared/currencyOrder.ts`. Diperagakan di `moneychanger` (USD, SAR di atas). Gerbang lokal sesudahnya:
-`Tests 1873 passed | 6 skipped (1879)`, tsc 0, build, Playwright `59 passed`. **`0068` belum di produksi** (produksi 68 →
-sesudah deploy 69): deploy berikutnya memakai langkah yang sama dengan `00a0788` (pemilik menjalankan `!` scp + ssh).
+`Tests 1873 passed | 6 skipped (1879)`, tsc 0, build, Playwright `59 passed`. **Sudah di produksi** 12 Nov ±17.40 WIB:
+cadangan `20261112T104004Z`, image `moneychanger-app:b81c32e`, `Migrasi tercatat: 69 (baru diterapkan: 1)`, `DEPLOY-OK`;
+halaman publik diperiksa (0 galat konsol). Pemilik tinggal mengatur urutan di Kurs → Atur urutan.
 
 ### Yang tidak perlu ditemukan ulang (halaman publik)
 - CSS halaman publik **dibangkitkan**: `python3 scripts/publik-css.py docs/design/halaman-publik/rujukan-paspor-v3.html
