@@ -5,6 +5,8 @@
 # lalu: docker compose up -d --force-recreate caddy
 services:
   caddy:
+    # Caddyfile.mc (di certs/) = Caddyfile tokoemas apa adanya + situs money changer.
+    command: ["caddy", "run", "--config", "/etc/caddy/certs/Caddyfile.mc", "--adapter", "caddyfile"]
     networks:
       default: {}
       mc_edge:

@@ -41,8 +41,7 @@ Tanggal 12 November 2026 (WIB). Menggantikan `deploy.sh` + pm2 + `.github/workfl
 ```bash
 # Kode tanpa deploy key: di Mac → git bundle create mc.bundle <cabang>; scp mc.bundle deploy@187.77.148.118:/tmp/
 docker network create --subnet 172.30.0.0/24 --ip-range 172.30.0.0/25 mc_edge   # sekali per VPS
-sudo mkdir -p /opt/moneychanger && sudo chown deploy: /opt/moneychanger
-git clone /tmp/mc.bundle /opt/moneychanger && cd /opt/moneychanger/deploy/vps
+git clone -b deploy/docker-vps /tmp/mc.bundle ~/moneychanger   # user deploy tanpa sudo tanpa sandi → di folder rumah && cd ~/moneychanger/deploy/vps
 ./init-env.sh                                   # .env mode 600, rahasia acak dibuat
 nano .env                                       # APP_VERSION=$(git rev-parse --short HEAD), R2_*, BACKUP_*
 docker compose build
@@ -52,13 +51,23 @@ docker compose up -d web backup
 docker compose ps                                # web (healthy), mysql (healthy)
 ```
 
-Lalu sisi tokoemas (sesi tokoemas atau pemilik, **sesudah toko tutup**):
-1. salin `deploy/vps/tokoemas-caddy-override.yaml` ke `/opt/tokoemas/deploy/vps/compose.mc-edge.yaml` dan tambahkan ke
-   `COMPOSE_FILE` di `.env` tokoemas (`compose.yaml:compose.cloudflare.yaml:compose.mc-edge.yaml`);
-2. tempel isi `deploy/vps/caddy-site.caddy` ke `Caddyfile.cloudflare` tokoemas (ganti `DOMAIN-MONEYCHANGER`);
-3. taruh sertifikat di `/opt/tokoemas/deploy/vps/certs/mc-origin.{pem,key}`;
-4. `docker compose up -d --force-recreate caddy` di folder tokoemas.
-Cek: `curl -fsS https://<domain>/` → 200, dan `https://ibkshop.com` tetap 200.
+Lalu sisi tokoemas — **tanpa mengubah satu pun berkas tokoemas yang dilacak git** (dipasang 12 Nov 2026):
+1. kunci + CSR dibuat di VPS: `/opt/tokoemas/deploy/vps/certs/mc-origin.{key,csr}` (kunci tidak pernah keluar server);
+   sertifikat Origin CA dari dashboard Cloudflare (apex + `*.ibukotavalasindo.online`, s.d. 2041) → `certs/mc-origin.pem`,
+   dicek cocok dengan kuncinya (`openssl pkey -pubout` = `openssl x509 -pubkey`);
+2. `certs/mc-site.caddy` = isi `deploy/vps/caddy-site.caddy`; `certs/Caddyfile.mc` = `import /etc/caddy/Caddyfile` +
+   `import /etc/caddy/certs/mc-site.caddy` (konfigurasi tokoemas apa adanya + situs money changer);
+3. tanpa restart: `docker network connect --ip 172.30.0.254 mc_edge tokoemas-caddy-1`, lalu
+   `docker exec tokoemas-caddy-1 caddy validate|reload --config /etc/caddy/certs/Caddyfile.mc --adapter caddyfile`
+   (reload dijalankan atas perintah pemilik; ibkshop.com tetap 200 sebelum/sesudah);
+4. **permanen — sesudah toko tutup**: salin `deploy/vps/tokoemas-caddy-override.yaml` ke
+   `/opt/tokoemas/deploy/vps/compose.mc-edge.yaml`, tambahkan `:compose.mc-edge.yaml` ke `COMPOSE_FILE` di `.env` tokoemas,
+   lalu `docker compose up -d --force-recreate caddy`. Sampai itu dilakukan, restart kontainer Caddy biasa memuat
+   Caddyfile tokoemas saja (situs money changer hilang sampai reload langkah 3 diulang).
+
+Cloudflare (zona ibukotavalasindo.online, 12 Nov 2026): A apex dan A `backoffice` → 187.77.148.118 (proxied), CNAME `www`
+(proxied, dialihkan Caddy ke apex), AAAA lama server mati dihapus; SSL Full (strict), Always Use HTTPS, TLS minimum 1.2.
+MX lama (ke server mati) masih ada — menunggu keputusan pemilik.
 
 Penyiapan perusahaan:
 
@@ -78,7 +87,7 @@ docker compose exec backup backup.sh
 ## Pembaruan versi (sesudah jam operasional)
 
 ```bash
-cd /opt/moneychanger && git fetch /tmp/mc.bundle <cabang> && git merge --ff-only FETCH_HEAD
+cd ~/moneychanger && git fetch /tmp/mc.bundle <cabang> && git merge --ff-only FETCH_HEAD
 cd deploy/vps
 docker compose exec backup backup.sh                       # titik pulih sebelum migrasi; catat jam WIB
 sed -i "s/^APP_VERSION=.*/APP_VERSION=$(git rev-parse --short HEAD)/" .env
