@@ -63,7 +63,7 @@ Lalu sisi tokoemas — **tanpa mengubah satu pun berkas tokoemas yang dilacak gi
    (reload dijalankan atas perintah pemilik; ibkshop.com tetap 200 sebelum/sesudah);
 4. **permanen — sesudah toko tutup**: salin `deploy/vps/tokoemas-caddy-override.yaml` ke
    `/opt/tokoemas/deploy/vps/compose.mc-edge.yaml`, tambahkan `:compose.mc-edge.yaml` ke `COMPOSE_FILE` di `.env` tokoemas,
-   lalu `docker compose up -d --force-recreate caddy`. Sampai itu dilakukan, restart kontainer Caddy biasa memuat
+   lalu `docker compose up -d --force-recreate caddy`. **Dilakukan 12 Nov 2026 lewat `deploy/vps/tokoemas-caddy-permanent.sh` (LULUS).** Sebelum itu, restart kontainer Caddy biasa memuat
    Caddyfile tokoemas saja (situs money changer hilang sampai reload langkah 3 diulang).
 
 Cloudflare (zona ibukotavalasindo.online, 12 Nov 2026): A apex dan A `backoffice` → 187.77.148.118 (proxied), CNAME `www`

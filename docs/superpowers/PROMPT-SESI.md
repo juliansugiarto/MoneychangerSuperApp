@@ -89,8 +89,9 @@ menyebutnya celah ke pemilik): ambang USD 10.000 hanya pembelian + `>` (`b0fd469
 **Pelajaran:** sebelum menyebut sesuatu "belum ada", cari commit/kode-nya — catatan PROMPT-SESI/memori bisa basi.
 
 **Langkah pemilik yang tersisa (urut):**
-1. **Caddy permanen** — sesudah toko emas DAN outlet tutup (situs putus beberapa detik; rollback otomatis bila gagal):
-   `! ssh deploy@187.77.148.118 'sh ~/moneychanger/deploy/vps/tokoemas-caddy-permanent.sh'` → harus berakhir `LULUS`.
+1. ~~**Caddy permanen**~~ — **SELESAI 12 Nov 2026 18.21 WIB** (pemilik menjalankan `tokoemas-caddy-permanent.sh`: ketiga situs
+   200 sebelum/sesudah, `LULUS`; Caddy kini `--config /etc/caddy/certs/Caddyfile.mc`, `mc_edge=172.30.0.254`,
+   `COMPOSE_FILE=…:compose.mc-edge.yaml`). Restart Caddy biasa tidak lagi menghilangkan situs ini.
 2. **Cadangan di luar VPS (R2)** — Cloudflare dashboard → R2 → *Create bucket* `ibv-backup` (lokasi Asia-Pacific) →
    bucket itu → *Settings → Object lifecycle rules* → hapus objek sesudah 35 hari → R2 *Manage API tokens* → *Create
    token* "Object Read & Write", hanya bucket `ibv-backup` → salin Access Key ID, Secret, dan Account ID ke Claude
