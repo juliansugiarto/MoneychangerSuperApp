@@ -1,11 +1,12 @@
 import { useEffect } from "react";
+import { documentTitle } from "@/components/shell/brand";
 import { applyTheme } from "./brandAccent";
 
-type ThemeSource = { themePalette?: string | null; accentColor?: string | null } | null | undefined;
+type ThemeSource = { themePalette?: string | null; accentColor?: string | null; tradingName?: string | null; legalEntityName?: string | null } | null | undefined;
 
 /**
  * Memasang palet perusahaan ke `document.documentElement`. Selama sumbernya belum dimuat, tema bawaan
- * di `index.css` (Marun) tetap berlaku — tidak ada kedipan ke warna lain.
+ * di `index.css` (Marun) tetap berlaku — tidak ada kedipan ke warna lain. Judul tab ikut nama usahanya.
  */
 export function useCompanyTheme(source: ThemeSource) {
   const palette = source?.themePalette;
@@ -14,4 +15,8 @@ export function useCompanyTheme(source: ThemeSource) {
     if (palette === undefined) return;
     applyTheme(document.documentElement, palette, accent);
   }, [palette, accent]);
+  const title = source ? documentTitle(source) : null;
+  useEffect(() => {
+    if (title) document.title = title;
+  }, [title]);
 }

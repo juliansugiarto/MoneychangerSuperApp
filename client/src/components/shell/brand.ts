@@ -10,6 +10,11 @@ export function brandName(profile: { tradingName?: string | null; legalEntityNam
   return legal || PRODUCT_NAME;
 }
 
+/** Judul tab peramban: nama usaha dari Profil Perusahaan, bukan nama satu perusahaan yang tertulis mati. */
+export function documentTitle(profile: Parameters<typeof brandName>[0]): string {
+  return `${brandName(profile)} — Operasional Valuta`;
+}
+
 export function brandInitials(name: string): string {
   const words = name.trim().split(/\s+/).filter((word) => !LEGAL_FORM_WORDS.has(word.toUpperCase()));
   if (words.length >= 2) return `${words[0][0]}${words[1][0]}`.toUpperCase();

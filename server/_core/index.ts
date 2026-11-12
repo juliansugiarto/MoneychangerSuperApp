@@ -20,6 +20,8 @@ import { isRoleAllowed } from "../../shared/backOfficeNavigation";
 import { configureProxyTrust } from "../proxyTrust";
 import { getDb } from "../db";
 import { assertUtcSession } from "../utcSession";
+import { ENV } from "./env";
+import { securityHeaders } from "../securityHeaders";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -43,6 +45,7 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   configureProxyTrust(app);
+  app.use(securityHeaders({ isProduction: ENV.isProduction }));
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
