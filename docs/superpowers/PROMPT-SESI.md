@@ -190,7 +190,8 @@ tembusan BI + PPATK, kota dari isian. Laporan penghapusan nihil ditolak selama a
 tidak ada di daftar. `0065` hanya di moneychanger, mc_t_abcvalas, mc_t_visual. Gerbang: `Tests 1844 passed | 6 skipped (1850)` (+4 uji DTTOT baru), tsc 0, build; spec Playwright `laporanDttot` lolos.
 
 **Laporan DPPSPM ke PPATK SELESAI** (migrasi `0066`, layar yang sama "Laporan DTTOT & DPPSPM"; bentuk dari laporan nihil
-pemilik 22 April 2025). Berita acara DPPSPM belum punya contoh resmi PPATK (lihat rancangan).
+pemilik 22 April 2025). Berita acara DPPSPM belum punya contoh resmi PPATK (lihat rancangan). Gerbang sesudah `0707109`: `Tests 1848 passed | 6 skipped
+(1854)`, tsc 0, build, Playwright `59 passed`. Migrasi `0066` hanya di tiga DB lokal.
 
 **Berikutnya (urut):**
 (2) paket Docker ala tokoemas + cadangan terenkripsi ke R2 + `deploy.yml` baru; (3) penyederhanaan layar
