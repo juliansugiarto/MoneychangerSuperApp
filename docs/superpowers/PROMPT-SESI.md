@@ -70,23 +70,15 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## Sesi berikutnya — keadaan per 28 September 2026 (butir B SELESAI; berikutnya rancangan paket Windows portabel)
+## Sesi berikutnya — keadaan per 12 November 2026 (arah desktop DICABUT; aplikasi tetap daring)
 
-**Arah yang disepakati pengguna 26 September 2026 — jangan ditanyakan ulang:** aplikasi berpindah
-dari layanan web multi-tenant menjadi **aplikasi luring, satu toko satu instalasi**. Rinciannya:
-- **Hanya Windows untuk pelanggan**, paket portabel ala proyek `tokoEmas-IR` (zip ke `C:\…`, Node
-  dan MariaDB/MySQL portabel, peluncur membuka peramban; komputer lain di toko membuka
-  `http://<pc-server>:port`). Tanpa Electron, tanpa akun Apple Developer; Mac hanya pengembangan.
-- **Satu komputer bertindak server** bila toko punya lebih dari satu komputer.
-- **Laporan gabungan** hanya untuk pemilik yang punya beberapa gerai, lewat **berkas ekspor**
-  bertanda tangan dan terenkripsi (bukan sinkronisasi); SOLVINC tidak pernah melihat data toko.
-- **Lisensi hibrida:** berkas lisensi bertanda tangan, perpanjangan otomatis saat daring, kode
-  aktivasi lewat WhatsApp saat luring; bulanan/tahunan/sekali bayar; uji coba 30 hari; deteksi jam
-  dimundurkan. **Lisensi habis → mode baca-saja** (lihat, cari, cetak, ekspor regulator, cadangan
-  tetap jalan), sesuai kewajiban simpan 5 tahun.
-- Urutan program desktop: (1) paket Windows portabel, (2) penyimpanan lokal + cadangan, (3) lisensi,
-  (4) ekspor cabang + aplikasi konsolidasi, (5) pembersihan tenancy/R2/halaman publik. Keputusan 3
-  September (SaaS multi-tenant, login SOLVINC) **digantikan**; memori *solvinc-saas-architecture* basi.
+**Keputusan pengguna 12 November 2026 — jangan ditanyakan ulang:** seluruh arah "aplikasi desktop
+luring Windows" (26 September 2026: paket portabel, satu PC server per toko, lisensi hibrida, ekspor
+cabang bertanda tangan, pembersihan tenancy/R2/halaman publik) **DICABUT**. Aplikasi berjalan
+**daring**, seperti tokoemas-superapp. Kode tenancy, R2, dan halaman publik dipertahankan.
+Yang belum diputuskan: bentuk daringnya (satu perusahaan vs multi-tenant), hosting, dan apakah
+dibangun ulang sebagai V2 atau dirapikan di tempat. Riwayat di bawah ini dibiarkan apa adanya;
+setiap rujukan "sebelum/sesudah desktop" kini hanya berarti urutan waktu.
 
 **Daftar "sisa pekerjaan sebelum aplikasi desktop" — SELURUHNYA SELESAI/DIPUTUSKAN:**
 
@@ -153,23 +145,8 @@ snapshot; rumus IRA tidak berubah.
 - M8 `recordRelationshipEnd` periksa-lalu-tulis tidak atomik.
 - M9 `referenceCode` tidak dinormalkan (huruf besar/spasi) pada kunci kecocokan.
 
-**Tugas berikutnya: sesi rancangan program desktop langkah 1 — paket Windows portabel.** Belum
-punya spec maupun rencana. Pakai prompt di bawah.
-
-**Prompt untuk sesi berikutnya:**
-
-```
-Mulai sesi rancangan program aplikasi desktop langkah 1: paket Windows portabel
-(superpowers:brainstorming, lalu writing-plans). Baca dulu bagian "Sesi berikutnya" di
-docs/superpowers/PROMPT-SESI.md dan "Program Aplikasi Desktop" di
-docs/superpowers/ROADMAP-SISA-PEKERJAAN.md — arah 26 September jangan ditanyakan ulang.
-Telusuri proyek tokoEmas-IR sebagai rujukan paket portabel bila tersedia di mesin ini, dan
-telusuri server/_core, scripts/tenant.mjs, serta ketergantungan R2/tenancy yang akan tersentuh.
-Pertanyaan kebijakan (port, lokasi instalasi, MariaDB vs MySQL, pembaruan versi) tanyakan satu
-per satu. Hasilkan spec dan rencana bertugas, commit keduanya. Tutup dengan skill serah-terima.
-
-Baseline uji: Test Files 234 passed (234), Tests 1793 passed | 2 skipped (1795).
-```
+**Tugas berikutnya: menunggu keputusan pengguna — V2 dibangun ulang atau dirapikan di tempat**
+(lihat catatan 12 November di atas). Prompt sesi rancangan desktop yang dulu ada di sini dihapus.
 
 ---
 

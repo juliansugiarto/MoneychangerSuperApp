@@ -317,31 +317,22 @@ sebagai tidak ditatausahakan di aplikasi ini.
 
 ---
 
-### Program Aplikasi Desktop (luring, satu toko satu instalasi) — **ARAH DISEPAKATI 26 September 2026, belum dirancang**
+### Arah produk: aplikasi daring (web), bukan aplikasi desktop — **diputuskan pengguna 12 November 2026**
 
-Menggantikan arah SaaS multi-tenant 3 September. Windows saja untuk pelanggan (paket portabel ala
-`tokoEmas-IR`), satu PC server per toko, laporan gabungan pemilik lewat berkas ekspor, lisensi
-hibrida bulanan/tahunan/sekali bayar dengan uji coba 30 hari dan mode baca-saja saat habis. Dimulai
-**sesudah** butir B (keputusan pengguna) pada daftar sisa pekerjaan di `PROMPT-SESI.md`; butir A1–A6
-selesai 26 September 2026. Sub-proyek 3–9 program desain ulang **ditunda sampai sesudah pindah**.
-Butir B **diputuskan 28 September 2026**: B1 diterima, B2/B3/B4 dirancang dan direncanakan
-(`plans/2026-09-28-butir-b-sebelum-desktop.md`, 10 tugas), B5 dibuang ke daftar sesudah desktop di bawah.
-**Butir B SELESAI 28 September 2026** (`2e0691e`…): pemblokiran + percobaan transaksi (Temuan 3),
-tinjauan berkala klasifikasi (Temuan 7), dan pengisian tanggal berakhir nasabah INACTIVE lama; migrasi
-`0062` hanya di kedua basis data lokal. B1 (bentuk baru `server/tenantIsolation.live.test.ts`) diterima
-apa adanya — ujinya ikut terhapus bersama tenancy pada langkah 5 program ini.
+Arah "aplikasi desktop luring Windows, satu toko satu instalasi, lisensi berkas" yang disepakati
+26 September 2026 **DICABUT SELURUHNYA** oleh pengguna 12 November 2026: aplikasi tetap berjalan
+**daring**, seperti tokoemas-superapp. Paket Windows portabel, MariaDB portabel, lisensi hibrida,
+ekspor cabang bertanda tangan, dan pembersihan tenancy/R2/halaman publik **tidak dikerjakan**.
+Kode tenancy, R2, dan halaman publik **dipertahankan**. Butir B (selesai 28 September) tetap sah;
+ia hanya kebetulan dikerjakan "sebelum desktop".
 
-**Calon sesudah desktop (dibuang dari daftar sebelum pindah):**
-- Harga per seri uang kertas (lama/baru) — butir B5, diputuskan pengguna 28 September 2026. Menambah
-  dimensi seri pada `cash_denomination_balances` (sumber kebenaran kas), opname, kedua kaki bon, kelompok
-  kurs, dan laporan. Dibuka hanya bila toko pengguna aplikasi desktop memintanya. Cara resmi sampai
-  itu: harga diketik pada bon, dalam toleransi atau dengan alasan.
+Bentuk daringnya (satu perusahaan atau multi-tenant ala keputusan 3 September, hosting, dan apakah
+dibangun ulang sebagai V2) belum diputuskan — lihat `PROMPT-SESI.md` bagian "Sesi berikutnya".
 
-- [ ] 1 — Paket Windows portabel (Node + MariaDB/MySQL portabel, peluncur, mode server/klien LAN, CI Windows + uji asap)
-- [ ] 2 — Penyimpanan berkas lokal + cadangan/pemulihan (mengganti R2)
-- [ ] 3 — Lisensi (di aplikasi + alat penerbit SOLVINC)
-- [ ] 4 — Ekspor cabang + aplikasi konsolidasi pemilik
-- [ ] 5 — Pembersihan tenancy, R2, dan nasib halaman publik
+**Calon pekerjaan (dari butir B5, 28 September 2026):**
+- Harga per seri uang kertas (lama/baru). Menambah dimensi seri pada `cash_denomination_balances`
+  (sumber kebenaran kas), opname, kedua kaki bon, kelompok kurs, dan laporan. Dibuka hanya bila toko
+  memintanya. Cara resmi sampai itu: harga diketik pada bon, dalam toleransi atau dengan alasan.
 
 ### Program Desain Ulang Antarmuka — **DIRANCANG 12 September 2026; tema Konter Tebal dan sub-proyek 1B ditambahkan 13 September; sub-proyek 1 SELESAI 16 September; sub-proyek 1B SELESAI 21 September (14 dari 14 tugas); sub-proyek 2 SELESAI 26 September (15 dari 15 tugas)**
 
