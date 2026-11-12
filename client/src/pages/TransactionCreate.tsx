@@ -165,7 +165,8 @@ export default function TransactionCreate() {
   const usdOutletRate = usdCells.find((cell) => cell.rateTierId === null) ?? usdCells[0];
   const usdOutletPrice = usdOutletRate ? Number(operation === "BUY" ? usdOutletRate.activeBuyRate : usdOutletRate.activeSellRate) / (Number(usdOutletRate.quoteUnit) || 1) : 0;
   const estimatedUsdEquivalent = usdOutletPrice > 0 && totalRupiah > 0 ? totalRupiah / usdOutletPrice : 0;
-  const estimatedMeetsThreshold = estimatedUsdEquivalent >= 10000;
+  // Hanya pembelian valas oleh nasabah (bon SELL) yang tunduk pada ambang, dan baru "di atas" USD 10.000.
+  const estimatedMeetsThreshold = operation === "SELL" && estimatedUsdEquivalent > 10000;
   // Nudge, not enforcement — never auto-unchecks, so a teller's own manual reason for requiring
   // underlying is never silently discarded.
   useEffect(() => { if (estimatedMeetsThreshold) setUnderlyingRequired(true); }, [estimatedMeetsThreshold]);
@@ -516,7 +517,7 @@ export default function TransactionCreate() {
       <Card className="border-[#dce6f0]">
         <CardHeader><CardTitle className="font-display text-lg text-[#18395f]">5. Dokumen underlying</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          {estimatedMeetsThreshold ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">Perkiraan transaksi ini mencapai/melebihi setara USD 10.000 — dokumen underlying dan alasan wajib diisi (perkiraan pakai kurs outlet; pengecekan sebenarnya memakai kurs referensi BI saat disimpan).</p> : null}
+          {estimatedMeetsThreshold ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">Perkiraan pembelian ini di atas setara USD 10.000 — lengkapi dokumen underlying dan alasannya. Pengecekan akhir memakai kurs BI dan total pembelian nasabah bulan ini.</p> : null}
           <label className="flex gap-3 rounded-xl border p-3 text-sm"><input className="mt-1" type="checkbox" checked={underlyingRequired} onChange={(e) => setUnderlyingRequired(e.target.checked)} /><span><b>Dokumen underlying diperlukan</b><br /><small>Transaksi tidak dapat dikirim sebelum ketiga dokumen tersimpan.</small></span></label>
           {underlyingRequired ? <div className="space-y-2 rounded-xl bg-slate-50 p-3">
             <div><Label>Referensi dokumen</Label><Input className="mt-1" required value={underlyingReference} onChange={(e) => setUnderlyingReference(e.target.value)} placeholder="No. invoice / surat / dokumen" /></div>

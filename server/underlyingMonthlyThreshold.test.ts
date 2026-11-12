@@ -47,10 +47,11 @@ describe("ambang underlying atas akumulasi sebulan", () => {
     expect(result.requiresReview).toBe(false);
   });
 
-  it("memperlakukan tepat sepuluh ribu sebagai sudah mencapai ambang", () => {
-    // Ketentuannya "maksimal USD 10.000 tanpa dokumen", jadi tepat di angka itu sudah termasuk.
-    const result = assessReviewRequirement({ ...base, rupiahAmount: rupiahFor(10000), monthlyRupiahTotal: rupiahFor(10000) });
-    expect(result.exceedsThreshold).toBe(true);
+  it("tepat USD 10.000 belum wajib underlying; sedikit di atasnya sudah", () => {
+    // PADG 15/2026: transaksi "dengan nominal di atas threshold" wajib underlying; sampai dengan
+    // USD 10.000 cukup surat pernyataan nasabah.
+    expect(assessReviewRequirement({ ...base, rupiahAmount: rupiahFor(10000), monthlyRupiahTotal: rupiahFor(10000) }).exceedsThreshold).toBe(false);
+    expect(assessReviewRequirement({ ...base, rupiahAmount: "160000016", monthlyRupiahTotal: "160000016" }).exceedsThreshold).toBe(true);
   });
 
   it("melaporkan nilai setara USD transaksi dan akumulasinya secara terpisah", () => {
@@ -71,5 +72,22 @@ describe("ambang underlying atas akumulasi sebulan", () => {
     const result = assessReviewRequirement({ thresholdUsd: THRESHOLD, profileStatus: "ACTIVE", riskLevel: "LOW", rupiahAmount: rupiahFor(12000), monthlyRupiahTotal: rupiahFor(12000) });
     expect(result.exceedsThreshold).toBe(false);
     expect(result.usdEquivalent).toBeNull();
+  });
+
+  it("hanya pembelian valas oleh nasabah yang dihitung: nasabah yang MENJUAL valas tidak dimintai underlying", () => {
+    // Bon BUY (kita membeli dari nasabah) sebesar USD 12.000 tidak tunduk pada ambang pembelian.
+    const jualKeKita = assessReviewRequirement({ ...base, operation: "BUY", rupiahAmount: rupiahFor(12000), monthlyRupiahTotal: rupiahFor(12000), monthlyPurchaseRupiahTotal: "0" });
+    expect(jualKeKita.exceedsThreshold).toBe(false);
+  });
+
+  it("akumulasi ambang memakai total PEMBELIAN sebulan, bukan total seluruh bon nasabah", () => {
+    // Bulan ini nasabah menjual USD 9.000 ke kita lalu membeli USD 3.000: total semua bon USD 12.000,
+    // tetapi pembeliannya baru USD 3.000 — belum wajib underlying.
+    const result = assessReviewRequirement({ ...base, operation: "SELL", rupiahAmount: rupiahFor(3000), monthlyRupiahTotal: rupiahFor(12000), monthlyPurchaseRupiahTotal: rupiahFor(3000) });
+    expect(result.exceedsThreshold).toBe(false);
+    // Pembelian kedua yang membawa akumulasi pembelian ke USD 11.000 sudah wajib.
+    const kedua = assessReviewRequirement({ ...base, operation: "SELL", rupiahAmount: rupiahFor(8000), monthlyRupiahTotal: rupiahFor(20000), monthlyPurchaseRupiahTotal: rupiahFor(11000) });
+    expect(kedua.exceedsThreshold).toBe(true);
+    expect(kedua.exceedsOnAccumulation).toBe(true);
   });
 });

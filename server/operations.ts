@@ -258,6 +258,13 @@ export function assessReviewRequirement(input: {
    * bukan atas satu transaksi.
    */
   monthlyRupiahTotal?: string | null;
+  /**
+   * Arah bon. Ambang underlying hanya berlaku atas **pembelian valas oleh nasabah** (bon SELL kita);
+   * nasabah yang menjual valas kepada kita (BUY) tidak tunduk padanya. Kosong = diperlakukan pembelian.
+   */
+  operation?: "BUY" | "SELL";
+  /** Total Rupiah pembelian valas nasabah (bon SELL) sebulan berjalan, termasuk bon ini — dasar ambang underlying. */
+  monthlyPurchaseRupiahTotal?: string | null;
   eddCashDailyThresholdIdr?: string | null;
   isCashPayment?: boolean;
   profileStatus: "ACTIVE" | "INACTIVE" | "RESTRICTED";
@@ -286,11 +293,14 @@ export function assessReviewRequirement(input: {
    * dengan transaksi berjalan, bukan kurs masing-masing transaksi lama; satu dasar konversi membuat
    * angka ambang dapat ditelusuri ulang dan tidak berubah-ubah karena kurs harian.
    */
-  const monthlyUsdEquivalent = input.monthlyRupiahTotal ? toUsd(input.monthlyRupiahTotal) : null;
+  const purchaseTotal = input.monthlyPurchaseRupiahTotal ?? input.monthlyRupiahTotal;
+  const monthlyUsdEquivalent = purchaseTotal ? toUsd(purchaseTotal) : null;
   const assessedUsd = monthlyUsdEquivalent ?? usdEquivalent;
-  const exceedsThreshold = assessedUsd ? assessedUsd.gte(new Decimal(input.thresholdUsd)) : false;
+  // PADG 15/2026: pembelian "dengan nominal di atas threshold" wajib underlying — tepat di ambang belum.
+  const threshold = new Decimal(input.thresholdUsd);
+  const exceedsThreshold = input.operation !== "BUY" && assessedUsd ? assessedUsd.gt(threshold) : false;
   const exceedsOnAccumulation = Boolean(
-    exceedsThreshold && usdEquivalent && !usdEquivalent.gte(new Decimal(input.thresholdUsd)),
+    exceedsThreshold && usdEquivalent && !usdEquivalent.gt(threshold),
   );
   const exceedsCashDailyEdd = input.isCashPayment && input.cashDailyRupiahTotal && input.eddCashDailyThresholdIdr
     ? new Decimal(input.cashDailyRupiahTotal).gte(new Decimal(input.eddCashDailyThresholdIdr))
@@ -1721,6 +1731,8 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   const nextMonth = startOfNextOperationalMonth(input.transactionAt);
   const monthlyAccumulation = (await db.select({
     total: sql<string>`COALESCE(SUM(${exchangeTransactions.rupiahAmount}), 0)`,
+    // Dasar ambang underlying: hanya pembelian valas oleh nasabah (bon SELL kita).
+    purchaseTotal: sql<string>`COALESCE(SUM(CASE WHEN ${exchangeTransactions.operation} = 'SELL' THEN ${exchangeTransactions.rupiahAmount} ELSE 0 END), 0)`,
     // Banyaknya transaksi dipakai bendera penyimpangan profil: pemecahan transaksi justru terlihat
     // di sini, bukan pada totalnya.
     count: sql<number>`COUNT(*)`,
@@ -1735,11 +1747,12 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     eq(exchangeTransactions.isHistorical, false),
   )))[0];
   const monthlyRupiahTotal = new Decimal(monthlyAccumulation?.total ?? "0").plus(rupiahAmount).toFixed(2);
+  const monthlyPurchaseRupiahTotal = new Decimal(monthlyAccumulation?.purchaseTotal ?? "0").plus(input.operation === "SELL" ? rupiahAmount : 0).toFixed(2);
   // Transaksi yang sedang dibuat ikut dihitung, sama seperti nilainya.
   const monthlyTransactionCount = Number(monthlyAccumulation?.count ?? 0) + 1;
   const assessment = assessReviewRequirement({
     rupiahAmount, thresholdUsd: thresholds.reviewThresholdUsd, usdSellRate: usdBiReferenceRate?.sellRate, usdQuoteUnit: usdBiReferenceRate?.quoteUnit,
-    cashDailyRupiahTotal, monthlyRupiahTotal, eddCashDailyThresholdIdr: thresholds.eddCashDailyThresholdIdr,
+    cashDailyRupiahTotal, monthlyRupiahTotal, monthlyPurchaseRupiahTotal, operation: input.operation, eddCashDailyThresholdIdr: thresholds.eddCashDailyThresholdIdr,
     isCashPayment: input.paymentMethod === "CASH", profileStatus: customer.profileStatus, riskLevel: customer.riskLevel,
     declaredMonthlyValueIdr: customer.declaredMonthlyValueIdr,
     declaredMonthlyCount: customer.declaredMonthlyCount,
@@ -1750,13 +1763,13 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
     monthlyTransactionCount,
   });
 
-  // Underlying stops being optional once the >=10,000 USD-equivalent threshold is met — PBI
-  // 18/20/PBI/2016 requires it, so the teller's checkbox choice is overridden, not just defaulted.
+  // Underlying stops being optional once the customer's monthly PURCHASES go above the USD-equivalent
+  // threshold (PADG 15/2026: USD 10.000 since 1 July 2026) — so the teller's checkbox choice is overridden.
   // The business-reason field is required alongside it (separate from underlyingNotes, which is
   // about the documents themselves).
   const underlyingRequired = assessment.exceedsThreshold || (input.underlyingRequired ?? false);
   if (assessment.exceedsThreshold && !input.thresholdReason?.trim()) {
-    throw new Error("Transaksi ini mencapai ambang setara USD 10.000 — alasan wajib diisi sebelum melanjutkan.");
+    throw new Error("Pembelian valas nasabah bulan ini sudah di atas ambang setara USD 10.000 — isi alasan dan lengkapi underlying.");
   }
 
   // TKM (Transaksi Keuangan Mencurigakan) — never auto-approved: flagging it always forces human

@@ -52,8 +52,9 @@ describe("review thresholds and immutable rate snapshots", () => {
     expect(normalizeRateShockThreshold("1.23456")).toBe("1.2346");
   });
 
-  it("flags an amount exactly at the configured USD-equivalent threshold", () => {
-    expect(assessReviewRequirement({ rupiahAmount: "160000000.00", thresholdUsd: "10000.00", usdSellRate: "16000.00", usdQuoteUnit: "1.00", profileStatus: "ACTIVE", riskLevel: "LOW" })).toMatchObject({ requiresReview: true, reviewReason: "NILAI_SETARA_USD_MELEBIHI_AMBANG" });
+  it("flags an amount just above the configured USD-equivalent threshold (exactly at it needs no underlying)", () => {
+    expect(assessReviewRequirement({ rupiahAmount: "160000000.00", thresholdUsd: "10000.00", usdSellRate: "16000.00", usdQuoteUnit: "1.00", profileStatus: "ACTIVE", riskLevel: "LOW" }).exceedsThreshold).toBe(false);
+    expect(assessReviewRequirement({ rupiahAmount: "160016000.00", thresholdUsd: "10000.00", usdSellRate: "16000.00", usdQuoteUnit: "1.00", profileStatus: "ACTIVE", riskLevel: "LOW" })).toMatchObject({ requiresReview: true, reviewReason: "NILAI_SETARA_USD_MELEBIHI_AMBANG" });
   });
 
   it("flags a high-risk profile even below the value threshold", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { bankAccounts, currencies, customers, exchangeTransactions, operationalRates, operationalSettings, rateReferenceSnapshots } from "../drizzle/schema";
+import { bankAccounts, cashBalances, cashDenominationBalances, currencies, customers, exchangeTransactions, operationalRates, operationalSettings, rateReferenceSnapshots } from "../drizzle/schema";
 import * as db from "./db";
 import { createTransaction } from "./operations";
 
@@ -170,8 +170,12 @@ describe("createTransaction — underlying threshold reason", () => {
       [bankAccounts, [activeBankAccount]],
       [rateReferenceSnapshots, [{ rate: usdReferenceRate }]],
       [operationalSettings, [reviewSettings]],
+      // Bon SELL mengeluarkan valas: laci tiruan perlu stok cukup agar pemeriksaan stok tidak mendahului ambang.
+      [cashBalances, [{ id: 1, currencyId: 2, availableAmount: "1000000.000000" }]],
+      [cashDenominationBalances, [{ currencyId: 2, denominationValue: "100.000000", quantity: 5000 }]],
     ]));
-    await expect(createTransaction({ ...baseInput, lines: [largeLine] }, 9)).rejects.toThrow(/ambang setara USD 10.000/);
+    // Ambang berlaku atas pembelian valas oleh nasabah: bon SELL.
+    await expect(createTransaction({ ...baseInput, operation: "SELL", lines: [largeLine] }, 9)).rejects.toThrow(/ambang setara USD 10.000/);
     getDb.mockRestore();
   });
 
