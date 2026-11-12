@@ -70,7 +70,41 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## MULAI DI SINI — keadaan per 12 November 2026 sore (WIB)
+## MULAI DI SINI — keadaan per 12 November 2026 malam, sesudah autorun (WIB)
+
+**Izin tetap pemilik (12 Nov):** Claude boleh deploy, merge, dan menjalankan langkah server untuk menyelesaikan proyek
+tanpa bertanya (memori `owner-authorizes-deploy-merge`). Cadangan sebelum setiap migrasi; bukti keluaran untuk setiap klaim.
+Pengklasifikasi tetap menolak perubahan pada tumpukan **tokoemas** (Caddy) → itu satu-satunya langkah server milik pemilik.
+
+**Produksi sekarang:** image `moneychanger-app:47fb3ff7` (= `main` = `deploy/docker-vps`), 69 migrasi, cadangan terakhir
+`20261112T105416Z`. **Uji pulih LULUS di produksi** (cadangan segar `20261112T104346Z`: 73/73 tabel, migrasi 69/69,
+`EXIT=0`). `main` di-fast-forward; tidak ada workflow GitHub lagi (penerapan = bundle → VPS, `docs/deployment/vps.md`).
+
+**Gerbang lokal terakhir (pada `47fb3ff`):** `Tests 1878 passed | 6 skipped (1884)`, tsc 0, build, Playwright `59 passed`.
+
+**Dikerjakan autorun:** pengumuman publik hanya kolom pengunjung; temuan minor M4, M6, M8, M9 (uji RED→GREEN);
+`affectedRows` satu helper. **Diperiksa ulang dan ternyata SUDAH ADA** (daftar lama basi; Claude sempat salah
+menyebutnya celah ke pemilik): ambang USD 10.000 hanya pembelian + `>` (`b0fd469`), pernyataan nasabah di kwitansi
+(`d512d11`), alur DTTOT/DPPSPM dari surel BI (`3032a5d` dst.), tanggal nota zona profil (`b7bf632`).
+**Pelajaran:** sebelum menyebut sesuatu "belum ada", cari commit/kode-nya — catatan PROMPT-SESI/memori bisa basi.
+
+**Langkah pemilik yang tersisa (urut):**
+1. **Caddy permanen** — sesudah toko emas DAN outlet tutup (situs putus beberapa detik; rollback otomatis bila gagal):
+   `! ssh deploy@187.77.148.118 'sh ~/moneychanger/deploy/vps/tokoemas-caddy-permanent.sh'` → harus berakhir `LULUS`.
+2. **Cadangan di luar VPS (R2)** — Cloudflare dashboard → R2 → *Create bucket* `ibv-backup` (lokasi Asia-Pacific) →
+   bucket itu → *Settings → Object lifecycle rules* → hapus objek sesudah 35 hari → R2 *Manage API tokens* → *Create
+   token* "Object Read & Write", hanya bucket `ibv-backup` → salin Access Key ID, Secret, dan Account ID ke Claude
+   (atau tulis langsung ke `~/moneychanger/deploy/vps/.env`: `BACKUP_R2_ACCESS_KEY_ID`, `BACKUP_R2_SECRET_ACCESS_KEY`,
+   `R2_ACCOUNT_ID`, `BACKUP_REMOTE=r2:ibv-backup`). Claude lalu memasang, menjalankan cadangan, dan uji pulih dari R2.
+3. **Simpan kata sandi cadangan di luar VPS** (`BACKUP_CIPHER_PASS` di `.env` VPS) ke pengelola kata sandi pemilik.
+   Tanpa itu, cadangan di R2 pun tidak bisa dibuka bila VPS mati.
+4. **Isi Profil Perusahaan** (telepon, alamat, nomor izin + kode KUPVA, jadwal buka, WhatsApp, peta), **buat akun staf**,
+   **Kurs → Atur urutan**, aktifkan kurs pertama, kas awal, satu-dua bon di mode **Latihan** sebelum nasabah sungguhan.
+
+**Temuan minor yang sengaja dibiarkan:** M1 (dua penyaringan serentak → dua blokir OPEN; gagal-aman), M2 (gerbang blokir
+di luar transaksi bon), M3 dan M5 (spec diam/ambigu — butuh keputusan pemilik), M7 (kinerja penyaringan massal).
+
+## Keadaan sebelumnya — 12 November 2026 sore (WIB)
 
 **Halaman publik "Paspor & cap" SELESAI DIBANGUN di cabang `deploy/docker-vps`** (`95625dd`…`b3741cf`). Rencana `plans/2026-11-12-halaman-publik-paspor.md`: irisan 1–4 tercentang,
 irisan 5 tinggal butir terakhir (pemilik melihat → deploy produksi, keputusan pemilik).
