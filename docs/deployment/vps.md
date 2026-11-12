@@ -41,7 +41,8 @@ Tanggal 12 November 2026 (WIB). Menggantikan `deploy.sh` + pm2 + `.github/workfl
 ```bash
 # Kode tanpa deploy key: di Mac → git bundle create mc.bundle <cabang>; scp mc.bundle deploy@187.77.148.118:/tmp/
 docker network create --subnet 172.30.0.0/24 --ip-range 172.30.0.0/25 mc_edge   # sekali per VPS
-git clone -b deploy/docker-vps /tmp/mc.bundle ~/moneychanger   # user deploy tanpa sudo tanpa sandi → di folder rumah && cd ~/moneychanger/deploy/vps
+# user deploy tidak punya sudo tanpa sandi → folder rumah
+git clone -b deploy/docker-vps /tmp/mc.bundle ~/moneychanger && cd ~/moneychanger/deploy/vps
 ./init-env.sh                                   # .env mode 600, rahasia acak dibuat
 nano .env                                       # APP_VERSION=$(git rev-parse --short HEAD), R2_*, BACKUP_*
 docker compose build
