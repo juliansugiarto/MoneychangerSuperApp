@@ -146,10 +146,21 @@ snapshot; rumus IRA tidak berubah.
 - M8 `recordRelationshipEnd` periksa-lalu-tulis tidak atomik.
 - M9 `referenceCode` tidak dinormalkan (huruf besar/spasi) pada kunci kecocokan.
 
-**Tugas berikutnya: paket "Siap daring"** — perbaiki U1, U2, K1, K2, K3, K4 (lalu U3–U5) dari
-`docs/audits/2026-11-12-audit-kualitas-sebelum-daring.md`, dengan uji MySQL sungguhan untuk U1/U2.
-Audit selesai 12 November: putusan **rapikan di tempat, bukan tulis ulang**. Cabang
-`chore/buang-sisa-manus` (`3be51cf`) belum digabung. **Push `main` = deploy produksi otomatis.** Prompt sesi rancangan desktop yang dulu ada di sini dihapus.
+**Paket "Siap daring" SELESAI 12 November** di cabang `fix/siap-daring` (11 commit di atas `main`, sudah
+di-push; BELUM digabung): U1–U5 dan K1–K4 audit diperbaiki + kebuntuan pool `writeAudit`, sisa Manus,
+judul tab white-label, kirim/tinjau bersyarat status, pelunasan ganda. Gerbang penuh pada `43b1e2c`:
+`Test Files 240 passed | 1 skipped (241)`, `Tests 1819 passed | 6 skipped (1825)`, tsc 0, build lulus,
+Playwright `55 passed`; sesudah `6c2fc8f` (server saja): `Tests 1821 passed | 6 skipped (1827)`, tsc 0.
+Uji suite memerlukan `.env` dimuat (`set -a; . ./.env; set +a`).
+
+**Server lama 187.53.128.14 MATI** (kunci host SSH berganti; produksinya kosong: 0 nasabah/bon/kurs).
+Rumah baru: VPS tokoemas 187.77.148.118 (4 vCPU, 15 GB, ±12 GB bebas) sebagai tumpukan Docker sendiri di
+belakang Caddy tokoemas; `ibukotavalasindo.online` masih menunjuk IP lama. **Push `main` memicu
+`deploy.yml` ke server mati** — tulis ulang deploy sebelum menggabung.
+
+**Berikutnya (urut):** (1) pemilik memutuskan pembalikan bon COMPLETED dan kembalian/pembulatan Rupiah;
+(2) paket Docker ala tokoemas + cadangan terenkripsi ke R2 + `deploy.yml` baru; (3) penyederhanaan layar
+Kasir & transaksi (sub-proyek 4); (4) CSP `script-src` sesudah jendela cetak berhenti memakai skrip sebaris.
 
 ---
 
