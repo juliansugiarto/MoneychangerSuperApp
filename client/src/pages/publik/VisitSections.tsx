@@ -1,14 +1,14 @@
 import { scheduleLines, type OpeningSchedule, type OpeningStatusText } from "@shared/openingStatus";
-import { hasMoneyRules, telHref, type MoneyRules } from "@shared/publicPage";
+import { moneyRulesOrDefault, telHref, type MoneyRules } from "@shared/publicPage";
 import { LiveNote, useCopyNote } from "./ShareSection";
 import { Kick, PageNo, Spread } from "./Spread";
 import { StatusLine } from "./StatusLine";
 import { Icon } from "./SvgDefs";
 import { whatsappHref, type Identity } from "./viewModel";
 
-/** §5 Pecahan dan kondisi uang. Tidak tampil sama sekali bila pemilik belum mengisi ketentuannya (spec teks §4). */
-export function RulesSection({ identity, rules, phone }: { identity: Identity; rules: MoneyRules | null; phone: string | null }) {
-  if (!rules || !hasMoneyRules(rules)) return null;
+/** §5 Pecahan dan kondisi uang: ketentuan perusahaan, atau ketentuan umum selama belum diisi. */
+export function RulesSection({ identity, rules: own, phone }: { identity: Identity; rules: MoneyRules | null; phone: string | null }) {
+  const rules = moneyRulesOrDefault(own);
   const items = [rules.denominations, rules.condition, rules.series].filter((item): item is string => Boolean(item?.trim()));
   return (
     <section className="sec" id="ketentuan" aria-labelledby="h-rules">

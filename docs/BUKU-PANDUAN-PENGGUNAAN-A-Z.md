@@ -267,7 +267,7 @@ Alasannya: kas awal **pertama** untuk sebuah mata uang tidak dijurnal — kalau 
      "belum diisi" dan halaman menulis *Jam belum tersedia*, bukan *Tutup*.
    - **Catatan jam buka** (opsional, mis. tutup pada hari libur nasional).
    - **Ketentuan uang**: pecahan yang diterima, kondisi uang, dan seri uang (masing-masing ≤ 500 huruf).
-     Tulis hanya yang benar-benar berlaku; bila ketiganya kosong, bagian *Pecahan dan kondisi uang* tidak tampil.
+     Bila ketiganya kosong, halaman memakai tiga ketentuan umum (kurs beda per pecahan, uang rusak bisa ditolak, seri lama bisa beda kurs; tampil abu-abu di isian). Begitu satu diisi, hanya isian perusahaan yang tampil.
    - Tautan peta (hanya `https://`), sampai **12 pertanyaan umum**, dan peringatan penipuan tambahan.
    Alamat, telepon utama, nama badan hukum, **nomor izin, dan kode KUPVA** diambil dari Data badan usaha dan
    **ditampilkan** di bagian *Berizin Bank Indonesia* serta kaki halaman (sejak 12 Nov 2026). NPWP, NIB,

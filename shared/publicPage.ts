@@ -8,14 +8,31 @@ import { checkOpeningSchedule, type OpeningSchedule } from "./openingStatus";
 export type PublicFaqItem = { question: string; answer: string };
 
 /**
- * Ketentuan uang (spec teks §4): tiga butir faktual yang diisi pemilik. Semua kosong = bagian
- * disembunyikan; tidak ada teks bawaan karena ketentuan penerimaan uang tidak boleh ditebak.
+ * Ketentuan uang (spec teks §4): tiga butir yang diisi pemilik. Semua kosong = halaman memakai
+ * `DEFAULT_MONEY_RULES` (keputusan pemilik 12 Nov 2026: "isi dulu dengan yang umum").
  */
 export type MoneyRules = { denominations: string | null; condition: string | null; series: string | null };
 export const MONEY_RULE_MAX_LENGTH = 500;
 
 export function hasMoneyRules(rules: Partial<MoneyRules> | null | undefined): boolean {
   return Boolean(rules && [rules.denominations, rules.condition, rules.series].some((value) => value?.trim()));
+}
+
+/**
+ * Ketentuan umum yang berlaku di hampir semua money changer, tanpa nama atau angka perusahaan. Sengaja
+ * memakai "bisa": tidak menjanjikan penerimaan maupun penolakan tertentu atas nama outlet.
+ */
+export const DEFAULT_MONEY_RULES: MoneyRules = {
+  denominations: "Kurs bisa berbeda menurut pecahan. Pecahan besar, misalnya USD 100, biasanya mendapat kurs lebih baik daripada pecahan kecil.",
+  condition: "Uang yang robek, bercoret, berstempel, atau rusak bisa ditolak atau mendapat kurs lebih rendah. Petugas memeriksa setiap lembar.",
+  series: "Uang seri lama bisa mendapat kurs berbeda atau tidak diterima. Tanyakan petugas bila uang Anda seri lama.",
+};
+
+/** Ketentuan milik perusahaan bila ada isinya; selain itu ketentuan umum. */
+export function moneyRulesOrDefault(rules: Partial<MoneyRules> | null | undefined): MoneyRules {
+  return rules && hasMoneyRules(rules)
+    ? { denominations: rules.denominations?.trim() || null, condition: rules.condition?.trim() || null, series: rules.series?.trim() || null }
+    : DEFAULT_MONEY_RULES;
 }
 
 export const PUBLIC_FAQ_LIMIT = 12;

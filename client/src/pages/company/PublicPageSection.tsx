@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { OpeningSchedule } from "@shared/openingStatus";
-import { DEFAULT_FRAUD_WARNING, MONEY_RULE_MAX_LENGTH, normalizePublicPage, type MoneyRules, type PublicFaqItem, type PublicPageValues } from "@shared/publicPage";
+import { DEFAULT_FRAUD_WARNING, DEFAULT_MONEY_RULES, MONEY_RULE_MAX_LENGTH, normalizePublicPage, type MoneyRules, type PublicFaqItem, type PublicPageValues } from "@shared/publicPage";
 import { useState } from "react";
 import { FaqEditor } from "./FaqEditor";
 import { OpeningScheduleEditor, fromScheduleDraft, toScheduleDraft } from "./OpeningScheduleEditor";
@@ -22,9 +22,9 @@ type Initial = {
 };
 
 const MONEY_RULE_FIELDS = [
-  { key: "denominations", label: "Pecahan yang diterima", placeholder: "Mis. USD pecahan 50 dan 100 memakai kurs besar; pecahan kecil kursnya lebih rendah." },
-  { key: "condition", label: "Kondisi uang", placeholder: "Mis. Uang robek, bercoret, atau berstempel tidak kami terima." },
-  { key: "series", label: "Seri uang", placeholder: "Mis. USD seri sebelum 2006 kursnya berbeda." },
+  { key: "denominations", label: "Pecahan yang diterima" },
+  { key: "condition", label: "Kondisi uang" },
+  { key: "series", label: "Seri uang" },
 ] as const;
 
 /**
@@ -80,11 +80,11 @@ export function PublicPageSection({ initial, isPending, onSave }: { initial: Ini
         </div>
         <fieldset className="grid gap-2">
           <legend className="text-body font-bold text-ink">Ketentuan uang</legend>
-          <p className="text-label text-ink-muted">Tulis hanya yang benar-benar berlaku di outlet. Bila semuanya kosong, bagian ini tidak tampil.</p>
+          <p className="text-label text-ink-muted">Tulis yang berlaku di outlet. Bila ketiganya kosong, halaman memakai ketentuan umum (contoh abu-abu di bawah).</p>
           {MONEY_RULE_FIELDS.map((field) => (
             <div key={field.key} className="grid gap-1">
               <Label htmlFor={`money-rule-${field.key}`}>{field.label}</Label>
-              <Textarea id={`money-rule-${field.key}`} rows={2} maxLength={MONEY_RULE_MAX_LENGTH} placeholder={field.placeholder} className={QUIET_FIELD} value={moneyRules[field.key] ?? ""} onChange={(event) => setMoneyRules({ ...moneyRules, [field.key]: event.target.value })} />
+              <Textarea id={`money-rule-${field.key}`} rows={2} maxLength={MONEY_RULE_MAX_LENGTH} placeholder={DEFAULT_MONEY_RULES[field.key] ?? undefined} className={QUIET_FIELD} value={moneyRules[field.key] ?? ""} onChange={(event) => setMoneyRules({ ...moneyRules, [field.key]: event.target.value })} />
             </div>
           ))}
         </fieldset>

@@ -81,7 +81,7 @@ irisan 5 tinggal butir terakhir (pemilik melihat → deploy produksi, keputusan 
    nullable di `company_profile`; produksi kini di 67 migrasi, sesudahnya 68).
 2. Sesudah deploy: pemilik mengisi di Profil Perusahaan → Halaman publik: **jadwal buka** (Sen–Sab 09–17, Minggu tutup),
    **Nomor WhatsApp** 0811-260-269, telepon (0263) 265-500, alamat, tautan peta, **nomor izin + kode KUPVA** (kini tampil
-   di halaman), dan ketentuan uang bila ada. Tanpa jadwal, chip menulis "Jam belum tersedia".
+   di halaman), dan ketentuan uang sendiri bila ada (kosong = 3 ketentuan umum). Tanpa jadwal, chip menulis "Jam belum tersedia".
 3. Pertanyaan untuk pemilik (lihat bawah), lalu lanjut ke pekerjaan berikutnya di daftar "belum dirancang".
 
 **Keadaan terukur (dijalankan sesi ini, pada `b3741cf`):**
@@ -107,7 +107,7 @@ yang disetujui hanya WhatsApp/telepon). Label "Telepon kedua" → "Nomor WhatsAp
 1. Urutan papan kurs: kini **abjad kode** (AED, AUD, CNY, EUR…) — sama dengan sebelumnya dan netral white-label. Rujukan
    yang disetujui memperlihatkan USD lalu SAR di atas. Pesan WhatsApp mengambil 4 valuta teratas urutan ini. Mau urutan
    sendiri (kolom urutan per valuta di layar Kurs)? Rekomendasi: ya, kecil.
-2. Nomor tag bagian tetap 01–09 walau bagian Ketentuan uang tersembunyi (nomor "05" hilang). Biarkan atau dinomori ulang?
+(Pertanyaan nomor tag bagian gugur: ketentuan uang kini selalu tampil — kosong = ketentuan umum `DEFAULT_MONEY_RULES`, keputusan pemilik 12 Nov.)
 
 ### Yang tidak perlu ditemukan ulang (halaman publik)
 - CSS halaman publik **dibangkitkan**: `python3 scripts/publik-css.py docs/design/halaman-publik/rujukan-paspor-v3.html

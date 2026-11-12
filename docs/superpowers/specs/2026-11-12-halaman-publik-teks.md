@@ -204,7 +204,7 @@ Tidak ada janji penguncian kurs. Ketentuan kondisi uang dan pengumuman tidak dii
 | Ketentuan seri | [Ketentuan seri uang dari Profil Perusahaan] | Jangan menetapkan batas tahun seri, termasuk USD sebelum 2006, tanpa isi profil yang disetujui. |
 | Arahkan pertanyaan | Belum yakin dengan kondisi uang Anda? Telepon {telepon} sebelum datang. | Tidak meminta foto identitas atau pembayaran. |
 | Tombol kontak | Telepon outlet | Membuka panggilan ke nomor yang ditampilkan. |
-| Kosong | Tidak ditampilkan | Arahan saja: seluruh bagian disembunyikan jika ketentuan profil kosong; jangan tayangkan teks ini. |
+| Kosong | Ketentuan umum `DEFAULT_MONEY_RULES` (`shared/publicPage.ts`) | Keputusan pemilik 12 Nov 2026 ("isi dulu dengan yang umum"): tiga kalimat "bisa …" tanpa janji atas nama outlet; isi profil menggantikannya. |
 | Memuat atau gagal | Tidak ditampilkan | Arahan saja: gunakan keadaan profil di kepala halaman; jangan membuat kebijakan pengganti. |
 
 ## §5 Datang ke outlet

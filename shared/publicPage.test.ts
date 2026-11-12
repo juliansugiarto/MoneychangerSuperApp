@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FRAUD_WARNING, DEFAULT_PUBLIC_FAQ, fraudWarningOrDefault, hasContactSection, isSafeMapUrl, normalizePublicPage, publicFaqOrDefault, telHref } from "./publicPage";
+import { DEFAULT_FRAUD_WARNING, DEFAULT_MONEY_RULES, DEFAULT_PUBLIC_FAQ, moneyRulesOrDefault, fraudWarningOrDefault, hasContactSection, isSafeMapUrl, normalizePublicPage, publicFaqOrDefault, telHref } from "./publicPage";
 
 const base = { publicPageEnabled: true, publicFaq: [] };
 
@@ -54,5 +54,14 @@ describe("isian halaman publik", () => {
     const thirteen = Array.from({ length: 13 }, (_, index) => ({ question: `Q${index}`, answer: "A" }));
     expect(normalizePublicPage({ ...base, publicFaq: thirteen })).toMatchObject({ ok: false, error: expect.stringContaining("12") });
     expect(normalizePublicPage({ ...base, publicFaq: [{ question: "Q", answer: "A" }, { question: "Q2", answer: " " }] })).toMatchObject({ ok: false, error: expect.stringContaining("ke-2") });
+  });
+});
+
+describe("ketentuan uang bawaan", () => {
+  it("kosong memakai ketentuan umum tanpa identitas perusahaan; isi sendiri menggantikannya", () => {
+    expect(moneyRulesOrDefault(null)).toBe(DEFAULT_MONEY_RULES);
+    expect(moneyRulesOrDefault({ denominations: " ", condition: null, series: "" })).toBe(DEFAULT_MONEY_RULES);
+    expect(moneyRulesOrDefault({ denominations: null, condition: " Uang robek tidak diterima. ", series: null })).toEqual({ denominations: null, condition: "Uang robek tidak diterima.", series: null });
+    expect(JSON.stringify(DEFAULT_MONEY_RULES)).not.toMatch(/\(0\d+\)|08\d{2}|\+62|Valasindo|Cianjur/);
   });
 });
