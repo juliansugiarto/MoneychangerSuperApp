@@ -92,13 +92,13 @@ menyebutnya celah ke pemilik): ambang USD 10.000 hanya pembelian + `>` (`b0fd469
 1. ~~**Caddy permanen**~~ — **SELESAI 12 Nov 2026 18.21 WIB** (pemilik menjalankan `tokoemas-caddy-permanent.sh`: ketiga situs
    200 sebelum/sesudah, `LULUS`; Caddy kini `--config /etc/caddy/certs/Caddyfile.mc`, `mc_edge=172.30.0.254`,
    `COMPOSE_FILE=…:compose.mc-edge.yaml`). Restart Caddy biasa tidak lagi menghilangkan situs ini.
-2. **Cadangan di luar VPS (R2)** — Cloudflare dashboard → R2 → *Create bucket* `ibv-backup` (lokasi Asia-Pacific) →
-   bucket itu → *Settings → Object lifecycle rules* → hapus objek sesudah 35 hari → R2 *Manage API tokens* → *Create
-   token* "Object Read & Write", hanya bucket `ibv-backup` → salin Access Key ID, Secret, dan Account ID ke Claude
-   (atau tulis langsung ke `~/moneychanger/deploy/vps/.env`: `BACKUP_R2_ACCESS_KEY_ID`, `BACKUP_R2_SECRET_ACCESS_KEY`,
-   `R2_ACCOUNT_ID`, `BACKUP_REMOTE=r2:ibv-backup`). Claude lalu memasang, menjalankan cadangan, dan uji pulih dari R2.
-3. **Simpan kata sandi cadangan di luar VPS** (`BACKUP_CIPHER_PASS` di `.env` VPS) ke pengelola kata sandi pemilik.
-   Tanpa itu, cadangan di R2 pun tidak bisa dibuka bila VPS mati.
+2. **Cadangan di luar VPS (R2)** — disiapkan Claude 12 Nov ±18.35 WIB lewat Chrome pemilik: bucket `ibv-backup` (Asia
+   Pacific, Standard, privat), aturan siklus hidup `hapus-35-hari`, token akun `ibv-vps-backup` (Object Read & Write,
+   hanya `ibv-backup`, hanya dari IP 187.77.148.118, tanpa kedaluwarsa). `.env` VPS: `R2_ACCOUNT_ID` dan
+   `BACKUP_REMOTE=r2:ibv-backup` sudah diisi (cadangan `.env.bak-r2`). **Sisa pemilik:** di Terminal Mac
+   `sh scripts/r2-cadangan-isi.sh` → tempel Access Key ID + Secret dari tab Cloudflare (tersembunyi) → harus muncul
+   `[cadangan] terkirim ke r2:ibv-backup`. Claude tidak menyalin kunci rahasia sendiri (batas keamanan).
+3. **Kata sandi cadangan ke Keychain Mac** — ikut skrip yang sama (layanan "IBV cadangan").
 4. **Isi Profil Perusahaan** (telepon, alamat, nomor izin + kode KUPVA, jadwal buka, WhatsApp, peta), **buat akun staf**,
    **Kurs → Atur urutan**, aktifkan kurs pertama, kas awal, satu-dua bon di mode **Latihan** sebelum nasabah sungguhan.
 
