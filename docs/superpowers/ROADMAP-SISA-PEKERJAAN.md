@@ -326,8 +326,8 @@ ekspor cabang bertanda tangan, dan pembersihan tenancy/R2/halaman publik **tidak
 Kode tenancy, R2, dan halaman publik **dipertahankan**. Butir B (selesai 28 September) tetap sah;
 ia hanya kebetulan dikerjakan "sebelum desktop".
 
-Bentuk daringnya (satu perusahaan atau multi-tenant ala keputusan 3 September, hosting, dan apakah
-dibangun ulang sebagai V2) belum diputuskan — lihat `PROMPT-SESI.md` bagian "Sesi berikutnya".
+Bentuknya: **satu perusahaan per deployment, siap white-label** (bukan SaaS multi-tenant bersama) —
+`docs/decisions/2026-11-12-daring-satu-perusahaan-white-label.md`.
 
 **Calon pekerjaan (dari butir B5, 28 September 2026):**
 - Harga per seri uang kertas (lama/baru). Menambah dimensi seri pada `cash_denomination_balances`

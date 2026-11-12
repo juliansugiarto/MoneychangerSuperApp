@@ -76,8 +76,9 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 luring Windows" (26 September 2026: paket portabel, satu PC server per toko, lisensi hibrida, ekspor
 cabang bertanda tangan, pembersihan tenancy/R2/halaman publik) **DICABUT**. Aplikasi berjalan
 **daring**, seperti tokoemas-superapp. Kode tenancy, R2, dan halaman publik dipertahankan.
-Yang belum diputuskan: bentuk daringnya (satu perusahaan vs multi-tenant), hosting, dan apakah
-dibangun ulang sebagai V2 atau dirapikan di tempat. Riwayat di bawah ini dibiarkan apa adanya;
+Bentuknya (diputuskan hari yang sama): **satu perusahaan per deployment seperti tokoemas, siap
+white-label** — lihat `docs/decisions/2026-11-12-daring-satu-perusahaan-white-label.md`. Langkah berikut:
+audit kualitas, lalu "V2 di tempat" modul demi modul (bukan tulis ulang dari nol). Riwayat di bawah ini dibiarkan apa adanya;
 setiap rujukan "sebelum/sesudah desktop" kini hanya berarti urutan waktu.
 
 **Daftar "sisa pekerjaan sebelum aplikasi desktop" — SELURUHNYA SELESAI/DIPUTUSKAN:**
@@ -145,8 +146,7 @@ snapshot; rumus IRA tidak berubah.
 - M8 `recordRelationshipEnd` periksa-lalu-tulis tidak atomik.
 - M9 `referenceCode` tidak dinormalkan (huruf besar/spasi) pada kunci kecocokan.
 
-**Tugas berikutnya: menunggu keputusan pengguna — V2 dibangun ulang atau dirapikan di tempat**
-(lihat catatan 12 November di atas). Prompt sesi rancangan desktop yang dulu ada di sini dihapus.
+**Tugas berikutnya: audit kualitas, lalu V2 di tempat** (lihat catatan 12 November di atas). Prompt sesi rancangan desktop yang dulu ada di sini dihapus.
 
 ---
 
