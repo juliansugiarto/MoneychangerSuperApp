@@ -1,0 +1,14 @@
+# Untuk TOKOEMAS (bukan tumpukan ini): Caddy tokoemas bergabung ke jaringan mc_edge dengan alamat tetap 172.30.0.254, satu-
+# satunya alamat yang dipercaya aplikasi money changer mengisi X-Forwarded-For (EDGE_PROXY_IP).
+# Salin ke /opt/tokoemas/deploy/vps/compose.mc-edge.yaml dan tambahkan ke COMPOSE_FILE di .env tokoemas, mis.:
+#   COMPOSE_FILE=compose.yaml:compose.cloudflare.yaml:compose.mc-edge.yaml
+# lalu: docker compose up -d --force-recreate caddy
+services:
+  caddy:
+    networks:
+      default: {}
+      mc_edge:
+        ipv4_address: 172.30.0.254
+networks:
+  mc_edge:
+    external: true

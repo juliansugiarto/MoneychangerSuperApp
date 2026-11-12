@@ -12,18 +12,20 @@ Tanggal 12 November 2026 (WIB). Menggantikan `deploy.sh` + pm2 + `.github/workfl
 | Layanan | Isi |
 |---|---|
 | `mysql` | MySQL 8.4, UTC, utf8mb4; batas memori `MYSQL_MEM_LIMIT` (bawaan 2 GB) agar tidak menghimpit tokoemas |
-| `web` (kontainer `moneychanger-web`) | `node dist/index.js` (image dari `Dockerfile`), batas 1 GB; ikut jaringan Caddy tokoemas |
+| `web` (kontainer `moneychanger-web`) | `node dist/index.js` (image dari `Dockerfile`), batas 1 GB; ikut jaringan `mc_edge` bersama Caddy tokoemas |
 | `backup` | tiap 01.00 WIB: `mysqldump` → zstd → AES-256 (openssl) → volume lokal (7 terakhir) + R2 |
 | `ops` (profil) | `node scripts/migrate.mjs`, `node scripts/tenant.mjs setup-code` |
 | `restore-check` (profil) | MySQL kosong di tmpfs untuk `restore-test.sh` |
 
-- Layanan aplikasi bernama `web`, **bukan** `app`: ia bergabung ke jaringan `tokoemas_default`, dan nama `app` akan ikut
-  menjawab `reverse_proxy app:3000` milik tokoemas. Caddy menuju **nama kontainer** `<COMPOSE_PROJECT_NAME>-web`
-  (`moneychanger-web`), yang unik per perusahaan; nama layanan `web` dipakai bersama semua tumpukan money changer di
-  jaringan itu sehingga tidak boleh dirujuk.
+- Jaringan `mc_edge` (172.30.0.0/24, alamat otomatis hanya .0–.127) berisi **hanya** Caddy tokoemas (alamat tetap
+  172.30.0.254) dan aplikasi money changer. Bukan `tokoemas_default`: kontainer tokoemas lain tidak dapat menghubungi
+  aplikasi ini langsung (melewati daftar IP Cloudflare), dan aplikasi ini tidak dapat menghubungi Postgres tokoemas.
+- Caddy menuju **nama kontainer** `<COMPOSE_PROJECT_NAME>-web` (`moneychanger-web`), unik per perusahaan; nama layanan
+  `web` dipakai bersama semua tumpukan money changer di jaringan itu sehingga tidak boleh dirujuk.
 - IP pengunjung: Caddy mengganti `X-Forwarded-For` dengan satu nilai (`{client_ip}` dari `CF-Connecting-IP`), aplikasi
-  mempercayai jaringan privat Docker lewat `TRUST_PROXY=loopback, uniquelocal` (`server/proxyTrust.ts`). Tanpa itu semua
-  pengunjung terlihat ber-IP Caddy dan pembatas salah sandi mengunci semua orang sekaligus.
+  hanya mempercayai alamat Caddy (`TRUST_PROXY=loopback, 172.30.0.254`, `server/proxyTrust.ts`). Gladi 12 Nov 2026:
+  lewat alamat Caddy, lima salah sandi mengunci IP pengunjung itu saja (429) sementara IP pengunjung lain tetap 401;
+  dari alamat lain di jaringan yang sama, X-Forwarded-For palsu diabaikan (kunci tetap pada alamat kontainernya).
 
 ## Yang diputuskan/disiapkan pemilik lebih dulu
 
@@ -38,6 +40,7 @@ Tanggal 12 November 2026 (WIB). Menggantikan `deploy.sh` + pm2 + `.github/workfl
 
 ```bash
 # Kode tanpa deploy key: di Mac → git bundle create mc.bundle <cabang>; scp mc.bundle deploy@187.77.148.118:/tmp/
+docker network create --subnet 172.30.0.0/24 --ip-range 172.30.0.0/25 mc_edge   # sekali per VPS
 sudo mkdir -p /opt/moneychanger && sudo chown deploy: /opt/moneychanger
 git clone /tmp/mc.bundle /opt/moneychanger && cd /opt/moneychanger/deploy/vps
 ./init-env.sh                                   # .env mode 600, rahasia acak dibuat
@@ -49,9 +52,12 @@ docker compose up -d web backup
 docker compose ps                                # web (healthy), mysql (healthy)
 ```
 
-Lalu sisi tokoemas (sesi tokoemas atau pemilik, **sesudah toko tutup**): tempel isi `deploy/vps/caddy-site.caddy` ke
-`/opt/tokoemas/deploy/vps/Caddyfile.cloudflare` (ganti `DOMAIN-MONEYCHANGER`), taruh sertifikat di
-`/opt/tokoemas/deploy/vps/certs/mc-origin.{pem,key}`, lalu `docker compose up -d --force-recreate caddy` di folder tokoemas.
+Lalu sisi tokoemas (sesi tokoemas atau pemilik, **sesudah toko tutup**):
+1. salin `deploy/vps/tokoemas-caddy-override.yaml` ke `/opt/tokoemas/deploy/vps/compose.mc-edge.yaml` dan tambahkan ke
+   `COMPOSE_FILE` di `.env` tokoemas (`compose.yaml:compose.cloudflare.yaml:compose.mc-edge.yaml`);
+2. tempel isi `deploy/vps/caddy-site.caddy` ke `Caddyfile.cloudflare` tokoemas (ganti `DOMAIN-MONEYCHANGER`);
+3. taruh sertifikat di `/opt/tokoemas/deploy/vps/certs/mc-origin.{pem,key}`;
+4. `docker compose up -d --force-recreate caddy` di folder tokoemas.
 Cek: `curl -fsS https://<domain>/` → 200, dan `https://ibkshop.com` tetap 200.
 
 Penyiapan perusahaan:
@@ -66,7 +72,7 @@ Bukti cadangan bisa dipulihkan (wajib sebelum go-live):
 
 ```bash
 docker compose exec backup backup.sh
-./restore-test.sh        # tabel, migrasi, dan baris tabel inti: live = pulih
+./restore-test.sh        # LULUS/GAGAL (exit 1): jumlah tabel & migrasi sama, tabel inti terbaca dan tidak lebih dari live
 ```
 
 ## Pembaruan versi (sesudah jam operasional)
@@ -106,6 +112,8 @@ Hasil gladi 12 Nov 2026: image aplikasi 658 MB; migrasi 67 pada basis data koson
 `moneychanger` lokal, 936 kolom); `/` dan kesehatan 200, header keamanan produksi aktif; cadangan data uji lokal
 (124 KB terenkripsi) pulih utuh: 73 tabel, 67 migrasi, users 4, customers 6, exchange_transactions 16, journal_entries
 12, audit_logs 614 sama dengan live, dua kali berturut-turut.
+Uji negatif: berkas cadangan terbaru rusak → `restore-test.sh` exit 1 dan kontainer uji tetap dihapus; tujuan R2 tidak
+terjangkau → `backup.sh` exit 1 ("GAGAL kirim"), salinan lokal tetap ada, tanpa sisa `.part`.
 Pelajaran gladi: (1) VM Docker 2 GB di Mac membunuh mysqld (OOM) bila dua MySQL + aplikasi + Postgres proyek lain
 berjalan; karena itu `mem_limit` MySQL dan `restore-check` yang ringan. (2) `mysqladmin ping` lewat soket lolos saat
 server sementara milik entrypoint masih inisialisasi; uji pulih menunggu lewat TCP.
@@ -113,6 +121,7 @@ server sementara milik entrypoint masih inisialisasi; uji pulih menunggu lewat T
 ## Belum
 
 - Sinkron kurs BI (`/api/scheduled/bi-rate-sync`) belum dijadwalkan di tumpukan ini (Caddy menolaknya dari internet).
+- Pemeriksaan kesehatan `web` tidak menyentuh MySQL (MySQL punya pemeriksaannya sendiri).
 - Pemantauan: belum ada ping keberhasilan cadangan (tokoemas memakai `BACKUP_PING_URL`); sementara cek
   `docker compose logs backup | grep cadangan`.
 - Image 658 MB: dependensi produksi besar (AWS SDK, SheetJS); belum dirampingkan.

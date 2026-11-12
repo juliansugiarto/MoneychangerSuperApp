@@ -1,5 +1,6 @@
-# Gladi di Mac/laptop: tanpa Caddy tokoemas. Aplikasi di http://127.0.0.1:3200, jaringan "edge" dibuat sendiri.
-#   docker compose -f compose.yaml -f compose.local.yaml up -d
+# Gladi di Mac/laptop: tanpa Caddy tokoemas. Aplikasi di http://127.0.0.1:3200; jaringan "edge" dibuat sendiri dengan
+# subnet yang sama dengan mc_edge di VPS (172.30.0.0/24), sehingga uji IP tepercaya meniru produksi.
+#   COMPOSE_FILE=compose.yaml:compose.local.yaml docker compose up -d
 services:
   web:
     ports:
@@ -8,3 +9,7 @@ networks:
   edge:
     name: moneychanger_local_edge
     external: false
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+          ip_range: 172.30.0.0/25

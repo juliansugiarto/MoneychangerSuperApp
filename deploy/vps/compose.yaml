@@ -12,8 +12,9 @@ x-app-env: &app-env
   DATABASE_URL: mysql://moneychanger_app:${DB_APP_PASSWORD:?}@mysql:3306/moneychanger
   JWT_SECRET: ${JWT_SECRET:?}
   CRON_SECRET: ${CRON_SECRET:?}
-  # Caddy tokoemas berada di kontainer lain; ia mengganti X-Forwarded-For dengan satu nilai (IP pengunjung asli).
-  TRUST_PROXY: "loopback, uniquelocal"
+  # Hanya Caddy tokoemas (alamat tetap di jaringan mc_edge) yang dipercaya mengisi X-Forwarded-For; ia mengganti header
+  # itu dengan satu nilai (IP pengunjung asli). Kontainer lain di mc_edge tidak bisa memalsukan IP.
+  TRUST_PROXY: loopback, ${EDGE_PROXY_IP:-172.30.0.254}
   # Dokumen KYC/operasional (opsional sampai bucket dibuat; unggah dokumen gagal dengan pesan jelas bila kosong).
   R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
   R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
@@ -44,12 +45,14 @@ services:
     volumes:
       - mysqldata:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      # Sandi lewat MYSQL_PWD, bukan argumen (tidak terlihat di `ps`).
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -uroot --silent"]
       interval: 10s
       timeout: 5s
       retries: 12
 
-  # Ikut jaringan Caddy tokoemas, jadi namanya tidak boleh `app` (akan ikut menjawab `reverse_proxy app:3000` tokoemas).
+  # Ikut jaringan `mc_edge` yang hanya berisi Caddy tokoemas dan aplikasi money changer (bukan jaringan tokoemas_default:
+  # kontainer tokoemas lain tidak dapat menghubungi aplikasi ini, dan aplikasi ini tidak dapat menghubungi Postgres tokoemas).
   # Caddy menuju NAMA KONTAINER `<COMPOSE_PROJECT_NAME>-web`, unik per perusahaan; nama layanan `web` dipakai bersama
   # tumpukan money changer lain di jaringan itu, jadi jangan pernah dirujuk dari Caddy.
   web:
@@ -118,7 +121,11 @@ volumes:
   backups:
 
 networks:
-  # Jaringan tempat Caddy tokoemas berada (lihat docs/deployment/vps.md). Gladi lokal menimpanya lewat compose.local.yaml.
+  # Jaringan khusus Caddy ↔ aplikasi, dibuat sekali di VPS dengan subnet tetap (docs/deployment/vps.md):
+  #   docker network create --subnet 172.30.0.0/24 --ip-range 172.30.0.0/25 mc_edge
+  # Alamat otomatis hanya dari 172.30.0.0/25; Caddy tokoemas memakai alamat tetap EDGE_PROXY_IP (172.30.0.254, di luar
+  # rentang otomatis, jadi tidak pernah keduluan kontainer lain) lewat deploy/vps/tokoemas-caddy-override.yaml.
+  # Gladi lokal menimpanya lewat compose.local.yaml.
   edge:
-    name: ${EDGE_NETWORK:-tokoemas_default}
+    name: ${EDGE_NETWORK:-mc_edge}
     external: true
