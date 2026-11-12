@@ -176,9 +176,18 @@ export async function listDeactivatedCompanyDocuments() {
     .orderBy(desc(operationalDocuments.deactivatedAt));
 }
 
-export async function getOperationalDocumentDownloadUrl(documentId: number) {
+/**
+ * Arsip perusahaan dan dokumen perusahaan yang dinonaktifkan hanya didaftar untuk CONTROLLER ke atas; tautan
+ * unduhnya wajib mengikuti aturan yang sama, karena id dokumen berurutan dan mudah ditebak.
+ */
+function requiresController(document: { ownerType: string; deactivatedAt: Date | null }) {
+  return document.ownerType === "COMPANY_ARCHIVE" || (document.ownerType === "COMPANY" && document.deactivatedAt != null);
+}
+
+export async function getOperationalDocumentDownloadUrl(documentId: number, viewerRole: BackOfficeRole) {
   const db = await databaseOrThrow();
   const document = (await db.select().from(operationalDocuments).where(eq(operationalDocuments.id, documentId)).limit(1))[0];
-  if (!document) throw new Error("Dokumen tidak ditemukan.");
+  // Penolakan berpesan sama dengan "tidak ada" agar id tidak bisa dipakai untuk menebak isi arsip.
+  if (!document || (requiresController(document) && !isRoleAllowed(viewerRole, "CONTROLLER"))) throw new Error("Dokumen tidak ditemukan.");
   return storageGetSignedUrl(document.storageKey);
 }

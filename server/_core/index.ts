@@ -156,7 +156,7 @@ async function startServer() {
     try {
       const user = await authenticateInternalRequest(req);
       if (user.mustChangePassword) return res.status(403).json({ message: "Ganti kata sandi terlebih dahulu sebelum membuka dokumen." });
-      const url = await getOperationalDocumentDownloadUrl(Number(req.params.documentId));
+      const url = await getOperationalDocumentDownloadUrl(Number(req.params.documentId), user.role);
       return res.redirect(url);
     } catch (error) {
       return res.status(404).json({ message: "Dokumen tidak tersedia." });

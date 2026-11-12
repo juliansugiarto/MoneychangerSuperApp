@@ -910,7 +910,7 @@ export const appRouter = router({
     forTransaction: staffProcedure.input(z.object({ transactionId: z.number().int().positive() })).query(({ input }) => listOperationalDocuments({ transactionId: input.transactionId })),
     forCompany: staffProcedure.query(() => listCompanyDocuments()),
     forExpense: staffProcedure.input(z.object({ expenseId: z.number().int().positive() })).query(({ input }) => listExpenseDocuments(input.expenseId)),
-    downloadUrl: staffProcedure.input(z.object({ documentId: z.number().int().positive() })).query(({ input }) => getOperationalDocumentDownloadUrl(input.documentId)),
+    downloadUrl: staffProcedure.input(z.object({ documentId: z.number().int().positive() })).query(({ input, ctx }) => getOperationalDocumentDownloadUrl(input.documentId, ctx.user.role)),
     /**
      * Dokumen profil perusahaan dinonaktifkan, bukan dihapus. Gerbangnya diperiksa di sini agar
      * layarnya berpesan benar, dan sekali lagi di dalam penulisnya agar datanya tetap terjaga.
