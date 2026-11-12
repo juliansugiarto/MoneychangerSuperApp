@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildLaporanNihilHtml, buildLaporanPemblokiranHtml, clockWib, longDayDate } from "./laporanDttot";
+import { buildLaporanNihilHtml, buildLaporanPemblokiranHtml, buildLaporanPenghapusanNihilHtml, clockWib, longDayDate, placeFromAddress } from "./laporanDttot";
 
 const company = { legalName: "PT Contoh Valuta", address: "Jl. Contoh 1, Jakarta" };
 const signer = { name: "Direktur Uji", position: "Direktur" };
 // 15 Oktober 2026 04.38 UTC = 11.38 WIB, hari Kamis.
 const at = new Date("2026-10-15T04:38:00Z");
+const police = { number: "R/7/III/RES.6.1./2026/Densus", date: new Date("2026-03-27T12:00:00Z"), kind: "PERPANJANGAN" as const };
 
 describe("laporan DTTOT ke Densus 88", () => {
   it("tanggal dan jam selalu WIB, apa pun zona perangkat", () => {
@@ -12,19 +13,37 @@ describe("laporan DTTOT ke Densus 88", () => {
     expect(clockWib(at)).toBe("11.38 WIB");
   });
 
-  it("Laporan Nihil memuat dasar hukum, batas waktu penyaringan, dan kata NIHIL", () => {
-    const html = buildLaporanNihilHtml({ company, reportNumber: "001/DTTOT/X/2026", place: "Jakarta", reportDate: at, screenedAt: at, signer });
-    expect(html).toContain("Laporan Nihil atas Pemblokiran Secara Serta Merta");
-    expect(html).toContain("Pasal 28 ayat (3) Undang-Undang Nomor 9 Tahun 2013");
-    expect(html).toContain("sampai dengan Kamis, 15 Oktober 2026, pukul\n  11.38 WIB");
-    expect(html).toContain("atau NIHIL");
-    expect(html).toContain("c.q. Kepala Densus 88");
+  it("Laporan Nihil mengikuti surat yang pernah diterima Densus: rujukan surat, alamat Trunojoyo, NIHIL, tembusan BI", () => {
+    const html = buildLaporanNihilHtml({ company, reportNumber: "001/DTTOT/X/2026", place: "Cianjur", reportDate: at, screenedAt: at, signer, police });
+    expect(html).toContain("Laporan Nihil atas Pemblokiran/Penolakan Transaksi Secara Serta Merta");
+    expect(html).toContain("Merujuk Surat Kepala Kepolisian Negara Republik Indonesia No. R/7/III/RES.6.1./2026/Densus tanggal 27 Maret 2026 perihal Bantuan untuk Melakukan Pemblokiran");
+    expect(html).toContain("sampai dengan Kamis, 15 Oktober 2026 pukul 11.38 WIB");
+    expect(html).toContain("di penyelenggara atau NIHIL");
+    expect(html).toContain("Jalan Trunojoyo No. 3, Kebayoran Baru");
+    expect(html).toContain("Kepala Kantor Perwakilan Bank Indonesia yang mewilayahi");
+    expect(html).toContain("Cianjur, 15 Oktober 2026");
+  });
+
+  it("tanpa tanggal surat Densus, kalimat rujukan tetap utuh", () => {
+    const html = buildLaporanNihilHtml({ company, reportNumber: "1", place: "Cianjur", reportDate: at, screenedAt: at, signer, police: { ...police, date: null } });
+    expect(html).toContain("No. R/7/III/RES.6.1./2026/Densus perihal");
+  });
+
+  it("laporan penghapusan nihil merujuk perihal penghapusan", () => {
+    const html = buildLaporanPenghapusanNihilHtml({ company, reportNumber: "1", place: "Cianjur", reportDate: at, screenedAt: at, signer, police: { ...police, kind: "PENGHAPUSAN" } });
+    expect(html).toContain("perihal Pemberitahuan Penghapusan Identitas Orang dan Entitas");
+    expect(html).toContain("tidak ada pemblokiran yang perlu dibuka (NIHIL)");
+  });
+
+  it("kota kepala surat diambil dari bagian terakhir alamat", () => {
+    expect(placeFromAddress("JL. Mangunsarkoro NO.35 Solokpandan. Cianjur")).toBe("Cianjur");
+    expect(placeFromAddress("Jl. Sudirman 1, Kota Bandung 40111")).toBe("Bandung");
   });
 
   it("Laporan Pemblokiran: satu surat pengantar + satu berita acara per nasabah, teks nasabah di-escape", () => {
     const html = buildLaporanPemblokiranHtml({
-      company, reportNumber: "002/DTTOT/XI/2026", place: "Jakarta", reportDate: at, blockedAt: at, signer,
-      witness: { name: "Saksi Uji", position: "Petugas APU PPT" }, biLetter: "surel 15 Oktober 2026", listNumber: "DTTOT/P-25/X/RES.6.1./2026",
+      company, reportNumber: "002/DTTOT/XI/2026", place: "Jakarta", reportDate: at, blockedAt: at, signer, police,
+      witness: { name: "Saksi Uji", position: "Petugas APU PPT" }, listNumber: "DTTOT/P-25/X/RES.6.1./2026",
       matched: [{ fullName: "Budi <b>Santoso</b>", placeOfBirth: "Bandung", dateOfBirth: "1980-01-02", occupation: "Wiraswasta", address: "Jl. A" }, { fullName: "Nasabah Dua" }],
     });
     expect(html.match(/BERITA ACARA PEMBLOKIRAN SECARA SERTA MERTA/g)).toHaveLength(2);

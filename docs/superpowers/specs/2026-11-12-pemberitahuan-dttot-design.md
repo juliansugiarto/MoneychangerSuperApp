@@ -20,6 +20,14 @@ dan memblokir, tetapi laporan nihil/berita acara dan lima pengirimannya masih di
 - Controller ke atas. Tenggat LTKM 3 hari kerja **hanya disebut**, tidak dihitung (keputusan butir B: menunggu
   Temuan 6 / kalender hari kerja).
 
+## Penyesuaian 12 November 2026 (sore)
+Surat disamakan dengan laporan yang benar-benar pernah dikirim pemilik dan diterima Densus (Drive: "DTTOT 20 April
+2026.docx", "Penghapusan dari DTTOT & Buka Blokir 2020.docx"): pembuka "Merujuk Surat Kepala Kepolisian … No. …
+tanggal … perihal …", alamat Jalan Trunojoyo No. 3 Kebayoran Baru Jakarta 12110, "Hormat kami", tembusan Kepala
+Kantor Perwakilan BI (+ PPATK, sesuai tata cara 7 Jul 2026), kota kepala surat dari isian (bukan "Jakarta" tetap).
+Migrasi `0065`: `policeLetterDate`, `reportPlace`. Penghapusan → laporan nihil penghapusan, ditolak selama ada blokir
+OPEN yang namanya sudah tidak ada di daftar (`staleOpenBlockCount`).
+
 ## Sengaja belum
-- Berita Acara **Pembukaan** Pemblokiran (penghapusan dari DTTOT) — formulirnya hanya ada di lampiran surel BI;
-  dibangun setelah pemilik menyerahkan berkasnya. Daftar DPPSPM (laporan ke PPATK) — menyusul dengan pola sama.
+- Berita Acara **Pembukaan** Pemblokiran (bila memang ada blokir yang harus dibuka) — formulir resmi hanya ada di
+  lampiran surel BI 15 Okt 2026; dibangun setelah berkasnya ada. Daftar DPPSPM (laporan ke PPATK) menyusul.

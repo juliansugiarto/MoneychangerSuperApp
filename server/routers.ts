@@ -1465,11 +1465,12 @@ export const appRouter = router({
       policeLetterNumber: z.string().trim().min(5).max(120),
       listNumber: z.string().trim().max(120).optional(),
       receivedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      policeLetterDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       notes: z.string().trim().max(2000).optional(),
     })).mutation(({ input, ctx }) => createDttotNotice(input, ctx.user)),
     screen: controllerProcedure.input(z.object({ noticeId: z.number().int().positive() })).mutation(({ input, ctx }) => screenDttotNotice(input.noticeId, ctx.user)),
     updateReport: controllerProcedure.input(z.object({
-      noticeId: z.number().int().positive(), reportNumber: z.string().trim().min(1).max(120),
+      noticeId: z.number().int().positive(), reportNumber: z.string().trim().min(1).max(120), reportPlace: z.string().trim().min(2).max(80),
       signerName: z.string().trim().min(3).max(200), signerPosition: z.string().trim().min(2).max(120),
     })).mutation(({ input, ctx }) => updateDttotNoticeReport(input, ctx.user)),
     recordDelivery: controllerProcedure.input(z.object({

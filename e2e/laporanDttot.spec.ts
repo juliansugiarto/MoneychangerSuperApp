@@ -20,7 +20,7 @@ test.beforeAll(async () => {
 
 test("Controller mencatat pemberitahuan, menyaring, mencetak laporan nihil, dan menandai pengiriman", async ({ signedInPage: page }) => {
   const letter = `R/E2E-${Date.now()}/RES.6.1./2026/Densus`;
-  const created = await page.request.post("/api/trpc/dttotNotices.create?batch=1", { data: { 0: superjson.serialize({ noticeType: "PERPANJANGAN", policeLetterNumber: letter, listNumber: "DTTOT/P-25/X/RES.6.1./2026", receivedOn: "2026-10-15" }) } });
+  const created = await page.request.post("/api/trpc/dttotNotices.create?batch=1", { data: { 0: superjson.serialize({ noticeType: "PERPANJANGAN", policeLetterNumber: letter, listNumber: "DTTOT/P-25/X/RES.6.1./2026", receivedOn: "2026-10-15", policeLetterDate: "2026-10-10" }) } });
   expect(created.ok()).toBe(true);
 
   await page.goto("/kepatuhan/laporan-dttot");
@@ -31,11 +31,14 @@ test("Controller mencatat pemberitahuan, menyaring, mencetak laporan nihil, dan 
   await expect(card.getByText("nihil", { exact: true })).toBeVisible();
 
   await card.getByLabel("Nomor surat").fill("001/DTTOT/X/2026");
+  await card.getByLabel("Kota").fill("Cianjur");
   await card.getByLabel("Ditandatangani").fill("Direktur Uji");
   await card.getByLabel("Jabatan", { exact: true }).fill("Direktur");
   const [report] = await Promise.all([page.waitForEvent("popup"), card.getByRole("button", { name: "Cetak laporan" }).click()]);
   await expect(report.getByText("atau NIHIL")).toBeVisible();
-  await expect(report.getByText("c.q. Kepala Densus 88")).toBeVisible();
+  await expect(report.getByText("c.q. Kepala Densus 88", { exact: false })).toBeVisible();
+  await expect(report.getByText("tanggal 10 Oktober 2026", { exact: false })).toBeVisible();
+  await expect(report.getByText("Cianjur, ", { exact: false })).toBeVisible();
   await report.screenshot({ path: "test-results/laporan-nihil.png", fullPage: true });
   await report.close();
 

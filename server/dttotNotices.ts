@@ -1,5 +1,5 @@
 import { and, desc, eq } from "drizzle-orm";
-import { customers, dttotNotices, sanctionsWatchlistEntries } from "../drizzle/schema";
+import { customers, dttotNotices, sanctionsWatchlistEntries, watchlistBlocks } from "../drizzle/schema";
 import { matchWatchlistEntries, MIN_SCREENABLE_NAME_LENGTH, rescreenAllCustomers } from "./customerWatchlistScreening";
 import { databaseOrThrow, writeAudit } from "./operations";
 
@@ -16,6 +16,8 @@ export type DttotNoticeInput = {
   listNumber?: string;
   /** YYYY-MM-DD, hari surel BI diterima (WIB). */
   receivedOn: string;
+  /** YYYY-MM-DD, tanggal pada surat Densus 88. */
+  policeLetterDate?: string;
   notes?: string;
 };
 
@@ -28,10 +30,12 @@ export async function createDttotNotice(input: DttotNoticeInput, actor: { id: nu
   const policeLetterNumber = input.policeLetterNumber.trim();
   if (policeLetterNumber.length < 5) throw new Error("Isi nomor surat Densus 88 dari surel BI.");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.receivedOn)) throw new Error("Tanggal diterima harus berbentuk YYYY-MM-DD.");
+  if (input.policeLetterDate && !/^\d{4}-\d{2}-\d{2}$/.test(input.policeLetterDate)) throw new Error("Tanggal surat harus berbentuk YYYY-MM-DD.");
+  if (input.policeLetterDate && input.policeLetterDate > input.receivedOn) throw new Error("Tanggal surat Densus tidak boleh sesudah tanggal surel BI diterima.");
   const db = await databaseOrThrow();
   const [created] = await db.insert(dttotNotices).values({
     noticeType: input.noticeType, policeLetterNumber, listNumber: input.listNumber?.trim() || null,
-    receivedOn: input.receivedOn as never, notes: input.notes?.trim() || null, createdByUserId: actor.id,
+    receivedOn: input.receivedOn as never, policeLetterDate: (input.policeLetterDate || null) as never, notes: input.notes?.trim() || null, createdByUserId: actor.id,
   }).$returningId();
   await writeAudit({ actorUserId: actor.id, action: "DTTOT_NOTICE_RECORDED", entityType: "dttot_notice", entityId: String(created!.id), afterState: { ...input, policeLetterNumber } });
   return { id: created!.id };
@@ -71,9 +75,9 @@ export async function screenDttotNotice(noticeId: number, actor: { id: number })
   return { screenedAt, screenedCustomerCount: liveCount, matchedCustomerCount: matched.length };
 }
 
-export async function updateDttotNoticeReport(input: { noticeId: number; reportNumber: string; signerName: string; signerPosition: string }, actor: { id: number }) {
-  const values = { reportNumber: input.reportNumber.trim(), signerName: input.signerName.trim(), signerPosition: input.signerPosition.trim() };
-  if (!values.reportNumber || !values.signerName || !values.signerPosition) throw new Error("Isi nomor surat, nama, dan jabatan penanda tangan.");
+export async function updateDttotNoticeReport(input: { noticeId: number; reportNumber: string; reportPlace: string; signerName: string; signerPosition: string }, actor: { id: number }) {
+  const values = { reportNumber: input.reportNumber.trim(), reportPlace: input.reportPlace.trim(), signerName: input.signerName.trim(), signerPosition: input.signerPosition.trim() };
+  if (!values.reportNumber || !values.reportPlace || !values.signerName || !values.signerPosition) throw new Error("Isi nomor surat, kota, nama, dan jabatan penanda tangan.");
   const db = await databaseOrThrow();
   await db.update(dttotNotices).set(values).where(eq(dttotNotices.id, input.noticeId));
   await writeAudit({ actorUserId: actor.id, action: "DTTOT_NOTICE_REPORT_UPDATED", entityType: "dttot_notice", entityId: String(input.noticeId), afterState: values });
@@ -93,6 +97,20 @@ export async function recordDttotDelivery(input: { noticeId: number; step: Dttot
   return { step: input.step, at: input.at };
 }
 
+/**
+ * Blokir yang masih OPEN padahal nama nasabahnya sudah tidak cocok dengan daftar mana pun (DTTOT/DPPSPM):
+ * itulah yang harus dibuka sesudah pemberitahuan penghapusan. Laporan nihil penghapusan hanya sah bila nol.
+ */
+export async function staleOpenBlockCount() {
+  const db = await databaseOrThrow();
+  const open = await db.select({ customerId: watchlistBlocks.customerId, fullName: customers.fullName })
+    .from(watchlistBlocks).innerJoin(customers, eq(watchlistBlocks.customerId, customers.id))
+    .where(eq(watchlistBlocks.status, "OPEN"));
+  if (!open.length) return 0;
+  const entries = await db.select().from(sanctionsWatchlistEntries);
+  return new Set(open.filter((row) => !matchWatchlistEntries(row.fullName?.trim() ?? "", entries).length).map((row) => row.customerId)).size;
+}
+
 /** Bahan cetak: pemberitahuan + nasabah yang cocok DTTOT (untuk Berita Acara per nasabah). */
 export async function getDttotNoticeReport(noticeId: number) {
   const db = await databaseOrThrow();
@@ -101,6 +119,7 @@ export async function getDttotNoticeReport(noticeId: number) {
   const { matched } = await dttotMatchedCustomers();
   return {
     notice,
+    staleOpenBlocks: notice.noticeType === "PENGHAPUSAN" ? await staleOpenBlockCount() : 0,
     matched: matched.map(({ customer, matchedNames }) => ({
       fullName: customer.fullName, placeOfBirth: customer.placeOfBirth, dateOfBirth: customer.dateOfBirth,
       occupation: customer.occupation, address: customer.address, identityNumber: customer.identityNumber, matchedNames,

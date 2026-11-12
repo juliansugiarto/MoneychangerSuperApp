@@ -328,6 +328,19 @@ aplikasi; yang dicatat hanya rujukan dan tanggalnya. Tenggat tembusan **3 hari k
 (4) huruf d) **belum dihitung** karena kalender hari kerja belum ada; Kesiapan Operasional menampilkan
 jumlah blokir yang menunggu keputusan dan yang dikonfirmasi tetapi belum ditembuskan.
 
+### 5.12 Laporan DTTOT ke Densus 88 — Controller ke atas
+
+Setiap 1–3 bulan Bank Indonesia meneruskan surat Densus 88 beserta daftar DTTOT terbaru. Buka **Kepatuhan → Laporan DTTOT**.
+
+1. **Catat pemberitahuan**: jenis (pencantuman, perpanjangan, atau penghapusan), nomor surat Densus 88, tanggal surat Densus (dirujuk di kalimat pembuka laporan; boleh kosong), nomor lampiran DTTOT, dan tanggal surel BI diterima. Tanggal surat tidak boleh sesudah tanggal surel diterima.
+2. **Impor daftar terbaru** di §5.10 lebih dulu, lalu tekan **Saring sekarang**. Seluruh nasabah aktif disaring; yang cocok langsung diblokir (§5.11). Hasilnya (waktu, jumlah nasabah disaring, jumlah yang cocok DTTOT) disimpan pada pemberitahuan itu.
+3. **Cetak laporan** (isi nomor surat, kota, penanda tangan, dan jabatan; kota diingat untuk pemberitahuan berikutnya):
+   - Pencantuman/perpanjangan tanpa kecocokan → **Laporan Nihil atas Pemblokiran/Penolakan Transaksi Secara Serta Merta**.
+   - Ada kecocokan → **Laporan Pemblokiran** + satu **Berita Acara Pemblokiran** per nasabah (isi nama dan jabatan saksi), lalu kirim LTKM ke PPATK paling lama 3 hari kerja.
+   - Penghapusan → **Laporan atas Penghapusan Identitas** (nihil). Laporan ini **ditolak dicetak** selama masih ada nasabah yang diblokir padahal namanya sudah tidak ada di daftar mana pun; buka blokirnya dulu di §5.11. Formulir Berita Acara Pembukaan Pemblokiran dari BI belum ada di aplikasi.
+   Bentuk surat mengikuti laporan yang pernah diterima Densus (20 April 2026): rujukan surat Densus beserta tanggal dan perihalnya, alamat Jalan Trunojoyo No. 3, tembusan Kepala Kantor Perwakilan BI dan PPATK. Tanggal dan jam selalu WIB.
+4. **Tandai lima pengiriman** sesudah surat ditandatangani: surat asli ke Densus 88, pindaian ke dttot.report.4@gmail.com, tembusan PPATK (dttot.report@ppatk.go.id), tembusan pengawas BI, dan unggah ke formulir BI. Pengiriman tidak bisa dicatat sebelum penyaringan, dan waktunya tidak boleh di masa depan. Aplikasi tidak mengirim apa pun sendiri.
+
 ## 6. Pelaporan dan Pengawasan
 
 ### 6.1 Kesiapan Operasional — Controller

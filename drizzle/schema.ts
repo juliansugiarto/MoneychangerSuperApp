@@ -562,12 +562,16 @@ export const dttotNotices = mysqlTable("dttot_notices", {
   policeLetterNumber: varchar("policeLetterNumber", { length: 120 }).notNull(),
   listNumber: varchar("listNumber", { length: 120 }),
   receivedOn: date("receivedOn").notNull(),
+  /** Tanggal surat Densus 88 (bukan tanggal surel BI); dirujuk di kalimat pembuka laporan. */
+  policeLetterDate: date("policeLetterDate"),
   screenedAt: datetime("screenedAt"),
   screenedCustomerCount: int("screenedCustomerCount"),
   matchedCustomerCount: int("matchedCustomerCount"),
   reportNumber: varchar("reportNumber", { length: 120 }),
   signerName: varchar("signerName", { length: 200 }),
   signerPosition: varchar("signerPosition", { length: 120 }),
+  /** Kota di kepala surat, mis. "Cianjur". */
+  reportPlace: varchar("reportPlace", { length: 80 }),
   policePhysicalSentAt: datetime("policePhysicalSentAt"),
   policeEmailSentAt: datetime("policeEmailSentAt"),
   ppatkCopySentAt: datetime("ppatkCopySentAt"),
