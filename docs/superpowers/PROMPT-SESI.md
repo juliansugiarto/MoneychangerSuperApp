@@ -201,6 +201,9 @@ pemilik 22 April 2025). Berita acara DPPSPM belum punya contoh resmi PPATK (liha
 `https://ibukotavalasindo.online` (publik, kurs nasabah) dan `https://backoffice.ibukotavalasindo.online` (staf).
 Pemilik menyelesaikan wizard penyiapan sendiri (1 akun pemilik, perusahaan "Ibukota Valasindo"); 67 migrasi; belum ada
 kurs aktif, nasabah, maupun transaksi. Cloudflare & Caddy: lihat `docs/deployment/vps.md`.
+**Desain halaman publik DISETUJUI 12 Nov ("oke greate job"):** arah "Paspor & cap" (C), dicatat di `DESIGN.md` +
+rujukan hidup `docs/design/halaman-publik/rujukan-paspor-v3.html` (artifact https://claude.ai/artifact/MXhVNvDMD4MeLdq9dRnsuW).
+Rencana bangun: `docs/superpowers/plans/2026-11-12-halaman-publik-paspor.md` (irisan 1–5, belum dimulai).
 **Belum:** (a) Caddy tokoemas permanen (override `compose.mc-edge.yaml` + `--force-recreate caddy`, SESUDAH toko tutup;
 sampai itu restart Caddy biasa menghilangkan situs money changer); (b) MX lama ke server mati (tanya pemilik); (c) R2
 dokumen + cadangan (cadangan sementara hanya lokal 7 malam); (d) desain ulang halaman publik (solvinc-design).
