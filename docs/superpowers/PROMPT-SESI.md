@@ -70,7 +70,69 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
-## MULAI DI SINI — keadaan per 12 November 2026 malam (WIB)
+## MULAI DI SINI — keadaan per 12 November 2026 sore (WIB)
+
+**Halaman publik "Paspor & cap" SELESAI DIBANGUN di cabang `deploy/docker-vps`** (`95625dd`…`b3741cf`). Rencana `plans/2026-11-12-halaman-publik-paspor.md`: irisan 1–4 tercentang,
+irisan 5 tinggal butir terakhir (pemilik melihat → deploy produksi, keputusan pemilik).
+
+**Tugas sesi berikutnya:**
+1. `git push` cabang `deploy/docker-vps` bila belum; minta pemilik melihat di lokal/pratinjau, lalu **deploy produksi
+   hanya atas perintah pemilik**: build image baru + **migrasi `0067` di produksi** (hanya menambah 2 kolom JSON
+   nullable di `company_profile`; produksi kini di 67 migrasi, sesudahnya 68).
+2. Sesudah deploy: pemilik mengisi di Profil Perusahaan → Halaman publik: **jadwal buka** (Sen–Sab 09–17, Minggu tutup),
+   **Nomor WhatsApp** 0811-260-269, telepon (0263) 265-500, alamat, tautan peta, **nomor izin + kode KUPVA** (kini tampil
+   di halaman), dan ketentuan uang bila ada. Tanpa jadwal, chip menulis "Jam belum tersedia".
+3. Pertanyaan untuk pemilik (lihat bawah), lalu lanjut ke pekerjaan berikutnya di daftar "belum dirancang".
+
+**Keadaan terukur (dijalankan sesi ini, pada `b3741cf`):**
+- Vitest `Test Files 247 passed | 1 skipped (248)`, `Tests 1869 passed | 6 skipped (1875)` (naik dari 1849: uji
+  openingStatus, publicRates, viewModel, useCalculation, PublicPageSection; uji Home/PublicSections lama dihapus).
+- `tsc --noEmit` keluar 0; `vite build` lulus; Playwright: `59 passed (1.2m)` (gerbang penuh lokal, bukan GitHub Actions — cabang ini tanpa workflow).
+- Kinerja kirim tiket (CPU 4×, `node scripts/ukur-kinerja-publik.mjs`, hanya server lokal): 59–60 fps, frame terburuk
+  17–33 ms, 0 long-animation-frame > 50 ms (3 putaran).
+- Migrasi terakhir `0067_jadwal_buka_ketentuan_uang` — diterapkan di `moneychanger`, `mc_t_abcvalas`, `mc_t_visual`
+  (68 migrasi). **Produksi belum** (67).
+- Peragaan end-to-end lokal (`moneychanger`): profil diisi data uji lokal (izin `KEP-UJI-LOKAL/2026`, ketentuan uang
+  berawalan "Uji lokal:"), permintaan `LNY-20261112-JGVX0D` (+ beberapa "Uji Kinerja Lokal") dari tiket publik,
+  kurs SAR +10 diaktifkan lewat `activateBoardDrafts` (alasan "Uji lokal halaman publik: peristiwa KURS BARU") →
+  cap KURS BARU tampil. `mc_t_visual`: uji e2e mengaktifkan SGD/MYR dan membuat permintaan "Uji E2E Paspor".
+
+**Yang dibangun (ringkas):** `company_profile.openingSchedule` + `moneyRules` dan editornya; `shared/openingStatus.ts`;
+`publicContent.profile` kini juga mengirim nama badan hukum, nomor izin, kode KUPVA, jadwal, zona, ketentuan;
+`activeRates` publik dipersempit + `previous` (`server/publicRatePrevious.ts`); `client/src/pages/publik/` (halaman +
+`/papan`); `Home.tsx`, `pages/home/*`, `PublicServicePlanner.tsx` dihapus (kanal email permintaan ikut hilang — desain
+yang disetujui hanya WhatsApp/telepon). Label "Telepon kedua" → "Nomor WhatsApp".
+
+**Pertanyaan untuk pemilik (belum diputuskan):**
+1. Urutan papan kurs: kini **abjad kode** (AED, AUD, CNY, EUR…) — sama dengan sebelumnya dan netral white-label. Rujukan
+   yang disetujui memperlihatkan USD lalu SAR di atas. Pesan WhatsApp mengambil 4 valuta teratas urutan ini. Mau urutan
+   sendiri (kolom urutan per valuta di layar Kurs)? Rekomendasi: ya, kecil.
+2. Nomor tag bagian tetap 01–09 walau bagian Ketentuan uang tersembunyi (nomor "05" hilang). Biarkan atau dinomori ulang?
+
+### Yang tidak perlu ditemukan ulang (halaman publik)
+- CSS halaman publik **dibangkitkan**: `python3 scripts/publik-css.py docs/design/halaman-publik/rujukan-paspor-v3.html
+  client/src/pages/publik/paspor.css`. Jangan sunting `paspor.css` tangan; tambahan aplikasi di `paspor-app.css`.
+  Keyframes berawalan `pp-` karena Tailwind juga punya `spin`/`pulse` (CSS global setelah dimuat).
+- `.paspor` memakai `overflow-x: clip`, bukan `hidden` (hidden mematikan kepala yang lengket di div).
+- Jam berdetak hanya di `Header`/`PapanClock`. Render seluruh halaman tiap detik = ±60 ms per frame pada CPU 4×.
+- Efek gerak harus menunggu `ready` (rootRef terpasang): wadah "memuat profil" tidak memegang ref; efek sekali-jalan
+  yang jalan saat itu tidak pernah jalan lagi (sampul kedatangan dulu tidak pernah tampil).
+- Uji e2e publik **jangan mengaktifkan kurs USD** di `mc_t_visual`: `pembalikan.spec` membuat bon USD 16.000 tanpa
+  alasan selisih; kurs USD aktif memicu penjaga ±0,5%.
+- Tautan "Lihat daftar berizin" → `https://www.bi.go.id/id/layanan/informasi-perizinan/default.aspx` (diperiksa
+  lewat peramban; halaman KUPVA BI sendiri menautkannya). `curl` ke bi.go.id gagal dari sandbox, pakai peramban.
+- Nama valuta di DB lokal masih Inggris lama ("United Arab Emirates Dirham"); produksi memakai `shared/worldCurrencies.ts`
+  (Indonesia). Tampilan diuji dengan keduanya.
+
+**Risiko residual jujur:**
+- `service_requests` tidak menyimpan pecahan/kelompok yang dipilih di tiket (hanya valuta, arah, jumlah); petugas memilih
+  kurs pecahan saat konfirmasi.
+- `publicContent.announcements` masih mengirim baris pengumuman utuh (termasuk id pembuat); tidak dipersempit sesi ini.
+- `paspor.css` 558 baris (> ~400) karena dibangkitkan dari rujukan; disengaja.
+- Peta lokasi adalah gambar ilustrasi (nama jalan dari alamat), bukan peta sungguhan — sesuai rencana bagian §5.
+- Risiko terbuka dari blok sebelumnya (Caddy tokoemas belum permanen, MX lama, R2, contoh kurs partner) **tetap**.
+
+## Keadaan sebelumnya — 12 November 2026 malam (WIB), sebelum halaman publik dibangun
 
 **Tugas sesi berikutnya:** irisan 1 dari `docs/superpowers/plans/2026-11-12-halaman-publik-paspor.md` (jadwal buka
 terstruktur + ketentuan uang beserta penulisnya di Profil Perusahaan, `shared/openingStatus.ts`), lalu irisan 2–5.

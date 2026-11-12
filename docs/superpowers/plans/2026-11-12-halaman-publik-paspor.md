@@ -29,7 +29,7 @@ kurs tetap diaktifkan manual (halaman hanya membaca); tidak ada data uji di prod
 - [x] Rute publik `/papan`: papan kurs layar penuh, jam WIB, halaman bergilir, segarkan kurs berkala, cap "KURS BARU" bila kurs berubah.
 
 ## Irisan 5 — bukti dan rilis
-- [ ] Uji unit irisan 1–2; e2e: halaman publik di 390/1440, saklar, hitung, kirim tiket membuat `service_requests` di `mc_t_visual`, `/papan`.
-- [ ] Ukur kinerja (skrip rAF + long-animation-frame, CPU 4×): kirim tiket ≥ 55 fps, tanpa frame > 50 ms.
-- [ ] Tinjauan desain (tangkapan layar dibandingkan rujukan) + satu tinjauan adversarial.
+- [x] Uji unit irisan 1–2; e2e: halaman publik di 390/1440, saklar, hitung, kirim tiket membuat `service_requests` di `mc_t_visual`, `/papan`.
+- [x] Ukur kinerja (skrip rAF + long-animation-frame, CPU 4×): kirim tiket ≥ 55 fps, tanpa frame > 50 ms.
+- [x] Tinjauan desain (tangkapan layar dibandingkan rujukan) + satu tinjauan adversarial.
 - [ ] Gerbang penuh sekali; pemilik melihat di situs hidup sebelum diganti (deploy produksi = keputusan pemilik).
