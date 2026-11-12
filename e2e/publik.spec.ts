@@ -12,17 +12,15 @@ async function trpc(request: APIRequestContext, path: string, input: unknown) {
   return (await response.json())[0].result.data.json;
 }
 
+/** SGD dan MYR sengaja: uji lain memakai USD tanpa kurs papan, dan kurs USD aktif akan memicu penjaga selisih mereka. */
 test.beforeAll(async ({ request }) => {
   await trpc(request, "auth.login", { username: "test-controller", password: "123456" });
-  const currencies = await request.get(`/api/trpc/currencies.list?batch=1&input=${encodeURIComponent(JSON.stringify({ 0: { json: null } }))}`);
-  const list: { id: number; code: string; active: boolean }[] = (await currencies.json())[0].result.data.json;
-  const pick = (code: string) => list.find((currency) => currency.code === code && currency.active);
-  const cells = [
-    { code: "USD", buyRate: "16310", sellRate: "16420" },
-    { code: "SAR", buyRate: "4320", sellRate: "4390" },
-  ].flatMap((cell) => { const currency = pick(cell.code); return currency ? [{ currencyId: currency.id, rateTierId: null, quoteUnit: "1", buyRate: cell.buyRate, sellRate: cell.sellRate }] : []; });
-  expect(cells.length, "mc_t_visual perlu valuta USD/SAR aktif").toBeGreaterThan(0);
-  await trpc(request, "rates.saveBoardDrafts", { cells });
+  const sgd = await trpc(request, "currencies.ensure", { code: "SGD", name: "Dolar Singapura" });
+  const myr = await trpc(request, "currencies.ensure", { code: "MYR", name: "Ringgit Malaysia" });
+  await trpc(request, "rates.saveBoardDrafts", { cells: [
+    { currencyId: sgd.id, rateTierId: null, quoteUnit: "1", buyRate: "12450", sellRate: "12701" },
+    { currencyId: myr.id, rateTierId: null, quoteUnit: "1", buyRate: "3880", sellRate: "3960" },
+  ] });
   await trpc(request, "rates.activateBoard", { approvalReason: "Uji e2e halaman publik paspor" });
 });
 
@@ -42,10 +40,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
       await expect(hero.locator(".tg")).toHaveAttribute("data-dir", "beli");
       await expect(page.locator("#hitung .tg")).toHaveAttribute("data-dir", "beli");
 
-      await page.locator("#fCur").selectOption("USD");
+      await page.locator("#fCur").selectOption("SGD");
       await page.locator("#fAmt").fill("3");
-      // 3 × 16.420 = 49.260 → dibulatkan ke atas kelipatan Rp 100 = 49.300.
-      await expect(page.locator("#hitung .res-sum")).toHaveText("Anda beli 3 USD. Perkiraan Anda membayar Rp 49.300.");
+      // 3 × 12.701 = 38.103 → dibulatkan ke atas kelipatan Rp 100 = 38.200.
+      await expect(page.locator("#hitung .res-sum")).toHaveText("Anda beli 3 SGD. Perkiraan Anda membayar Rp 38.200.");
       await page.locator("#fAmt").fill("lima");
       await expect(page.locator("#eAmt")).toHaveText("Jumlah valas belum terbaca. Isi dengan angka, misalnya 500.");
     });
@@ -57,7 +55,7 @@ test.describe("tiket konfirmasi", () => {
 
   test("menulis service_requests sungguhan dan menampilkan nomornya", async ({ page }) => {
     await page.goto("/");
-    await page.locator("#fCur").selectOption("USD");
+    await page.locator("#fCur").selectOption("SGD");
     await page.locator("#fAmt").fill("500");
     await page.getByRole("button", { name: "Minta konfirmasi kurs" }).first().click();
     const ticket = page.locator("#konfirmasi");

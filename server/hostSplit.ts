@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 
 /**
- * Dua alamat untuk satu aplikasi (keputusan pemilik 12 Nov 2026): alamat publik (mis. ibukotavalasindo.online) hanya
- * melayani halaman kurs untuk nasabah; back office (mis. backoffice.ibukotavalasindo.online) melayani login dan semua
+ * Dua alamat untuk satu aplikasi (keputusan pemilik 12 Nov 2026): alamat publik (mis. contohvalas.co.id) hanya
+ * melayani halaman kurs untuk nasabah; back office (mis. backoffice.contohvalas.co.id) melayani login dan semua
  * layar staf. Diatur lewat PUBLIC_HOST dan BACKOFFICE_HOST; bila salah satunya kosong (pengembangan lokal), tidak ada
  * pemisahan dan semua jalur dilayani di alamat mana pun.
  *
