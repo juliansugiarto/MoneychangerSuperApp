@@ -182,7 +182,7 @@ import { currentTenantCode } from "./tenantContext";
 import { SetupRefusal, completeInstallationSetup } from "./installationSetup";
 import { readPublicProfile } from "./publicProfile";
 import { updateCompanyAppearance, updateCompanyPublicPage } from "./companyPresentation";
-import { PUBLIC_FAQ_LIMIT } from "../shared/publicPage";
+import { MONEY_RULE_MAX_LENGTH, PUBLIC_FAQ_LIMIT } from "../shared/publicPage";
 import { countRemainingRecoveryCodes, recoverOwnerAccount, regenerateRecoveryCodes } from "./recoveryCodes";
 import { reverseTransaction } from "./transactionReversal";
 import { createDttotNotice, DTTOT_DELIVERY_STEPS, getDttotNoticeReport, listDttotNotices, recordDttotDelivery, screenDttotNotice, updateDttotNoticeReport } from "./dttotNotices";
@@ -1279,6 +1279,12 @@ export const appRouter = router({
       mapUrl: z.string().trim().max(500).nullable(),
       publicFaq: z.array(z.object({ question: z.string().max(200), answer: z.string().max(1000) })).max(PUBLIC_FAQ_LIMIT + 1),
       fraudWarning: z.string().trim().max(1000).nullable(),
+      openingSchedule: z.array(z.object({ open: z.string().max(5), close: z.string().max(5) }).nullable()).length(7).nullable(),
+      moneyRules: z.object({
+        denominations: z.string().trim().max(MONEY_RULE_MAX_LENGTH + 1).nullable(),
+        condition: z.string().trim().max(MONEY_RULE_MAX_LENGTH + 1).nullable(),
+        series: z.string().trim().max(MONEY_RULE_MAX_LENGTH + 1).nullable(),
+      }).nullable(),
     })).mutation(({ input, ctx }) => updateCompanyPublicPage(input, ctx.user)),
   }),
 

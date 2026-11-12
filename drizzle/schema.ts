@@ -24,6 +24,8 @@ import {
   IRA_LEGAL_FORM_VALUES,
   IRA_OCCUPATION_CATEGORY_VALUES,
 } from "../shared/iraVocabulary";
+import type { OpeningSchedule } from "../shared/openingStatus";
+import type { MoneyRules } from "../shared/publicPage";
 import { THEME_PALETTE_IDS } from "../shared/themePalettes";
 
 export const staffRoles = ["STAFF", "ADMIN", "CONTROLLER", "SHAREHOLDER"] as const;
@@ -946,8 +948,12 @@ export const companyProfile = mysqlTable("company_profile", {
   /** Mati → alamat `/` langsung membuka halaman masuk staf. */
   publicPageEnabled: boolean("publicPageEnabled").default(true).notNull(),
   secondaryPhone: varchar("secondaryPhone", { length: 60 }),
-  /** Teks bebas, mis. "Senin–Sabtu 08.00–17.00". */
+  /** Teks bebas, mis. "Senin–Sabtu 08.00–17.00". Catatan saja; status Buka/Tutup membaca `openingSchedule`. */
   openingHours: varchar("openingHours", { length: 500 }),
+  /** Tujuh hari, Senin dulu; `null` per hari = tutup. Kosong = jadwal belum diisi. Dijaga `shared/openingStatus.ts`. */
+  openingSchedule: json("openingSchedule").$type<OpeningSchedule>(),
+  /** Ketentuan pecahan / kondisi / seri uang untuk halaman publik §4. Kosong = bagian disembunyikan. */
+  moneyRules: json("moneyRules").$type<MoneyRules>(),
   /** Hanya `https://`; ditegakkan `shared/publicPage.ts`. */
   mapUrl: varchar("mapUrl", { length: 500 }),
   /** Pasangan tanya-jawab halaman publik, maks. 12. Kosong = FAQ produk netral. */

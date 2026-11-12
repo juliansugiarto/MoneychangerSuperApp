@@ -3,7 +3,20 @@
  * peringatan penipuan memakai teks produk netral — tanpa nama perusahaan, tanpa nomor — sampai
  * pemilik mengisinya. Tidak ada teks milik perusahaan mana pun yang ditulis mati di sini.
  */
+import { checkOpeningSchedule, type OpeningSchedule } from "./openingStatus";
+
 export type PublicFaqItem = { question: string; answer: string };
+
+/**
+ * Ketentuan uang (spec teks §4): tiga butir faktual yang diisi pemilik. Semua kosong = bagian
+ * disembunyikan; tidak ada teks bawaan karena ketentuan penerimaan uang tidak boleh ditebak.
+ */
+export type MoneyRules = { denominations: string | null; condition: string | null; series: string | null };
+export const MONEY_RULE_MAX_LENGTH = 500;
+
+export function hasMoneyRules(rules: Partial<MoneyRules> | null | undefined): boolean {
+  return Boolean(rules && [rules.denominations, rules.condition, rules.series].some((value) => value?.trim()));
+}
 
 export const PUBLIC_FAQ_LIMIT = 12;
 
@@ -49,6 +62,8 @@ export type PublicPageInput = {
   mapUrl?: string | null;
   publicFaq: PublicFaqItem[];
   fraudWarning?: string | null;
+  openingSchedule?: OpeningSchedule | null;
+  moneyRules?: Partial<MoneyRules> | null;
 };
 
 export type PublicPageValues = {
@@ -58,6 +73,8 @@ export type PublicPageValues = {
   mapUrl: string | null;
   publicFaq: PublicFaqItem[] | null;
   fraudWarning: string | null;
+  openingSchedule: OpeningSchedule | null;
+  moneyRules: MoneyRules | null;
 };
 
 const blankToNull = (value: string | null | undefined) => value?.trim() || null;
@@ -70,6 +87,16 @@ export function normalizePublicPage(input: PublicPageInput): { ok: true; values:
   const faq = input.publicFaq.map((item) => ({ question: item.question.trim(), answer: item.answer.trim() }));
   const incomplete = faq.findIndex((item) => !item.question || !item.answer);
   if (incomplete >= 0) return { ok: false, error: `Pertanyaan ke-${incomplete + 1} belum lengkap. Isi pertanyaan dan jawabannya, atau hapus barisnya.` };
+  const schedule = checkOpeningSchedule(input.openingSchedule ?? null);
+  if (!schedule.ok) return schedule;
+  const rules: MoneyRules = {
+    denominations: blankToNull(input.moneyRules?.denominations),
+    condition: blankToNull(input.moneyRules?.condition),
+    series: blankToNull(input.moneyRules?.series),
+  };
+  if (Object.values(rules).some((value) => value && value.length > MONEY_RULE_MAX_LENGTH)) {
+    return { ok: false, error: `Setiap ketentuan uang paling panjang ${MONEY_RULE_MAX_LENGTH} huruf. Ringkas kalimatnya.` };
+  }
   return {
     ok: true,
     values: {
@@ -79,6 +106,8 @@ export function normalizePublicPage(input: PublicPageInput): { ok: true; values:
       mapUrl,
       publicFaq: faq.length ? faq : null,
       fraudWarning: blankToNull(input.fraudWarning),
+      openingSchedule: schedule.value,
+      moneyRules: hasMoneyRules(rules) ? rules : null,
     },
   };
 }

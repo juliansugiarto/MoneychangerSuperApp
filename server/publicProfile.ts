@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import { operationalDocuments, type CompanyProfile } from "../drizzle/schema";
-import { isSafeMapUrl, type PublicFaqItem } from "../shared/publicPage";
+import type { OpeningSchedule } from "../shared/openingStatus";
+import { isSafeMapUrl, type MoneyRules, type PublicFaqItem } from "../shared/publicPage";
+import { DEFAULT_OPERATIONAL_TIMEZONE } from "../shared/regulatoryActionQueue";
 import { DEFAULT_PALETTE_ID } from "../shared/themePalettes";
 import { isSetupRequired } from "./installationSetup";
 import { databaseOrThrow, getCompanyProfile } from "./operations";
@@ -8,20 +10,29 @@ import { storageGetSignedUrl } from "./storage";
 
 /**
  * Satu-satunya jalan data Profil Perusahaan ke pengunjung tanpa akun. Daftar kuncinya dipaku uji;
- * menambah kunci berarti mengubah uji itu dengan sadar. Nomor izin, NPWP, kode BI/PPATK/goAML, dan
- * email tidak pernah keluar lewat sini.
+ * menambah kunci berarti mengubah uji itu dengan sadar. NPWP, NIB, kode BI/PPATK/goAML, dan email
+ * tidak pernah keluar lewat sini. Nama badan hukum, nomor izin, dan kode KUPVA **sengaja** publik
+ * sejak 12 Nov 2026 (rencana bagian §6 "Resmi & aman" dan §9 kaki halaman): itulah bukti izin yang
+ * dicari pengunjung, dan sama dengan yang tercetak di papan izin outlet.
  */
 export const PUBLIC_PROFILE_KEYS = [
-  "tradingName", "address", "phone", "secondaryPhone", "openingHours", "mapUrl", "publicFaq", "fraudWarning",
+  "tradingName", "legalEntityName", "licenseNumber", "kupvaCode", "address", "phone", "secondaryPhone", "openingHours",
+  "openingSchedule", "timezone", "moneyRules", "mapUrl", "publicFaq", "fraudWarning",
   "themePalette", "accentColor", "publicPageEnabled", "logoUrl", "setupRequired",
 ] as const;
 
 export type PublicProfile = {
   tradingName: string | null;
+  legalEntityName: string | null;
+  licenseNumber: string | null;
+  kupvaCode: string | null;
   address: string | null;
   phone: string | null;
   secondaryPhone: string | null;
   openingHours: string | null;
+  openingSchedule: OpeningSchedule | null;
+  timezone: string;
+  moneyRules: MoneyRules | null;
   mapUrl: string | null;
   publicFaq: PublicFaqItem[] | null;
   fraudWarning: string | null;
@@ -35,10 +46,16 @@ export type PublicProfile = {
 export function toPublicProfile(row: CompanyProfile | null, logoUrl: string | null, setupRequired: boolean): PublicProfile {
   return {
     tradingName: row?.tradingName?.trim() || row?.legalEntityName?.trim() || null,
+    legalEntityName: row?.legalEntityName?.trim() || null,
+    licenseNumber: row?.licenseNumber?.trim() || null,
+    kupvaCode: row?.kupvaCode?.trim() || null,
     address: row?.address ?? null,
     phone: row?.phone ?? null,
     secondaryPhone: row?.secondaryPhone ?? null,
     openingHours: row?.openingHours ?? null,
+    openingSchedule: row?.openingSchedule ?? null,
+    timezone: row?.timezone || DEFAULT_OPERATIONAL_TIMEZONE,
+    moneyRules: row?.moneyRules ?? null,
     mapUrl: row?.mapUrl && isSafeMapUrl(row.mapUrl) ? row.mapUrl : null,
     publicFaq: row?.publicFaq ?? null,
     fraudWarning: row?.fraudWarning ?? null,

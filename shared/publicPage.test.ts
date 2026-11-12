@@ -38,7 +38,14 @@ describe("isian halaman publik", () => {
 
   it("isian kosong disimpan sebagai null dan teks dipangkas", () => {
     const result = normalizePublicPage({ ...base, secondaryPhone: "  ", openingHours: " Senin–Sabtu ", mapUrl: "", fraudWarning: "", publicFaq: [{ question: " Q ", answer: " A " }] });
-    expect(result).toEqual({ ok: true, values: { publicPageEnabled: true, secondaryPhone: null, openingHours: "Senin–Sabtu", mapUrl: null, fraudWarning: null, publicFaq: [{ question: "Q", answer: "A" }] } });
+    expect(result).toEqual({ ok: true, values: { publicPageEnabled: true, secondaryPhone: null, openingHours: "Senin–Sabtu", mapUrl: null, fraudWarning: null, publicFaq: [{ question: "Q", answer: "A" }], openingSchedule: null, moneyRules: null } });
+  });
+
+  it("ketentuan uang: dipangkas, kosong semua = null, terlalu panjang ditolak; jadwal salah ditolak", () => {
+    expect(normalizePublicPage({ ...base, moneyRules: { denominations: " ", condition: " Uang robek tidak diterima. ", series: "" } })).toMatchObject({ ok: true, values: { moneyRules: { denominations: null, condition: "Uang robek tidak diterima.", series: null } } });
+    expect(normalizePublicPage({ ...base, moneyRules: { denominations: " ", condition: null, series: "" } })).toMatchObject({ ok: true, values: { moneyRules: null } });
+    expect(normalizePublicPage({ ...base, moneyRules: { denominations: "x".repeat(501), condition: null, series: null } })).toMatchObject({ ok: false, error: expect.stringContaining("500") });
+    expect(normalizePublicPage({ ...base, openingSchedule: [{ open: "10:00", close: "09:00" }, null, null, null, null, null, null] })).toMatchObject({ ok: false, error: expect.stringContaining("Senin") });
   });
 
   it("menolak peta non-https, lebih dari 12 pertanyaan, dan pertanyaan tanpa jawaban", () => {

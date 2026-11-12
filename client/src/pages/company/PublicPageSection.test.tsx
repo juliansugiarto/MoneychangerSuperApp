@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { PublicPageSection, publicPageKey } from "./PublicPageSection";
 
-const initial = { publicPageEnabled: true, secondaryPhone: null, openingHours: null, mapUrl: null, publicFaq: null, fraudWarning: null };
+const initial = { publicPageEnabled: true, secondaryPhone: null, openingHours: null, mapUrl: null, publicFaq: null, fraudWarning: null, openingSchedule: null, moneyRules: null };
 
 describe("bagian Halaman publik", () => {
   it("mematikan halaman publik menjelaskan akibatnya", async () => {
@@ -22,7 +22,30 @@ describe("bagian Halaman publik", () => {
     await userEvent.clear(map);
     await userEvent.type(map, "https://maps.app.goo.gl/abc");
     await userEvent.click(screen.getByRole("button", { name: "Simpan halaman publik" }));
-    expect(onSave).toHaveBeenCalledWith({ publicPageEnabled: true, secondaryPhone: null, openingHours: null, mapUrl: "https://maps.app.goo.gl/abc", publicFaq: [], fraudWarning: null });
+    expect(onSave).toHaveBeenCalledWith({ publicPageEnabled: true, secondaryPhone: null, openingHours: null, mapUrl: "https://maps.app.goo.gl/abc", publicFaq: [], fraudWarning: null, openingSchedule: null, moneyRules: null });
+  });
+
+  it("jadwal: Senin disalin ke Selasa–Sabtu, Minggu tutup; jam tutup sebelum buka ditolak", async () => {
+    const onSave = vi.fn();
+    render(<PublicPageSection initial={initial} isPending={false} onSave={onSave} />);
+    const save = screen.getByRole("button", { name: "Simpan halaman publik" });
+    await userEvent.type(screen.getByLabelText("Jam buka Senin"), "09:00");
+    await userEvent.type(screen.getByLabelText("Jam tutup Senin"), "08:00");
+    expect(screen.getByText("Jam tutup Senin harus sesudah jam bukanya.")).toBeTruthy();
+    expect(save.hasAttribute("disabled")).toBe(true);
+    await userEvent.clear(screen.getByLabelText("Jam tutup Senin"));
+    await userEvent.type(screen.getByLabelText("Jam tutup Senin"), "17:00");
+    // Minggu belum diisi → jadwal belum lengkap.
+    await userEvent.click(screen.getByRole("button", { name: "Samakan Selasa–Sabtu dengan Senin" }));
+    expect(screen.getByText(/Jam Minggu belum lengkap/)).toBeTruthy();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Minggu tutup" }));
+    await userEvent.type(screen.getByLabelText("Seri uang"), "USD seri sebelum 2006 kursnya berbeda.");
+    await userEvent.click(save);
+    const day = { open: "09:00", close: "17:00" };
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      openingSchedule: [day, day, day, day, day, day, null],
+      moneyRules: { denominations: null, condition: null, series: "USD seri sebelum 2006 kursnya berbeda." },
+    }));
   });
 });
 

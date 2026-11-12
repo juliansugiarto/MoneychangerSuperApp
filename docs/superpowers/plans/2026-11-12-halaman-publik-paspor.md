@@ -9,10 +9,10 @@ pembulatan memakai `shared/rupiahRounding.ts` (sama dengan kasir); waktu WIB lew
 kurs tetap diaktifkan manual (halaman hanya membaca); tidak ada data uji di produksi.
 
 ## Irisan 1 — data baru beserta penulisnya
-- [ ] Migrasi `0067`: `company_profile.openingSchedule` (JSON 7 hari: buka/tutup "HH:MM" atau tutup) dan `moneyRules` (teks pendek, opsional). Baca SQL; hanya menambah kolom.
-- [ ] Penulis: Profil Perusahaan (layar + tRPC + validasi + audit) untuk jadwal per hari dan ketentuan uang.
-- [ ] `shared/openingStatus.ts`: status Buka / Segera tutup (30 menit) / Tutup + "buka lagi …" dalam WIB, dengan uji (termasuk Minggu, sebelum buka, tepat jam tutup, zona perangkat lain).
-- [ ] `publicContent.profile` mengirim jadwal, ketentuan, telepon, WhatsApp (telepon kedua), nomor izin, kode KUPVA.
+- [x] Migrasi `0067`: `company_profile.openingSchedule` (JSON 7 hari: buka/tutup "HH:MM" atau tutup) dan `moneyRules` (teks pendek, opsional). Baca SQL; hanya menambah kolom. *Dibangun sebagai JSON tiga butir (pecahan / kondisi / seri) mengikuti spec teks §4; diterapkan di moneychanger, mc_t_abcvalas, mc_t_visual (68 migrasi), BELUM di produksi.*
+- [x] Penulis: Profil Perusahaan (layar + tRPC + validasi + audit) untuk jadwal per hari dan ketentuan uang.
+- [x] `shared/openingStatus.ts`: status Buka / Segera tutup (30 menit) / Tutup + "buka lagi …" dalam WIB, dengan uji (termasuk Minggu, sebelum buka, tepat jam tutup, zona perangkat lain).
+- [x] `publicContent.profile` mengirim jadwal, ketentuan, telepon, WhatsApp (telepon kedua), nomor izin, kode KUPVA.
 
 ## Irisan 2 — data kurs publik
 - [ ] Perubahan dibanding kurs sebelumnya (kurs RETIRED terakhir untuk valuta + kelompok pecahan yang sama); "Belum ada pembanding" bila tidak ada; uji.
