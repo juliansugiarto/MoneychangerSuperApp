@@ -248,4 +248,33 @@ describe("idempotensi posting mutasi kas", () => {
     getDb.mockRestore();
     post.mockRestore();
   });
+
+  it("satu mutasi yang gagal dijurnal dicatat dilewati, dan mutasi berikutnya tetap dijurnal", async () => {
+    const movement = (id: number) => ({
+      id, cashBalanceId: 1, category: "CAPITAL_INJECTION", amount: "1000000.000000", reason: `Setoran ${id}`,
+      createdAt: new Date("2026-09-04T03:00:00Z"), currencyCode: "IDR",
+    });
+    const chain = (rows: unknown[]): any => ({
+      from: () => chain(rows), innerJoin: () => chain(rows), where: () => chain(rows), orderBy: () => chain(rows),
+      limit: () => Promise.resolve(rows), then: (ok: any, err: any) => Promise.resolve(rows).then(ok, err),
+    });
+    const fakeDb = {
+      select: vi.fn((fields: Record<string, unknown>) => {
+        if ("sourceReference" in fields) return chain([]);
+        if (Object.keys(fields).length === 1) return chain([{ id: 1 }]);
+        return chain([movement(21), movement(22)]);
+      }),
+    };
+    const getDb = vi.spyOn(db, "getDb").mockResolvedValue(fakeDb as never);
+    const post = vi.spyOn(ledgerOperations, "postJournalEntry")
+      .mockRejectedValueOnce(new Error("Periode ini sudah ditutup."))
+      .mockResolvedValueOnce({ entryNumber: "JU-202609-0002" } as never);
+
+    const outcome = await postCashMovements({ from: new Date("2026-09-01"), to: new Date("2026-09-30") }, { id: 1 });
+
+    expect(outcome.skipped).toEqual([{ reference: "KAS-21", reason: "Periode ini sudah ditutup." }]);
+    expect(outcome.posted).toEqual([{ reference: "KAS-22", entryNumber: "JU-202609-0002" }]);
+    getDb.mockRestore();
+    post.mockRestore();
+  });
 });

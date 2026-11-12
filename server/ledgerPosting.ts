@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, lt, lte } from "drizzle-orm";
 import {
   bankAccountMovements,
   bankAccounts,
@@ -14,6 +14,7 @@ import { snapshotOnOrBefore, valueMonetaryBalance } from "../shared/currencyReva
 import { midClosingRate } from "../shared/inventoryValuation";
 import { isSkipped, mapBankMovement, mapCashMovement, mapExchangeTransaction, mapExpense } from "../shared/journalMapping";
 import { calendarDay, isoDay } from "../shared/ledger";
+import { operationalDateKey, startOfNextOperationalDay, startOfOperationalDay } from "../shared/regulatoryActionQueue";
 import { databaseOrThrow, writeAudit } from "./operations";
 import { postJournalEntry } from "./ledgerOperations";
 
@@ -38,7 +39,36 @@ export type PostingOutcome = {
 
 const emptyOutcome = (): PostingOutcome => ({ posted: [], alreadyPosted: [], skipped: [] });
 
+/**
+ * Satu sumber gagal dijurnal (mis. bulannya sudah tutup buku) tidak boleh menghentikan batch di tengah jalan
+ * — sebagian sumber terposting, sisanya tidak, tanpa penjelasan. Kegagalannya dicatat sebagai "dilewati"
+ * beserta alasannya, dan sumber berikutnya tetap diproses.
+ */
+async function postOne(outcome: PostingOutcome, reference: string, post: () => Promise<{ entryNumber: string }>) {
+  try {
+    const entry = await post();
+    outcome.posted.push({ reference, entryNumber: entry.entryNumber });
+  } catch (error) {
+    outcome.skipped.push({ reference, reason: error instanceof Error ? error.message : String(error) });
+  }
+}
+
 const dbDate = (value: Date) => new Date(`${calendarDay(value)}T00:00:00`);
+
+/**
+ * Tanggal jurnal untuk sumber yang berupa instan (bon, mutasi kas, mutasi bank): hari usaha WIB-nya, bukan
+ * hari kalender proses server (UTC di produksi). Dibentuk sebagai tengah hari UTC agar `isoDay` dan
+ * `calendarDay` — keduanya dipakai `postJournalEntry` — membaca hari yang sama di mesin UTC maupun WIB.
+ */
+export const operationalEntryDate = (instant: Date) => new Date(`${operationalDateKey(instant)}T12:00:00Z`);
+
+/** Jendela instan `[awal hari WIB from, awal hari WIB sesudah to)` untuk rentang tanggal pilihan layar. */
+export function operationalPostingWindow(input: { from: Date; to: Date }) {
+  return {
+    start: startOfOperationalDay(new Date(`${isoDay(input.from)}T12:00:00Z`)),
+    end: startOfNextOperationalDay(new Date(`${isoDay(input.to)}T12:00:00Z`)),
+  };
+}
 
 type PostedSourceType = "TRANSAKSI_VALUTA" | "PENGELUARAN" | "MUTASI_KAS" | "MUTASI_BANK";
 
@@ -69,8 +99,8 @@ export async function postExchangeTransactions(input: { from: Date; to: Date }, 
         eq(exchangeTransactions.status, "COMPLETED"),
         eq(exchangeTransactions.isDemo, false),
         eq(exchangeTransactions.isHistorical, false),
-        gte(exchangeTransactions.transactionAt, dbDate(input.from)),
-        lte(exchangeTransactions.transactionAt, new Date(`${isoDay(input.to)}T23:59:59`)),
+        gte(exchangeTransactions.transactionAt, operationalPostingWindow(input).start),
+        lt(exchangeTransactions.transactionAt, operationalPostingWindow(input).end),
       ),
     );
 
@@ -92,17 +122,16 @@ export async function postExchangeTransactions(input: { from: Date; to: Date }, 
       outcome.skipped.push({ reference: row.transactionNumber, reason: mapped.skipped });
       continue;
     }
-    const entry = await postJournalEntry(
+    await postOne(outcome, row.transactionNumber, () => postJournalEntry(
       {
-        entryDate: new Date(row.transactionAt),
+        entryDate: operationalEntryDate(new Date(row.transactionAt)),
         description: `${row.operation === "BUY" ? "Pembelian" : "Penjualan"} UKA — bon ${row.receiptNumber ?? row.transactionNumber}`,
         sourceType: "TRANSAKSI_VALUTA",
         sourceReference: row.transactionNumber,
         lines: mapped.lines,
       },
       actor,
-    );
-    outcome.posted.push({ reference: row.transactionNumber, entryNumber: entry.entryNumber });
+    ));
   }
   return outcome;
 }
@@ -129,7 +158,7 @@ export async function postExpenses(input: { from: Date; to: Date }, actor: { id:
       outcome.skipped.push({ reference, reason: mapped.skipped });
       continue;
     }
-    const entry = await postJournalEntry(
+    await postOne(outcome, reference, () => postJournalEntry(
       {
         entryDate: new Date(row.expenseDate),
         description: `Pengeluaran — ${row.description}`,
@@ -138,8 +167,7 @@ export async function postExpenses(input: { from: Date; to: Date }, actor: { id:
         lines: mapped.lines,
       },
       actor,
-    );
-    outcome.posted.push({ reference, entryNumber: entry.entryNumber });
+    ));
   }
   return outcome;
 }
@@ -168,8 +196,8 @@ export async function postCashMovements(input: { from: Date; to: Date }, actor: 
     .innerJoin(currencies, eq(currencies.id, cashBalances.currencyId))
     .where(
       and(
-        gte(cashBalanceMovements.createdAt, dbDate(input.from)),
-        lte(cashBalanceMovements.createdAt, new Date(`${isoDay(input.to)}T23:59:59`)),
+        gte(cashBalanceMovements.createdAt, operationalPostingWindow(input).start),
+        lt(cashBalanceMovements.createdAt, operationalPostingWindow(input).end),
       ),
     )
     .orderBy(cashBalanceMovements.id);
@@ -206,17 +234,16 @@ export async function postCashMovements(input: { from: Date; to: Date }, actor: 
       outcome.skipped.push({ reference, reason: mapped.skipped });
       continue;
     }
-    const entry = await postJournalEntry(
+    await postOne(outcome, reference, () => postJournalEntry(
       {
-        entryDate: new Date(row.createdAt),
+        entryDate: operationalEntryDate(new Date(row.createdAt)),
         description: `Mutasi kas — ${row.reason}`.slice(0, 500),
         sourceType: "MUTASI_KAS",
         sourceReference: reference,
         lines: mapped.lines,
       },
       actor,
-    );
-    outcome.posted.push({ reference, entryNumber: entry.entryNumber });
+    ));
   }
   return outcome;
 }
@@ -245,8 +272,8 @@ export async function postBankMovements(input: { from: Date; to: Date }, actor: 
     .innerJoin(currencies, eq(currencies.id, bankAccounts.currencyId))
     .where(
       and(
-        gte(bankAccountMovements.createdAt, dbDate(input.from)),
-        lte(bankAccountMovements.createdAt, new Date(`${isoDay(input.to)}T23:59:59`)),
+        gte(bankAccountMovements.createdAt, operationalPostingWindow(input).start),
+        lt(bankAccountMovements.createdAt, operationalPostingWindow(input).end),
       ),
     )
     .orderBy(bankAccountMovements.id);
@@ -314,17 +341,16 @@ export async function postBankMovements(input: { from: Date; to: Date }, actor: 
       outcome.skipped.push({ reference, reason: mapped.skipped });
       continue;
     }
-    const entry = await postJournalEntry(
+    await postOne(outcome, reference, () => postJournalEntry(
       {
-        entryDate: new Date(row.createdAt),
+        entryDate: operationalEntryDate(new Date(row.createdAt)),
         description: `Mutasi bank — ${row.reason}`.slice(0, 500),
         sourceType: "MUTASI_BANK",
         sourceReference: reference,
         lines: mapped.lines,
       },
       actor,
-    );
-    outcome.posted.push({ reference, entryNumber: entry.entryNumber });
+    ));
   }
   return outcome;
 }

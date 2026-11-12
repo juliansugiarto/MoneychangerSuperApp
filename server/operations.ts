@@ -62,6 +62,7 @@ import { customerHighRiskDenial, highRiskResetValues } from "./customerHighRiskA
 import { relationshipEndValues } from "../shared/documentRetention";
 import { parseWatchlistNameList, scoreNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
 import { compareDenominationCounts, type DenominationVarianceRow } from "../shared/denominationVariance";
+import { assertTransactionTimeAllowed } from "./transactionTime";
 
 /** Rejects a denomination value that doesn't match a real banknote/coin for this currency (when we have a curated list — see shared/currencyDenominations.ts). Never trust the client alone here: this is exactly the check that stops a typo like "IDR 131250000 × 1 lembar" from being recorded as if it were a real note. */
 function assertKnownDenomination(value: Decimal, currencyCode: string | undefined, label: string) {
@@ -1532,6 +1533,7 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   if (!customer) throw new Error("Nasabah tidak ditemukan.");
   if (customer.isDemo || customer.isHistorical) throw new Error("Nasabah demo atau historis tidak dapat digunakan pada transaksi operasional.");
   if (customer.profileStatus === "INACTIVE") throw new Error("Nasabah tidak aktif dan tidak dapat digunakan pada transaksi.");
+  await assertTransactionTimeAllowed(input.transactionAt);
   // Pemblokiran serta merta — Pasal 47 ayat (1) huruf d PBI 10/2024. Diperiksa sebelum gerbang
   // risiko tinggi: persetujuan Pemegang Saham tidak dapat meloloskan kecocokan nama. Percobaannya
   // dicatat lebih dulu, di luar transaksi basis data bon, supaya tetap ada walau bon ditolak.
