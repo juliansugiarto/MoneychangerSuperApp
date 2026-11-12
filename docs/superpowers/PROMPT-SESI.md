@@ -170,7 +170,13 @@ Pembukaan Pemblokiran dari formulir BI, LTKM ≤ 3 hari kerja bila cocok, dan ca
 Densus 88, tembusan PPATK, tembusan pengawas BI, unggah MS Forms BI) — aplikasi baru punya saring + blokir;
 (d) uji pengimpor DTTOT terhadap daftar terbaru BI (P-25, Oktober 2026). Rincian: memori `kupva-regulation-2026`.
 
-**Berikutnya (urut):** (1a) pembalikan bon + pembulatan ke atas; (1b) dua celah regulasi di atas;
+**Selesai 12 November (sore), cabang `fix/siap-daring`:** ambang underlying hanya pembelian nasabah & `>`
+USD 10.000 (`b0fd469`); kalimat kwitansi (`d512d11`); pembulatan Rp 100 (`f74f07c`); pembalikan bon + migrasi
+`0063` (`4d598d5`, perbaikan reviu `fb7de4b`); panduan & skema (`13b7436`). Gerbang sesudah `fb7de4b`:
+`Tests 1834 passed | 6 skipped (1840)`, tsc 0, build, Playwright `56 passed`. Migrasi `0063` hanya di
+moneychanger, mc_t_abcvalas, mc_t_visual.
+
+**Berikutnya (urut):** (1) alur DTTOT (celah c) + uji pengimpor terhadap daftar P-25 (celah d);
 (2) paket Docker ala tokoemas + cadangan terenkripsi ke R2 + `deploy.yml` baru; (3) penyederhanaan layar
 Kasir & transaksi (sub-proyek 4); (4) CSP `script-src` sesudah jendela cetak berhenti memakai skrip sebaris.
 
