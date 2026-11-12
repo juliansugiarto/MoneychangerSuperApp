@@ -146,7 +146,10 @@ snapshot; rumus IRA tidak berubah.
 - M8 `recordRelationshipEnd` periksa-lalu-tulis tidak atomik.
 - M9 `referenceCode` tidak dinormalkan (huruf besar/spasi) pada kunci kecocokan.
 
-**Tugas berikutnya: audit kualitas, lalu V2 di tempat** (lihat catatan 12 November di atas). Prompt sesi rancangan desktop yang dulu ada di sini dihapus.
+**Tugas berikutnya: paket "Siap daring"** — perbaiki U1, U2, K1, K2, K3, K4 (lalu U3–U5) dari
+`docs/audits/2026-11-12-audit-kualitas-sebelum-daring.md`, dengan uji MySQL sungguhan untuk U1/U2.
+Audit selesai 12 November: putusan **rapikan di tempat, bukan tulis ulang**. Cabang
+`chore/buang-sisa-manus` (`3be51cf`) belum digabung. **Push `main` = deploy produksi otomatis.** Prompt sesi rancangan desktop yang dulu ada di sini dihapus.
 
 ---
 
