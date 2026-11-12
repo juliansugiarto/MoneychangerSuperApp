@@ -15,6 +15,7 @@ function mockDb(opts: { currencyCode?: string; cashAmount?: string; bankCurrency
           const name = String(table?.[Symbol.for("drizzle:Name")] ?? "");
           if (name === "bank_accounts") return lockableRows([{ id: 9, currencyId: bankCurrencyId, availableAmount: bankAmount, active: true }]);
           if (name === "currencies") return lockableRows([{ id: 1, code: currencyCode, active: true }]);
+          if (name === "cash_denomination_balances") return lockableRows([{ currencyId: 1, quantity: 1000 }]);
           return lockableRows([{ id: 1, currencyId: 1, availableAmount: cashAmount }]);
         } }),
       }),

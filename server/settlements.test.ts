@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { bankAccounts, cashBalances, currencies, fixedAssets, ledgerSettlements, operationalExpenses } from "../drizzle/schema";
+import { bankAccounts, cashBalances, cashDenominationBalances, currencies, fixedAssets, ledgerSettlements, operationalExpenses } from "../drizzle/schema";
 import * as db from "./db";
 import { listOutstandingSettlements, recordSettlement } from "./settlements";
 
@@ -28,6 +28,8 @@ function mockDb(options: { expenses?: unknown[]; assets?: unknown[]; settlements
     [bankAccounts, options.bank ? [options.bank] : []],
     [currencies, [{ id: 1, code: options.currencyCode ?? "IDR", active: true }]],
     [cashBalances, [{ id: 1, currencyId: 1, availableAmount: options.cash ?? "50000000.000000" }]],
+    // Stok lembar di laci tiruan: cukup untuk setiap pembayaran tunai di uji ini.
+    [cashDenominationBalances, [{ currencyId: 1, denominationValue: "100000.000000", quantity: 1000 }]],
   ]);
   const transactions: { table: unknown; values: any }[][] = [];
 

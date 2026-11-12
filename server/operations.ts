@@ -2002,11 +2002,25 @@ async function resetDenominationBalances(tx: any, currencyId: number, entries: {
   await tx.insert(cashDenominationBalances).values(entries.map((entry) => ({ currencyId, denominationValue: new Decimal(entry.value).toFixed(6), quantity: entry.quantity })));
 }
 
-/** Adds (sign=1) or removes (sign=-1) notes/coins from a currency's running denomination stock — for adjustments and completed transactions, which move stock by a delta rather than redeclaring it. */
+/**
+ * Adds (sign=1) or removes (sign=-1) notes/coins from a currency's running denomination stock — for adjustments and completed transactions, which move stock by a delta rather than redeclaring it.
+ * Pengeluaran mengunci baris pecahannya dan menolak stok di bawah nol. Ini satu-satunya jalan keluar lembar
+ * (kedua kaki bon, brankas, setoran bank, penukaran pecahan), jadi pemeriksaan saat draf tidak lagi menjadi
+ * satu-satunya penjaga: dua bon yang lolos pemeriksaan draf atas lembar yang sama tidak bisa sama-sama selesai.
+ */
 async function applyDenominationBalanceDelta(tx: any, currencyId: number, entries: { value: string; quantity: number }[], sign: 1 | -1) {
-  for (const entry of entries) {
+  // Urutan kunci tetap (pecahan terkecil dulu) agar dua bon atas lembar yang sama tidak saling mengunci silang.
+  const ordered = [...entries].sort((left, right) => new Decimal(left.value).comparedTo(right.value));
+  for (const entry of ordered) {
     const denominationValue = new Decimal(entry.value).toFixed(6);
     const delta = sign * entry.quantity;
+    if (sign < 0) {
+      const stock = (await tx.select().from(cashDenominationBalances).where(and(eq(cashDenominationBalances.currencyId, currencyId), eq(cashDenominationBalances.denominationValue, denominationValue))).limit(1).for("update"))[0];
+      const available = stock?.quantity ?? 0;
+      if (available < entry.quantity) {
+        throw new Error(`Stok pecahan ${new Decimal(entry.value).toString()} tidak cukup: ada ${available} lembar, perlu ${entry.quantity}. Hitung ulang laci atau catat tukar pecahan dulu.`);
+      }
+    }
     await tx.insert(cashDenominationBalances).values({ currencyId, denominationValue, quantity: delta }).onDuplicateKeyUpdate({ set: { quantity: sql`${cashDenominationBalances.quantity} + ${delta}` } });
   }
 }

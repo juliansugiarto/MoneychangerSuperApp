@@ -50,4 +50,32 @@ describe.skipIf(!runnable)("saldo kas di bawah penulisan bersamaan", () => {
     expect(String(balance.availableAmount)).toBe("500.000000");
     expect(notes?.quantity).toBe(5);
   }, 30000);
+
+  async function stockOf(value: string) {
+    const db = (await getDb())!;
+    const row = (await db.select().from(cashDenominationBalances).where(and(eq(cashDenominationBalances.currencyId, currencyId), eq(cashDenominationBalances.denominationValue, value))).limit(1))[0];
+    return row?.quantity ?? 0;
+  }
+
+  it("menolak mengeluarkan lembar yang tidak ada, walau total saldonya cukup", async () => {
+    await resetBalance();
+    const actor = { id: actorId, role: "CONTROLLER" as const };
+    await recordCashAdjustment({ currencyId, category: "SAFE_WITHDRAWAL", amount: "200", notes: "isi laci uji", denominations: [{ value: "100", quantity: 1 }, { value: "1", quantity: 100 }] }, actor);
+
+    await expect(recordCashAdjustment({ currencyId, category: "SAFE_DEPOSIT", amount: "200", notes: "setor dua lembar", denominations: [{ value: "100", quantity: 2 }] }, actor))
+      .rejects.toThrow(/pecahan 100 tidak cukup/i);
+    expect(await stockOf("100.000000")).toBe(1);
+  }, 30000);
+
+  it("dua pengeluaran bersamaan atas satu-satunya lembar: hanya satu yang lolos", async () => {
+    await resetBalance();
+    const actor = { id: actorId, role: "CONTROLLER" as const };
+    await recordCashAdjustment({ currencyId, category: "SAFE_WITHDRAWAL", amount: "300", notes: "isi laci uji", denominations: [{ value: "100", quantity: 1 }, { value: "1", quantity: 200 }] }, actor);
+
+    const results = await Promise.allSettled([1, 2].map((index) => recordCashAdjustment({
+      currencyId, category: "SAFE_DEPOSIT", amount: "100", notes: `setor bersamaan ${index}`, denominations: [{ value: "100", quantity: 1 }],
+    }, actor)));
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(await stockOf("100.000000")).toBe(0);
+  }, 30000);
 });
