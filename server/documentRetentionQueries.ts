@@ -1,4 +1,4 @@
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import {
   auditLogs,
   companyProfile,
@@ -17,6 +17,7 @@ import {
   type RetentionVerdict,
 } from "../shared/documentRetention";
 import { DEFAULT_OPERATIONAL_TIMEZONE, operationalDateKey, startOfOperationalDay } from "../shared/regulatoryActionQueue";
+import { affectedRows } from "./dbResult";
 import { databaseOrThrow } from "./operations";
 
 /**
@@ -264,7 +265,10 @@ export async function recordRelationshipEnd(input: { customerId: number; dateKey
   if (denial) throw new Error(denial);
   // Tengah hari UTC pada tanggal itu jatuh di hari kalender yang sama untuk zona mana pun dalam daftar.
   const relationshipEndedAt = startOfOperationalDay(new Date(`${input.dateKey}T12:00:00Z`), timeZone);
-  await db.update(customers).set({ relationshipEndedAt }).where(eq(customers.id, input.customerId));
+  // Tulis bersyarat: dua Controller menyimpan bersamaan tidak boleh sama-sama lolos pemeriksaan di atas (temuan M8).
+  const result = await db.update(customers).set({ relationshipEndedAt })
+    .where(and(eq(customers.id, input.customerId), eq(customers.profileStatus, "INACTIVE"), isNull(customers.relationshipEndedAt)));
+  if (affectedRows(result) !== 1) throw new Error("Tanggal berakhir hubungan nasabah ini sudah tercatat.");
   await db.insert(auditLogs).values({ actorUserId: actor.id, action: "CUSTOMER_RELATIONSHIP_END_RECORDED", entityType: "customer", entityId: String(input.customerId), beforeState: { relationshipEndedAt: null }, afterState: { relationshipEndedAt }, reason: source });
   return { relationshipEndedAt };
 }

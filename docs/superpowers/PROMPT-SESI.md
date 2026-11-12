@@ -237,9 +237,9 @@ snapshot; rumus IRA tidak berubah.
 - M3 FALSE_POSITIVE atas blokir PENGISIAN_AWAL membiarkan centang lama `dttotPpsdmMatch` (spec diam).
 - ~~M4 `biCopySentAt` saat konfirmasi tanpa periksa masa depan di server~~ — **SELESAI 12 Nov 2026** (uji RED→GREEN).
 - M5 tinjauan klasifikasi jatuh tempo pada hari jatuh temponya; spec berbunyi sehari sesudahnya.
-- M6 kartu Kesiapan menampilkan "hanya terlihat oleh Controller" untuk galat apa pun.
+- ~~M6 kartu Kesiapan menampilkan "hanya terlihat oleh Controller" untuk galat apa pun~~ — **SELESAI 12 Nov 2026** (hanya FORBIDDEN).
 - M7 penyaringan massal membaca seluruh riwayat penyaringan nasabah cocok hanya demi id terbesar.
-- M8 `recordRelationshipEnd` periksa-lalu-tulis tidak atomik.
+- ~~M8 `recordRelationshipEnd` periksa-lalu-tulis tidak atomik~~ — **SELESAI 12 Nov 2026** (tulis bersyarat + `affectedRows`, uji balapan).
 - ~~M9 `referenceCode` tidak dinormalkan pada kunci kecocokan~~ — **SELESAI 12 Nov 2026**: huruf besar tanpa spasi; kunci lama
   berhuruf kecil yang tersimpan dibesarkan saat dibaca (`parseMatchKeys`), keputusan FALSE_POSITIVE lama tetap dikenali.
 

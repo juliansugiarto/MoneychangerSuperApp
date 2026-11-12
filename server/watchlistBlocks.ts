@@ -4,6 +4,7 @@ import { isRoleAllowed, type BackOfficeRole } from "../shared/backOfficeNavigati
 import { hasActiveBlock, shouldOpenScreeningBlock, summarizeAttemptLines, type BlockLite } from "../shared/watchlistBlock";
 import { highRiskResetValues } from "./customerHighRiskApproval";
 import { getDb } from "./db";
+import { affectedRows } from "./dbResult";
 
 /**
  * Penulis `watchlist_blocks` — pemblokiran serta merta atas kecocokan DTTOT/DPPSPM (Pasal 47 ayat
@@ -27,7 +28,6 @@ async function blocksOf(customerIds: number[], executor?: Executor) {
 }
 
 /** mysql2 mengembalikan [ResultSetHeader]; banyaknya baris yang benar-benar berubah. */
-const affectedRows = (result: unknown) => Number((result as [{ affectedRows?: number }] | undefined)?.[0]?.affectedRows ?? 0);
 
 export async function openBlocksForScreenings(rows: { customerId: number; screeningId: number | null; matchKeys: string[] }[]): Promise<number> {
   const candidates = rows.filter((row) => row.matchKeys.length > 0);

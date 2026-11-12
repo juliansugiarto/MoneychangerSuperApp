@@ -57,17 +57,18 @@ function tableName(table: unknown) {
 function mockDb(rowsByTable: Record<string, unknown[]>) {
   const inserted: { table: string; values: Record<string, unknown> }[] = [];
   const updates: { table: string; set: Record<string, unknown> }[] = [];
+  const affected = { value: 1 };
   const fakeDb = {
     select: vi.fn(() => ({ from: (table: unknown) => makeReader(rowsByTable[tableName(table)] ?? []) })),
     insert: vi.fn((table: unknown) => ({
       values: async (values: Record<string, unknown>) => { inserted.push({ table: tableName(table), values }); },
     })),
     update: vi.fn((table: unknown) => ({
-      set: (set: Record<string, unknown>) => ({ where: async () => { updates.push({ table: tableName(table), set }); } }),
+      set: (set: Record<string, unknown>) => ({ where: async () => { updates.push({ table: tableName(table), set }); return [{ affectedRows: affected.value }]; } }),
     })),
   };
   vi.spyOn(db, "getDb").mockResolvedValue(fakeDb as never);
-  return { inserted, updates };
+  return { inserted, updates, affected };
 }
 
 beforeEach(() => {
@@ -110,5 +111,11 @@ describe("recordRelationshipEnd", () => {
     mockDb({ customers: [{ id: 4, profileStatus: "INACTIVE", relationshipEndedAt: new Date() }], exchange_transactions: [], company_profile: [] });
     await expect(recordRelationshipEnd({ customerId: 4, dateKey: "2026-03-02", source: "berkas" }, { id: 3 })).rejects.toThrow(/sudah/);
     await expect(recordRelationshipEnd({ customerId: 4, dateKey: "2026-03-02", source: " " }, { id: 3 })).rejects.toThrow(/Sumber/);
+  });
+  it("dua penyimpanan bersamaan: yang kalah balapan ditolak tanpa audit kedua (temuan M8)", async () => {
+    const { inserted, affected } = mockDb({ customers: [{ id: 4, profileStatus: "INACTIVE", relationshipEndedAt: null }], exchange_transactions: [], company_profile: [{ timezone: "Asia/Jakarta" }] });
+    affected.value = 0; // penulis lain sudah mengisi tanggalnya di antara baca dan tulis
+    await expect(recordRelationshipEnd({ customerId: 4, dateKey: "2026-03-02", source: "Berkas fisik" }, { id: 3 })).rejects.toThrow(/sudah tercatat/);
+    expect(inserted.filter((row) => row.table === "audit_logs")).toHaveLength(0);
   });
 });

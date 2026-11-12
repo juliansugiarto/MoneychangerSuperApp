@@ -10,6 +10,11 @@ import { useLocation } from "wouter";
 
 function goTo(path: string, setLocation: (path: string) => void) { setLocation(path); }
 
+/** Hanya penolakan hak akses yang disebut sebagai soal peran; galat lain = gagal memuat (temuan M6). */
+export function unavailableDetail(error: { data?: { code?: string } | null } | null | undefined, what: string): string {
+  return error?.data?.code === "FORBIDDEN" ? `${what} hanya terlihat oleh Controller ke atas.` : `${what} belum bisa dimuat. Muat ulang halaman.`;
+}
+
 export default function OperationalReadiness() {
   const [, setLocation] = useLocation();
   const dashboard = trpc.dashboard.overview.useQuery();
@@ -45,8 +50,8 @@ export default function OperationalReadiness() {
     { label: "Paket pelaporan", detail: reportingReadiness.detail, ready: reportingReady, loading: regulatoryPackages.isLoading, unavailable: reportingReadiness.unavailable, icon: FileLock2, action: "Buka pelaporan", path: "/operasional/pelaporan-regulator" },
     // Siklus tahunan: barisnya hanya memberitahu, tidak pernah membuat penilaian sendiri.
     { label: "Penilaian risiko (IRA)", detail: iraAssessments.isError ? "Status penilaian belum tersedia. Buka Penilaian Risiko untuk pemeriksaan." : iraDue.detail, ready: !iraDue.overdue && iraDue.currentApproved, loading: iraAssessments.isPending, unavailable: iraAssessments.isError, icon: ShieldCheck, action: "Buka penilaian", path: "/kepatuhan/ira" },
-    { label: "Pemblokiran DTTOT/DPPSPM", detail: blocks.isError ? "Status pemblokiran hanya terlihat oleh Controller ke atas." : blockActions.detail, ready: blockActions.ready, loading: blocks.isPending, unavailable: blocks.isError, icon: ShieldCheck, action: "Buka pemblokiran", path: "/kepatuhan/pemblokiran" },
-    { label: "Tinjauan klasifikasi risiko", detail: classificationReviews.isError ? "Status tinjauan hanya terlihat oleh Controller ke atas." : reviewDue.detail, ready: !reviewDue.due, loading: classificationReviews.isPending, unavailable: classificationReviews.isError, icon: ShieldCheck, action: "Buka klasifikasi", path: "/kepatuhan/klasifikasi-risiko" },
+    { label: "Pemblokiran DTTOT/DPPSPM", detail: blocks.isError ? unavailableDetail(blocks.error, "Status pemblokiran") : blockActions.detail, ready: blockActions.ready, loading: blocks.isPending, unavailable: blocks.isError, icon: ShieldCheck, action: "Buka pemblokiran", path: "/kepatuhan/pemblokiran" },
+    { label: "Tinjauan klasifikasi risiko", detail: classificationReviews.isError ? unavailableDetail(classificationReviews.error, "Status tinjauan") : reviewDue.detail, ready: !reviewDue.due, loading: classificationReviews.isPending, unavailable: classificationReviews.isError, icon: ShieldCheck, action: "Buka klasifikasi", path: "/kepatuhan/klasifikasi-risiko" },
   ];
   // Dihitung dari kartunya sendiri: kartu yang ditambahkan kelak ikut terhitung tanpa diingat terpisah.
   const totalReady = controls.filter((control) => control.ready && !control.unavailable).length;
