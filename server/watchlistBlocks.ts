@@ -129,6 +129,8 @@ async function audit(db: Executor, actorUserId: number, action: string, block: W
 
 export async function resolveWatchlistBlock(input: { blockId: number; decision: "CONFIRMED" | "FALSE_POSITIVE"; notes: string; ltkmReference?: string | null; biCopySentAt?: Date | null }, actor: { id: number }) {
   const notes = requireNote(input.notes, "Catatan keputusan");
+  // Sama dengan recordWatchlistBlockReporting: layar membatasi lewat `max`, server yang menegakkan (temuan M4).
+  if (input.biCopySentAt && input.biCopySentAt.getTime() > Date.now()) throw new Error("Tanggal tembusan tidak boleh di masa depan.");
   const { db, block } = await loadBlock(input.blockId);
   if (block.status !== "OPEN") throw new Error("Pemblokiran ini sudah diputuskan.");
   const resolvedAt = new Date();

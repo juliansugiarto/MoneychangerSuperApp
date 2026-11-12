@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasActiveBlock, matchKeyOf, shouldOpenScreeningBlock, summarizeAttemptLines, WATCHLIST_BLOCK_TELLER_MESSAGE } from "./watchlistBlock";
+import { hasActiveBlock, matchKeyOf, parseMatchKeys, shouldOpenScreeningBlock, summarizeAttemptLines, WATCHLIST_BLOCK_TELLER_MESSAGE } from "./watchlistBlock";
 
 describe("matchKeyOf", () => {
   it("memakai referenceCode bila ada — id entri berganti setiap impor", () => {
@@ -7,6 +7,14 @@ describe("matchKeyOf", () => {
   });
   it("memakai nama ternormalisasi bila tanpa kode", () => {
     expect(matchKeyOf({ listType: "DPPSPM", referenceCode: null, fullName: "  Abdul   Rahman " })).toBe("DPPSPM:ABDUL RAHMAN");
+  });
+  it("kode rujukan dinormalkan (huruf besar, tanpa spasi) supaya keputusan lama tetap dikenali sesudah impor ulang", () => {
+    expect(matchKeyOf({ listType: "DTTOT", referenceCode: " idi. 001 ", fullName: "A" })).toBe(matchKeyOf({ listType: "DTTOT", referenceCode: "IDi.001", fullName: "A" }));
+    // Individu (i) dan entitas (e) tetap berbeda.
+    expect(matchKeyOf({ listType: "DTTOT", referenceCode: "IDi.001", fullName: "A" })).not.toBe(matchKeyOf({ listType: "DTTOT", referenceCode: "IDe.001", fullName: "A" }));
+  });
+  it("kunci lama berhuruf kecil yang sudah tersimpan tetap dikenali", () => {
+    expect(parseMatchKeys(JSON.stringify(["DPPSPM:DPRKi.001"]))).toContain(matchKeyOf({ listType: "DPPSPM", referenceCode: "DPRKi.001", fullName: "A" }));
   });
 });
 

@@ -15,7 +15,9 @@ const normalizeName = (value: string) => value.trim().replace(/\s+/g, " ").toUpp
 
 /** Kunci kecocokan yang bertahan melewati impor ulang — id entri tidak. */
 export function matchKeyOf(match: { listType: string; referenceCode: string | null; fullName: string }): string {
-  const reference = match.referenceCode?.trim();
+  // Kode rujukan ditulis tangan di daftar BI/PPATK ("IDi.001", "idi. 001"): huruf besar, tanpa spasi. Huruf i/e
+  // (individu/entitas) tetap berbeda sesudah dibesarkan (I/E).
+  const reference = match.referenceCode?.replace(/\s+/g, "").toUpperCase();
   return `${match.listType}:${reference ? reference : normalizeName(match.fullName)}`;
 }
 
@@ -23,7 +25,9 @@ export function parseMatchKeys(value: string | null): string[] {
   if (!value) return [];
   try {
     const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+    // Dibesarkan saat dibaca: kunci lama tersimpan sebelum kode rujukan dinormalkan ("DPRKi.001") tetap sama dengan
+    // kunci baru ("DPRKI.001"). Kunci nama sudah huruf besar sejak awal.
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string").map((item) => item.toUpperCase()) : [];
   } catch {
     return [];
   }

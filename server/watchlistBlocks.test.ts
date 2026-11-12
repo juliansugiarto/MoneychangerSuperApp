@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as db from "./db";
 import { rescreenAllCustomers, screenCustomer } from "./customerWatchlistScreening";
-import { openBlockFromScreening, openOfficerBlock } from "./watchlistBlocks";
+import { openBlockFromScreening, openOfficerBlock, resolveWatchlistBlock } from "./watchlistBlocks";
 
 /**
  * Penulis `watchlist_blocks`. Pembantu basis data palsu disalin dari
@@ -135,5 +135,15 @@ describe("rescreenAllCustomers membuka blokir hanya bagi yang cocok", () => {
     expect(blocks).toHaveLength(1);
     expect(blocks[0].values).toMatchObject({ customerId: 7 });
     expect(selected.filter((table) => table === "watchlist_blocks")).toHaveLength(1);
+  });
+});
+
+describe("resolveWatchlistBlock", () => {
+  it("menolak tanggal tembusan BI di masa depan sebelum menyentuh basis data (temuan M4)", async () => {
+    const getDb = vi.spyOn(db, "getDb");
+    const tomorrow = new Date(Date.now() + 86_400_000);
+    await expect(resolveWatchlistBlock({ blockId: 1, decision: "CONFIRMED", notes: "Cocok dengan daftar.", biCopySentAt: tomorrow }, { id: 1 })).rejects.toThrow("Tanggal tembusan tidak boleh di masa depan.");
+    expect(getDb).not.toHaveBeenCalled();
+    getDb.mockRestore();
   });
 });

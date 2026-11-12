@@ -235,12 +235,13 @@ snapshot; rumus IRA tidak berubah.
 - M1 dua penyaringan serentak dapat membuka dua blokir OPEN untuk satu nasabah (gagal-aman).
 - M2 gerbang blokir di luar transaksi basis data bon — jendela satu bon.
 - M3 FALSE_POSITIVE atas blokir PENGISIAN_AWAL membiarkan centang lama `dttotPpsdmMatch` (spec diam).
-- M4 `biCopySentAt` saat konfirmasi tanpa periksa masa depan di server (hanya `max` di layar).
+- ~~M4 `biCopySentAt` saat konfirmasi tanpa periksa masa depan di server~~ — **SELESAI 12 Nov 2026** (uji RED→GREEN).
 - M5 tinjauan klasifikasi jatuh tempo pada hari jatuh temponya; spec berbunyi sehari sesudahnya.
 - M6 kartu Kesiapan menampilkan "hanya terlihat oleh Controller" untuk galat apa pun.
 - M7 penyaringan massal membaca seluruh riwayat penyaringan nasabah cocok hanya demi id terbesar.
 - M8 `recordRelationshipEnd` periksa-lalu-tulis tidak atomik.
-- M9 `referenceCode` tidak dinormalkan (huruf besar/spasi) pada kunci kecocokan.
+- ~~M9 `referenceCode` tidak dinormalkan pada kunci kecocokan~~ — **SELESAI 12 Nov 2026**: huruf besar tanpa spasi; kunci lama
+  berhuruf kecil yang tersimpan dibesarkan saat dibaca (`parseMatchKeys`), keputusan FALSE_POSITIVE lama tetap dikenali.
 
 **Paket "Siap daring" SELESAI 12 November** di cabang `fix/siap-daring` (11 commit di atas `main`, sudah
 di-push; BELUM digabung): U1–U5 dan K1–K4 audit diperbaiki + kebuntuan pool `writeAudit`, sisa Manus,
