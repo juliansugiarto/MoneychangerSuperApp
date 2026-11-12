@@ -1,10 +1,11 @@
 import Decimal from "decimal.js";
+import { compareCurrencyOrder } from "./currencyOrder";
 import { zoneAbbreviation } from "./openingStatus";
 import { DEFAULT_OPERATIONAL_TIMEZONE } from "./regulatoryActionQueue";
 
 export type PublicRateRow = {
   rate: { id: number; buyRate: string; sellRate: string; quoteUnit: string; effectiveAt: Date };
-  currency: { id: number; code: string; name: string };
+  currency: { id: number; code: string; name: string; boardOrder?: number | null };
   /** Kelompok pecahan yang dihargai baris ini; null berarti kurs tingkat valuta. */
   tier: { id: number; label: string; sortOrder?: number } | null;
   /**
@@ -14,10 +15,10 @@ export type PublicRateRow = {
   previous?: { buyRate: string; sellRate: string } | null;
 };
 
-/** Valuta menaik menurut kode; di dalamnya kelompok lebih dahulu (urut `sortOrder`, lalu label) daripada baris tingkat valuta, sehingga "Pecahan lain" selalu menjadi baris penutup valutanya. */
+/** Valuta menurut urutan papan pilihan pemilik (`shared/currencyOrder.ts`; tanpa urutan = abjad kode); di dalamnya kelompok lebih dahulu (urut `sortOrder`, lalu label) daripada baris tingkat valuta, sehingga "Pecahan lain" selalu menjadi baris penutup valutanya. */
 export function sortPublicRates<T extends PublicRateRow>(rates: readonly T[]): T[] {
   return [...rates].sort((left, right) =>
-    left.currency.code.localeCompare(right.currency.code)
+    compareCurrencyOrder(left.currency, right.currency)
     || Number(left.tier === null) - Number(right.tier === null)
     || (left.tier?.sortOrder ?? 0) - (right.tier?.sortOrder ?? 0)
     || (left.tier?.label ?? "").localeCompare(right.tier?.label ?? "", "id"));

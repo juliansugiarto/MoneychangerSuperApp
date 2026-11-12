@@ -477,6 +477,13 @@
       "when": 1794476586615,
       "tag": "0067_jadwal_buka_ketentuan_uang",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "5",
+      "when": 1794479689543,
+      "tag": "0068_urutan_papan_valuta",
+      "breakpoints": true
     }
   ]
 }

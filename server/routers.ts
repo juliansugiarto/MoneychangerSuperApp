@@ -182,6 +182,7 @@ import { currentTenantCode } from "./tenantContext";
 import { SetupRefusal, completeInstallationSetup } from "./installationSetup";
 import { readPublicProfile } from "./publicProfile";
 import { updateCompanyAppearance, updateCompanyPublicPage } from "./companyPresentation";
+import { reorderCurrencies } from "./currencyOrder";
 import { MONEY_RULE_MAX_LENGTH, PUBLIC_FAQ_LIMIT } from "../shared/publicPage";
 import { countRemainingRecoveryCodes, recoverOwnerAccount, regenerateRecoveryCodes } from "./recoveryCodes";
 import { reverseTransaction } from "./transactionReversal";
@@ -625,6 +626,8 @@ export const appRouter = router({
     list: staffProcedure.query(() => listCurrencies()),
     create: adminProcedure.input(z.object({ code: z.string().trim().regex(/^[A-Za-z]{3}$/), name: z.string().trim().min(3).max(100) })).mutation(({ input, ctx }) => createCurrency({ ...input, actorUserId: ctx.user.id })),
     setActive: adminProcedure.input(z.object({ currencyId: z.number().int().positive(), active: z.boolean() })).mutation(({ input, ctx }) => setCurrencyActive({ ...input, actorUserId: ctx.user.id })),
+    /** Urutan papan kurs (halaman publik, /papan, pesan WhatsApp). Daftar lengkap valuta aktif selain IDR. */
+    reorder: adminProcedure.input(z.object({ currencyIds: z.array(z.number().int().positive()).min(1).max(200) })).mutation(({ input, ctx }) => reorderCurrencies(input.currencyIds, ctx.user.id)),
     /** Staff-level, idempotent: registers a world currency on first use (e.g. picked from a search box) without needing an Admin to pre-create it. Never touches rates. */
     ensure: staffProcedure.input(z.object({ code: z.string().trim().regex(/^[A-Za-z]{3}$/), name: z.string().trim().min(1).max(100) })).mutation(({ input }) => ensureCurrency(input)),
   }),

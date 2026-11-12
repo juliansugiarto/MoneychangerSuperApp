@@ -1288,7 +1288,7 @@ export async function listPublicActiveRates() {
     // Hanya kolom yang memang untuk publik: catatan, alasan aktivasi, dan id petugas tidak ikut keluar.
     return selected.map(({ rate, currency, tier }) => ({
       rate: { id: rate.id, buyRate: rate.buyRate, sellRate: rate.sellRate, quoteUnit: rate.quoteUnit, effectiveAt: rate.effectiveAt },
-      currency: { id: currency.id, code: currency.code, name: currency.name },
+      currency: { id: currency.id, code: currency.code, name: currency.name, boardOrder: currency.boardOrder },
       tier: tier ? { id: tier.id, label: tier.label, sortOrder: tier.sortOrder } : null,
       previous: previousFor(previous, rate),
       isDemo: false,

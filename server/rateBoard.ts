@@ -5,6 +5,7 @@ import { auditLogs, currencies, operationalRates, rateReferenceSnapshots, rateTi
 import type { BoardCellPayload } from "../shared/rateBoard";
 import { deviationRejectionMessage, exceedsTolerance, rateDeviationPercent, type DeviationRow } from "../shared/rateDeviation";
 import { startOfNextOperationalDay, startOfOperationalDay } from "../shared/regulatoryActionQueue";
+import { compareCurrencyOrder } from "../shared/currencyOrder";
 import { findTierOverlap, matchTier, normalizeDenominationValue, OTHER_TIER_LABEL, sortTiers, type RateTierRow } from "../shared/rateTiers";
 import { databaseOrThrow, writeAudit } from "./operations";
 
@@ -259,7 +260,7 @@ export async function readRateBoard(now = new Date()): Promise<RateBoardPayload>
   }
 
   const cells: BoardCellPayload[] = [];
-  for (const currency of currencyRows) {
+  for (const currency of [...currencyRows].sort(compareCurrencyOrder)) {
     if (currency.code === "IDR") continue;
     const reference = latestReferenceByCurrency.get(currency.id);
     const tiers = sortTiers(tiersByCurrency.get(currency.id) ?? []);

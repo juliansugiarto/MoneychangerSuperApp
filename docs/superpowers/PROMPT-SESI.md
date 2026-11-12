@@ -107,11 +107,11 @@ Langkah VPS (scp/ssh) ditolak pengklasifikasi untuk Claude → selalu beri pemil
 `/papan`); `Home.tsx`, `pages/home/*`, `PublicServicePlanner.tsx` dihapus (kanal email permintaan ikut hilang — desain
 yang disetujui hanya WhatsApp/telepon). Label "Telepon kedua" → "Nomor WhatsApp".
 
-**Pertanyaan untuk pemilik (belum diputuskan):**
-1. Urutan papan kurs: kini **abjad kode** (AED, AUD, CNY, EUR…) — sama dengan sebelumnya dan netral white-label. Rujukan
-   yang disetujui memperlihatkan USD lalu SAR di atas. Pesan WhatsApp mengambil 4 valuta teratas urutan ini. Mau urutan
-   sendiri (kolom urutan per valuta di layar Kurs)? Rekomendasi: ya, kecil.
-(Pertanyaan nomor tag bagian gugur: ketentuan uang kini selalu tampil — kosong = ketentuan umum `DEFAULT_MONEY_RULES`, keputusan pemilik 12 Nov.)
+**Urutan valuta (diputuskan pemilik 12 Nov: "yeah okay"):** kolom `currencies.boardOrder` (migrasi `0068`) + layar Kurs →
+**Atur urutan** (ADMIN+, audit `CURRENCY_BOARD_ORDER_UPDATED`); papan staf, halaman publik, `/papan`, dan pesan WhatsApp
+memakai `shared/currencyOrder.ts`. Diperagakan di `moneychanger` (USD, SAR di atas). Gerbang lokal sesudahnya:
+`Tests 1873 passed | 6 skipped (1879)`, tsc 0, build, Playwright `59 passed`. **`0068` belum di produksi** (produksi 68 →
+sesudah deploy 69): deploy berikutnya memakai langkah yang sama dengan `00a0788` (pemilik menjalankan `!` scp + ssh).
 
 ### Yang tidak perlu ditemukan ulang (halaman publik)
 - CSS halaman publik **dibangkitkan**: `python3 scripts/publik-css.py docs/design/halaman-publik/rujukan-paspor-v3.html

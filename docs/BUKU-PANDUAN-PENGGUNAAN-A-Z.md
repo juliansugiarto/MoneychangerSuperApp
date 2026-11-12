@@ -284,6 +284,10 @@ Alasannya: kas awal **pertama** untuk sebuah mata uang tidak dijurnal — kalau 
 9. **Papan TV outlet**: buka `https://<alamat publik>/papan` di TV (atau tombol *Mode TV* di kepala
    halaman). Papan menampilkan semua kurs aktif berganti halaman tiap 12 detik, jam berjalan, dan
    menyegarkan kurs tiap 30 detik. Papan hanya membaca; kurs tetap diaktifkan manual di layar Kurs.
+10. **Urutan valuta**: di layar **Kurs Hari Ini** tekan **Atur urutan** (Admin ke atas), naik/turunkan valuta, lalu
+    **Simpan urutan**. Urutan ini dipakai papan kurs staf, halaman kurs publik, layar TV, dan pesan WhatsApp (4 valuta
+    teratas). Valuta baru yang belum diurutkan muncul di bawah, menurut abjad. Tercatat di log audit
+    (`CURRENCY_BOARD_ORDER_UPDATED`).
 
 ### 5.9 Pencatatan Pengeluaran — Staff ke atas
 

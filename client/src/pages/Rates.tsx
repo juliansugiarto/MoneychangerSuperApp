@@ -16,6 +16,7 @@ import { RateBoardFooter } from "./rates/RateBoardFooter";
 import { RateBoardGrid } from "./rates/RateBoardGrid";
 import { RateReferencePanel } from "./rates/RateReferencePanel";
 import { RateTierDialog } from "./rates/RateTierDialog";
+import { CurrencyOrderDialog } from "./rates/CurrencyOrderDialog";
 
 const FILTERS: { value: BoardFilter; label: string }[] = [
   { value: "SEMUA", label: "Semua" },
@@ -43,6 +44,7 @@ export default function Rates() {
   const [reason, setReason] = useState("");
   const [addingCurrency, setAddingCurrency] = useState(false);
   const [tierCurrencyId, setTierCurrencyId] = useState<number | null>(null);
+  const [ordering, setOrdering] = useState(false);
 
   const refresh = () => Promise.all([utils.rates.board.invalidate(), utils.rates.activeRates.invalidate(), utils.rates.comparison.invalidate()]);
   const onError = (error: { message?: string }) => toast.error(operationalActionError(error));
@@ -134,6 +136,7 @@ export default function Rates() {
       actions={<>
         <Button variant="outline" className={OUTLINE_BUTTON} disabled={copyActive.isPending || busy} onClick={() => copyActive.mutate()}>Salin kurs kemarin</Button>
         <Button variant="outline" className={OUTLINE_BUTTON} disabled={suggest.isPending || busy} onClick={() => suggest.mutate()}>Isi saran dari referensi BI</Button>
+        <Button variant="outline" className={OUTLINE_BUTTON} disabled={!currencies.data} onClick={() => setOrdering(true)}>Atur urutan</Button>
         <Button className={BOLD_BUTTON} onClick={() => setAddingCurrency((value) => !value)} aria-expanded={addingCurrency}>+ Tambah valuta</Button>
       </>}
     />
@@ -203,6 +206,11 @@ export default function Rates() {
       </section>
 
       <RateReferencePanel alerts={board.data.alerts} latestReferenceDate={board.data.latestReferenceDate} />
+
+      {ordering && currencies.data ? (
+        <CurrencyOrderDialog open onOpenChange={setOrdering}
+          currencies={currencies.data.filter((item) => item.active && item.code !== "IDR").map((item) => ({ id: item.id, code: item.code, name: item.name, boardOrder: item.boardOrder }))} />
+      ) : null}
 
       {tierCurrency ? (
         <RateTierDialog

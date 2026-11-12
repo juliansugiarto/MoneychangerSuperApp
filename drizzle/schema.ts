@@ -53,6 +53,8 @@ export const currencies = mysqlTable("currencies", {
   code: varchar("code", { length: 3 }).notNull(),
   name: varchar("name", { length: 100 }).notNull(),
   active: boolean("active").default(true).notNull(),
+  /** Urutan di papan kurs, halaman publik, /papan, dan pesan WhatsApp (1 = teratas). Kosong = sesudah yang berurut, abjad kode. */
+  boardOrder: int("boardOrder"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [uniqueIndex("currencies_code_uq").on(table.code)]);
