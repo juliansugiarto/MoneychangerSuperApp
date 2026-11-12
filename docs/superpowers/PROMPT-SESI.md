@@ -271,8 +271,12 @@ snapshot; rumus IRA tidak berubah.
    kartu IRA pun tidak pernah terhitung).
 
 **Sembilan temuan minor reviu akhir yang DITUNDA (belum dikerjakan):**
-- M1 dua penyaringan serentak dapat membuka dua blokir OPEN untuk satu nasabah (gagal-aman).
-- M2 gerbang blokir di luar transaksi basis data bon — jendela satu bon.
+- ~~M1 dua penyaringan serentak dapat membuka dua blokir OPEN~~ — **SELESAI 12 Nov 2026** (kunci baris nasabah, uji MySQL serentak).
+- ~~M2 gerbang blokir di luar transaksi basis data bon~~ — **SELESAI 12 Nov 2026**, dan ternyata lebih lebar dari "satu bon":
+  `completeTransaction` tidak memeriksa blokir sama sekali, jadi bon DRAFT yang dibuat sebelum nasabahnya diblokir masih bisa
+  diselesaikan. Kini diperiksa di pembuatan DAN penyelesaian, di dalam transaksi, di belakang kunci baris nasabah (bon: FOR SHARE;
+  pembuka blokir: FOR UPDATE); percobaan tetap dicatat. Uji MySQL sungguhan `server/watchlistBlockGate.live.test.ts` (RED tanpa
+  gerbang penyelesaian, GREEN dengan).
 - M3 FALSE_POSITIVE atas blokir PENGISIAN_AWAL membiarkan centang lama `dttotPpsdmMatch` (spec diam).
 - ~~M4 `biCopySentAt` saat konfirmasi tanpa periksa masa depan di server~~ — **SELESAI 12 Nov 2026** (uji RED→GREEN).
 - M5 tinjauan klasifikasi jatuh tempo pada hari jatuh temponya; spec berbunyi sehari sesudahnya.

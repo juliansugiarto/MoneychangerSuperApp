@@ -57,7 +57,7 @@ import { buildGoAmlLtktReportXml, buildGoAmlLtkmReportXml, type GoAmlCustomer, t
 import { isKnownGoAmlReportIndicator } from "../shared/goAmlReportIndicators";
 import { decodeSanctionsWatchlistUpload, parseSanctionsWatchlistWorkbook, cleanSanctionsWatchlistFileName } from "./sanctionsWatchlistImport";
 import { matchWatchlistEntries, rescreenAllCustomers, screenCustomer, type SanctionsWatchlistMatch, type ScreeningTrigger } from "./customerWatchlistScreening";
-import { activeBlockFor, hasConfirmedBlock, openOfficerBlock, recordAttempt } from "./watchlistBlocks";
+import { activeBlockFor, assertNoBlockInTransaction, hasConfirmedBlock, holdingBlock, openOfficerBlock, recordAttempt, WatchlistHoldError, type BlockHold } from "./watchlistBlocks";
 import { WATCHLIST_BLOCK_TELLER_MESSAGE } from "../shared/watchlistBlock";
 import { customerHighRiskDenial, highRiskResetValues } from "./customerHighRiskApproval";
 import { relationshipEndValues } from "../shared/documentRetention";
@@ -1556,6 +1556,19 @@ export async function getHistoricalTransactionReport(input: { from: Date; to: Da
   });
 }
 
+/**
+ * Bon yang ditahan blokir DTTOT/DPPSPM: percobaannya dicatat (Pasal 47 ayat (1) huruf d), lalu kasir menerima pesan yang
+ * sama di mana pun penolakannya terjadi. Galat pencatatan masuk log server, tidak ditelan menjadi keberhasilan.
+ */
+async function refuseHeldTransaction(hold: BlockHold, attempt: Omit<Parameters<typeof recordAttempt>[0], "block" | "blockedParty">): Promise<never> {
+  try {
+    await recordAttempt({ ...attempt, block: hold.block, blockedParty: hold.party });
+  } catch (error) {
+    console.error("[pemblokiran] percobaan transaksi gagal dicatat", error);
+  }
+  throw new Error(WATCHLIST_BLOCK_TELLER_MESSAGE);
+}
+
 export async function createTransaction(input: CreateTransactionInput, tellerUserId: number) {
   const db = await databaseOrThrow();
   const customer = (await db.select().from(customers).where(and(eq(customers.id, input.customerId), eq(customers.isDemo, false), eq(customers.isHistorical, false))).limit(1))[0];
@@ -1567,18 +1580,9 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   // risiko tinggi: persetujuan Pemegang Saham tidak dapat meloloskan kecocokan nama. Percobaannya
   // dicatat lebih dulu, di luar transaksi basis data bon, supaya tetap ada walau bon ditolak.
   const representativeId = input.customerActingAs === "REPRESENTATIVE" ? input.representativeCustomerId ?? null : null;
-  const activeBlocks = await activeBlockFor(representativeId ? [customer.id, representativeId] : [customer.id]);
-  const heldBy = activeBlocks.get(customer.id) ? { block: activeBlocks.get(customer.id)!, party: "NASABAH" as const }
-    : representativeId && activeBlocks.get(representativeId) ? { block: activeBlocks.get(representativeId)!, party: "KUASA" as const } : null;
-  if (heldBy) {
-    try {
-      await recordAttempt({ block: heldBy.block, blockedParty: heldBy.party, customerId: customer.id, representativeCustomerId: representativeId, tellerUserId, operation: input.operation, lines: input.lines ?? [] });
-    } catch (error) {
-      // Galat penulisan dicatat ke log server, tidak ditelan menjadi keberhasilan: bon tetap ditolak.
-      console.error("[pemblokiran] percobaan transaksi gagal dicatat", error);
-    }
-    throw new Error(WATCHLIST_BLOCK_TELLER_MESSAGE);
-  }
+  const heldBy = holdingBlock(await activeBlockFor(representativeId ? [customer.id, representativeId] : [customer.id]), customer.id, representativeId);
+  const refuseHeld = (hold: BlockHold) => refuseHeldTransaction(hold, { customerId: customer.id, representativeCustomerId: representativeId, tellerUserId, operation: input.operation, lines: input.lines ?? [] });
+  if (heldBy) return refuseHeld(heldBy);
   // Gerbang persetujuan nasabah berisiko tinggi — Pasal 32 ayat (5) dan (6) PBI 10/2024. Ditegakkan
   // di penulisnya, bukan hanya disembunyikan di layar: bon yang dibuat lewat jalur lain mana pun
   // tetap tertahan.
@@ -1808,6 +1812,8 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
   const number = transactionNumber();
 
   const created = await db.transaction(async (tx) => {
+    // Diperiksa ulang di belakang kunci baris nasabah: blokir yang terbuka sejak pemeriksaan di atas tetap menahan bon ini.
+    await assertNoBlockInTransaction(tx, customer.id, representativeId);
     await tx.insert(exchangeTransactions).values({
       transactionNumber: number,
       receiptNumber,
@@ -1878,7 +1884,7 @@ export async function createTransaction(input: CreateTransactionInput, tellerUse
       await tx.insert(exchangeTransactionPaymentDenominations).values(paymentDenominationRows.map((entry) => ({ transactionId: row.id, currencyId: paymentCurrencyId, denominationValue: entry.denominationValue, quantity: entry.quantity, lineTotal: entry.subtotal })));
     }
     return row;
-  });
+  }).catch((error) => (error instanceof WatchlistHoldError ? refuseHeld(error.hold) : Promise.reject(error)));
   await writeAudit({ actorUserId: tellerUserId, action: "TRANSACTION_DRAFT_CREATED", entityType: "exchange_transaction", entityId: String(created.id), afterState: { transactionNumber: number, receiptNumber, operation: input.operation, lineCount: preparedLines.length, rupiahAmount, requiresReview, reviewReason, underlyingRequired: created.underlyingRequired, rateDeviationCount: deviation.exceeding.length } });
   return created;
 }
@@ -2184,6 +2190,9 @@ export async function completeTransaction(transactionId: number, actor: { id: nu
     if (transaction.isDemo || transaction.isHistorical) throw new Error("Transaksi demo atau historis tidak dapat diproses pada operasi live.");
     if (actor.role === "STAFF" && transaction.tellerUserId !== actor.id) throw new Error("Staff hanya dapat menyelesaikan transaksi miliknya sendiri.");
     if (transaction.status !== "APPROVED") throw new Error("Hanya transaksi APPROVED yang dapat diselesaikan.");
+    // Pemblokiran serta merta berlaku sampai uang berpindah: bon yang dibuat sebelum nasabahnya diblokir tidak boleh
+    // diselesaikan sesudahnya. Kunci bersama baris nasabah menahan pembuka blokir sampai bon ini selesai, dan sebaliknya.
+    await assertNoBlockInTransaction(tx, transaction.customerId, transaction.customerActingAs === "REPRESENTATIVE" ? transaction.representativeCustomerId : null);
 
     const lines = await tx.select().from(exchangeTransactionLines).where(eq(exchangeTransactionLines.transactionId, transactionId)).orderBy(exchangeTransactionLines.lineNumber);
     // Bons created before multi-line bons existed have no rows here; post cash from the legacy header columns instead.
@@ -2277,8 +2286,29 @@ export async function completeTransaction(transactionId: number, actor: { id: nu
     await tx.update(exchangeTransactions).set({ status: "COMPLETED" }).where(eq(exchangeTransactions.id, transactionId));
     await tx.insert(auditLogs).values({ actorUserId: actor.id, action: "TRANSACTION_COMPLETED_AND_CASH_POSTED", entityType: "exchange_transaction", entityId: String(transaction.id), beforeState: { status: transaction.status }, afterState: { status: "COMPLETED", cashResults, bankResult }, metadata: { transactionNumber: transaction.transactionNumber, lineCount: postingLines.length } });
     return { ...transaction, status: "COMPLETED" as const, cashResults, bankResult };
+  }).catch(async (error) => {
+    if (!(error instanceof WatchlistHoldError)) throw error;
+    return refuseHeldTransaction(error.hold, { ...await attemptOfTransaction(transactionId), tellerUserId: actor.id });
   });
   return result;
+}
+
+/** Isi bon yang sudah ada sebagai baris percobaan (nasabah, kuasa, arah, pecahan × kurs) — untuk penolakan saat penyelesaian. */
+async function attemptOfTransaction(transactionId: number) {
+  const db = await databaseOrThrow();
+  const [transaction] = await db.select().from(exchangeTransactions).where(eq(exchangeTransactions.id, transactionId)).limit(1);
+  const lines = await db.select().from(exchangeTransactionLines).where(eq(exchangeTransactionLines.transactionId, transactionId));
+  const entries = lines.length ? await db.select().from(exchangeTransactionDenominationEntries).where(inArray(exchangeTransactionDenominationEntries.transactionLineId, lines.map((line) => line.id))) : [];
+  return {
+    customerId: transaction.customerId,
+    representativeCustomerId: transaction.customerActingAs === "REPRESENTATIVE" ? transaction.representativeCustomerId : null,
+    operation: transaction.operation,
+    lines: lines.map((line) => ({
+      currencyId: line.currencyId, quoteUnit: String(line.quoteUnit),
+      denominations: entries.filter((entry) => entry.transactionLineId === line.id)
+        .map((entry) => ({ value: String(entry.denominationValue), quantity: entry.quantity, rate: String(entry.agreedRate ?? line.agreedRate) })),
+    })),
+  };
 }
 
 /** The single company-profile row (id ascending, first one), or null if never configured yet — printed receipts and regulator screens fall back to sensible defaults when this is null. */

@@ -20,6 +20,8 @@ function makeReader(rows: unknown[]): Record<string, unknown> & PromiseLike<unkn
     leftJoin: () => makeReader(rows),
     where: () => makeReader(rows),
     orderBy: () => makeReader(rows),
+    // Pembacaan berkunci (`FOR SHARE/UPDATE`) baris nasabah sebelum blokir dibaca/ditulis.
+    for: () => makeReader(rows),
     limit: () => makeReader(rows),
     then: (onfulfilled: any, onrejected: any) => Promise.resolve(rows).then(onfulfilled, onrejected),
   };

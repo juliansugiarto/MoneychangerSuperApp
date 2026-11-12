@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { attemptedTransactions, auditLogs, currencies, customers, customerWatchlistScreenings, watchlistBlocks, type WatchlistBlock } from "../drizzle/schema";
 import { isRoleAllowed, type BackOfficeRole } from "../shared/backOfficeNavigation";
-import { hasActiveBlock, shouldOpenScreeningBlock, summarizeAttemptLines, type BlockLite } from "../shared/watchlistBlock";
+import { hasActiveBlock, shouldOpenScreeningBlock, summarizeAttemptLines, WATCHLIST_BLOCK_TELLER_MESSAGE, type BlockLite } from "../shared/watchlistBlock";
 import { highRiskResetValues } from "./customerHighRiskApproval";
 import { getDb } from "./db";
 import { affectedRows } from "./dbResult";
@@ -27,20 +27,58 @@ async function blocksOf(customerIds: number[], executor?: Executor) {
   return db.select().from(watchlistBlocks).where(inArray(watchlistBlocks.customerId, customerIds));
 }
 
-/** mysql2 mengembalikan [ResultSetHeader]; banyaknya baris yang benar-benar berubah. */
+/**
+ * Kunci baris nasabah, urut id (urutan tetap mencegah kebuntuan). Pembuka blokir memakai "update", bon memakai "share":
+ * blokir yang sedang ditulis menahan bon nasabah itu sampai selesai, dan sebaliknya — sehingga tidak ada bon yang
+ * lolos di antara "diperiksa" dan "diposting" (temuan M2), dan dua penyaringan serentak tidak membuka dua blokir (M1).
+ * Pembacaan blokir sesudah kunci ini dalam transaksi yang sama selalu melihat blokir yang sudah tersimpan.
+ */
+export async function lockCustomerRows(executor: Executor, customerIds: number[], mode: "share" | "update"): Promise<void> {
+  const ids = Array.from(new Set(customerIds)).sort((a, b) => a - b);
+  if (!ids.length) return;
+  await executor.select({ id: customers.id }).from(customers).where(inArray(customers.id, ids)).orderBy(customers.id).for(mode);
+}
+
+export type BlockHold = { block: WatchlistBlock; party: "NASABAH" | "KUASA" };
+
+/** Bon ditahan blokir nasabahnya sendiri lebih dulu, lalu blokir pihak kuasa/wakil. */
+export function holdingBlock(active: Map<number, WatchlistBlock>, customerId: number, representativeId: number | null): BlockHold | null {
+  const own = active.get(customerId);
+  if (own) return { block: own, party: "NASABAH" };
+  const representative = representativeId ? active.get(representativeId) : undefined;
+  return representative ? { block: representative, party: "KUASA" } : null;
+}
+
+/** Dilempar dari dalam transaksi bon supaya seluruh tulisan bon dibatalkan; pemanggil mencatat percobaannya. */
+export class WatchlistHoldError extends Error {
+  constructor(readonly hold: BlockHold) { super(WATCHLIST_BLOCK_TELLER_MESSAGE); }
+}
+
+/** Pemeriksaan blokir di dalam transaksi bon (pembuatan dan penyelesaian), di belakang kunci baris nasabah. */
+export async function assertNoBlockInTransaction(tx: Executor, customerId: number, representativeId: number | null): Promise<void> {
+  const ids = representativeId ? [customerId, representativeId] : [customerId];
+  await lockCustomerRows(tx, ids, "share");
+  const hold = holdingBlock(await activeBlockFor(ids, tx), customerId, representativeId);
+  if (hold) throw new WatchlistHoldError(hold);
+}
+
 
 export async function openBlocksForScreenings(rows: { customerId: number; screeningId: number | null; matchKeys: string[] }[]): Promise<number> {
   const candidates = rows.filter((row) => row.matchKeys.length > 0);
   if (!candidates.length) return 0;
-  const existing = await blocksOf(candidates.map((row) => row.customerId));
-  const openedAt = new Date();
-  const toInsert = candidates
-    .filter((row) => shouldOpenScreeningBlock(existing.filter((block) => block.customerId === row.customerId) as BlockLite[], row.matchKeys))
-    .map((row) => ({ customerId: row.customerId, openedAt, source: "PENYARINGAN" as const, screeningId: row.screeningId, matchKeys: JSON.stringify(row.matchKeys), status: "OPEN" as const }));
-  if (!toInsert.length) return 0;
   const db = await databaseOrThrow();
-  await db.insert(watchlistBlocks).values(toInsert);
-  return toInsert.length;
+  return db.transaction(async (tx) => {
+    const ids = candidates.map((row) => row.customerId);
+    await lockCustomerRows(tx, ids, "update");
+    const existing = await blocksOf(ids, tx);
+    const openedAt = new Date();
+    const toInsert = candidates
+      .filter((row) => shouldOpenScreeningBlock(existing.filter((block) => block.customerId === row.customerId) as BlockLite[], row.matchKeys))
+      .map((row) => ({ customerId: row.customerId, openedAt, source: "PENYARINGAN" as const, screeningId: row.screeningId, matchKeys: JSON.stringify(row.matchKeys), status: "OPEN" as const }));
+    if (!toInsert.length) return 0;
+    await tx.insert(watchlistBlocks).values(toInsert);
+    return toInsert.length;
+  });
 }
 
 export async function openBlockFromScreening(input: { customerId: number; screeningId: number | null; matchKeys: string[] }): Promise<boolean> {
@@ -52,17 +90,19 @@ export async function openBlockFromScreening(input: { customerId: number; screen
  * tanpa blokirnya adalah nasabah bercentang yang tetap dapat bertransaksi.
  */
 export async function openOfficerBlock(customerId: number, executor?: Executor): Promise<boolean> {
-  const existing = await blocksOf([customerId], executor);
-  if (hasActiveBlock(existing as BlockLite[])) return false;
-  const db = executor ?? await databaseOrThrow();
-  await db.insert(watchlistBlocks).values({ customerId, openedAt: new Date(), source: "PETUGAS", screeningId: null, matchKeys: null, status: "OPEN" });
-  return true;
+  const open = async (tx: Executor) => {
+    await lockCustomerRows(tx, [customerId], "update");
+    if (hasActiveBlock(await blocksOf([customerId], tx) as BlockLite[])) return false;
+    await tx.insert(watchlistBlocks).values({ customerId, openedAt: new Date(), source: "PETUGAS", screeningId: null, matchKeys: null, status: "OPEN" });
+    return true;
+  };
+  return executor ? open(executor) : (await databaseOrThrow()).transaction(open);
 }
 
 /** Blokir yang masih menahan (OPEN/CONFIRMED) per nasabah — yang terbaru bila lebih dari satu. */
-export async function activeBlockFor(customerIds: number[]): Promise<Map<number, WatchlistBlock>> {
+export async function activeBlockFor(customerIds: number[], executor?: Executor): Promise<Map<number, WatchlistBlock>> {
   const result = new Map<number, WatchlistBlock>();
-  for (const block of await blocksOf(customerIds)) {
+  for (const block of await blocksOf(customerIds, executor)) {
     if (block.status !== "OPEN" && block.status !== "CONFIRMED") continue;
     const current = result.get(block.customerId);
     if (!current || current.id < block.id) result.set(block.customerId, block);
@@ -72,7 +112,7 @@ export async function activeBlockFor(customerIds: number[]): Promise<Map<number,
 
 /**
  * Satu baris percobaan transaksi yang ditahan blokir — Pasal 47 ayat (1) huruf d ("termasuk
- * percobaan Transaksi"). Satu-satunya pemanggilnya `createTransaction`, sebelum bon apa pun ditulis.
+ * percobaan Transaksi"). Dipanggil `createTransaction` dan `completeTransaction` sesudah bonnya ditolak.
  */
 export async function recordAttempt(input: {
   block: WatchlistBlock; blockedParty: "NASABAH" | "KUASA"; customerId: number; representativeCustomerId: number | null;

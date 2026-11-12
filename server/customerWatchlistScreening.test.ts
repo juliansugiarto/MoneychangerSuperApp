@@ -46,6 +46,8 @@ function makeReader(rows: unknown[]): Record<string, unknown> & PromiseLike<unkn
       })));
     },
     orderBy: () => makeReader(rows),
+    // Pembacaan berkunci (`FOR SHARE/UPDATE`) baris nasabah sebelum blokir dibaca/ditulis.
+    for: () => makeReader(rows),
     limit: () => makeReader(rows),
     then: (onfulfilled: any, onrejected: any) => Promise.resolve(rows).then(onfulfilled, onrejected),
   };
@@ -70,6 +72,8 @@ function mockDb(rowsByTable: Record<string, unknown[]>) {
       return { set: () => ({ where: async () => {} }) };
     }),
   };
+  // Pembuka blokir menulis di dalam transaksi berkunci; transaksi tiruan = basis data tiruan yang sama.
+  (fakeDb as Record<string, unknown>).transaction = vi.fn((run: (tx: unknown) => Promise<unknown>) => run(fakeDb));
   vi.spyOn(db, "getDb").mockResolvedValue(fakeDb as never);
   return { inserted, updated };
 }
