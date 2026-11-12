@@ -1,11 +1,12 @@
 import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
-import { cashBalances, cashDenominationBalances, exchangeTransactions, journalEntries, journalEntryLines } from "../drizzle/schema";
+import { accountingPeriods, cashBalances, cashDenominationBalances, exchangeTransactions, journalEntries, journalEntryLines, regulatoryReportPackages } from "../drizzle/schema";
+import { closeAccountingPeriod } from "./ledgerOperations";
 import { ensureChartOfAccounts } from "./ledgerOperations";
 import { postExchangeTransactions, reversalReference } from "./ledgerPosting";
 import { createInternalUser } from "./db";
 import { hashPassword } from "./internalAuth";
-import { createCustomer, createTransaction, databaseOrThrow, ensureCurrency, recordOpeningCash, submitTransaction } from "./operations";
+import { cancelTransaction, createCustomer, createTransaction, databaseOrThrow, ensureCurrency, recordOpeningCash, submitTransaction } from "./operations";
 import { runWithTenant, type TenantBinding } from "./tenantContext";
 import { createScratchDatabase } from "./testing/scratchDatabase";
 import { reverseTransaction } from "./transactionReversal";
@@ -82,6 +83,8 @@ describe("membalik bon selesai", () => {
       expect(after.count(idrId, "100000")).toBe(before.count(idrId, "100000"));
 
       await expect(reverseTransaction(bon.id, "salah input jumlah lembar", controller)).rejects.toThrow(/sudah dibalik/);
+      // Bon yang sudah dibalik tidak bisa "dibatalkan" lewat API: itu akan menimpa status dan menghapus jurnal baliknya.
+      await expect(cancelTransaction(bon.id, "coba batalkan", controller)).rejects.toThrow(/dibalik/);
     });
   }, 60_000);
 
@@ -119,6 +122,9 @@ describe("membalik bon selesai", () => {
       expect(first, JSON.stringify(first)).toMatchObject({ posted: expect.arrayContaining([expect.objectContaining({ reference: journaled.transactionNumber })]) });
 
       await reverseTransaction(journaled.id, "salah pilih nasabah pada bon", controller);
+      const db0 = await databaseOrThrow();
+      const [period] = await db0.select().from(accountingPeriods).limit(1);
+      await expect(closeAccountingPeriod({ periodId: period!.id }, controller)).rejects.toThrow(/belum dijurnal baliknya/);
       const neverJournaled = await completedBon("BUY", 1, [{ value: "100000", quantity: 16 }]);
       await reverseTransaction(neverJournaled.id, "salah pilih nasabah pada bon", controller);
 
@@ -139,6 +145,26 @@ describe("membalik bon selesai", () => {
 
       const third = await postExchangeTransactions(window, controller);
       expect(third.posted).toHaveLength(0);
+    });
+  }, 60_000);
+
+  it("menolak membalik bila buku bulannya sudah ditutup atau LKU periodenya sudah ada", async () => {
+    await inTenant(async () => {
+      const db = await databaseOrThrow();
+      const bon = await completedBon("BUY", 1, [{ value: "100000", quantity: 16 }]);
+
+      const [period] = await db.select().from(accountingPeriods).limit(1);
+      await db.update(accountingPeriods).set({ status: "DITUTUP" }).where(eq(accountingPeriods.id, period!.id));
+      await expect(reverseTransaction(bon.id, "salah input jumlah lembar", controller)).rejects.toThrow(/sudah ditutup/);
+      await db.update(accountingPeriods).set({ status: "TERBUKA" }).where(eq(accountingPeriods.id, period!.id));
+
+      const dayStart = new Date(Date.now() - 86_400_000);
+      await db.insert(regulatoryReportPackages).values({
+        packageNumber: `REG-LKU-UJI-${Date.now()}`, reportType: "LKU", status: "PREPARED", periodStart: dayStart, periodEnd: new Date(Date.now() + 86_400_000),
+        dataSnapshot: {}, validationSummary: {}, sourceDigest: "uji", createdByUserId: controller.id,
+      });
+      await expect(reverseTransaction(bon.id, "salah input jumlah lembar", controller)).rejects.toThrow(/LKU/);
+      expect((await db.select().from(exchangeTransactions).where(eq(exchangeTransactions.id, bon.id)).limit(1))[0]!.status).toBe("COMPLETED");
     });
   }, 60_000);
 });

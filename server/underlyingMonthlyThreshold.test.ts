@@ -78,6 +78,9 @@ describe("ambang underlying atas akumulasi sebulan", () => {
     // Bon BUY (kita membeli dari nasabah) sebesar USD 12.000 tidak tunduk pada ambang pembelian.
     const jualKeKita = assessReviewRequirement({ ...base, operation: "BUY", rupiahAmount: rupiahFor(12000), monthlyRupiahTotal: rupiahFor(12000), monthlyPurchaseRupiahTotal: "0" });
     expect(jualKeKita.exceedsThreshold).toBe(false);
+    // ...tetapi tetap masuk antrean tinjauan karena nilainya besar.
+    expect(jualKeKita.requiresReview).toBe(true);
+    expect(jualKeKita.reviewReason).toContain("NILAI_BELI_SETARA_USD_MELEBIHI_AMBANG_REVIEW");
   });
 
   it("akumulasi ambang memakai total PEMBELIAN sebulan, bukan total seluruh bon nasabah", () => {

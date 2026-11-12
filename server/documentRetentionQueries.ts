@@ -115,7 +115,7 @@ export async function customerRetentionStatement(customerId: number) {
       ? or(ownedByCustomer, and(eq(operationalDocuments.ownerType, "TRANSACTION"), inArray(operationalDocuments.transactionId, transactionIds)))
       : ownedByCustomer);
 
-  const lastCompletedTransactionAt = latest(transactions.filter((row) => row.status === "COMPLETED").map((row) => row.transactionAt));
+  const lastCompletedTransactionAt = latest(transactions.filter((row) => row.status === "COMPLETED" || row.status === "REVERSED").map((row) => row.transactionAt));
   const lastDeviationReviewAt = latest(reviews.filter((row) => hasDeviation(row.deviationReasons)).map((row) => row.reviewedAt));
 
   const customerVerdict = customerDocumentRetention({
@@ -190,7 +190,8 @@ export async function documentRetentionOverview({ asOf = new Date() }: { asOf?: 
       .from(exchangeTransactions)
       .where(and(
         inArray(exchangeTransactions.customerId, endedIds),
-        eq(exchangeTransactions.status, "COMPLETED"),
+        // Bon yang dibalik tetap pernah terjadi dan tetap memperpanjang masa simpan data nasabahnya.
+        inArray(exchangeTransactions.status, ["COMPLETED", "REVERSED"]),
         eq(exchangeTransactions.isDemo, false),
         eq(exchangeTransactions.isHistorical, false),
       ))
@@ -207,7 +208,7 @@ export async function documentRetentionOverview({ asOf = new Date() }: { asOf?: 
     const verdict = customerDocumentRetention({
       profileStatus: "INACTIVE",
       relationshipEndedAt: customer.relationshipEndedAt,
-      lastCompletedTransactionAt: latest(transactionRows.filter((row) => row.customerId === customer.id && row.status === "COMPLETED").map((row) => row.transactionAt)),
+      lastCompletedTransactionAt: latest(transactionRows.filter((row) => row.customerId === customer.id && (row.status === "COMPLETED" || row.status === "REVERSED")).map((row) => row.transactionAt)),
       lastDeviationReviewAt: latest(reviewRows.filter((row) => row.customerId === customer.id && hasDeviation(row.deviationReasons)).map((row) => row.reviewedAt)),
     });
     if (verdict.retainUntil && verdict.retainUntil.getTime() <= asOf.getTime()) pastRetention += 1;
@@ -257,7 +258,7 @@ export async function recordRelationshipEnd(input: { customerId: number; dateKey
   if (customer.relationshipEndedAt) throw new Error("Tanggal berakhir hubungan nasabah ini sudah tercatat.");
   const timeZone = await operationalTimeZone(db);
   const transactions = await db.select({ transactionAt: exchangeTransactions.transactionAt }).from(exchangeTransactions)
-    .where(and(eq(exchangeTransactions.customerId, input.customerId), eq(exchangeTransactions.status, "COMPLETED"), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false)));
+    .where(and(eq(exchangeTransactions.customerId, input.customerId), inArray(exchangeTransactions.status, ["COMPLETED", "REVERSED"]), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false)));
   const lastAt = latest(transactions.map((row) => row.transactionAt));
   const denial = relationshipEndDenial({ dateKey: input.dateKey, todayKey: operationalDateKey(new Date(), timeZone), lastTransactionDateKey: lastAt ? operationalDateKey(lastAt, timeZone) : null });
   if (denial) throw new Error(denial);

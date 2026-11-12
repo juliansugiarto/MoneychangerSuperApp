@@ -303,6 +303,10 @@ export function assessReviewRequirement(input: {
   const exceedsOnAccumulation = Boolean(
     exceedsThreshold && usdEquivalent && !usdEquivalent.gt(threshold),
   );
+  // Ambang underlying tidak berlaku untuk bon BELI, tetapi BELI bernilai besar tetap ditinjau (APU-PPT):
+  // dinilai atas seluruh bon nasabah sebulan, seperti sebelum aturan underlying dipersempit.
+  const allMonthlyUsd = input.monthlyRupiahTotal ? toUsd(input.monthlyRupiahTotal) : usdEquivalent;
+  const largeBuyReview = input.operation === "BUY" && allMonthlyUsd ? allMonthlyUsd.gt(threshold) : false;
   const exceedsCashDailyEdd = input.isCashPayment && input.cashDailyRupiahTotal && input.eddCashDailyThresholdIdr
     ? new Decimal(input.cashDailyRupiahTotal).gte(new Decimal(input.eddCashDailyThresholdIdr))
     : false;
@@ -336,13 +340,14 @@ export function assessReviewRequirement(input: {
   );
   const reviewReason = [
     exceedsThreshold ? (exceedsOnAccumulation ? "AKUMULASI_BULANAN_SETARA_USD_MELEBIHI_AMBANG" : "NILAI_SETARA_USD_MELEBIHI_AMBANG") : null,
+    largeBuyReview ? "NILAI_BELI_SETARA_USD_MELEBIHI_AMBANG_REVIEW" : null,
     exceedsCashDailyEdd ? "AKUMULASI_TRANSAKSI_TUNAI_HARIAN_MEMENUHI_AMBANG_EDD" : null,
     meetsLtktThreshold ? "MEMENUHI_AMBANG_LTKT_PPATK" : null,
     input.profileStatus === "RESTRICTED" ? "PROFIL_NASABAH_RESTRICTED" : null,
     input.riskLevel === "HIGH" ? "RISIKO_NASABAH_TINGGI" : null,
     profileDeviation.hasDeviation ? "AKTIVITAS_MENYIMPANG_DARI_PROFIL" : null,
   ].filter(Boolean).join("; ") || null;
-  return { requiresReview: exceedsThreshold || exceedsCashDailyEdd || profileMismatch || profileDeviation.hasDeviation, reviewReason, usdEquivalent: usdEquivalent?.toFixed(6) ?? null, monthlyUsdEquivalent: monthlyUsdEquivalent?.toFixed(6) ?? null, meetsLtktThreshold, exceedsThreshold, exceedsOnAccumulation, profileDeviationReasons: profileDeviation.reasons };
+  return { requiresReview: exceedsThreshold || largeBuyReview || exceedsCashDailyEdd || profileMismatch || profileDeviation.hasDeviation, reviewReason, usdEquivalent: usdEquivalent?.toFixed(6) ?? null, monthlyUsdEquivalent: monthlyUsdEquivalent?.toFixed(6) ?? null, meetsLtktThreshold, exceedsThreshold, exceedsOnAccumulation, profileDeviationReasons: profileDeviation.reasons };
 }
 
 export function submissionTransition(status: "DRAFT" | "RETURNED", requiresReview: boolean) {
@@ -352,7 +357,8 @@ export function submissionTransition(status: "DRAFT" | "RETURNED", requiresRevie
 }
 
 export function assertTransactionCanBeCancelled(status: string) {
-  if (["COMPLETED", "CANCELLED"].includes(status)) throw new Error("Transaksi yang selesai atau sudah dibatalkan tidak dapat dibatalkan.");
+  // REVERSED ikut ditolak: membatalkannya akan menimpa status dibalik dan menghilangkan jurnal baliknya.
+  if (["COMPLETED", "CANCELLED", "REVERSED"].includes(status)) throw new Error("Transaksi yang selesai, dibalik, atau sudah dibatalkan tidak dapat dibatalkan.");
 }
 
 type ComplaintStatus = "OPEN" | "IN_REVIEW" | "RESOLVED" | "ESCALATED_LAPS_BI";
@@ -3782,7 +3788,11 @@ export async function prepareRegulatoryReportPackage(packageId: number, actorUse
   const nextStatus = nextRegulatoryReportStatus({ action: "PREPARE", currentStatus: current.status, actorUserId });
   const periodLock = await activeRegulatoryPackageLock({ reportType: current.reportType, periodStart: current.periodStart, periodEnd: current.periodEnd, currentPackageId: current.id });
   if (periodLock) throw new Error(periodLock);
-  const now = new Date(); await db.update(regulatoryReportPackages).set({ status: nextStatus, preparedByUserId: actorUserId, preparedAt: now }).where(eq(regulatoryReportPackages.id, packageId));
+  // Draf LKU bisa basi (mis. bon dibalik sesudah draf dibuat; pembalikan baru dikunci mulai PREPARED).
+  // Angkanya disusun ulang dari data hidup tepat saat disiapkan, sehingga yang diperiksa = yang dikirim.
+  const refreshed = current.reportType === "LKU" ? await createLkuSnapshot({ from: current.periodStart, to: current.periodEnd }) : null;
+  const now = new Date(); await db.update(regulatoryReportPackages).set({ status: nextStatus, preparedByUserId: actorUserId, preparedAt: now,
+    ...(refreshed ? { dataSnapshot: refreshed.snapshot, validationSummary: refreshed.validationSummary, sourceDigest: refreshed.sourceDigest } : {}) }).where(eq(regulatoryReportPackages.id, packageId));
   await writeAudit({ actorUserId, action: "REGULATORY_REPORT_PREPARED", entityType: "regulatory_report_package", entityId: String(packageId), beforeState: { status: current.status }, afterState: { status: nextStatus, preparedAt: now } });
   return { ...current, status: nextStatus, preparedByUserId: actorUserId, preparedAt: now };
 }

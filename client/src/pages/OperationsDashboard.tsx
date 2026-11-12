@@ -53,7 +53,7 @@ export default function OperationsDashboard() {
 
   const today = data?.todayTransactions ?? [];
   const approved = today.filter(({ transaction }) => transaction.status === "APPROVED");
-  const transactionValue = sumIdrDecimals(today.filter(({ transaction }) => transaction.status !== "CANCELLED").map(({ transaction }) => String(transaction.rupiahAmount)));
+  const transactionValue = sumIdrDecimals(today.filter(({ transaction }) => !["CANCELLED", "REVERSED"].includes(transaction.status)).map(({ transaction }) => String(transaction.rupiahAmount)));
   const dateLabel = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(data?.businessDate ? new Date(data.businessDate) : new Date());
   const canMonitor = user?.role === "ADMIN" || user?.role === "CONTROLLER" || user?.role === "SHAREHOLDER";
   const queueCount = (data?.pendingReview.length ?? 0) + approved.length;

@@ -20,7 +20,7 @@ export default function Reports() {
   const { data: recap, isLoading: recapLoading } = trpc.reports.transactionRecap.useQuery(params, { enabled: Boolean(user) });
   const { data: stockRows } = trpc.reports.stockOpnames.useQuery(params, { enabled: Boolean(user) });
   const { data: historicalRows, isLoading: historicalLoading } = trpc.reports.historicalTransactions.useQuery(params, { enabled: Boolean(user) });
-  const total = sumIdrDecimals(data?.filter(({ transaction }) => transaction.status !== "CANCELLED").map(({ transaction }) => String(transaction.rupiahAmount)) ?? []);
+  const total = sumIdrDecimals(data?.filter(({ transaction }) => !["CANCELLED", "REVERSED"].includes(transaction.status)).map(({ transaction }) => String(transaction.rupiahAmount)) ?? []);
   const historicalTotal = sumIdrDecimals(historicalRows?.map(({ transaction }) => String(transaction.rupiahAmount)) ?? []);
 
   const setPresetToday = () => { setFrom(dateInput(new Date())); setTo(dateInput(new Date(Date.now() + 86_400_000))); };

@@ -1,11 +1,12 @@
 import Decimal from "decimal.js";
-import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
 import {
   accountingPeriods,
   cashBalanceMovements,
   cashBalances,
   chartOfAccounts,
   currencies,
+  exchangeTransactions,
   journalEntries,
   journalEntryLines,
   type journalSourceTypes,
@@ -26,6 +27,7 @@ import {
   type JournalSide,
 } from "../shared/ledger";
 import { CASH_ACCOUNT } from "../shared/journalMapping";
+import { startOfNextOperationalDay, startOfOperationalDay } from "../shared/regulatoryActionQueue";
 import { databaseOrThrow, jakartaBusinessDate, retryTransientDatabaseRead, writeAudit } from "./operations";
 
 type JournalSourceType = (typeof journalSourceTypes)[number];
@@ -199,6 +201,13 @@ export async function closeAccountingPeriod(input: { periodId: number; notes?: s
   if (integrity.problems.length) {
     const detail = integrity.problems.slice(0, 3).map((problem) => `${problem.entryNumber} (${problem.problem})`).join(", ");
     throw new Error(`Periode tidak dapat ditutup: ${integrity.problems.length} jurnal tidak utuh — ${detail}.`);
+  }
+
+  // Bon yang dibalik sesudah dijurnal butuh jurnal balik dari batch penjurnalan. Menutup periode sebelum
+  // jurnal itu ada membuat kas (sudah kembali) dan buku besar (masih memuat penjualannya) berpisah selamanya.
+  const pendingReversals = await reversalsAwaitingJournal(db, period.periodStart, period.periodEnd);
+  if (pendingReversals.length) {
+    throw new Error(`Periode tidak dapat ditutup: ${pendingReversals.length} transaksi yang dibalik belum dijurnal baliknya (${pendingReversals.slice(0, 3).join(", ")}). Jalankan penjurnalan operasional untuk bulan ini dulu.`);
   }
 
   // Mengunci tanpa menilai adalah keadaan yang berlaku sampai paket C, dan justru itu yang membuat
@@ -819,4 +828,21 @@ export async function getCashReconciliation(input: { asOf: Date }) {
       ...reconcileCash({ ledgerCashIdr, operationalCashIdr, safeBalanceIdr }),
     };
   });
+}
+
+/** Nomor bon REVERSED dalam periode yang jurnal aslinya sudah ada tetapi jurnal `-BALIK`-nya belum. */
+async function reversalsAwaitingJournal(db: Awaited<ReturnType<typeof databaseOrThrow>>, periodStart: Date | string, periodEnd: Date | string) {
+  const start = startOfOperationalDay(new Date(`${calendarDay(periodStart)}T12:00:00Z`));
+  const end = startOfNextOperationalDay(new Date(`${calendarDay(periodEnd)}T12:00:00Z`));
+  const reversed = await db.select({ transactionNumber: exchangeTransactions.transactionNumber }).from(exchangeTransactions).where(and(
+    eq(exchangeTransactions.status, "REVERSED"), eq(exchangeTransactions.isDemo, false), eq(exchangeTransactions.isHistorical, false),
+    gte(exchangeTransactions.transactionAt, start), lt(exchangeTransactions.transactionAt, end),
+  ));
+  if (!reversed.length) return [];
+  const numbers = reversed.map((row) => row.transactionNumber);
+  const journaled = new Set((await db.select({ reference: journalEntries.sourceReference }).from(journalEntries).where(and(
+    eq(journalEntries.sourceType, "TRANSAKSI_VALUTA"),
+    inArray(journalEntries.sourceReference, numbers.flatMap((number) => [number, `${number}-BALIK`])),
+  ))).map((row) => row.reference));
+  return numbers.filter((number) => journaled.has(number) && !journaled.has(`${number}-BALIK`));
 }

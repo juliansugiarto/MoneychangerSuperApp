@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { csvCell, PrintableLine, printBon, transactionStatusClass, transactionStatusLabel } from "./Transactions";
 import { ReverseTransactionDialog } from "./transactions/ReverseTransactionDialog";
+import { pricedRowRupiah } from "@shared/rupiahRounding";
 
 export default function TransactionList() {
   const { user } = useAuth();
@@ -47,7 +48,7 @@ export default function TransactionList() {
     ? denominations.map((denomination) => {
       const foreignAmount = Number(denomination.denominationValue) * denomination.quantity;
       const agreedRate = denomination.agreedRate ?? line.agreedRate;
-      return { currencyCode: currency.code, denominationValue: String(denomination.denominationValue), quantity: denomination.quantity, foreignAmount: String(foreignAmount), agreedRate: String(agreedRate), rupiahAmount: (foreignAmount * Number(agreedRate) / Number(line.quoteUnit)).toFixed(2) };
+      return { currencyCode: currency.code, denominationValue: String(denomination.denominationValue), quantity: denomination.quantity, foreignAmount: String(foreignAmount), agreedRate: String(agreedRate), rupiahAmount: pricedRowRupiah(String(denomination.denominationValue), denomination.quantity, String(agreedRate), String(line.quoteUnit)).toFixed(2) };
     })
     : [{ currencyCode: currency.code, foreignAmount: String(line.foreignAmount), agreedRate: String(line.agreedRate), rupiahAmount: String(line.rupiahAmount) }]);
 

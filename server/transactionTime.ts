@@ -22,11 +22,11 @@ export async function assertTransactionTimeAllowed(transactionAt: Date, now: Dat
 }
 
 /** Apakah hari usaha `dateKey` (YYYY-MM-DD, WIB) berada di periode buku yang sudah ditutup. */
-export async function isBookClosedOn(dateKey: string) {
-  const db = await getDb();
+export async function isBookClosedOn(dateKey: string, executor?: { select: any }) {
+  const db = executor ?? await getDb();
   if (!db) throw new Error("Database tidak tersedia. Coba ulangi tindakan ini.");
   // Kolom `date` dibandingkan dengan string YYYY-MM-DD: tidak bergantung pada zona waktu proses.
-  const closed = await db.select({ id: accountingPeriods.id }).from(accountingPeriods)
+  const closed: unknown[] = await db.select({ id: accountingPeriods.id }).from(accountingPeriods)
     .where(and(eq(accountingPeriods.status, "DITUTUP"), lte(accountingPeriods.periodStart, dateKey as never), gte(accountingPeriods.periodEnd, dateKey as never)))
     .limit(1);
   return closed.length > 0;

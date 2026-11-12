@@ -6,6 +6,7 @@ import {
   cashBalanceMovements,
   cashBalances,
   cashDenominationEntries,
+  currencies,
   exchangeTransactions,
   regulatoryReportPackages,
   stockOpnames,
@@ -36,23 +37,23 @@ export async function reverseTransaction(transactionId: number, reason: string, 
   if (note.length < 10) throw new Error("Tulis alasan pembalikan (minimal 10 karakter) untuk jejak audit.");
 
   const db = await databaseOrThrow();
-  const preview = (await db.select().from(exchangeTransactions).where(eq(exchangeTransactions.id, transactionId)).limit(1))[0];
-  if (!preview || preview.isDemo || preview.isHistorical) throw new Error("Transaksi tidak ditemukan.");
-  await assertPeriodStillOpen(new Date(preview.transactionAt));
-
   return db.transaction(async (tx) => {
     // Bon dikunci lebih dulu, urutan kunci sama dengan penyelesaian: pembalikan ganda bersamaan menunggu,
     // lalu melihat status REVERSED dan ditolak.
     const transaction = (await tx.select().from(exchangeTransactions).where(eq(exchangeTransactions.id, transactionId)).limit(1).for("update"))[0];
-    if (!transaction) throw new Error("Transaksi tidak ditemukan.");
+    if (!transaction || transaction.isDemo || transaction.isHistorical) throw new Error("Transaksi tidak ditemukan.");
+    // Di dalam transaksi dan lewat `tx`: tidak ada celah antara pemeriksaan dan penulisan, dan tidak ada
+    // sambungan kedua dari pool selagi baris bon dikunci.
+    await assertPeriodStillOpen(tx, new Date(transaction.transactionAt));
     if (transaction.status === "REVERSED") throw new Error("Transaksi ini sudah dibalik.");
     if (transaction.status !== "COMPLETED") throw new Error("Hanya transaksi yang sudah selesai yang bisa dibalik. Yang belum selesai cukup dibatalkan.");
 
     const label = transaction.receiptNumber ?? transaction.transactionNumber;
     const reversalReason = `PEMBALIKAN ${label}: ${note}`;
 
-    const cashMovements = await tx.select({ movement: cashBalanceMovements, currencyId: cashBalances.currencyId })
+    const cashMovements = await tx.select({ movement: cashBalanceMovements, currencyId: cashBalances.currencyId, currencyCode: currencies.code })
       .from(cashBalanceMovements).innerJoin(cashBalances, eq(cashBalanceMovements.cashBalanceId, cashBalances.id))
+      .innerJoin(currencies, eq(cashBalances.currencyId, currencies.id))
       // Mutasi bon lama tersimpan berkategori bawaan OTHER, yang baru TRANSACTION; pengenalnya adalah transactionId.
       .where(eq(cashBalanceMovements.transactionId, transaction.id))
       .orderBy(asc(cashBalanceMovements.id));
@@ -62,7 +63,7 @@ export async function reverseTransaction(transactionId: number, reason: string, 
       : [];
 
     const reversedCash: { currencyId: number; before: string; after: string }[] = [];
-    for (const { movement, currencyId } of originalCash) {
+    for (const { movement, currencyId, currencyCode } of originalCash) {
       const direction = movement.direction === "IN" ? "OUT" as const : "IN" as const;
       const denominationRows = entries.filter((entry) => entry.cashBalanceMovementId === movement.id)
         .map((entry) => ({ denominationValue: String(entry.denominationValue), quantity: entry.quantity, subtotal: String(entry.subtotal) }));
@@ -73,7 +74,8 @@ export async function reverseTransaction(transactionId: number, reason: string, 
       reversedCash.push({ currencyId, before: applied.before, after: applied.after });
       // Kaki valas per baris menambah pembelian/penjualan opname hari penyelesaiannya; kurangi lagi selama
       // opname itu masih terbuka. Opname yang sudah ditutup tidak disunting — mutasi baliknya terlihat sendiri.
-      if (movement.transactionLineId != null) await undoOpnameTally(tx, transaction.operation, currencyId, movement.createdAt, String(movement.amount));
+      // Kaki valas (bukan kaki Rupiah), termasuk bon lama tanpa baris.
+      if (String(currencyCode).trim().toUpperCase() !== "IDR") await undoOpnameTally(tx, transaction.operation, currencyId, movement.createdAt, String(movement.amount));
     }
 
     const bankLegs = await tx.select().from(bankAccountMovements)
@@ -112,11 +114,10 @@ export async function reverseTransaction(transactionId: number, reason: string, 
 }
 
 /** Buku bulannya harus masih terbuka dan LKU yang memuat tanggal bon belum disiapkan (keputusan pemilik 12 Nov 2026). */
-async function assertPeriodStillOpen(transactionAt: Date) {
+async function assertPeriodStillOpen(tx: any, transactionAt: Date) {
   const dateKey = operationalDateKey(transactionAt);
-  if (await isBookClosedOn(dateKey)) throw new Error(`Buku tanggal ${dateKey} sudah ditutup, jadi transaksinya tidak bisa dibalik.`);
-  const db = await databaseOrThrow();
-  const lku = await db.select({ id: regulatoryReportPackages.id }).from(regulatoryReportPackages).where(and(
+  if (await isBookClosedOn(dateKey, tx)) throw new Error(`Buku tanggal ${dateKey} sudah ditutup, jadi transaksinya tidak bisa dibalik.`);
+  const lku = await tx.select({ id: regulatoryReportPackages.id }).from(regulatoryReportPackages).where(and(
     eq(regulatoryReportPackages.reportType, "LKU"),
     inArray(regulatoryReportPackages.status, ["PREPARED", "APPROVED", "EXPORTED"]),
     lte(regulatoryReportPackages.periodStart, transactionAt),
@@ -128,6 +129,7 @@ async function assertPeriodStillOpen(transactionAt: Date) {
 async function undoOpnameTally(tx: any, operation: "BUY" | "SELL", currencyId: number, completedAt: Date, amount: string) {
   const opnameDate = jakartaBusinessDateColumn(new Date(completedAt));
   const column = operation === "BUY" ? stockOpnames.purchases : stockOpnames.sales;
+  // Hanya opname yang SUDAH ada saat bon diselesaikan yang pernah ditambah; opname yang dibuka sesudahnya tidak.
   await tx.update(stockOpnames).set(operation === "BUY" ? { purchases: sql`${column} - ${amount}` } : { sales: sql`${column} - ${amount}` })
-    .where(and(eq(stockOpnames.opnameDate, opnameDate), eq(stockOpnames.currencyId, currencyId), eq(stockOpnames.reconciliationStatus, "OPEN"), eq(stockOpnames.isDemo, false), eq(stockOpnames.isHistorical, false)));
+    .where(and(eq(stockOpnames.opnameDate, opnameDate), eq(stockOpnames.currencyId, currencyId), eq(stockOpnames.reconciliationStatus, "OPEN"), eq(stockOpnames.isDemo, false), eq(stockOpnames.isHistorical, false), lte(stockOpnames.createdAt, new Date(completedAt))));
 }
