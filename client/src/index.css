@@ -240,35 +240,6 @@
     text-transform: uppercase;
   }
 
-  .public-input,
-  .public-field {
-    height: 3rem;
-    width: 100%;
-    border: 1px solid #d5dbe7;
-    border-radius: 0.7rem;
-    background: white;
-    padding: 0 0.75rem;
-    color: #243552;
-    outline: none;
-  }
-
-  .public-input:focus,
-  .public-field:focus {
-    border-color: #708dff;
-    box-shadow: 0 0 0 3px rgb(112 141 255 / 18%);
-  }
-
-  .public-label {
-    display: grid;
-    gap: 0.5rem;
-    color: #2c3d59;
-    font-size: 0.875rem;
-    font-weight: 700;
-  }
-
-  .glass-panel { background: linear-gradient(135deg, oklch(1 0 0 / 14%), oklch(1 0 0 / 6%)); border: 1px solid oklch(1 0 0 / 16%); box-shadow: 0 22px 64px oklch(0.12 0.03 252 / 26%); backdrop-filter: blur(18px); }
-  .public-shell { background: linear-gradient(180deg, #fdfdfb 0%, #f5f7fb 46%, #fbfcff 100%); }
-  .ink-panel { background: #182947; color: #f9fbff; }
   .table-number { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
   .subtle-grid { background-image: radial-gradient(circle at 1px 1px, rgb(58 75 110 / 11%) 1px, transparent 0); background-size: 18px 18px; }
   .interactive-lift { transition: transform 180ms var(--ease-out-expo), border-color 180ms var(--ease-out-expo), box-shadow 180ms var(--ease-out-expo); }

@@ -59,8 +59,9 @@ export function PublicPageSection({ initial, isPending, onSave }: { initial: Ini
       {!enabled ? <p className="mt-1 text-label text-ink-muted">Selama mati, alamat / langsung membuka halaman masuk staf.</p> : null}
       <div className="mt-3 grid max-w-2xl gap-3">
         <div className="grid gap-1">
-          <Label htmlFor="secondary-phone">Telepon kedua</Label>
-          <Input id="secondary-phone" className={QUIET_FIELD} value={secondaryPhone} onChange={(event) => setSecondaryPhone(event.target.value)} />
+          <Label htmlFor="secondary-phone">Nomor WhatsApp</Label>
+          <Input id="secondary-phone" placeholder="Mis. 0812-3456-7890" className={QUIET_FIELD} value={secondaryPhone} onChange={(event) => setSecondaryPhone(event.target.value)} />
+          <p className="text-label text-ink-subtle">Tampil di halaman publik dengan tombol Chat di WhatsApp.</p>
         </div>
         <OpeningScheduleEditor draft={schedule} onChange={setSchedule} />
         <div className="grid gap-1">

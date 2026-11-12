@@ -48,11 +48,17 @@ export function rateChange(row: PublicRateRow, direction: CustomerDirection): Ra
   return { kind: delta.isPositive() ? "up" : "down", amount: delta.abs().toString() };
 }
 
-const rupiahFormat = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 });
+const wholeFormat = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 });
+const centsFormat = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-/** "16310.000000" → "Rp 16.310". Kurs tidak dibulatkan seperti total transaksi. */
+/** "16310.000000" → "16.310"; "11341.3" → "11.341,30" (pecahan selalu dua angka). Kurs tidak dibulatkan seperti total. */
+export function formatRupiahNumber(value: Decimal.Value): string {
+  const number = new Decimal(value);
+  return (number.isInteger() ? wholeFormat : centsFormat).format(number.toNumber());
+}
+
 export function formatRateRupiah(value: Decimal.Value): string {
-  return `Rp ${rupiahFormat.format(new Decimal(value).toNumber())}`;
+  return `Rp ${formatRupiahNumber(value)}`;
 }
 
 /** "1.000000" → "1"; "100.000000" → "100". */

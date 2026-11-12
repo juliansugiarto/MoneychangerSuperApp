@@ -5,13 +5,14 @@ import { Route, Switch } from "wouter";
 import DashboardLayout from "./components/DashboardLayout";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
 import Login from "./pages/Login";
 import ChangePassword from "./pages/ChangePassword";
 
 // Every operational page loads on demand, split into its own chunk — none of these are needed for
 // the public landing page or login, so there's no reason to ship them in the main bundle upfront.
 const NotFound = lazy(() => import("@/pages/NotFound"));
+const PublicPage = lazy(() => import("./pages/publik/PublicPage"));
+const Papan = lazy(() => import("./pages/publik/Papan"));
 const Recover = lazy(() => import("./pages/Recover"));
 const Setup = lazy(() => import("./pages/Setup"));
 const RecoveryCodes = lazy(() => import("./pages/RecoveryCodes"));
@@ -69,7 +70,8 @@ function OperationsRoute({ page, minimumRole = "STAFF" }: { page: React.ReactNod
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/" component={PublicPage} />
+<Route path="/papan" component={Papan} />
       <Route path="/login" component={Login} />
       <Route path="/ubah-sandi" component={ChangePassword} />
       <Route path="/pulihkan" component={Recover} />

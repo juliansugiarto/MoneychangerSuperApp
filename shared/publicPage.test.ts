@@ -7,7 +7,8 @@ describe("isian halaman publik", () => {
   it("FAQ kosong, null, atau berisi baris kosong memakai FAQ produk netral", () => {
     expect(publicFaqOrDefault(null)).toBe(DEFAULT_PUBLIC_FAQ);
     expect(publicFaqOrDefault([{ question: " ", answer: "x" }])).toBe(DEFAULT_PUBLIC_FAQ);
-    expect(JSON.stringify(DEFAULT_PUBLIC_FAQ)).not.toMatch(/\d{3}|Valasindo|Cianjur/);
+    // Tanpa nomor telepon/WhatsApp maupun nama perusahaan; angka aturan BI (USD 10.000, Rp 100) boleh.
+    expect(JSON.stringify(DEFAULT_PUBLIC_FAQ)).not.toMatch(/\(0\d+\)|08\d{2}|\+62|Valasindo|Cianjur/);
   });
 
   it("FAQ milik perusahaan dipakai apa adanya", () => {

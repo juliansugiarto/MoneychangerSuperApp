@@ -1,0 +1,25 @@
+/*
+ * Tambahan khusus aplikasi di atas paspor.css (yang dibangkitkan dari rujukan). Hanya hal yang di rujukan diurus
+ * oleh <body>, atau yang tidak ada di rujukan karena datanya contoh.
+ */
+/* Rujukan memakai overflow-x:hidden pada <body> (merambat ke viewport). Pada div, hidden membuat wadah gulir dan
+   mematikan kepala yang lengket; clip memotong tanpa itu. */
+.paspor{overflow-x:clip;min-height:100vh;position:relative}
+.paspor a.btn-tv{text-decoration:none;color:inherit}
+/* Jadwal belum diisi: chip netral, tidak menebak Buka atau Tutup. */
+.paspor .chip[data-s=unknown]{color:var(--ink-2)}
+.paspor .chip[data-s=unknown]::before{background:transparent;border:1.5px solid currentColor}
+.paspor .kv > .note{margin-top:2px}
+.paspor .callout[role=alert] .btn{margin-top:10px}
+/* Papan TV di rute sendiri: tampil tanpa kelas .tv pada <html>. */
+.paspor.tv{background:#16060B}
+.paspor.tv .papan{position:fixed}
+.paspor .pp-empty{display:grid;place-items:center;align-content:center;gap:1cqw;height:100%;text-align:center}
+.paspor .pp-empty b{font-size:3.4cqw;font-stretch:84%}
+.paspor .pp-empty span{font-size:1.6cqw;color:#D8C8CC}
+.paspor .pp-empty .btn{font-size:1.3cqw;min-height:0;padding:.6cqw 1.4cqw;background:transparent;color:#fff;border-color:rgba(255,255,255,.5);margin-top:1cqw}
+.paspor a.pp-back{text-decoration:none}
+/* Nama valuta asli lebih panjang dari contoh rujukan ("Dolar Amerika Serikat" vs "Dolar AS"): boleh dua baris,
+   jangan menimpa kolom Pecahan. */
+@media (min-width:960px){.paspor .rates .cur-t b{white-space:normal}}
+.paspor .pp-cur span{overflow:hidden;text-overflow:ellipsis}

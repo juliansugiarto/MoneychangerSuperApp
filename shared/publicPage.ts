@@ -20,10 +20,20 @@ export function hasMoneyRules(rules: Partial<MoneyRules> | null | undefined): bo
 
 export const PUBLIC_FAQ_LIMIT = 12;
 
+/**
+ * Delapan tanya-jawab bawaan halaman publik (spec teks 2026-11-12 §8, 1–8). Tanpa nama, alamat, atau nomor
+ * perusahaan; jawaban "kapan dan di mana" serta "memastikan kontak" disusun halaman dari Profil Perusahaan.
+ * Batas USD 10.000 adalah aturan BI (PADG 15/2026) untuk semua KUPVA, bukan teks satu perusahaan.
+ */
 export const DEFAULT_PUBLIC_FAQ: readonly PublicFaqItem[] = [
-  { question: "Apakah kurs di halaman ini sudah terkunci?", answer: "Belum. Kurs bersifat indikatif; petugas mengonfirmasi kurs dan ketersediaan sebelum transaksi dilakukan." },
-  { question: "Apakah formulir permintaan merupakan transaksi?", answer: "Tidak. Formulir hanya membantu kami memahami kebutuhan awal Anda. Formulir tidak mengunci kurs, tidak meminta data identitas, dan tidak meminta pembayaran." },
-  { question: "Apa yang perlu dibawa ke outlet?", answer: "Siapkan kebutuhan mata uang dan nominal Anda. Petugas akan memberi arahan mengenai informasi yang diperlukan sesuai prosedur layanan." },
+  { question: "Apa itu valas?", answer: "Valas adalah uang asing, misalnya dolar AS atau riyal Saudi. Anda bisa melihat kursnya di bagian Kurs." },
+  { question: "Saya jual atau beli valas?", answer: "Pilih “Saya jual valas” jika Anda menyerahkan uang asing dan menerima rupiah. Pilih “Saya beli valas” jika Anda membayar rupiah untuk mendapat uang asing." },
+  { question: "Apakah kurs di sini sudah pasti?", answer: "Kurs di halaman ini masih perkiraan. Petugas memastikan kurs dan pecahan yang tersedia sebelum transaksi." },
+  { question: "Kenapa beda pecahan beda kurs?", answer: "Kurs bisa berbeda menurut pecahan uang, misalnya USD 100 dan pecahan kecil. Pilih pecahan yang sesuai saat menghitung, lalu pastikan kursnya dengan petugas." },
+  { question: "Bagaimana total rupiah dibulatkan?", answer: "Total rupiah dibulatkan ke atas dalam kelipatan Rp 100. Aturan ini berlaku saat Anda menjual maupun membeli valas." },
+  { question: "Apa yang perlu saya bawa?", answer: "Bawa KTP atau paspor Anda. Jika total pembelian valas Anda melebihi USD 10.000 atau setaranya per bulan, bawa juga dokumen pendukung dan NPWP." },
+  { question: "Bagaimana pembelian sampai USD 10.000?", answer: "Anda menandatangani pernyataan bahwa pembelian valas Anda pada bulan itu belum melebihi USD 10.000 atau setaranya. Batas dihitung per orang per bulan. Bawa KTP atau paspor Anda." },
+  { question: "Apakah formulir ini memesan valas?", answer: "Formulir ini hanya untuk meminta konfirmasi kurs dan pecahan yang tersedia. Ini bukan pemesanan atau transaksi. Petugas akan menghubungi Anda; kurs belum dikunci." },
 ];
 
 export const DEFAULT_FRAUD_WARNING = "Waspada penipuan. Konfirmasi ulang lewat kontak resmi di halaman ini sebelum menindaklanjuti informasi yang mengatasnamakan kami.";

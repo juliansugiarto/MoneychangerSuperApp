@@ -19,14 +19,14 @@ kurs tetap diaktifkan manual (halaman hanya membaca); tidak ada data uji di prod
 - [x] Pembangun teks bagikan WhatsApp (4 valuta teratas urutan papan) di `shared/`, dengan uji.
 
 ## Irisan 3 — halaman publik React
-- [ ] Folder fitur `client/src/pages/publik/` (≤ ~400 baris per berkas): kepala, §1 kurs (meja desktop + daftar ponsel, saklar jual/beli), §2 pas naik hitung tukar, §3 tiket konfirmasi, §4 bagikan, §5 ketentuan, §6 lokasi, §7 resmi + penipuan, §8 pengumuman, §9 FAQ, kaki MRZ.
-- [ ] Token & gaya terlingkup halaman publik (tidak mengubah Konter Tebal back office).
-- [ ] Gerak: kedatangan, cap, rute pesawat (titik analitik), awan, spread terbuka, laminasi, angka bergulir — dengan aturan kinerja DESIGN.md.
-- [ ] Tiket konfirmasi memakai mutasi permintaan layanan yang sudah ada (bukan tiruan): nomor permintaan asli, masuk ke layar petugas.
-- [ ] Semua tautan/isian/aksi halaman lama tetap ada (daftar sebelum-sesudah di PR).
+- [x] Folder fitur `client/src/pages/publik/` (≤ ~400 baris per berkas): kepala, §1 kurs (meja desktop + daftar ponsel, saklar jual/beli), §2 pas naik hitung tukar, §3 tiket konfirmasi, §4 bagikan, §5 ketentuan, §6 lokasi, §7 resmi + penipuan, §8 pengumuman, §9 FAQ, kaki MRZ.
+- [x] Token & gaya terlingkup halaman publik (tidak mengubah Konter Tebal back office).
+- [x] Gerak: kedatangan, cap, rute pesawat (titik analitik), awan, spread terbuka, laminasi, angka bergulir — dengan aturan kinerja DESIGN.md.
+- [x] Tiket konfirmasi memakai mutasi permintaan layanan yang sudah ada (bukan tiruan): nomor permintaan asli, masuk ke layar petugas.
+- [x] Semua tautan/isian/aksi halaman lama tetap ada (daftar sebelum-sesudah di PR).
 
 ## Irisan 4 — `/papan` (TV outlet)
-- [ ] Rute publik `/papan`: papan kurs layar penuh, jam WIB, halaman bergilir, segarkan kurs berkala, cap "KURS BARU" bila kurs berubah.
+- [x] Rute publik `/papan`: papan kurs layar penuh, jam WIB, halaman bergilir, segarkan kurs berkala, cap "KURS BARU" bila kurs berubah.
 
 ## Irisan 5 — bukti dan rilis
 - [ ] Uji unit irisan 1–2; e2e: halaman publik di 390/1440, saklar, hitung, kirim tiket membuat `service_requests` di `mc_t_visual`, `/papan`.
