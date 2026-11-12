@@ -63,6 +63,7 @@ import { relationshipEndValues } from "../shared/documentRetention";
 import { parseWatchlistNameList, scoreNameMatch, MATCH_THRESHOLD } from "../shared/sanctionsNameMatch";
 import { compareDenominationCounts, type DenominationVarianceRow } from "../shared/denominationVariance";
 import { assertTransactionTimeAllowed } from "./transactionTime";
+import { pricedRowRupiah } from "../shared/rupiahRounding";
 
 /** Rejects a denomination value that doesn't match a real banknote/coin for this currency (when we have a curated list — see shared/currencyDenominations.ts). Never trust the client alone here: this is exactly the check that stops a typo like "IDR 131250000 × 1 lembar" from being recorded as if it were a real note. */
 function assertKnownDenomination(value: Decimal, currencyCode: string | undefined, label: string) {
@@ -2096,7 +2097,8 @@ function reconcilePricedDenominations(entries: PricedDenominationInput[], quoteU
     const rate = nonNegativeDecimal(entry.rate, "Harga pecahan");
     if (rate.lte(0)) throw new Error(`Harga pecahan pada ${lineLabel} harus lebih besar dari nol.`);
     const foreignSubtotal = value.times(entry.quantity);
-    const rupiahSubtotal = foreignSubtotal.times(rate).div(quoteUnit).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+    // Dibulatkan ke atas ke Rp 100 agar selalu bisa dibayar tunai pas (shared/rupiahRounding.ts).
+    const rupiahSubtotal = pricedRowRupiah(value, entry.quantity, rate, quoteUnit);
     totalForeign = totalForeign.plus(foreignSubtotal);
     totalRupiah = totalRupiah.plus(rupiahSubtotal);
     return { denominationValue: value.toFixed(6), quantity: entry.quantity, lineTotal: foreignSubtotal.toFixed(6), agreedRate: rate.toFixed(6), rupiahSubtotal: rupiahSubtotal.toFixed(2) };

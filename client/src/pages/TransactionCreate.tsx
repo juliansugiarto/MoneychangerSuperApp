@@ -21,6 +21,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { Customer, PrintableLine, printBon } from "./Transactions";
+import { pricedRowRupiah } from "@shared/rupiahRounding";
 
 /** Every denomination group is priced on its own (e.g. USD 100s vs USD 10s in the same deal), so price lives here, not on the line. */
 /** `rateAuto` menandai harga yang diisi dari papan kurs: boleh diganti ketika pecahannya berubah, sedangkan harga ketikan kasir tidak pernah ditimpa. */
@@ -34,7 +35,10 @@ const emptyPlainDenominationRow = (): PlainDenominationRow => ({ value: "", quan
 const emptyLine = (): LineDraft => ({ key: crypto.randomUUID(), currency: null, quoteUnit: "1", denominations: [emptyDenominationRow()], sellTargetAmount: "" });
 const isCompleteDenominationRow = (row: PricedDenominationRow) => Boolean(row.value && row.quantity && row.rate);
 const lineForeignTotal = (line: LineDraft) => line.denominations.reduce((sum, row) => sum + (Number(row.value) || 0) * (Number(row.quantity) || 0), 0);
-const lineRupiahTotal = (line: LineDraft) => { const unit = Number(line.quoteUnit) || 1; return line.denominations.reduce((sum, row) => sum + (Number(row.value) || 0) * (Number(row.quantity) || 0) * (Number(row.rate) || 0) / unit, 0); };
+/** Rupiah satu baris pecahan, dibulatkan ke atas ke Rp 100 persis seperti di server. */
+const rowRupiah = (row: { value: string; quantity: string | number; rate: string }, quoteUnit: string | number) =>
+  pricedRowRupiah(Number(row.value) || 0, Number(row.quantity) || 0, Number(row.rate) || 0, Number(quoteUnit) || 1).toNumber();
+const lineRupiahTotal = (line: LineDraft) => line.denominations.reduce((sum, row) => sum + rowRupiah(row, line.quoteUnit), 0);
 
 export default function TransactionCreate() {
   const { user } = useAuth();
@@ -277,7 +281,7 @@ export default function TransactionCreate() {
           quantity: Number(row.quantity) || 0,
           foreignAmount: ((Number(row.value) || 0) * (Number(row.quantity) || 0)).toString(),
           agreedRate: row.rate,
-          rupiahAmount: (((Number(row.value) || 0) * (Number(row.quantity) || 0) * (Number(row.rate) || 0)) / (Number(line.quoteUnit) || 1)).toFixed(2),
+          rupiahAmount: rowRupiah(row, line.quoteUnit).toFixed(2),
         })));
         setLastBon(transaction);
         setLastBonLines(printableLines);
