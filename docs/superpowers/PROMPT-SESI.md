@@ -158,7 +158,13 @@ Rumah baru: VPS tokoemas 187.77.148.118 (4 vCPU, 15 GB, ±12 GB bebas) sebagai t
 belakang Caddy tokoemas; `ibukotavalasindo.online` masih menunjuk IP lama. **Push `main` memicu
 `deploy.yml` ke server mati** — tulis ulang deploy sebelum menggabung.
 
-**Berikutnya (urut):** (1) pemilik memutuskan pembalikan bon COMPLETED dan kembalian/pembulatan Rupiah;
+**Keputusan 12 November** (`docs/decisions/2026-11-12-pembalikan-bon-dan-pembulatan.md`): pembalikan bon
+COMPLETED oleh CONTROLLER ke atas; tanpa fitur kembalian, total sulit dibulatkan ke atas (bawaan Rp 100).
+**Celah regulasi baru (PADG 15/2025, SE 18/42 IV.L)**: laporan pemblokiran/nihil DTTOT ke Kepolisian dan
+DPPSPM ke PPATK; pernyataan tertulis nasabah "belum melebihi USD 25.000 bulan ini" untuk pembelian UKA di
+bawah ambang. Lihat memori `kupva-regulation-2026`.
+
+**Berikutnya (urut):** (1a) pembalikan bon + pembulatan ke atas; (1b) dua celah regulasi di atas;
 (2) paket Docker ala tokoemas + cadangan terenkripsi ke R2 + `deploy.yml` baru; (3) penyederhanaan layar
 Kasir & transaksi (sub-proyek 4); (4) CSP `script-src` sesudah jendela cetak berhenti memakai skrip sebaris.
 
