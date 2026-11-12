@@ -256,7 +256,9 @@ belakang Caddy tokoemas; `ibukotavalasindo.online` masih menunjuk IP lama. **Pus
 
 **Keputusan 12 November** (`docs/decisions/2026-11-12-pembalikan-bon-dan-pembulatan.md`): pembalikan bon
 COMPLETED oleh CONTROLLER ke atas; tanpa fitur kembalian, total sulit dibulatkan ke atas (bawaan Rp 100).
-**Celah regulasi (diperiksa ulang 12 November, termasuk surel BI di kotak masuk pemilik):**
+**Celah regulasi (diperiksa ulang 12 November, termasuk surel BI di kotak masuk pemilik):** — **SEMUANYA SUDAH DIBANGUN 12 Nov**
+(diperiksa di kode + uji malam itu): (a) `b0fd469`, (b) `d512d11`, (c) `3032a5d`/`b57603f`/`ba7bdb1`, DPPSPM `0707109`, (d) `ba7bdb1`.
+Daftar di bawah ini riwayat, bukan pekerjaan terbuka.
 (a) ambang underlying **sudah USD 10.000** di aplikasi (benar, PADG 15/2026 sejak 1 Jul 2026), TETAPI akumulasi
 bulanan di `createTransaction` menjumlah BELI dan JUAL — aturan hanya menghitung pembelian valas oleh nasabah
 (operasi SELL kita); juga "di atas" ambang = `>` bukan `>=`;
@@ -1387,7 +1389,7 @@ Urut sesuai usul pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`:
 3. **Temuan 7 — penginian berkala klasifikasi risiko** (Pasal 9 ayat 6) — menaikkan risiko residual
    Paket J2 nomor 3 menjadi kewajiban. **DIRANCANG 28 September 2026** — rencana butir B Tugas 7–8
    (klasifikasi saja; tinjauan berkala per nasabah tidak dibangun).
-4. **Tanggal nota memakai zona waktu peramban** (risiko residual Paket K3).
+4. ~~**Tanggal nota memakai zona waktu peramban**~~ — **SELESAI** (`b7bf632`, `client/src/pages/transactions/notaDate.ts`: zona Profil Perusahaan; diperiksa 12 Nov 2026).
 5. **Penjelasan Pasal 9, 32, 47, dan 48 PBI 10/2024 sudah dibaca** (sesi rancangan Paket M,
    11 September 2026); tidak satu pun mengubah Temuan 1, 2, 5, atau 7. Penjelasan pasal lain belum
    dibaca — **baca penjelasannya sebelum temuan mana pun menjadi rencana.**
@@ -1400,7 +1402,7 @@ Urut sesuai usul pada `specs/2026-09-09-pbi-10-2024-temuan-awal.md`:
    migrasi `0058` (ditemukan Paket M). Sampai itu diputuskan, nasabah tersebut tanpa jam retensi dan
    tampil pada kartu *Tidak aktif tanpa tanggal berakhir*. **Butuh keputusan pengguna**: tanggal
    mana yang sah dipakai — menebak dari `updatedAt` sudah ditolak.
-9. **GitHub Action penerapan tidak pernah berhasil** — setiap run (`1be46a0`, `85aee5a`, `724de6b`)
+9. ~~**GitHub Action penerapan tidak pernah berhasil**~~ — **TUNTAS 12 Nov 2026**: `deploy.yml` dihapus di `6fe6211`; `main` di-fast-forward ke `3ce8aec` tanpa run baru. Penerapan = bundle + VPS (`docs/deployment/vps.md`). — setiap run (`1be46a0`, `85aee5a`, `724de6b`)
    gagal dalam hitungan detik di langkah *Deploy over SSH*, sebelum `deploy.sh` berjalan. Kemungkinan
    rahasia `SSH_*`/`DEPLOY_PATH` pada environment `production` belum benar atau firewall menolak
    GitHub. Log galatnya hanya terlihat oleh pemilik repo di tab Actions. Sampai diperbaiki, setiap

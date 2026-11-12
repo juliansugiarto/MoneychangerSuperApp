@@ -551,10 +551,12 @@ export async function listPublicAnnouncements() {
   return retryTransientDatabaseRead(async () => {
     const db = await databaseOrThrow();
     const now = new Date();
-    return db.select().from(publicAnnouncements).where(and(
-      eq(publicAnnouncements.status, "PUBLISHED"),
-      or(isNull(publicAnnouncements.expiresAt), gt(publicAnnouncements.expiresAt, now)),
-    )).orderBy(desc(publicAnnouncements.publishedAt));
+    // Hanya kolom untuk pengunjung: id petugas pembuat/penerbit tidak ikut keluar lewat prosedur publik.
+    return db.select({ id: publicAnnouncements.id, title: publicAnnouncements.title, content: publicAnnouncements.content, publishedAt: publicAnnouncements.publishedAt, expiresAt: publicAnnouncements.expiresAt })
+      .from(publicAnnouncements).where(and(
+        eq(publicAnnouncements.status, "PUBLISHED"),
+        or(isNull(publicAnnouncements.expiresAt), gt(publicAnnouncements.expiresAt, now)),
+      )).orderBy(desc(publicAnnouncements.publishedAt));
   });
 }
 
