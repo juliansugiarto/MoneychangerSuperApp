@@ -276,7 +276,11 @@ snapshot; rumus IRA tidak berubah.
   `completeTransaction` tidak memeriksa blokir sama sekali, jadi bon DRAFT yang dibuat sebelum nasabahnya diblokir masih bisa
   diselesaikan. Kini diperiksa di pembuatan DAN penyelesaian, di dalam transaksi, di belakang kunci baris nasabah (bon: FOR SHARE;
   pembuka blokir: FOR UPDATE); percobaan tetap dicatat. Uji MySQL sungguhan `server/watchlistBlockGate.live.test.ts` (RED tanpa
-  gerbang penyelesaian, GREEN dengan).
+  gerbang penyelesaian, GREEN dengan), termasuk balapan terbalik (pembuka blokir memegang kunci → penyelesaian menunggu
+  lalu ditolak). Tinjauan adversarial: isolasi benar (drizzle `begin` biasa; pembacaan pertama yang tidak berkunci sesudah
+  kunci), tanpa siklus kunci, tanpa transaksi bersarang. Diperbaiki: percobaan atas nama kasir pemilik bon (bukan Supervisor),
+  bon lama tanpa baris tetap bernominal, galat baca isi bon tidak menyembunyikan pesan blokir. **Sengaja dibiarkan:** bon
+  yang ditolak saat penyelesaian tetap APPROVED (jejak setuju ada, kas tidak bergerak) — batalkan dari Daftar Transaksi.
 - M3 FALSE_POSITIVE atas blokir PENGISIAN_AWAL membiarkan centang lama `dttotPpsdmMatch` (spec diam).
 - ~~M4 `biCopySentAt` saat konfirmasi tanpa periksa masa depan di server~~ — **SELESAI 12 Nov 2026** (uji RED→GREEN).
 - M5 tinjauan klasifikasi jatuh tempo pada hari jatuh temponya; spec berbunyi sehari sesudahnya.

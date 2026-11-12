@@ -2288,7 +2288,12 @@ export async function completeTransaction(transactionId: number, actor: { id: nu
     return { ...transaction, status: "COMPLETED" as const, cashResults, bankResult };
   }).catch(async (error) => {
     if (!(error instanceof WatchlistHoldError)) throw error;
-    return refuseHeldTransaction(error.hold, { ...await attemptOfTransaction(transactionId), tellerUserId: actor.id });
+    // Pencarian isi bon tidak boleh menyembunyikan pesan blokir: bila gagal, percobaan tetap dicatat tanpa rincian baris.
+    const attempt = await attemptOfTransaction(transactionId).catch((lookupError) => {
+      console.error("[pemblokiran] isi bon untuk catatan percobaan gagal dibaca", lookupError);
+      return { customerId: error.hold.block.customerId, representativeCustomerId: null, operation: "BUY" as const, lines: [], tellerUserId: actor.id };
+    });
+    return refuseHeldTransaction(error.hold, attempt);
   });
   return result;
 }
@@ -2299,15 +2304,21 @@ async function attemptOfTransaction(transactionId: number) {
   const [transaction] = await db.select().from(exchangeTransactions).where(eq(exchangeTransactions.id, transactionId)).limit(1);
   const lines = await db.select().from(exchangeTransactionLines).where(eq(exchangeTransactionLines.transactionId, transactionId));
   const entries = lines.length ? await db.select().from(exchangeTransactionDenominationEntries).where(inArray(exchangeTransactionDenominationEntries.transactionLineId, lines.map((line) => line.id))) : [];
+  // Bon lama tanpa baris: satu baris dari kolom kepala, sama dengan posting kas di completeTransaction.
+  const legacy = !lines.length && transaction.currencyId && transaction.foreignAmount && transaction.rateSnapshot
+    ? [{ currencyId: transaction.currencyId, quoteUnit: String(transaction.quoteUnitSnapshot ?? "1"), denominations: [{ value: String(transaction.foreignAmount), quantity: 1, rate: String(transaction.rateSnapshot) }] }]
+    : [];
   return {
     customerId: transaction.customerId,
     representativeCustomerId: transaction.customerActingAs === "REPRESENTATIVE" ? transaction.representativeCustomerId : null,
     operation: transaction.operation,
-    lines: lines.map((line) => ({
+    // Kasir pemilik bon, bukan Supervisor yang kebetulan menyelesaikannya dari layar tinjauan.
+    tellerUserId: transaction.tellerUserId,
+    lines: lines.length ? lines.map((line) => ({
       currencyId: line.currencyId, quoteUnit: String(line.quoteUnit),
       denominations: entries.filter((entry) => entry.transactionLineId === line.id)
         .map((entry) => ({ value: String(entry.denominationValue), quantity: entry.quantity, rate: String(entry.agreedRate ?? line.agreedRate) })),
-    })),
+    })) : legacy,
   };
 }
 

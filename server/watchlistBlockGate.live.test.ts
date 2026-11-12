@@ -55,8 +55,9 @@ describe("gerbang blokir sampai uang berpindah", () => {
       expect(await db.select().from(cashBalances)).toEqual(cashBefore);
       const attempts = await db.select().from(attemptedTransactions).where(eq(attemptedTransactions.customerId, customerId));
       expect(attempts).toHaveLength(1);
-      // 2 lembar × USD 100 × 16.000.
+      // 2 lembar × USD 100 × 16.000, atas nama kasir pemilik bon.
       expect(Number(attempts[0].totalIdr)).toBe(3_200_000);
+      expect(attempts[0].tellerUserId).toBe(staff.id);
     });
   });
 
@@ -75,6 +76,30 @@ describe("gerbang blokir sampai uang berpindah", () => {
       const [, block] = await Promise.all([sale, opened]);
       expect(block.result).toBe(true);
       expect(block.at).toBeGreaterThanOrEqual(saleCommittedAt);
+    });
+  });
+
+  it("blokir yang sedang ditulis menahan penyelesaian bon; bon lalu ditolak dan kas tidak bergerak", async () => {
+    await inTenant(async () => {
+      const db = await databaseOrThrow();
+      const customerId = await customer("4");
+      const draft = await createTransaction({
+        operation: "BUY", customerId, receiptNumber: "UJI-GERBANG-4", paymentMethod: "CASH", transactionAt: new Date(),
+        lines: [{ currencyId: usdId, denominations: [{ value: "100", quantity: 1, rate: "16000" }] }],
+        paymentDenominations: [{ value: "100000", quantity: 16 }],
+      } as never, staff.id);
+      const cashBefore = await db.select().from(cashBalances);
+      // Pembuka blokir memegang kunci eksklusif, menulis blokirnya, menahan 600 ms, lalu commit.
+      const opener = db.transaction(async (tx) => {
+        await lockCustomerRows(tx, [customerId], "update");
+        await tx.insert(watchlistBlocks).values({ customerId, openedAt: new Date(), source: "PETUGAS", screeningId: null, matchKeys: null, status: "OPEN" });
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const completion = submitTransaction(draft.id, staff).then(() => "selesai", (error: Error) => error.message);
+      await opener;
+      expect(await completion).toBe(WATCHLIST_BLOCK_TELLER_MESSAGE);
+      expect(await db.select().from(cashBalances)).toEqual(cashBefore);
     });
   });
 
