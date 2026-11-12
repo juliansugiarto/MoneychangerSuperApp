@@ -123,8 +123,9 @@ describe("pemetaan pengeluaran", () => {
 describe("penjurnalan otomatis", () => {
   const source = readFileSync(new URL("./ledgerPosting.ts", import.meta.url), "utf8");
 
-  it("hanya menjurnal bon yang sudah selesai, bukan yang baru disetujui", () => {
-    expect(source).toContain('eq(exchangeTransactions.status, "COMPLETED")');
+  it("hanya menjurnal bon yang sudah selesai (atau dibalik sesudah selesai), bukan yang baru disetujui", () => {
+    expect(source).toContain('inArray(exchangeTransactions.status, ["COMPLETED", "REVERSED"])');
+    expect(source).not.toContain('"APPROVED"');
   });
 
   it("mengecualikan data latihan dan data historis dari buku besar", () => {

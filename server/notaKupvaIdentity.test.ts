@@ -64,6 +64,7 @@ describe("identitas penyelenggara pada nota", () => {
   it("mempertahankan tanda tangan nasabah dan petugas serta ketentuan PBI", () => {
     expect(receiptSource).toContain("Teller");
     expect(receiptSource).toContain("Nasabah");
-    expect(receiptSource).toContain("PBI No. 18/20/PBI/2016");
+    // Kalimat ketentuan (identitas + ambang USD 10.000) kini disusun notaStatement; isinya diuji di notaStatement.test.ts.
+    expect(receiptSource).toContain("notaStatement(transaction)");
   });
 });
