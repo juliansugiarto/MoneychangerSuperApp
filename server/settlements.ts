@@ -217,15 +217,14 @@ export async function recordSettlement(input: SettlementInput, actor: { id: numb
         beforeState: { outstanding: target.outstandingAmount }, afterState: { outstanding: outstanding.minus(amount).toFixed(2), cash: applied.after },
         reason: notes,
         metadata: { direction: input.direction, targetType: input.targetType, method: "KAS", amount: amount.toFixed(2), denominationCount: denominationRows.length },
-      });
+      }, tx);
       return { targetType: input.targetType, targetId, amount: amount.toFixed(2), outstandingAfter: outstanding.minus(amount).toFixed(2), cashAfter: applied.after };
     });
   }
 
   if (!input.bankAccountId) throw new Error("Rekening yang dipakai harus dipilih.");
   return db.transaction(async (tx) => {
-    await tx.execute(sql`SELECT ${bankAccounts.id} FROM ${bankAccounts} WHERE ${bankAccounts.id} = ${input.bankAccountId} FOR UPDATE`);
-    const account = (await tx.select().from(bankAccounts).where(and(eq(bankAccounts.id, input.bankAccountId!))).limit(1))[0];
+    const account = (await tx.select().from(bankAccounts).where(and(eq(bankAccounts.id, input.bankAccountId!))).limit(1).for("update"))[0];
     if (!account) throw new Error("Rekening bank tidak ditemukan.");
 
     const before = new Decimal(String(account.availableAmount));
@@ -252,7 +251,7 @@ export async function recordSettlement(input: SettlementInput, actor: { id: numb
       afterState: { outstanding: outstanding.minus(amount).toFixed(2), bank: after.toFixed(6) },
       reason: notes,
       metadata: { direction: input.direction, targetType: input.targetType, method: "BANK", bankAccountId: account.id, amount: amount.toFixed(2) },
-    });
+    }, tx);
     return { targetType: input.targetType, targetId, amount: amount.toFixed(2), outstandingAfter: outstanding.minus(amount).toFixed(2), bankAfter: after.toFixed(6) };
   });
 }

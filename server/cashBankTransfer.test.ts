@@ -1,3 +1,4 @@
+import { lockableRows } from "./testing/lockableRows";
 import { describe, expect, it, vi } from "vitest";
 import * as db from "./db";
 import { recordCashBankTransfer } from "./operations";
@@ -12,9 +13,9 @@ function mockDb(opts: { currencyCode?: string; cashAmount?: string; bankCurrency
       from: (table: any) => ({
         where: () => ({ limit: () => {
           const name = String(table?.[Symbol.for("drizzle:Name")] ?? "");
-          if (name === "bank_accounts") return Promise.resolve([{ id: 9, currencyId: bankCurrencyId, availableAmount: bankAmount, active: true }]);
-          if (name === "currencies") return Promise.resolve([{ id: 1, code: currencyCode, active: true }]);
-          return Promise.resolve([{ id: 1, currencyId: 1, availableAmount: cashAmount }]);
+          if (name === "bank_accounts") return lockableRows([{ id: 9, currencyId: bankCurrencyId, availableAmount: bankAmount, active: true }]);
+          if (name === "currencies") return lockableRows([{ id: 1, code: currencyCode, active: true }]);
+          return lockableRows([{ id: 1, currencyId: 1, availableAmount: cashAmount }]);
         } }),
       }),
     })),
@@ -22,7 +23,7 @@ function mockDb(opts: { currencyCode?: string; cashAmount?: string; bankCurrency
     insert: vi.fn(() => ({ values: (values: any) => { inserted.push({ values }); return { $returningId: () => Promise.resolve([{ id: inserted.length }]), onDuplicateKeyUpdate: () => Promise.resolve(undefined) }; } })),
   };
   const fakeDb = {
-    select: vi.fn(() => ({ from: () => ({ where: () => ({ limit: () => Promise.resolve([{ code: currencyCode }]) }) }) })),
+    select: vi.fn(() => ({ from: () => ({ where: () => ({ limit: () => lockableRows([{ code: currencyCode }]) }) }) })),
     insert: vi.fn(() => ({ values: () => Promise.resolve(undefined) })),
     transaction: vi.fn((callback: (tx: unknown) => unknown) => callback(fakeTx)),
   };

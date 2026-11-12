@@ -1,3 +1,4 @@
+import { lockableRows } from "./testing/lockableRows";
 import { describe, expect, it, vi } from "vitest";
 import * as db from "./db";
 import { recordCapitalMovement } from "./operations";
@@ -6,12 +7,12 @@ function mockDb(currencyCode = "IDR", availableAmount = "0.000000") {
   const inserted: { values: any }[] = [];
   const fakeTx = {
     execute: vi.fn().mockResolvedValue(undefined),
-    select: vi.fn(() => ({ from: () => ({ where: () => ({ limit: () => Promise.resolve([{ id: 1, currencyId: 1, code: currencyCode, availableAmount, active: true }]) }) }) })),
+    select: vi.fn(() => ({ from: () => ({ where: () => ({ limit: () => lockableRows([{ id: 1, currencyId: 1, code: currencyCode, availableAmount, active: true }]) }) }) })),
     update: vi.fn(() => ({ set: () => ({ where: () => Promise.resolve(undefined) }) })),
     insert: vi.fn(() => ({ values: (values: any) => { inserted.push({ values }); return { $returningId: () => Promise.resolve([{ id: inserted.length }]), onDuplicateKeyUpdate: () => Promise.resolve(undefined) }; } })),
   };
   const fakeDb = {
-    select: vi.fn(() => ({ from: () => ({ where: () => ({ limit: () => Promise.resolve([{ code: currencyCode }]) }) }) })),
+    select: vi.fn(() => ({ from: () => ({ where: () => ({ limit: () => lockableRows([{ code: currencyCode }]) }) }) })),
     insert: vi.fn(() => ({ values: () => Promise.resolve(undefined) })),
     transaction: vi.fn((callback: (tx: unknown) => unknown) => callback(fakeTx)),
   };

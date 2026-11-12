@@ -151,8 +151,13 @@ export async function waitForConcurrentInitialization<T>(read: () => Promise<T |
   return undefined;
 }
 
-export async function writeAudit(entry: AuditEntry) {
-  const db = await databaseOrThrow();
+/**
+ * Di dalam transaksi basis data, `executor` WAJIB diisi `tx`: jejak audit ikut batal bila transaksinya
+ * batal, dan tidak meminta sambungan kedua dari pool — dengan pool 4 sambungan, empat penulisan kas
+ * bersamaan yang masing-masing menunggu sambungan kedua saling mengunci sampai batas tunggu kunci MySQL.
+ */
+export async function writeAudit(entry: AuditEntry, executor?: { insert: Awaited<ReturnType<typeof databaseOrThrow>>["insert"] }) {
+  const db = executor ?? await databaseOrThrow();
   await db.insert(auditLogs).values({
     actorUserId: entry.actorUserId,
     action: entry.action,
@@ -2138,8 +2143,7 @@ export async function completeTransaction(transactionId: number, actor: { id: nu
     const cashResults: { currencyId: number; before: string; after: string }[] = [];
     for (const [index, postingLine] of Array.from(postingLines.entries())) {
       await tx.insert(cashBalances).values({ currencyId: postingLine.currencyId, availableAmount: "0.000000" }).onDuplicateKeyUpdate({ set: { currencyId: sql`${cashBalances.currencyId}` } });
-      await tx.execute(sql`SELECT ${cashBalances.id} FROM ${cashBalances} WHERE ${cashBalances.currencyId} = ${postingLine.currencyId} FOR UPDATE`);
-      const balance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, postingLine.currencyId)).limit(1))[0];
+      const balance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, postingLine.currencyId)).limit(1).for("update"))[0];
       if (!balance) throw new Error("Saldo kas tidak dapat dikunci.");
       const movementAmount = new Decimal(String(postingLine.foreignAmount));
       const beforeBalance = new Decimal(String(balance.availableAmount));
@@ -2175,8 +2179,7 @@ export async function completeTransaction(transactionId: number, actor: { id: nu
       const paymentTotal = paymentRows.reduce((sum, row) => sum.plus(String(row.lineTotal)), new Decimal(0));
       const paymentDirection = transaction.operation === "BUY" ? "OUT" as const : "IN" as const;
       await tx.insert(cashBalances).values({ currencyId: paymentCurrencyId, availableAmount: "0.000000" }).onDuplicateKeyUpdate({ set: { currencyId: sql`${cashBalances.currencyId}` } });
-      await tx.execute(sql`SELECT ${cashBalances.id} FROM ${cashBalances} WHERE ${cashBalances.currencyId} = ${paymentCurrencyId} FOR UPDATE`);
-      const paymentBalance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, paymentCurrencyId)).limit(1))[0];
+      const paymentBalance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, paymentCurrencyId)).limit(1).for("update"))[0];
       if (!paymentBalance) throw new Error("Saldo kas Rupiah tidak dapat dikunci.");
       const paymentBefore = new Decimal(String(paymentBalance.availableAmount));
       // calculateCashBalanceAfter treats BUY as +amount/SELL as -amount; Rupiah needs the opposite of the
@@ -2196,8 +2199,7 @@ export async function completeTransaction(transactionId: number, actor: { id: nu
     // physical stock — no denominations, since there are no notes to count.
     let bankResult: { bankAccountId: number; before: string; after: string } | null = null;
     if (transaction.paymentMethod === "BANK_TRANSFER" && transaction.bankAccountId) {
-      await tx.execute(sql`SELECT ${bankAccounts.id} FROM ${bankAccounts} WHERE ${bankAccounts.id} = ${transaction.bankAccountId} FOR UPDATE`);
-      const account = (await tx.select().from(bankAccounts).where(eq(bankAccounts.id, transaction.bankAccountId)).limit(1))[0];
+      const account = (await tx.select().from(bankAccounts).where(eq(bankAccounts.id, transaction.bankAccountId)).limit(1).for("update"))[0];
       if (!account) throw new Error("Rekening bank untuk transaksi ini tidak ditemukan.");
       const bankBefore = new Decimal(String(account.availableAmount));
       const bankDirection = transaction.operation === "BUY" ? "OUT" as const : "IN" as const;
@@ -2694,7 +2696,7 @@ export async function createBankAccount(
     }).$returningId();
     if (!created) throw new Error("Rekening bank tidak dapat disimpan.");
     await tx.insert(bankAccountMovements).values({ bankAccountId: created.id, direction: "ADJUSTMENT", amount: openingBalance.toFixed(6), reason: `Saldo awal rekening ${bankName} ${accountNumber}`, category: "OPENING", createdByUserId: actor.id });
-    await writeAudit({ actorUserId: actor.id, action: "BANK_ACCOUNT_CREATED", entityType: "bank_account", entityId: String(created.id), afterState: { bankName, accountHolderName, accountNumber, currencyCode: currency.code, openingBalance: openingBalance.toFixed(6) }, reason: input.notes?.trim() || null });
+    await writeAudit({ actorUserId: actor.id, action: "BANK_ACCOUNT_CREATED", entityType: "bank_account", entityId: String(created.id), afterState: { bankName, accountHolderName, accountNumber, currencyCode: currency.code, openingBalance: openingBalance.toFixed(6) }, reason: input.notes?.trim() || null }, tx);
     return { id: created.id, bankName, accountHolderName, accountNumber, currencyCode: currency.code, availableAmount: openingBalance.toFixed(6) };
   });
 }
@@ -2733,15 +2735,14 @@ export async function recordBankAccountAdjustment(
 
   const db = await databaseOrThrow();
   return db.transaction(async (tx) => {
-    await tx.execute(sql`SELECT ${bankAccounts.id} FROM ${bankAccounts} WHERE ${bankAccounts.id} = ${input.bankAccountId} FOR UPDATE`);
-    const account = (await tx.select().from(bankAccounts).where(eq(bankAccounts.id, input.bankAccountId)).limit(1))[0];
+    const account = (await tx.select().from(bankAccounts).where(eq(bankAccounts.id, input.bankAccountId)).limit(1).for("update"))[0];
     if (!account) throw new Error("Rekening bank tidak ditemukan.");
     const before = new Decimal(String(account.availableAmount));
     if (input.direction === "OUT" && before.lt(amount)) throw new Error("Jumlah penyesuaian melebihi saldo rekening yang tersedia.");
     const after = input.direction === "OUT" ? before.minus(amount) : before.plus(amount);
     await tx.update(bankAccounts).set({ availableAmount: after.toFixed(6) }).where(eq(bankAccounts.id, account.id));
     await tx.insert(bankAccountMovements).values({ bankAccountId: account.id, direction: input.direction, amount: amount.toFixed(6), reason: notes, category: "ADJUSTMENT", createdByUserId: actor.id });
-    await writeAudit({ actorUserId: actor.id, action: "BANK_ACCOUNT_ADJUSTMENT_RECORDED", entityType: "bank_account", entityId: String(account.id), beforeState: { availableAmount: before.toFixed(6) }, afterState: { availableAmount: after.toFixed(6) }, reason: notes, metadata: { direction: input.direction, amount: amount.toFixed(6) } });
+    await writeAudit({ actorUserId: actor.id, action: "BANK_ACCOUNT_ADJUSTMENT_RECORDED", entityType: "bank_account", entityId: String(account.id), beforeState: { availableAmount: before.toFixed(6) }, afterState: { availableAmount: after.toFixed(6) }, reason: notes, metadata: { direction: input.direction, amount: amount.toFixed(6) } }, tx);
     return { id: account.id, beforeAmount: before.toFixed(6), afterAmount: after.toFixed(6) };
   });
 }
@@ -2938,8 +2939,7 @@ export async function recordOpeningCash(input: { currencyId: number; openingAmou
     const currency = (await tx.select().from(currencies).where(and(eq(currencies.id, input.currencyId), eq(currencies.active, true))).limit(1))[0];
     if (!currency) throw new Error("Mata uang aktif tidak ditemukan.");
     await tx.insert(cashBalances).values({ currencyId: input.currencyId, availableAmount: "0.000000" }).onDuplicateKeyUpdate({ set: { currencyId: sql`${cashBalances.currencyId}` } });
-    await tx.execute(sql`SELECT ${cashBalances.id} FROM ${cashBalances} WHERE ${cashBalances.currencyId} = ${input.currencyId} FOR UPDATE`);
-    const balance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, input.currencyId)).limit(1))[0];
+    const balance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, input.currencyId)).limit(1).for("update"))[0];
     if (!balance) throw new Error("Saldo kas tidak dapat dikunci.");
     const reason = openingCashMovementReason(currency.code);
     const existing = (await tx.select({ id: cashBalanceMovements.id }).from(cashBalanceMovements).where(and(eq(cashBalanceMovements.cashBalanceId, balance.id), eq(cashBalanceMovements.reason, reason))).limit(1))[0];
@@ -2970,7 +2970,7 @@ export async function recordOpeningCash(input: { currencyId: number; openingAmou
         capitalWarning = "Setoran modal belum pernah dicatat, sehingga kas awal Rupiah ini tidak akan dijurnal ke buku besar. Catat setoran modal lewat tab Modal & Bank, lalu jalankan penjurnalan.";
       }
     }
-    await writeAudit({ actorUserId: actor.id, action: "OPENING_CASH_RECORDED", entityType: "cash_balance", entityId: String(balance.id), beforeState: { availableAmount: before.toFixed(6) }, afterState: { availableAmount: declaredAmount.toFixed(6), currency: currency.code }, reason: input.notes?.trim() || null, metadata: { movementReason: reason, adjustment: adjustment.toFixed(6), denominationCount: denominationRows.length, capitalWarning: Boolean(capitalWarning) } });
+    await writeAudit({ actorUserId: actor.id, action: "OPENING_CASH_RECORDED", entityType: "cash_balance", entityId: String(balance.id), beforeState: { availableAmount: before.toFixed(6) }, afterState: { availableAmount: declaredAmount.toFixed(6), currency: currency.code }, reason: input.notes?.trim() || null, metadata: { movementReason: reason, adjustment: adjustment.toFixed(6), denominationCount: denominationRows.length, capitalWarning: Boolean(capitalWarning) } }, tx);
     return { balanceId: balance.id, currencyCode: currency.code, beforeAmount: before.toFixed(6), openingAmount: declaredAmount.toFixed(6), capitalWarning };
   });
 }
@@ -2996,8 +2996,7 @@ export async function applyCashMovement(
 ) {
   const currency = (await tx.select().from(currencies).where(and(eq(currencies.id, input.currencyId), eq(currencies.active, true))).limit(1))[0];
   if (!currency) throw new Error("Mata uang aktif tidak ditemukan.");
-  await tx.execute(sql`SELECT ${cashBalances.id} FROM ${cashBalances} WHERE ${cashBalances.currencyId} = ${input.currencyId} FOR UPDATE`);
-  const balance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, input.currencyId)).limit(1))[0];
+  const balance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, input.currencyId)).limit(1).for("update"))[0];
   if (!balance) throw new Error("Saldo kas belum ada. Catat kas awal terlebih dahulu.");
 
   const before = new Decimal(String(balance.availableAmount));
@@ -3036,7 +3035,7 @@ export async function recordCashAdjustment(
       currencyId: input.currencyId, direction, amount, category: input.category,
       reason: `${input.category}: ${notes}`, denominationRows, actorUserId: actor.id,
     });
-    await writeAudit({ actorUserId: actor.id, action: "CASH_ADJUSTMENT_RECORDED", entityType: "cash_balance", entityId: String(applied.balanceId), beforeState: { availableAmount: applied.before }, afterState: { availableAmount: applied.after, currency: applied.currencyCode }, reason: notes, metadata: { category: input.category, direction, amount: amount.toFixed(6), denominationCount: denominationRows.length } });
+    await writeAudit({ actorUserId: actor.id, action: "CASH_ADJUSTMENT_RECORDED", entityType: "cash_balance", entityId: String(applied.balanceId), beforeState: { availableAmount: applied.before }, afterState: { availableAmount: applied.after, currency: applied.currencyCode }, reason: notes, metadata: { category: input.category, direction, amount: amount.toFixed(6), denominationCount: denominationRows.length } }, tx);
     return { balanceId: applied.balanceId, currencyCode: applied.currencyCode, beforeAmount: applied.before, afterAmount: applied.after, direction, category: input.category };
   });
 }
@@ -3072,7 +3071,7 @@ export async function recordCapitalMovement(
       currencyId: input.currencyId, direction: input.direction, amount, category,
       reason: `${category}: ${notes}`, denominationRows, actorUserId: actor.id,
     });
-    await writeAudit({ actorUserId: actor.id, action: "CAPITAL_MOVEMENT_RECORDED", entityType: "cash_balance", entityId: String(applied.balanceId), beforeState: { availableAmount: applied.before }, afterState: { availableAmount: applied.after, currency: applied.currencyCode }, reason: notes, metadata: { category, direction: input.direction, amount: amount.toFixed(6), denominationCount: denominationRows.length } });
+    await writeAudit({ actorUserId: actor.id, action: "CAPITAL_MOVEMENT_RECORDED", entityType: "cash_balance", entityId: String(applied.balanceId), beforeState: { availableAmount: applied.before }, afterState: { availableAmount: applied.after, currency: applied.currencyCode }, reason: notes, metadata: { category, direction: input.direction, amount: amount.toFixed(6), denominationCount: denominationRows.length } }, tx);
     return { balanceId: applied.balanceId, currencyCode: applied.currencyCode, beforeAmount: applied.before, afterAmount: applied.after, direction: input.direction };
   });
 }
@@ -3103,8 +3102,7 @@ export async function recordCashBankTransfer(
   const cashCategory = toBank ? "BANK_DEPOSIT" : "BANK_WITHDRAWAL";
 
   return db.transaction(async (tx) => {
-    await tx.execute(sql`SELECT ${bankAccounts.id} FROM ${bankAccounts} WHERE ${bankAccounts.id} = ${input.bankAccountId} FOR UPDATE`);
-    const account = (await tx.select().from(bankAccounts).where(eq(bankAccounts.id, input.bankAccountId)).limit(1))[0];
+    const account = (await tx.select().from(bankAccounts).where(eq(bankAccounts.id, input.bankAccountId)).limit(1).for("update"))[0];
     if (!account) throw new Error("Rekening bank tidak ditemukan.");
     if (account.currencyId !== input.currencyId) throw new Error("Mata uang rekening berbeda dari mata uang kas yang dipindahkan.");
 
@@ -3123,7 +3121,7 @@ export async function recordCashBankTransfer(
       reason: `CASH_TRANSFER: ${notes}`.slice(0, 255), category: "CASH_TRANSFER", createdByUserId: actor.id,
     });
 
-    await writeAudit({ actorUserId: actor.id, action: "CASH_BANK_TRANSFER_RECORDED", entityType: "cash_balance", entityId: String(applied.balanceId), beforeState: { cash: applied.before, bank: bankBefore.toFixed(6) }, afterState: { cash: applied.after, bank: bankAfter.toFixed(6), currency: applied.currencyCode }, reason: notes, metadata: { direction: input.direction, bankAccountId: account.id, amount: amount.toFixed(6), denominationCount: denominationRows.length } });
+    await writeAudit({ actorUserId: actor.id, action: "CASH_BANK_TRANSFER_RECORDED", entityType: "cash_balance", entityId: String(applied.balanceId), beforeState: { cash: applied.before, bank: bankBefore.toFixed(6) }, afterState: { cash: applied.after, bank: bankAfter.toFixed(6), currency: applied.currencyCode }, reason: notes, metadata: { direction: input.direction, bankAccountId: account.id, amount: amount.toFixed(6), denominationCount: denominationRows.length } }, tx);
 
     return { balanceId: applied.balanceId, bankAccountId: account.id, currencyCode: applied.currencyCode, cashAfter: applied.after, bankAfter: bankAfter.toFixed(6), direction: input.direction };
   });
@@ -3205,8 +3203,7 @@ export async function recordDenominationExchange(
   const reason = (input.notes?.trim() || autoReason).slice(0, 255);
 
   return db.transaction(async (tx) => {
-    await tx.execute(sql`SELECT ${cashBalances.id} FROM ${cashBalances} WHERE ${cashBalances.currencyId} = ${input.currencyId} FOR UPDATE`);
-    const balance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, input.currencyId)).limit(1))[0];
+    const balance = (await tx.select().from(cashBalances).where(eq(cashBalances.currencyId, input.currencyId)).limit(1).for("update"))[0];
     if (!balance) throw new Error("Saldo kas belum ada. Catat kas awal terlebih dahulu.");
 
     for (const row of giveRows) {
@@ -3222,7 +3219,7 @@ export async function recordDenominationExchange(
     await applyDenominationBalanceDelta(tx, input.currencyId, giveRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })), -1);
     await applyDenominationBalanceDelta(tx, input.currencyId, receiveRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })), 1);
 
-    await writeAudit({ actorUserId: actor.id, action: "DENOMINATION_EXCHANGE_RECORDED", entityType: "cash_balance", entityId: String(balance.id), beforeState: { give: giveRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })) }, afterState: { receive: receiveRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })) }, reason, metadata: { currencyCode: currency.code, amount: giveTotal.toFixed(6) } });
+    await writeAudit({ actorUserId: actor.id, action: "DENOMINATION_EXCHANGE_RECORDED", entityType: "cash_balance", entityId: String(balance.id), beforeState: { give: giveRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })) }, afterState: { receive: receiveRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })) }, reason, metadata: { currencyCode: currency.code, amount: giveTotal.toFixed(6) } }, tx);
     return { currencyCode: currency.code, give: giveRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })), receive: receiveRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })) };
   });
 }

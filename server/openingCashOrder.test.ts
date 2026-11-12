@@ -1,3 +1,4 @@
+import { lockableRows } from "./testing/lockableRows";
 import { describe, expect, it, vi } from "vitest";
 import * as db from "./db";
 import { recordOpeningCash } from "./operations";
@@ -14,7 +15,7 @@ function mockDb(options: { currencyCode?: string; hasCapitalInjection?: boolean;
   const code = options.currencyCode ?? "IDR";
   const availableAmount = options.availableAmount ?? "0.000000";
   const inserted: { table: string; values: any }[] = [];
-  const rowsFor = (rows: unknown[]) => ({ from: () => ({ where: () => ({ limit: () => Promise.resolve(rows) }) }) });
+  const rowsFor = (rows: unknown[]) => ({ from: () => ({ where: () => ({ limit: () => lockableRows(rows) }) }) });
 
   // Dua kueri berproyeksi `{ id }` dijalankan berurutan di dalam transaksi: mutasi OPENING hari ini
   // (harus kosong supaya pencatatannya lanjut), lalu mutasi CAPITAL_INJECTION yang dinilai di sini.

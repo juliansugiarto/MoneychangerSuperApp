@@ -20,6 +20,7 @@ function chain(rows: unknown[]): any {
     where: () => self,
     orderBy: () => self,
     limit: () => self,
+    for: () => self,
     innerJoin: () => self,
     then: (onfulfilled: any, onrejected: any) => Promise.resolve(rows).then(onfulfilled, onrejected),
   };
