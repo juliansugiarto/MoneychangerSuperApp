@@ -88,7 +88,8 @@ eksplisit (layar + aturan + uji).
 ## 5. Alur harian (pemilik, 12 Nov 2026)
 
 1. **Pagi — cek stok otomatis.** Stok pembuka = hasil hitung penutupan kemarin; Pelaksana mengonfirmasi atau mencatat
-   selisih (bukan menghitung ulang dari nol). *Dugaan Claude, perlu konfirmasi:* konfirmasi per valuta, bukan per pecahan.
+   selisih (bukan menghitung ulang dari nol). Konfirmasi **per pecahan** (keputusan Claude: aturan keras proyek dan temuan
+   BI 6 menuntut rincian pecahan pada setiap pergerakan kas fisik; konfirmasi hanya per valuta akan melanggarnya).
 2. **Kas awal** untuk jual-beli valas, dan semua pemasukan/pengeluaran lain dicatat.
 3. **Kurs dari mitra + margin.** Mitra (Smartdeal Puncak) mengirim "HARGA PEMBUKAAN" tiap pagi (gambar WhatsApp ±40
    valuta, beli/jual, sebagian per pecahan: SAR500/100/50/10/5/1 dengan beli sama dan jual berbeda; SGD dan "SGDB";
@@ -146,6 +147,13 @@ Rincian aturan per modul: inventaris persyaratan (lampiran A, dibuat dari pandua
 Batas cakupan dari keputusan lama tetap berlaku (lampiran A §10–11), mis. tenggat Pasal 60 tidak dibangun; dividen nol
 menurut kebijakan; pencocokan BO tidak memblokir nasabah (ditandai "bila keliru", §9).
 
+### Aturan paritas (keputusan Claude, dari tinjauan pembangun)
+
+Paritas = **fitur dan aturan bisnis/regulasi yang sama**, bukan mekanika yang sama. Bila perilaku lama terbukti keliru
+(mis. gerbang blokir hanya di pembuatan bon; perubahan uang sebagai ubah-status) atau bertentangan dengan fondasi
+baru (peristiwa append-only + persetujuan), aplikasi baru melakukannya dengan benar dan **setiap perbedaan dicatat** di
+daftar "perbedaan dari aplikasi lama" untuk dibaca pemilik. Uji lama dipakai sebagai daftar periksa aturan, bukan disalin.
+
 ## 7. Keamanan data (untuk tim TI BI)
 
 Tidak ada pedoman BI tertulis; tolok ukur yang dipakai: **OWASP ASVS level 2**, UU PDP No. 27/2022 untuk data pribadi
@@ -190,8 +198,10 @@ paket bersama):
 
 ## 9. Keputusan terbuka (milik pemilik — dijawab sebelum rencana)
 
-1. **Pembatalan bon selesai:** tetap langsung oleh Direksi dengan alasan (aplikasi lama), atau pengajuan Pelaksana →
-   persetujuan Direksi/Komisaris (pola tokoemas)? Batas hari yang sama atau kapan saja selama buku belum ditutup?
+1. **Pembatalan bon selesai.** Sudah diputuskan 12 Nov 2026: Direksi ke atas boleh membalik, ditolak bila bulannya
+   sudah ditutup atau tanggalnya tercakup paket LKU. Yang terbuka: tambahkan alur **pengajuan Pelaksana → persetujuan**
+   (pola tokoemas) atau tetap langsung oleh Direksi? Dan untuk bon yang sudah masuk paket goAML/SIPESAT yang
+   **diekspor**: dibalik pada periode berjalan disertai laporan koreksi, atau ditolak?
 2. **Alasan pembatalan:** daftar baku (salah barang/harga/nasabah batal/lainnya) seperti tokoemas, atau teks bebas?
 3. **Margin kurs mitra:** persentase per valuta, terpisah beli dan jual? Hasilnya dibulatkan (mis. ke Rp 5/10)? Untuk
    valuta per pecahan (SAR500/100/…) margin sama atau per pecahan?
@@ -201,8 +211,19 @@ paket bersama):
 6. **Temuan minor lama yang butuh keputusan:** pencocokan pemilik manfaat memblokir nasabah atau tidak; harga per seri
    uang kertas; M3/M5 (spec lama ambigu).
 7. **Masuk Pelaksana/Penyelia:** PIN + perangkat terdaftar (tokoemas) atau sandi?
+8. **Jumlah orang dan tempat:** berapa Pelaksana, Penyelia, Direksi, Komisaris; berapa outlet dan laci (satu laci
+   bersama per outlet, atau satu per Pelaksana)? Menentukan model kas, opname, dan apakah persetujuan dua orang
+   (maker ≠ checker, penyiap ≠ penyetuju) selalu bisa dipenuhi atau butuh delegasi.
+9. **Siapa menyetujui apa antara Direksi dan Komisaris:** nasabah risiko tinggi (APU-PPT lazimnya manajemen senior =
+   Direksi, aplikasi lama: Komisaris/SHAREHOLDER), paket regulator, IRA.
+10. **Selisih kas saat penutupan:** apakah hari tidak bisa ditutup sampai Penyelia memberi alasan, atau boleh ditutup
+    dengan catatan?
+11. **Tenggat:** ada jadwal pemeriksaan ulang atau tindak lanjut BI? Menentukan apakah perlu jalur sementara.
 
 ## 10. Peralihan ke VPS
+
+VPS: tokoemas `187.77.148.118`; aplikasi lama hidup di sana sejak 12 Nov 2026 (tumpukan sendiri di belakang Caddy
+tokoemas, permanen sejak 18.21 WIB).
 
 Aplikasi lama tetap berjalan (halaman publik + back office kosong) dan **tidak mendapat fitur baru** sejak keputusan ini.
 Aplikasi baru dipasang berdampingan di VPS (tumpukan Docker sendiri, Postgres sendiri) dengan alamat uji, diperiksa
@@ -216,6 +237,26 @@ Struktur tabel, nama, pembagian irisan dan urutan, pustaka di dalam fondasi toko
 fondasi platform → pengguna & peran → nasabah/KYC → kurs (+ mitra) → kas & pecahan → bon dua kaki → tinjauan/batal →
 daftar terduga & blokir → penutupan & opname → buku besar & laporan keuangan → paket regulator → SDM → risiko (IRA) →
 arsip & retensi → halaman publik → keamanan & dokumen untuk BI → uji penerimaan 12 temuan → peralihan.
+
+## 12. Riset pasar (12 Nov 2026, agent-reach/exa; rincian dan sumber di catatan riset)
+
+**Pesaing di Indonesia:** ValasPro (Datamindo), Valas Mate, SIS ForexSuite (Siscom), CLS MC (70+ klien), Ideacastudio POS.
+Semua mengklaim buku besar, penyaringan DTTOT, dan LKU/goAML/SIPESAT. Dari halaman mereka **tidak tampak**: kas per
+pecahan, opname lengkap (brankas + Rupiah), IRA, modul SDM/pelatihan. Label "sesuai BI" dinyatakan sendiri oleh vendor.
+
+**Ketentuan BI tentang sistem:** satu-satunya yang ditemukan tertulis: SE BI 18/42/DKSP Lampiran II.D butir 4i —
+"sistem pencatatan transaksi yang paling kurang menggunakan sistem komputer", mencatat minimal tanggal, nama nasabah,
+jenis valuta, nominal, kurs (salinan APVA). **Tidak ditemukan** sumber resmi bahwa BI menyetujui/mensertifikasi aplikasi
+KUPVA, maupun standar TI/keamanan khusus KUPVA → kesiapan keamanan dibuktikan sendiri (§7) tetap pendekatan yang benar.
+
+**Laporan regulator yang belum ada di aplikasi lama** (sumber: materi APVA 2022, perlu dicek ke naskah aturan):
+laporan tahunan APU-PPT (penilaian sendiri) dan **laporan perlindungan konsumen** (rencana dan realisasi edukasi).
+→ Calon tambahan cakupan; dibangun hanya sesudah naskah aturannya diperiksa (tanpa menebak format).
+
+**Fitur yang berulang di produk lain, calon tambahan (keputusan pemilik):** serah terima shift per kasir; mutasi stok antar
+laci/outlet; baca KTP/paspor otomatis (OCR) + pengingat masa berlaku identitas; kalender pelaporan + pengingat tenggat;
+mode tetap bertransaksi saat internet putus; data di Indonesia (ValasPro mengiklankannya); dasar biaya per lot vs rata-rata
+(keputusan lama: rata-rata tertimbang, bukan FIFO — tetap kecuali pemilik mengubah).
 
 ## Lampiran A — sumber persyaratan
 
