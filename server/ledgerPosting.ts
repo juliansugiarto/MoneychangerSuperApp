@@ -96,7 +96,8 @@ export async function postExchangeTransactions(input: { from: Date; to: Date }, 
     .from(exchangeTransactions)
     .where(
       and(
-        eq(exchangeTransactions.status, "COMPLETED"),
+        // REVERSED ikut dibaca: bon yang dibalik sesudah dijurnal butuh jurnal balik.
+        inArray(exchangeTransactions.status, ["COMPLETED", "REVERSED"]),
         eq(exchangeTransactions.isDemo, false),
         eq(exchangeTransactions.isHistorical, false),
         gte(exchangeTransactions.transactionAt, operationalPostingWindow(input).start),
@@ -105,9 +106,13 @@ export async function postExchangeTransactions(input: { from: Date; to: Date }, 
     );
 
   const outcome = emptyOutcome();
-  const done = await alreadyJournaled("TRANSAKSI_VALUTA", rows.map((row) => row.transactionNumber));
+  const done = await alreadyJournaled("TRANSAKSI_VALUTA", rows.flatMap((row) => [row.transactionNumber, reversalReference(row.transactionNumber)]));
 
   for (const row of rows) {
+    if (row.status === "REVERSED") {
+      await postExchangeReversal(outcome, done, row, actor);
+      continue;
+    }
     if (done.has(row.transactionNumber)) {
       outcome.alreadyPosted.push(row.transactionNumber);
       continue;
@@ -134,6 +139,41 @@ export async function postExchangeTransactions(input: { from: Date; to: Date }, 
     ));
   }
   return outcome;
+}
+
+/** Rujukan jurnal balik sebuah bon; idempoten seperti rujukan jurnal aslinya. */
+export const reversalReference = (transactionNumber: string) => `${transactionNumber}-BALIK`;
+
+/**
+ * Bon REVERSED: bila jurnal aslinya sudah ada, tulis jurnal balik (sisi debit/kredit ditukar) bertanggal
+ * sama dengan jurnal asli — pembalikan hanya boleh selama bulannya masih terbuka, jadi periodenya sama.
+ * Bila jurnal aslinya belum pernah ada, tidak ada yang perlu dibalik.
+ */
+async function postExchangeReversal(outcome: PostingOutcome, done: Set<string>, row: typeof exchangeTransactions.$inferSelect, actor: { id: number }) {
+  const reference = reversalReference(row.transactionNumber);
+  if (!done.has(row.transactionNumber)) {
+    outcome.skipped.push({ reference: row.transactionNumber, reason: "dibalik sebelum dijurnal; tidak ada jurnal yang perlu dibalik" });
+    return;
+  }
+  if (done.has(reference)) {
+    outcome.alreadyPosted.push(reference);
+    return;
+  }
+  const mapped = mapExchangeTransaction({ operation: row.operation, paymentMethod: row.paymentMethod, rupiahAmount: row.rupiahAmount, transactionNumber: row.transactionNumber });
+  if (isSkipped(mapped)) {
+    outcome.skipped.push({ reference, reason: mapped.skipped });
+    return;
+  }
+  await postOne(outcome, reference, () => postJournalEntry(
+    {
+      entryDate: operationalEntryDate(new Date(row.transactionAt)),
+      description: `Pembalikan bon ${row.receiptNumber ?? row.transactionNumber}${row.reversalReason ? ` — ${row.reversalReason}` : ""}`.slice(0, 255),
+      sourceType: "TRANSAKSI_VALUTA",
+      sourceReference: reference,
+      lines: mapped.lines.map((line) => ({ ...line, side: line.side === "DEBIT" ? "KREDIT" as const : "DEBIT" as const })),
+    },
+    actor,
+  ));
 }
 
 export async function postExpenses(input: { from: Date; to: Date }, actor: { id: number }) {

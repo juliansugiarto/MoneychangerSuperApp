@@ -16,8 +16,8 @@ export type DenominationRow = { value: string; quantity: string };
  */
 export type PrintableLine = { currencyCode: string; foreignAmount: string; agreedRate: string; rupiahAmount: string; denominationValue?: string; quantity?: number };
 
-export const transactionStatusClass: Record<string, string> = { DRAFT: "status-pending", PENDING_REVIEW: "status-pending", APPROVED: "status-approved", COMPLETED: "status-approved", RETURNED: "status-rejected", CANCELLED: "status-rejected" };
-export const transactionStatusLabel: Record<string, string> = { DRAFT: "Draft", PENDING_REVIEW: "Perlu review", APPROVED: "Disetujui", COMPLETED: "Selesai", RETURNED: "Dikembalikan", CANCELLED: "Dibatalkan" };
+export const transactionStatusClass: Record<string, string> = { DRAFT: "status-pending", PENDING_REVIEW: "status-pending", APPROVED: "status-approved", COMPLETED: "status-approved", RETURNED: "status-rejected", CANCELLED: "status-rejected", REVERSED: "status-rejected" };
+export const transactionStatusLabel: Record<string, string> = { DRAFT: "Draft", PENDING_REVIEW: "Perlu review", APPROVED: "Disetujui", COMPLETED: "Selesai", RETURNED: "Dikembalikan", CANCELLED: "Dibatalkan", REVERSED: "Dibalik" };
 export const toBase64 = (file: File) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
 export const escapeHtml = (value: unknown) => String(value ?? "-").replace(/[&<>\"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" })[character] ?? character);
 export const csvCell = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;

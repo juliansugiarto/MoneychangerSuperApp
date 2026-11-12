@@ -29,6 +29,7 @@ function statusLabel(status: string) {
     RETURNED: "Dikembalikan",
     ESCALATED: "Dieskalasi",
     CANCELLED: "Dibatalkan",
+    REVERSED: "Dibalik",
   };
   return labels[status] ?? status;
 }

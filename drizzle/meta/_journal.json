@@ -442,6 +442,13 @@
       "when": 1790577857635,
       "tag": "0062_butir_b_pemblokiran_tinjauan",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "5",
+      "when": 1794458076170,
+      "tag": "0063_pembalikan_bon",
+      "breakpoints": true
     }
   ]
 }

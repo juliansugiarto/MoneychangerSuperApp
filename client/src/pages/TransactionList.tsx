@@ -10,9 +10,11 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { csvCell, PrintableLine, printBon, transactionStatusClass, transactionStatusLabel } from "./Transactions";
+import { ReverseTransactionDialog } from "./transactions/ReverseTransactionDialog";
 
 export default function TransactionList() {
   const { user } = useAuth();
+  const canReverse = user?.role === "CONTROLLER" || user?.role === "SHAREHOLDER";
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
   const { data: transactions, isLoading } = trpc.transactions.list.useQuery(undefined, { enabled: Boolean(user) });
@@ -106,15 +108,17 @@ export default function TransactionList() {
                     <div className="flex flex-wrap justify-end gap-1.5">
                       {transaction.isSuspiciousTransaction ? <Badge className="bg-rose-700 text-white hover:bg-rose-700" title="Ditandai sebagai Transaksi Keuangan Mencurigakan (TKM) — data internal, tidak pernah tercetak di kwitansi atau ekspor">TKM</Badge> : null}
                       {transaction.paymentMethod === "CASH" && Number(transaction.rupiahAmount) >= 500000000 ? <Badge className="bg-amber-600 text-white hover:bg-amber-600" title="Memenuhi ambang LTKT (≥ Rp 500 juta tunai) — wajib dilaporkan ke PPATK secara manual sesuai prosedur">LTKT</Badge> : null}
-                      <Badge className={transactionStatusClass[transaction.status] ?? "status-inactive"}>{transactionStatusLabel[transaction.status] ?? transaction.status}</Badge>
+                      <Badge variant="outline" className={transactionStatusClass[transaction.status] ?? "status-inactive"}>{transactionStatusLabel[transaction.status] ?? transaction.status}</Badge>
                     </div>
                   </div>
                   <p className="mt-2 text-xs">{formatIdrDecimal(String(transaction.rupiahAmount))} · {lines.length} baris mata uang</p>
+                  {transaction.status === "REVERSED" && transaction.reversalReason ? <p className="mt-1 text-xs text-rose-700">Dibalik: {transaction.reversalReason}</p> : null}
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => reprint(row)}><Printer className="size-3" /></Button>
                     {["DRAFT", "RETURNED"].includes(transaction.status) ? <Button size="sm" variant="outline" onClick={() => submit.mutate({ transactionId: transaction.id })}>Kirim</Button> : null}
                     {transaction.status === "APPROVED" ? <Button size="sm" className="bg-[#183f70]" disabled={complete.isPending} onClick={() => complete.mutate({ transactionId: transaction.id })}>Selesaikan (posting kas &amp; stok)</Button> : null}
-                    {!["COMPLETED", "CANCELLED"].includes(transaction.status) ? <Button size="sm" variant="ghost" onClick={() => { const reason = window.prompt("Alasan pembatalan:"); if (reason) cancel.mutate({ transactionId: transaction.id, reason }); }}>Batalkan</Button> : null}
+                    {transaction.status === "COMPLETED" && canReverse ? <ReverseTransactionDialog transactionId={transaction.id} label={transaction.receiptNumber ? `No. ${transaction.receiptNumber}` : transaction.transactionNumber} onDone={() => utils.transactions.list.invalidate()} /> : null}
+                    {!["COMPLETED", "CANCELLED", "REVERSED"].includes(transaction.status) ? <Button size="sm" variant="ghost" onClick={() => { const reason = window.prompt("Alasan pembatalan:"); if (reason) cancel.mutate({ transactionId: transaction.id, reason }); }}>Batalkan</Button> : null}
                   </div>
                 </div>;
               })}

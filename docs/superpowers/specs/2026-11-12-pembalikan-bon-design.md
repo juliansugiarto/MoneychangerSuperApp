@@ -21,7 +21,7 @@ penyesuaian kas `OTHER` yang tidak dijurnal, sehingga stok, jurnal, LKU, dan goA
      `sourceType` sama + rujukan `…-BALIK`;
    - jejak audit di dalam transaksi yang sama.
 3. **Ditolak bila**: periode buku bulan bon sudah ditutup, atau paket LKU bulan itu sudah disiapkan/disetujui
-   (laporan yang sudah ke BI tidak boleh berubah diam-diam) — *usulan, menunggu pemilik*.
+   (laporan yang sudah ke BI tidak boleh berubah diam-diam) — **diputuskan pemilik 12 November 2026: tolak.**
 4. **Layar**: tombol "Batalkan transaksi selesai" di detail bon untuk CONTROLLER ke atas, dialog alasan, status
    "Dibatalkan (dibalik)" di daftar dan kwitansi.
 

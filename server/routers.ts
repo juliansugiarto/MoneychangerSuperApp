@@ -184,6 +184,7 @@ import { readPublicProfile } from "./publicProfile";
 import { updateCompanyAppearance, updateCompanyPublicPage } from "./companyPresentation";
 import { PUBLIC_FAQ_LIMIT } from "../shared/publicPage";
 import { countRemainingRecoveryCodes, recoverOwnerAccount, regenerateRecoveryCodes } from "./recoveryCodes";
+import { reverseTransaction } from "./transactionReversal";
 
 const LOGIN_FAILED_MESSAGE = "Username atau kata sandi tidak valid.";
 const RECOVERY_FAILED_MESSAGE = "Username atau kode pemulihan tidak cocok, atau kode itu sudah pernah dipakai.";
@@ -1291,6 +1292,8 @@ export const appRouter = router({
     denominations: staffProcedure.input(z.object({ transactionId: z.number().int().positive() })).query(({ input }) => listTransactionDenominations(input.transactionId)),
     create: staffProcedure.input(transactionCreateInput).mutation(({ input, ctx }) => createTransaction(input, ctx.user.id)),
     submit: staffProcedure.input(z.object({ transactionId: z.number().int().positive() })).mutation(({ input, ctx }) => submitTransaction(input.transactionId, ctx.user)),
+    /** Membalik bon COMPLETED: kedua kaki, stok pecahan, dan (lewat batch) jurnalnya. Keputusan pemilik 12 Nov 2026. */
+    reverse: controllerProcedure.input(z.object({ transactionId: z.number().int().positive(), reason: z.string().trim().min(10).max(1000) })).mutation(({ input, ctx }) => reverseTransaction(input.transactionId, input.reason, ctx.user)),
     cancel: staffProcedure.input(z.object({ transactionId: z.number().int().positive(), reason: z.string().trim().min(5).max(1000) })).mutation(({ input, ctx }) => cancelTransaction(input.transactionId, input.reason, ctx.user)),
     review: adminProcedure.input(z.object({ transactionId: z.number().int().positive(), action: z.enum(["APPROVED", "RETURNED", "ESCALATED"]), notes: z.string().trim().min(3).max(1000) })).mutation(({ input, ctx }) => recordReviewAction(input, ctx.user)),
     complete: staffProcedure.input(z.object({ transactionId: z.number().int().positive() })).mutation(({ input, ctx }) => completeTransaction(input.transactionId, ctx.user)),

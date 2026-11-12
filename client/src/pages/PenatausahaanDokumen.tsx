@@ -36,7 +36,7 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
 const STATUS_LABELS: Record<string, string> = { ACTIVE: "Aktif", RESTRICTED: "Dibatasi", INACTIVE: "Tidak aktif" };
 
 const TRANSACTION_STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Draft", PENDING_REVIEW: "Menunggu tinjauan", APPROVED: "Disetujui", COMPLETED: "Selesai", RETURNED: "Dikembalikan", CANCELLED: "Batal",
+  DRAFT: "Draft", PENDING_REVIEW: "Menunggu tinjauan", APPROVED: "Disetujui", COMPLETED: "Selesai", RETURNED: "Dikembalikan", CANCELLED: "Batal", REVERSED: "Dibalik",
 };
 
 function formatDate(value: string | Date | null | undefined, timeZone: string = DEFAULT_OPERATIONAL_TIMEZONE) {

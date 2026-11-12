@@ -329,7 +329,8 @@ export const exchangeTransactions = mysqlTable("exchange_transactions", {
   /** Array of indicator codes from shared/suspiciousTransactionIndicators.ts, e.g. ["MENOLAK_IDENTIFIKASI"]. Required (min 1) when isSuspiciousTransaction is true. */
   suspiciousIndicators: json("suspiciousIndicators").$type<string[]>(),
   suspiciousNotes: text("suspiciousNotes"),
-  status: mysqlEnum("status", ["DRAFT", "PENDING_REVIEW", "APPROVED", "COMPLETED", "RETURNED", "CANCELLED"]).default("DRAFT").notNull(),
+  /** REVERSED = bon COMPLETED yang dibalik CONTROLLER ke atas; seluruh pembaca yang menyaring COMPLETED otomatis tidak menghitungnya. */
+  status: mysqlEnum("status", ["DRAFT", "PENDING_REVIEW", "APPROVED", "COMPLETED", "RETURNED", "CANCELLED", "REVERSED"]).default("DRAFT").notNull(),
   requiresReview: boolean("requiresReview").default(false).notNull(),
   reviewStatus: mysqlEnum("reviewStatus", ["NOT_REVIEWED", "NEEDS_REVIEW", "REVIEWED", "ESCALATED"]).default("NOT_REVIEWED").notNull(),
   reviewReason: text("reviewReason"),
@@ -341,6 +342,9 @@ export const exchangeTransactions = mysqlTable("exchange_transactions", {
   cancelledByUserId: int("cancelledByUserId"),
   cancelledAt: datetime("cancelledAt"),
   cancellationReason: text("cancellationReason"),
+  reversedByUserId: int("reversedByUserId"),
+  reversedAt: datetime("reversedAt"),
+  reversalReason: text("reversalReason"),
   /** Training-only transactions are excluded from live operations and reports. */
   isDemo: boolean("isDemo").default(false).notNull(),
   /** Imported ledger transaction excluded from live workflow, balances, and compliance queues. */

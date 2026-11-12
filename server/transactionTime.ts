@@ -18,11 +18,16 @@ export async function assertTransactionTimeAllowed(transactionAt: Date, now: Dat
     throw new Error("Waktu bon ada di masa depan. Periksa jam di perangkat ini.");
   }
   const dateKey = operationalDateKey(transactionAt);
+  if (await isBookClosedOn(dateKey)) throw new Error(`Buku tanggal ${dateKey} sudah ditutup. Bon untuk tanggal itu tidak bisa dibuat.`);
+}
+
+/** Apakah hari usaha `dateKey` (YYYY-MM-DD, WIB) berada di periode buku yang sudah ditutup. */
+export async function isBookClosedOn(dateKey: string) {
   const db = await getDb();
   if (!db) throw new Error("Database tidak tersedia. Coba ulangi tindakan ini.");
   // Kolom `date` dibandingkan dengan string YYYY-MM-DD: tidak bergantung pada zona waktu proses.
   const closed = await db.select({ id: accountingPeriods.id }).from(accountingPeriods)
     .where(and(eq(accountingPeriods.status, "DITUTUP"), lte(accountingPeriods.periodStart, dateKey as never), gte(accountingPeriods.periodEnd, dateKey as never)))
     .limit(1);
-  if (closed.length) throw new Error(`Buku tanggal ${dateKey} sudah ditutup. Bon untuk tanggal itu tidak bisa dibuat.`);
+  return closed.length > 0;
 }

@@ -2197,7 +2197,7 @@ export async function completeTransaction(transactionId: number, actor: { id: nu
       const afterBalance = new Decimal(calculateCashBalanceAfter(transaction.operation, beforeBalance.toFixed(6), movementAmount.toFixed(6)));
       await tx.update(cashBalances).set({ availableAmount: afterBalance.toFixed(6) }).where(eq(cashBalances.id, balance.id));
       const reason = postingLines.length > 1 ? `TRANSACTION_${transaction.operation}_${transaction.transactionNumber}_L${index + 1}` : `TRANSACTION_${transaction.operation}_${transaction.transactionNumber}`;
-      const [cashMovement] = await tx.insert(cashBalanceMovements).values({ cashBalanceId: balance.id, transactionId: transaction.id, transactionLineId: postingLine.transactionLineId, direction, amount: movementAmount.toFixed(6), reason, createdByUserId: actor.id }).$returningId();
+      const [cashMovement] = await tx.insert(cashBalanceMovements).values({ cashBalanceId: balance.id, transactionId: transaction.id, category: "TRANSACTION", transactionLineId: postingLine.transactionLineId, direction, amount: movementAmount.toFixed(6), reason, createdByUserId: actor.id }).$returningId();
       const lineDenominations = postingLine.transactionLineId != null ? denominationsByLineId.get(postingLine.transactionLineId) : undefined;
       if (lineDenominations?.length && cashMovement) {
         await tx.insert(cashDenominationEntries).values(lineDenominations.map((entry) => ({ cashBalanceMovementId: cashMovement.id, denominationValue: entry.denominationValue, quantity: entry.quantity, subtotal: new Decimal(entry.denominationValue).times(entry.quantity).toFixed(6) })));
@@ -2233,7 +2233,7 @@ export async function completeTransaction(transactionId: number, actor: { id: nu
       // deal's own operation, so the flipped operation is passed in rather than duplicating that math.
       const paymentAfter = new Decimal(calculateCashBalanceAfter(transaction.operation === "BUY" ? "SELL" : "BUY", paymentBefore.toFixed(6), paymentTotal.toFixed(6)));
       await tx.update(cashBalances).set({ availableAmount: paymentAfter.toFixed(6) }).where(eq(cashBalances.id, paymentBalance.id));
-      const [paymentMovement] = await tx.insert(cashBalanceMovements).values({ cashBalanceId: paymentBalance.id, transactionId: transaction.id, transactionLineId: null, direction: paymentDirection, amount: paymentTotal.toFixed(6), reason: `TRANSACTION_${transaction.operation}_${transaction.transactionNumber}_IDR`, createdByUserId: actor.id }).$returningId();
+      const [paymentMovement] = await tx.insert(cashBalanceMovements).values({ cashBalanceId: paymentBalance.id, transactionId: transaction.id, category: "TRANSACTION", transactionLineId: null, direction: paymentDirection, amount: paymentTotal.toFixed(6), reason: `TRANSACTION_${transaction.operation}_${transaction.transactionNumber}_IDR`, createdByUserId: actor.id }).$returningId();
       if (paymentMovement) {
         await tx.insert(cashDenominationEntries).values(paymentRows.map((row) => ({ cashBalanceMovementId: paymentMovement.id, denominationValue: row.denominationValue, quantity: row.quantity, subtotal: row.lineTotal })));
         await applyDenominationBalanceDelta(tx, paymentCurrencyId, paymentRows.map((row) => ({ value: row.denominationValue, quantity: row.quantity })), paymentDirection === "IN" ? 1 : -1);
@@ -3039,6 +3039,8 @@ export async function applyCashMovement(
     category: string;
     denominationRows: { denominationValue: string; quantity: number; subtotal: string }[];
     actorUserId: number;
+    /** Bon yang menjadi asal mutasi ini (mis. pembalikan bon); kosong untuk penyesuaian kas biasa. */
+    transactionId?: number;
   },
 ) {
   const currency = (await tx.select().from(currencies).where(and(eq(currencies.id, input.currencyId), eq(currencies.active, true))).limit(1))[0];
@@ -3052,7 +3054,7 @@ export async function applyCashMovement(
   await tx.update(cashBalances).set({ availableAmount: after.toFixed(6) }).where(eq(cashBalances.id, balance.id));
 
   const [movement] = await tx.insert(cashBalanceMovements).values({
-    cashBalanceId: balance.id, direction: input.direction, amount: input.amount.toFixed(6),
+    cashBalanceId: balance.id, transactionId: input.transactionId ?? null, direction: input.direction, amount: input.amount.toFixed(6),
     reason: input.reason.slice(0, 255), category: input.category as never, createdByUserId: input.actorUserId,
   }).$returningId();
   if (input.denominationRows.length && movement) {
