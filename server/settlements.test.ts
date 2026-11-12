@@ -20,7 +20,8 @@ const kendaraan = {
  * `ledger_settlements` pendampingnya akan muncul sebagai arus kas "belum terklasifikasi" tanpa ada
  * yang tahu sebabnya, dan hanya transaksi yang mencegahnya — bukan urutan pemanggilan.
  */
-function mockDb(options: { expenses?: unknown[]; assets?: unknown[]; settlements?: unknown[]; cash?: string; currencyCode?: string; bank?: unknown } = {}) {
+/** `settledInsideTx`: total pelunasan yang terbaca di dalam transaksi — meniru pelunasan lain yang masuk di antaranya. */
+function mockDb(options: { expenses?: unknown[]; assets?: unknown[]; settlements?: unknown[]; cash?: string; currencyCode?: string; bank?: unknown; settledInsideTx?: string } = {}) {
   const queues = new Map<unknown, unknown[]>([
     [operationalExpenses, options.expenses ?? [sewa]],
     [fixedAssets, options.assets ?? [kendaraan]],
@@ -42,7 +43,9 @@ function mockDb(options: { expenses?: unknown[]; assets?: unknown[]; settlements
 
   const txFor = (log: { table: unknown; values: any }[]) => ({
     execute: vi.fn().mockResolvedValue(undefined),
-    select: vi.fn(() => ({ from: selectFrom })),
+    select: vi.fn((fields?: Record<string, unknown>) => ({
+      from: (table: unknown) => (fields && "total" in fields && options.settledInsideTx ? chain([{ total: options.settledInsideTx }]) : selectFrom(table)),
+    })),
     update: vi.fn((table: unknown) => ({ set: (values: any) => ({ where: () => { log.push({ table, values }); return Promise.resolve(); } }) })),
     insert: vi.fn((table: unknown) => ({
       values: (values: any) => {
@@ -170,5 +173,11 @@ describe("recordSettlement", () => {
     // Kas fisik valuta asing adalah persediaan yang dinilai di akhir periode, bukan alat bayar.
     mockDb({ currencyCode: "USD" });
     await expect(recordSettlement(pembayaranKas, controller)).rejects.toThrow(/Rupiah/i);
+  });
+
+  it("menolak bila tagihan yang sama baru saja dilunasi orang lain di antara pembacaan dan penulisan", async () => {
+    const { transactions } = mockDb({ settledInsideTx: "400000" });
+    await expect(recordSettlement(pembayaranKas, { id: 1, role: "CONTROLLER" })).rejects.toThrow(/baru saja dilunasi/);
+    expect(transactions).toHaveLength(0);
   });
 });

@@ -1872,7 +1872,7 @@ export async function submitTransaction(transactionId: number, actor: { id: numb
     if (missing.length) throw new Error(`Unggah dokumen underlying berikut sebelum mengirim bon transaksi ini: ${missing.join(", ")}.`);
   }
   const next = submissionTransition(transaction.status as "DRAFT" | "RETURNED", transaction.requiresReview);
-  await db.update(exchangeTransactions).set(next).where(eq(exchangeTransactions.id, transactionId));
+  assertStatusStillMatched(await db.update(exchangeTransactions).set(next).where(and(eq(exchangeTransactions.id, transactionId), eq(exchangeTransactions.status, transaction.status))));
   await writeAudit({ actorUserId: actor.id, action: "TRANSACTION_SUBMITTED", entityType: "exchange_transaction", entityId: String(transactionId), beforeState: { status: transaction.status }, afterState: next });
   if (next.status === "APPROVED") {
     // Low-risk bon: no human review required, so the physical exchange is already final by the time this
@@ -1880,6 +1880,17 @@ export async function submitTransaction(transactionId: number, actor: { id: numb
     return completeTransaction(transactionId, actor);
   }
   return { ...transaction, ...next };
+}
+
+/**
+ * Perubahan status bon selalu bersyarat pada status yang tadi dibaca. Batal, kirim, dan tinjau dari dua layar
+ * bisa berpacu; yang kalah tidak boleh menimpa (mis. menghidupkan kembali bon yang baru dibatalkan lalu
+ * menyelesaikannya otomatis).
+ */
+function assertStatusStillMatched(result: unknown) {
+  if (Number((result as [{ affectedRows?: number }] | undefined)?.[0]?.affectedRows ?? 0) !== 1) {
+    throw new Error("Bon ini baru saja berubah status di layar lain. Muat ulang lalu periksa lagi.");
+  }
 }
 
 export async function cancelTransaction(transactionId: number, reason: string, actor: { id: number; role: StaffRole }) {
@@ -1893,9 +1904,7 @@ export async function cancelTransaction(transactionId: number, reason: string, a
   // Bersyarat pada status yang tadi dibaca: bila bon baru saja diselesaikan (kasnya sudah terposting), batal ditolak.
   const updated = await db.update(exchangeTransactions).set({ status: "CANCELLED", cancelledByUserId: actor.id, cancelledAt, cancellationReason: reason })
     .where(and(eq(exchangeTransactions.id, transactionId), eq(exchangeTransactions.status, transaction.status)));
-  if (Number((updated as unknown as [{ affectedRows?: number }])[0]?.affectedRows ?? 0) !== 1) {
-    throw new Error("Bon ini baru saja berubah status di layar lain. Muat ulang lalu periksa lagi.");
-  }
+  assertStatusStillMatched(updated);
   await writeAudit({ actorUserId: actor.id, action: "TRANSACTION_CANCELLED", entityType: "exchange_transaction", entityId: String(transactionId), beforeState: { status: transaction.status }, afterState: { status: "CANCELLED", cancelledAt }, reason });
   return { ...transaction, status: "CANCELLED" as const, cancelledByUserId: actor.id, cancelledAt, cancellationReason: reason };
 }
@@ -1918,7 +1927,8 @@ export async function recordReviewAction(input: { transactionId: number; action:
       ? { status: "RETURNED" as const, reviewStatus: "NEEDS_REVIEW" as const }
       : { status: "PENDING_REVIEW" as const, reviewStatus: "ESCALATED" as const };
   const result = await db.transaction(async (tx) => {
-    await tx.update(exchangeTransactions).set({ ...next, reviewedByUserId: actor.id, reviewedAt, reviewerNotes: input.notes }).where(eq(exchangeTransactions.id, input.transactionId));
+    assertStatusStillMatched(await tx.update(exchangeTransactions).set({ ...next, reviewedByUserId: actor.id, reviewedAt, reviewerNotes: input.notes })
+      .where(and(eq(exchangeTransactions.id, input.transactionId), eq(exchangeTransactions.status, "PENDING_REVIEW"))));
     await tx.insert(transactionReviewActions).values({ transactionId: input.transactionId, action: input.action, reviewerUserId: actor.id, notes: input.notes });
     await tx.insert(auditLogs).values({ actorUserId: actor.id, action: `TRANSACTION_REVIEW_${input.action}`, entityType: "exchange_transaction", entityId: String(input.transactionId), beforeState: { status: transaction.status, reviewStatus: transaction.reviewStatus }, afterState: { ...next, reviewedAt }, reason: input.notes });
     return { ...transaction, ...next, reviewedByUserId: actor.id, reviewedAt, reviewerNotes: input.notes };

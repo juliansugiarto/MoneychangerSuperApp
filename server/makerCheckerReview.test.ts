@@ -24,7 +24,7 @@ function databaseWithSelectResults(...results: unknown[][]) {
   let index = 0;
   const database = {
     select: vi.fn(() => queryResult(results[index++] ?? [])),
-    update: vi.fn(() => ({ set: () => ({ where: () => Promise.resolve() }) })),
+    update: vi.fn(() => ({ set: () => ({ where: () => Promise.resolve([{ affectedRows: 1 }]) }) })),
     insert: vi.fn(() => ({ values: () => Promise.resolve() })),
     execute: vi.fn(),
   };

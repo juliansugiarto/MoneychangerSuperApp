@@ -153,6 +153,29 @@ export type SettlementInput = {
   denominations: DenominationEntryInput[];
 };
 
+type SettlementTarget = { direction: "PEMBAYARAN" | "PENERIMAAN"; targetType: "BEBAN" | "ASET_TETAP"; targetId: number };
+
+/** Jumlah yang sudah dilunasi atas satu tagihan/piutang, dibaca dengan eksekutor yang diberikan (db atau tx). */
+async function settledSoFar(executor: any, target: SettlementTarget) {
+  const idColumn = target.targetType === "BEBAN" ? ledgerSettlements.expenseId : ledgerSettlements.fixedAssetId;
+  const [row] = await executor.select({ total: sql<string>`COALESCE(SUM(${ledgerSettlements.amount}), 0)` }).from(ledgerSettlements)
+    .where(and(eq(ledgerSettlements.direction, target.direction), eq(ledgerSettlements.targetType, target.targetType), eq(idColumn, target.targetId)));
+  return new Decimal(String(row?.total ?? 0));
+}
+
+/**
+ * Sisa tagihan dihitung di luar transaksi. Di dalam transaksi, baris sumbernya dikunci lalu jumlah pelunasan
+ * dibaca ulang: bila orang lain melunasi tagihan yang sama di antaranya, pelunasan ini ditolak — dua
+ * pelunasan bersamaan tidak boleh sama-sama lolos dan melunasi lebih daripada yang terutang.
+ */
+async function lockSettlementTarget(tx: any, target: SettlementTarget, settledBefore: Decimal) {
+  const table = target.targetType === "BEBAN" ? operationalExpenses : fixedAssets;
+  await tx.select({ id: table.id }).from(table).where(eq(table.id, target.targetId)).limit(1).for("update");
+  if (!(await settledSoFar(tx, target)).eq(settledBefore)) {
+    throw new Error("Tagihan ini baru saja dilunasi di layar lain. Muat ulang untuk melihat sisanya.");
+  }
+}
+
 export async function recordSettlement(input: SettlementInput, actor: { id: number; role: StaffRole }) {
   const amount = nonNegativeOrZeroDecimal(input.amount, "Jumlah pelunasan");
   if (amount.lte(0)) throw new Error("Jumlah pelunasan harus lebih besar dari nol.");
@@ -169,6 +192,10 @@ export async function recordSettlement(input: SettlementInput, actor: { id: numb
   if (input.targetType === "ASET_TETAP" && !input.fixedAssetId) throw new Error("Aset tetap yang dilunasi harus dipilih.");
 
   const targetId = (input.targetType === "BEBAN" ? input.expenseId : input.fixedAssetId)!;
+  // Dibaca SEBELUM sisa tagihan: pelunasan lain yang masuk sesudah titik ini membuat pemeriksaan di dalam
+  // transaksi menolak, jadi sisa tagihan yang dipakai di bawah tidak pernah lebih basi daripada angka ini.
+  const settlementTarget: SettlementTarget = { direction: input.direction, targetType: input.targetType, targetId };
+  const settledBefore = await settledSoFar(await databaseOrThrow(), settlementTarget);
   const { payables, receivables } = await listOutstandingSettlements();
   const pool = input.direction === "PEMBAYARAN" ? payables : receivables;
   const target = pool.find((row) => row.targetType === input.targetType && row.targetId === targetId);
@@ -200,6 +227,7 @@ export async function recordSettlement(input: SettlementInput, actor: { id: numb
     const denominationRows = reconcileDenominations(input.denominations, amount, String(currency.code));
 
     return db.transaction(async (tx) => {
+      await lockSettlementTarget(tx, settlementTarget, settledBefore);
       const applied = await applyCashMovement(tx, {
         currencyId: input.currencyId!, direction, amount, category,
         reason: `${category}: ${notes}`, denominationRows, actorUserId: actor.id,
@@ -224,6 +252,7 @@ export async function recordSettlement(input: SettlementInput, actor: { id: numb
 
   if (!input.bankAccountId) throw new Error("Rekening yang dipakai harus dipilih.");
   return db.transaction(async (tx) => {
+    await lockSettlementTarget(tx, settlementTarget, settledBefore);
     const account = (await tx.select().from(bankAccounts).where(and(eq(bankAccounts.id, input.bankAccountId!))).limit(1).for("update"))[0];
     if (!account) throw new Error("Rekening bank tidak ditemukan.");
 
