@@ -1,0 +1,23 @@
+CREATE TABLE `dttot_notices` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`noticeType` enum('PENCANTUMAN','PERPANJANGAN','PENGHAPUSAN') NOT NULL,
+	`policeLetterNumber` varchar(120) NOT NULL,
+	`listNumber` varchar(120),
+	`receivedOn` date NOT NULL,
+	`screenedAt` datetime,
+	`screenedCustomerCount` int,
+	`matchedCustomerCount` int,
+	`reportNumber` varchar(120),
+	`signerName` varchar(200),
+	`signerPosition` varchar(120),
+	`policePhysicalSentAt` datetime,
+	`policeEmailSentAt` datetime,
+	`ppatkCopySentAt` datetime,
+	`biCopySentAt` datetime,
+	`biFormUploadedAt` datetime,
+	`notes` text,
+	`createdByUserId` int NOT NULL,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `dttot_notices_id` PRIMARY KEY(`id`)
+);

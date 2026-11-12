@@ -26,7 +26,7 @@ export type ScreeningTrigger = "NASABAH_DIBUAT" | "NASABAH_DIUBAH" | "DAFTAR_DII
 export const SCREENING_SUMMARY_MAX_LENGTH = 500;
 
 /** Panjang minimal nama yang dapat disaring — sama dengan ambang `searchSanctionsWatchlist`. */
-const MIN_SCREENABLE_NAME_LENGTH = 3;
+export const MIN_SCREENABLE_NAME_LENGTH = 3;
 
 const TOO_SHORT_SUMMARY = "Nama nasabah terlalu pendek untuk disaring (minimal 3 karakter); tidak ada pencocokan yang dijalankan.";
 

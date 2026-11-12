@@ -552,6 +552,33 @@ export const operationalExpenses = mysqlTable("operational_expenses", {
  * fully replaces prior rows in that scope; it never merges, so a partial/older re-upload can't
  * leave stale entries mixed in.
  */
+/**
+ * Satu pemberitahuan DTTOT dari BI (surat Densus 88 + daftar terbaru) beserta hasil penyaringan dan jejak lima
+ * pengiriman laporannya. Rancangan: docs/superpowers/specs/2026-11-12-pemberitahuan-dttot-design.md.
+ */
+export const dttotNotices = mysqlTable("dttot_notices", {
+  id: int("id").autoincrement().primaryKey(),
+  noticeType: mysqlEnum("noticeType", ["PENCANTUMAN", "PERPANJANGAN", "PENGHAPUSAN"]).notNull(),
+  policeLetterNumber: varchar("policeLetterNumber", { length: 120 }).notNull(),
+  listNumber: varchar("listNumber", { length: 120 }),
+  receivedOn: date("receivedOn").notNull(),
+  screenedAt: datetime("screenedAt"),
+  screenedCustomerCount: int("screenedCustomerCount"),
+  matchedCustomerCount: int("matchedCustomerCount"),
+  reportNumber: varchar("reportNumber", { length: 120 }),
+  signerName: varchar("signerName", { length: 200 }),
+  signerPosition: varchar("signerPosition", { length: 120 }),
+  policePhysicalSentAt: datetime("policePhysicalSentAt"),
+  policeEmailSentAt: datetime("policeEmailSentAt"),
+  ppatkCopySentAt: datetime("ppatkCopySentAt"),
+  biCopySentAt: datetime("biCopySentAt"),
+  biFormUploadedAt: datetime("biFormUploadedAt"),
+  notes: text("notes"),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const sanctionsWatchlistEntries = mysqlTable("sanctions_watchlist_entries", {
   id: int("id").autoincrement().primaryKey(),
   listType: mysqlEnum("listType", ["DTTOT", "DPPSPM"]).notNull(),

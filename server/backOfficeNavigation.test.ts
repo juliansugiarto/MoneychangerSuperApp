@@ -41,6 +41,7 @@ const pageByPath: Record<string, string> = {
   "/operasional/go-live": "GoLiveSetup",
   "/kepatuhan/klasifikasi-risiko": "KlasifikasiRisiko",
   "/kepatuhan/pemblokiran": "Pemblokiran",
+  "/kepatuhan/laporan-dttot": "LaporanDttot",
   "/kepatuhan/ira": "PenilaianRisiko",
 };
 
@@ -120,6 +121,7 @@ describe("back-office navigation routes", () => {
     expect(groupOf("/kepatuhan/ira")).toBe("Risiko");
     expect(groupOf("/kepatuhan/klasifikasi-risiko")).toBe("Risiko");
     expect(groupOf("/kepatuhan/pemblokiran")).toBe("Risiko");
+    expect(groupOf("/kepatuhan/laporan-dttot")).toBe("Risiko");
     expect(groupOf("/operasional/pelaporan-regulator")).toBe("Kepatuhan");
     expect(groupOf("/kepatuhan/penatausahaan-dokumen")).toBe("Kepatuhan");
     expect(groupOf("/operasional/watchlist")).toBe("Nasabah");

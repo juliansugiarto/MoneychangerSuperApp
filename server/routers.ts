@@ -185,6 +185,7 @@ import { updateCompanyAppearance, updateCompanyPublicPage } from "./companyPrese
 import { PUBLIC_FAQ_LIMIT } from "../shared/publicPage";
 import { countRemainingRecoveryCodes, recoverOwnerAccount, regenerateRecoveryCodes } from "./recoveryCodes";
 import { reverseTransaction } from "./transactionReversal";
+import { createDttotNotice, DTTOT_DELIVERY_STEPS, getDttotNoticeReport, listDttotNotices, recordDttotDelivery, screenDttotNotice, updateDttotNoticeReport } from "./dttotNotices";
 
 const LOGIN_FAILED_MESSAGE = "Username atau kata sandi tidak valid.";
 const RECOVERY_FAILED_MESSAGE = "Username atau kode pemulihan tidak cocok, atau kode itu sudah pernah dipakai.";
@@ -1455,6 +1456,26 @@ export const appRouter = router({
     summary: staffProcedure.query(() => listSanctionsWatchlistSummary()),
     // Bulk SIPENDAR watchlist paste — a mutation (not query) since pasted lists can be long and shouldn't ride in a URL query string.
     checkSipendarNames: staffProcedure.input(z.object({ names: z.string().trim().min(1).max(50000) })).mutation(({ input }) => checkSipendarWatchlistNames(input)),
+  }),
+  /** Pemberitahuan DTTOT dari BI: penyaringan, laporan nihil/berita acara, dan jejak lima pengirimannya. */
+  dttotNotices: router({
+    list: controllerProcedure.query(() => listDttotNotices()),
+    create: controllerProcedure.input(z.object({
+      noticeType: z.enum(["PENCANTUMAN", "PERPANJANGAN", "PENGHAPUSAN"]),
+      policeLetterNumber: z.string().trim().min(5).max(120),
+      listNumber: z.string().trim().max(120).optional(),
+      receivedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      notes: z.string().trim().max(2000).optional(),
+    })).mutation(({ input, ctx }) => createDttotNotice(input, ctx.user)),
+    screen: controllerProcedure.input(z.object({ noticeId: z.number().int().positive() })).mutation(({ input, ctx }) => screenDttotNotice(input.noticeId, ctx.user)),
+    updateReport: controllerProcedure.input(z.object({
+      noticeId: z.number().int().positive(), reportNumber: z.string().trim().min(1).max(120),
+      signerName: z.string().trim().min(3).max(200), signerPosition: z.string().trim().min(2).max(120),
+    })).mutation(({ input, ctx }) => updateDttotNoticeReport(input, ctx.user)),
+    recordDelivery: controllerProcedure.input(z.object({
+      noticeId: z.number().int().positive(), step: z.enum(DTTOT_DELIVERY_STEPS), at: z.coerce.date().nullable(),
+    })).mutation(({ input, ctx }) => recordDttotDelivery(input, ctx.user)),
+    report: controllerProcedure.input(z.object({ noticeId: z.number().int().positive() })).query(({ input }) => getDttotNoticeReport(input.noticeId)),
   }),
   /** Pemblokiran atas kecocokan DTTOT/DPPSPM — Pasal 47 ayat (1) huruf d PBI 10/2024. */
   watchlistBlocks: router({

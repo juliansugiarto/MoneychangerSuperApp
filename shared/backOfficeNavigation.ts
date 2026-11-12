@@ -64,6 +64,7 @@ export const backOfficeNavigationGroups: BackOfficeNavigationGroup[] = [
   { label: "Risiko", items: [
     { label: "Klasifikasi Risiko", path: "/kepatuhan/klasifikasi-risiko", minimumRole: "CONTROLLER" },
     { label: "Pemblokiran", path: "/kepatuhan/pemblokiran", minimumRole: "CONTROLLER" },
+    { label: "Laporan DTTOT", path: "/kepatuhan/laporan-dttot", minimumRole: "CONTROLLER" },
     // ADMIN yang mengisi penilaian dan SHAREHOLDER yang menyetujuinya; keduanya harus melihat
     // barisnya. Halaman detailnya berparameter dan karena itu tidak menjadi tujuan sidebar.
     { label: "Penilaian Risiko (IRA)", path: "/kepatuhan/ira", minimumRole: "ADMIN" },
