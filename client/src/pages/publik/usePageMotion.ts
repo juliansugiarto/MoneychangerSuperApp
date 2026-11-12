@@ -8,18 +8,18 @@ import { loudRemaining, reducedMotion, restartClass, wait } from "./motion";
  * - gerak latar berhenti saat tab tersembunyi (kelas `paused`).
  * Dipasang sesudah kedatangan selesai, sama dengan rujukan.
  */
-export function usePageMotion(rootRef: React.RefObject<HTMLDivElement | null>, armed: boolean, contentKey: string) {
+export function usePageMotion(rootRef: React.RefObject<HTMLDivElement | null>, ready: boolean, armed: boolean, contentKey: string) {
   useEffect(() => {
     const root = rootRef.current;
-    if (!root) return;
+    if (!root || !ready) return;
     const onVisibility = () => root.classList.toggle("paused", document.hidden);
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [rootRef]);
+  }, [rootRef, ready]);
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root || !armed || reducedMotion()) return;
+    if (!root || !ready || !armed || reducedMotion()) return;
     const queue: Element[] = [];
     let busy = false; let disposed = false;
     const pump = () => {
@@ -51,7 +51,7 @@ export function usePageMotion(rootRef: React.RefObject<HTMLDivElement | null>, a
       spreads.observe(el);
     });
     return () => { disposed = true; stamps.disconnect(); spreads.disconnect(); };
-  }, [rootRef, armed, contentKey]);
+  }, [rootRef, ready, armed, contentKey]);
 }
 
 const SEEN_KEY = "paspor-arrived";
@@ -62,14 +62,15 @@ const markSeen = () => { try { sessionStorage.setItem(SEEN_KEY, "1"); } catch { 
  * Sampul paspor terbuka saat kedatangan (≤ 1,3 s, sekali per sesi, ketuk/tombol = lewati). Tulisan "Kurs terbaru …"
  * hanya muncul bila kurs benar-benar sudah termuat; kalau belum, sampul tidak menahan pengunjung.
  */
-export function useArrival(rootRef: React.RefObject<HTMLDivElement | null>, latestText: () => string | null, names: string[]) {
+/** `ready` = halaman sungguhan sudah dirender (bukan wadah "memuat profil"), sehingga `rootRef` terpasang. */
+export function useArrival(rootRef: React.RefObject<HTMLDivElement | null>, ready: boolean, latestText: () => string | null, names: string[]) {
   const [done, setDone] = useState(() => reducedMotion() || seenBefore());
   const latest = useRef(latestText);
   latest.current = latestText;
 
   useEffect(() => {
     const root = rootRef.current;
-    if (done || !root) return;
+    if (done || !root || !ready) return;
     markSeen();
     const overlay = document.createElement("div");
     overlay.className = "arr";
@@ -129,9 +130,9 @@ export function useArrival(rootRef: React.RefObject<HTMLDivElement | null>, late
       root.querySelectorAll(".arr-fly").forEach((el) => el.remove());
       if (header) header.style.opacity = "";
     };
-    // Sekali per pemasangan.
+    // Sekali, begitu halaman siap.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [ready]);
 
   return done;
 }

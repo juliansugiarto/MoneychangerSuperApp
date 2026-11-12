@@ -258,12 +258,32 @@ Alasannya: kas awal **pertama** untuk sebuah mata uang tidak dijurnal — kalau 
    Kosongkan untuk memakai warna palet. Palet dipakai seluruh aplikasi, halaman masuk, wizard, dan
    halaman kurs publik. Perubahan tercatat di log audit (`COMPANY_APPEARANCE_UPDATED`).
 7. **Halaman publik.** Sakelar **Tampilkan halaman kurs publik** — selama mati, alamat `/` langsung
-   membuka halaman masuk staf. Isian: telepon kedua, jam buka, tautan peta (hanya `https://`), sampai
-   **12 pertanyaan umum** (tambah, naik/turun, hapus), dan peringatan penipuan. Alamat dan telepon utama
-   diambil dari isian di atas. **Bagian yang kosong disembunyikan**; FAQ dan peringatan yang kosong
-   memakai teks umum bawaan tanpa nama perusahaan. Halaman publik tidak pernah menampilkan nomor izin,
-   NPWP, kode BI/PPATK/goAML, maupun email. Perubahan tercatat di log audit
+   membuka halaman masuk staf. Isian:
+   - **Nomor WhatsApp** (tampil dengan tombol *Chat di WhatsApp*).
+   - **Jadwal buka** per hari, Senin sampai Minggu: jam buka dan tutup, atau centang **Tutup**. Tombol
+     *Samakan Selasa–Sabtu dengan Senin* menyalin jam Senin. Jadwal ini yang menyalakan tanda **Buka /
+     Segera tutup / Tutup** di halaman (30 menit sebelum tutup = *Segera tutup*), dihitung pada zona waktu
+     outlet di Data badan usaha. Jam tutup harus sesudah jam buka; jadwal yang kosong semua berarti
+     "belum diisi" dan halaman menulis *Jam belum tersedia*, bukan *Tutup*.
+   - **Catatan jam buka** (opsional, mis. tutup pada hari libur nasional).
+   - **Ketentuan uang**: pecahan yang diterima, kondisi uang, dan seri uang (masing-masing ≤ 500 huruf).
+     Tulis hanya yang benar-benar berlaku; bila ketiganya kosong, bagian *Pecahan dan kondisi uang* tidak tampil.
+   - Tautan peta (hanya `https://`), sampai **12 pertanyaan umum**, dan peringatan penipuan tambahan.
+   Alamat, telepon utama, nama badan hukum, **nomor izin, dan kode KUPVA** diambil dari Data badan usaha dan
+   **ditampilkan** di bagian *Berizin Bank Indonesia* serta kaki halaman (sejak 12 Nov 2026). NPWP, NIB,
+   kode BI/PPATK/goAML, dan email tetap tidak pernah tampil. Kota di kepala halaman diambil dari bagian
+   terakhir alamat (mis. "…, Cianjur"). FAQ yang kosong memakai 8 tanya-jawab umum ditambah jawaban
+   lokasi dan kontak yang disusun dari profil. Perubahan tercatat di log audit
    (`COMPANY_PUBLIC_PAGE_UPDATED`). Kedua bagian hanya dapat disimpan sesudah Data badan usaha disimpan.
+8. **Apa yang dilihat nasabah** di alamat utama (desain "Paspor & cap"): kurs hari ini per pecahan dengan
+   tanda Naik/Turun/Tetap dibanding kurs sebelumnya, hitung tukar (total dibulatkan ke atas kelipatan
+   Rp 100, sama dengan kasir), formulir **Minta konfirmasi kurs** yang masuk ke **Hari ini → Meja Konfirmasi**
+   sebagai permintaan baru (bukan transaksi, tidak mengunci kurs), tombol bagikan kurs ke WhatsApp,
+   ketentuan uang, lokasi + jam buka, izin, pengumuman terbit, dan pertanyaan umum. Halaman membaca kurs
+   aktif tiap menit; begitu staf mengaktifkan kurs baru, baris itu diberi cap **KURS BARU**.
+9. **Papan TV outlet**: buka `https://<alamat publik>/papan` di TV (atau tombol *Mode TV* di kepala
+   halaman). Papan menampilkan semua kurs aktif berganti halaman tiap 12 detik, jam berjalan, dan
+   menyegarkan kurs tiap 30 detik. Papan hanya membaca; kurs tetap diaktifkan manual di layar Kurs.
 
 ### 5.9 Pencatatan Pengeluaran — Staff ke atas
 

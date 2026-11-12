@@ -72,3 +72,4 @@ Huruf: **Archivo** (judul tebal rapat + teks), **IBM Plex Mono** (angka, cap, MR
 | 2026-11-12 | Konfirmasi kurs = tiket mendatar terpisah; latar rute pesawat mengikuti gulir; rute mulai **CGK** | pemilik |
 | 2026-11-12 | Celah printer di atas tiket dibuang ("bar hitam itu apa?"); sorotan bersegmen dibetulkan | pemilik |
 | 2026-11-12 | Rujukan v3.2 disetujui ("oke greate job"); dibangun ke aplikasi React sesudahnya | pemilik |
+| 2026-11-12 | Dibangun di `client/src/pages/publik/`: CSS rujukan dibangkitkan + dilingkupkan `.paspor` (`scripts/publik-css.py`), tambahan aplikasi di `paspor-app.css`. Nama valuta asli boleh dua baris; jam berdetak hanya di kepala (render penuh tiap detik melanggar anggaran 50 ms pada CPU 4×) | Claude |

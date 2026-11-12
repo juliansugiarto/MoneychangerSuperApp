@@ -59,16 +59,17 @@ export default function PublicPage() {
   }, [data]);
 
   const latestText = useCallback(() => (updatedAt ? shortTime(wallClock(updatedAt, timeZone), timeZone) : null), [updatedAt, timeZone]);
-  const arrived = useArrival(rootRef, latestText, identity.name.toUpperCase().split(/\s+/).slice(0, 3));
-  usePageMotion(rootRef, arrived, `${views.length}:${announcements.data?.length ?? 0}:${Boolean(data?.moneyRules)}`);
+  const redirecting = !data || data.setupRequired || data.publicPageEnabled === false;
+  const ready = !profile.isLoading && !(data && redirecting);
+  const arrived = useArrival(rootRef, ready, latestText, identity.name.toUpperCase().split(/\s+/).slice(0, 3));
+  usePageMotion(rootRef, ready, arrived, `${views.length}:${announcements.data?.length ?? 0}:${Boolean(data?.moneyRules)}`);
 
   const onRateEvent = useCallback((id: string) => {
     const view = views.find((item) => item.id === id);
     if (view) setHighlight((current) => ({ code: view.code, seq: (current?.seq ?? 0) + 1 }));
   }, [views]);
 
-  const redirecting = !data || data.setupRequired || data.publicPageEnabled === false;
-  if (profile.isLoading || (data && redirecting)) return <div className="paspor" aria-busy="true" style={{ minHeight: "100vh" }} />;
+  if (!ready) return <div className="paspor" aria-busy="true" style={{ minHeight: "100vh" }} />;
 
   const legal = { legalEntityName: data?.legalEntityName ?? null, licenseNumber: data?.licenseNumber ?? null, kupvaCode: data?.kupvaCode ?? null, fraudWarning: data?.fraudWarning ?? null };
 
