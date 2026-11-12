@@ -1,7 +1,8 @@
 export const ENV = {
   cookieSecret: process.env.JWT_SECRET ?? "",
   databaseUrl: process.env.DATABASE_URL ?? "",
-  isProduction: process.env.NODE_ENV === "production",
+  // Gagal-tertutup: apa pun selain development/test (termasuk NODE_ENV kosong) adalah produksi.
+  isProduction: !["development", "test"].includes(process.env.NODE_ENV ?? ""),
   // Cloudflare R2 (S3-compatible object storage) for KYC/operational documents.
   r2AccountId: process.env.R2_ACCOUNT_ID ?? "",
   r2AccessKeyId: process.env.R2_ACCESS_KEY_ID ?? "",
