@@ -1,6 +1,7 @@
 import { createConnection } from "mysql2/promise";
 import superjson from "superjson";
 import { expect, test } from "./fixtures";
+import { v1Fixtures } from "../server/v1Fixtures";
 
 /**
  * Laporan DTTOT ke Densus 88 lewat layar, sebagai Controller, di `mc_t_visual` (tidak pernah moneychanger/produksi).
@@ -52,4 +53,49 @@ test("Controller mencatat pemberitahuan, menyaring, mencetak laporan nihil, dan 
   // Tidak ada gulir mendatar pada lebar ponsel.
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await card.screenshot({ path: "test-results/laporan-dttot-390.png" });
+});
+
+test("Penghapusan: blokir yang dicabut dengan surat Densus tercetak sebagai Berita Acara Pembukaan Pemblokiran", async ({ signedInPage: page }) => {
+  const runId = Date.now();
+  // Nama unik tanpa angka (pencocokan nama mengabaikan angka): digit → huruf.
+  const suffix = String(runId).slice(-6).replace(/\d/g, (digit) => "ABCDEFGHIJ"[Number(digit)]!);
+  const name = `Muasih Peragaan ${suffix}`;
+  const letter = `R/E2E-HAPUS-${runId}/RES.6.1./2026/Densus`;
+  const call = async <T,>(path: string, input: unknown) => {
+    const response = await page.request.post(`/api/trpc/${path}?batch=1`, { data: { 0: superjson.serialize(input) } });
+    const body = await response.json();
+    expect(response.ok(), `${path}: ${JSON.stringify(body).slice(0, 300)}`).toBe(true);
+    return superjson.deserialize(body[0].result.data) as T;
+  };
+  const connection = await createConnection({ uri: "mysql://root@127.0.0.1:3306/mc_t_visual" });
+  try {
+    await connection.query("INSERT INTO sanctions_watchlist_entries (listType, entityType, referenceCode, fullName, sourceFileName, importedByUserId) VALUES ('DTTOT', 'INDIVIDUAL', ?, ?, 'e2e-dttot.xlsx', 1)", [`E2E-HAPUS-${suffix}`, name.toUpperCase()]);
+    // Nasabah baru disaring saat disimpan → blokir terbuka otomatis.
+    const customer = await call<{ id: number }>("customers.create", { ...v1Fixtures.customer, cifNumber: `E2E-HAPUS-${runId}`, identityNumber: `3175${String(runId).slice(-12)}`, fullName: name });
+    const [blocks] = await connection.query("SELECT id FROM watchlist_blocks WHERE customerId = ? AND status = 'OPEN'", [customer.id]);
+    const blockId = (blocks as { id: number }[])[0]!.id;
+    await call("watchlistBlocks.resolve", { blockId, decision: "CONFIRMED", notes: "cocok DTTOT peragaan" });
+    await call("watchlistBlocks.revoke", { blockId, revocationReference: letter, notes: "dihapus dari DTTOT" });
+    await connection.query("DELETE FROM sanctions_watchlist_entries WHERE referenceCode = ?", [`E2E-HAPUS-${suffix}`]);
+  } finally {
+    await connection.end();
+  }
+  await call("dttotNotices.create", { noticeType: "PENGHAPUSAN", policeLetterNumber: letter, listNumber: "DTTOT/P-24.a/X/RES.6.1./2026", receivedOn: "2026-10-15", policeLetterDate: "2026-10-09" });
+
+  await page.goto("/kepatuhan/laporan-dttot");
+  const card = page.locator("[data-slot=card]", { hasText: letter });
+  await card.getByRole("button", { name: "Saring sekarang" }).click();
+  await expect(card.getByText("1 blokir sudah dicabut dengan surat ini.", { exact: false })).toBeVisible();
+  await card.getByLabel("Nomor surat").fill("005/DTTOT/X/2026");
+  await card.getByLabel("Kota").fill("Cianjur");
+  await card.getByLabel("Ditandatangani").fill("Direktur Uji");
+  await card.getByLabel("Jabatan", { exact: true }).fill("Direktur");
+  await card.getByLabel("Saksi", { exact: true }).fill("Saksi Uji");
+  await card.getByLabel("Jabatan saksi").fill("Petugas APU PPT");
+  const [report] = await Promise.all([page.waitForEvent("popup"), card.getByRole("button", { name: "Cetak laporan" }).click()]);
+  await expect(report.getByText("Laporan Pembukaan Pemblokiran")).toBeVisible();
+  await expect(report.getByRole("heading", { name: /PEMBUKAAN PEMBLOKIRAN/ })).toBeVisible();
+  await expect(report.getByText(name, { exact: false }).first()).toBeVisible();
+  await report.screenshot({ path: "test-results/laporan-pembukaan.png", fullPage: true });
+  await report.close();
 });

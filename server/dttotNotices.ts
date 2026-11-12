@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, like } from "drizzle-orm";
 import { customers, dttotNotices, sanctionsWatchlistEntries, watchlistBlocks } from "../drizzle/schema";
 import { matchWatchlistEntries, MIN_SCREENABLE_NAME_LENGTH, rescreenAllCustomers } from "./customerWatchlistScreening";
 import { databaseOrThrow, writeAudit } from "./operations";
@@ -98,14 +98,15 @@ export async function recordDttotDelivery(input: { noticeId: number; step: Dttot
 }
 
 /**
- * Blokir yang masih OPEN padahal nama nasabahnya sudah tidak cocok dengan daftar mana pun (DTTOT/DPPSPM):
- * itulah yang harus dibuka sesudah pemberitahuan penghapusan. Laporan nihil penghapusan hanya sah bila nol.
+ * Blokir yang masih berlaku (OPEN/CONFIRMED) padahal nama nasabahnya sudah tidak cocok dengan daftar mana pun
+ * (DTTOT/DPPSPM): itulah yang harus diputus/dicabut sesudah pemberitahuan penghapusan. Laporan penghapusan
+ * baru boleh dicetak bila nol.
  */
-export async function staleOpenBlockCount() {
+export async function staleBlockCount() {
   const db = await databaseOrThrow();
   const open = await db.select({ customerId: watchlistBlocks.customerId, fullName: customers.fullName })
     .from(watchlistBlocks).innerJoin(customers, eq(watchlistBlocks.customerId, customers.id))
-    .where(eq(watchlistBlocks.status, "OPEN"));
+    .where(inArray(watchlistBlocks.status, ["OPEN", "CONFIRMED"]));
   if (!open.length) return 0;
   const entries = await db.select().from(sanctionsWatchlistEntries);
   return new Set(open.filter((row) => !matchWatchlistEntries(row.fullName?.trim() ?? "", entries).length).map((row) => row.customerId)).size;
@@ -117,12 +118,26 @@ export async function getDttotNoticeReport(noticeId: number) {
   const notice = (await db.select().from(dttotNotices).where(eq(dttotNotices.id, noticeId)).limit(1))[0];
   if (!notice) throw new Error("Pemberitahuan DTTOT tidak ditemukan.");
   const { matched } = await dttotMatchedCustomers();
+  const removal = notice.noticeType === "PENGHAPUSAN";
   return {
     notice,
-    staleOpenBlocks: notice.noticeType === "PENGHAPUSAN" ? await staleOpenBlockCount() : 0,
+    staleBlocks: removal ? await staleBlockCount() : 0,
+    unblocked: removal ? await blocksRevokedUnder(notice.policeLetterNumber) : [],
     matched: matched.map(({ customer, matchedNames }) => ({
       fullName: customer.fullName, placeOfBirth: customer.placeOfBirth, dateOfBirth: customer.dateOfBirth,
       occupation: customer.occupation, address: customer.address, identityNumber: customer.identityNumber, matchedNames,
     })),
   };
+}
+
+/** Blokir yang dicabut dengan rujukan surat penghapusan ini (diisi Controller saat mencabut di halaman Pemblokiran). */
+async function blocksRevokedUnder(policeLetterNumber: string) {
+  const db = await databaseOrThrow();
+  const rows = await db.select({ block: watchlistBlocks, customer: customers })
+    .from(watchlistBlocks).innerJoin(customers, eq(watchlistBlocks.customerId, customers.id))
+    .where(and(eq(watchlistBlocks.status, "DICABUT"), like(watchlistBlocks.revocationReference, `%${policeLetterNumber.replace(/[%_\\]/g, (char) => `\\${char}`)}%`)));
+  return rows.map(({ block, customer }) => ({
+    unblockedAt: block.resolvedAt, fullName: customer.fullName, placeOfBirth: customer.placeOfBirth, dateOfBirth: customer.dateOfBirth,
+    occupation: customer.occupation, address: customer.address,
+  }));
 }

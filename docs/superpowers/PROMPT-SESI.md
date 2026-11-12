@@ -179,15 +179,16 @@ moneychanger, mc_t_abcvalas, mc_t_visual.
 **Laporan DTTOT ke Densus 88 SELESAI 12 November** (`3032a5d`, migrasi `0064`): Kepatuhan > Laporan DTTOT —
 catat surel BI, saring, cetak Laporan Nihil / Laporan Pemblokiran + Berita Acara (format Lampiran I–III Pedoman
 BI), lima pengiriman. Gerbang: `Tests 1840 passed | 6 skipped (1846)`, tsc 0, build, Playwright `57 passed`.
-**Menunggu pemilik:** dua lampiran surel BI 15 Okt 2026 — `DTTOT OKTOBER.xlsx` (uji pengimpor P-25) dan
-`Lamp 2_Form Berita Acara Pembukaan Pemblokiran DTTOT.docx` (berita acara pembukaan); konektor Gmail tidak bisa
-mengunduh lampiran, halaman PPATK kosong bagi peramban otomatis.
+Lampiran surel BI 15 Okt 2026 diunduh lewat Chrome atas permintaan pemilik (~/Downloads): pengimpor terbukti pada
+daftar P-25 (530 entri, cocok persis dengan berkas), dan Laporan + Berita Acara Pembukaan Pemblokiran dibangun dari
+formulir "Lamp 2" (lihat rancangan DTTOT bagian "lampiran BI diunduh"). Daftar P-25 asli kini termuat di DB lokal
+`moneychanger` (menggantikan 7 entri DTTOT uji).
 **Penyesuaian surat (12 Nov sore, migrasi `0065`):** bentuk surat disamakan dengan laporan nihil pemilik 20 April
 2026 dan surat penghapusan 2020 (Google Drive pemilik): rujukan surat Densus + tanggal + perihal, alamat Trunojoyo,
 tembusan BI + PPATK, kota dari isian. Laporan penghapusan nihil ditolak selama ada blokir OPEN yang namanya sudah
 tidak ada di daftar. `0065` hanya di moneychanger, mc_t_abcvalas, mc_t_visual. Gerbang: `Tests 1844 passed | 6 skipped (1850)` (+4 uji DTTOT baru), tsc 0, build; spec Playwright `laporanDttot` lolos.
 
-**Berikutnya (urut):** (1) uji pengimpor P-25 + berita acara pembukaan begitu berkasnya ada; DPPSPM ke PPATK;
+**Berikutnya (urut):** (1) laporan DPPSPM ke PPATK (pola sama);
 (2) paket Docker ala tokoemas + cadangan terenkripsi ke R2 + `deploy.yml` baru; (3) penyederhanaan layar
 Kasir & transaksi (sub-proyek 4); (4) CSP `script-src` sesudah jendela cetak berhenti memakai skrip sebaris.
 

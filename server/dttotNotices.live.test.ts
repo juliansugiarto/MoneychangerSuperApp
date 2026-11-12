@@ -8,6 +8,7 @@ import { createCustomer, databaseOrThrow } from "./operations";
 import { runWithTenant, type TenantBinding } from "./tenantContext";
 import { createScratchDatabase } from "./testing/scratchDatabase";
 import { v1Fixtures } from "./v1Fixtures";
+import { resolveWatchlistBlock, revokeWatchlistBlock } from "./watchlistBlocks";
 
 /** Pemberitahuan DTTOT terhadap MySQL sungguhan; daftar dan nasabah sintetis di `mc_uji_pemberitahuan_dttot`. */
 let binding: TenantBinding;
@@ -68,9 +69,17 @@ describe("pemberitahuan DTTOT", () => {
       // Budi (diblokir di uji sebelumnya) dihapus dari daftar terbaru.
       await db.delete(sanctionsWatchlistEntries).where(eq(sanctionsWatchlistEntries.referenceCode, "UJI-P25-002"));
       await screenDttotNotice(id, controller);
-      expect((await getDttotNoticeReport(id)).staleOpenBlocks).toBe(1);
-      await db.update(watchlistBlocks).set({ status: "DICABUT", resolvedAt: new Date(), resolvedByUserId: controller.id }).where(eq(watchlistBlocks.status, "OPEN"));
-      expect((await getDttotNoticeReport(id)).staleOpenBlocks).toBe(0);
+      expect((await getDttotNoticeReport(id)).staleBlocks).toBe(1);
+      // Dikonfirmasi pun tetap terhitung sampai dicabut.
+      const [block] = await db.select().from(watchlistBlocks).where(eq(watchlistBlocks.status, "OPEN"));
+      await resolveWatchlistBlock({ blockId: block!.id, decision: "CONFIRMED", notes: "cocok DTTOT P-25" }, controller);
+      expect((await getDttotNoticeReport(id)).staleBlocks).toBe(1);
+      expect((await getDttotNoticeReport(id)).unblocked).toHaveLength(0);
+      await revokeWatchlistBlock({ blockId: block!.id, revocationReference: "Surat Densus R/23/XI/RES.6.1./2026/Densus", notes: "dihapus dari DTTOT" }, controller);
+      const after = await getDttotNoticeReport(id);
+      expect(after.staleBlocks).toBe(0);
+      expect(after.unblocked.map((row) => row.fullName)).toEqual(["Budi Santoso Wibowo"]);
+      expect(after.unblocked[0]!.unblockedAt).toBeInstanceOf(Date);
 
       await expect(updateDttotNoticeReport({ noticeId: id, reportNumber: "003/DTTOT/XI/2026", reportPlace: " ", signerName: "Direktur Uji", signerPosition: "Direktur" }, controller)).rejects.toThrow(/kota/);
       await updateDttotNoticeReport({ noticeId: id, reportNumber: "003/DTTOT/XI/2026", reportPlace: "Cianjur", signerName: "Direktur Uji", signerPosition: "Direktur" }, controller);

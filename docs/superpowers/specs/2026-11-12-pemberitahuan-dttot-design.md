@@ -28,6 +28,13 @@ Kantor Perwakilan BI (+ PPATK, sesuai tata cara 7 Jul 2026), kota kepala surat d
 Migrasi `0065`: `policeLetterDate`, `reportPlace`. Penghapusan → laporan nihil penghapusan, ditolak selama ada blokir
 OPEN yang namanya sudah tidak ada di daftar (`staleOpenBlockCount`).
 
+## Penyesuaian 12 November 2026 (lampiran BI diunduh)
+- `DTTOT OKTOBER.xlsx` (P-25): pengimpor membaca 530 entri (411 Orang, 119 Korporasi, sama persis dengan kolom
+  "Terduga"), 530 kode unik, 450 beralias; impor ke `moneychanger` 0,16 detik. Satu salah ketik di daftar resmi
+  (ELQ-069 "…(JAK-A) aliasJUND AL KHALIFA") kini terpisah juga (`splitAliasNames`).
+- Formulir "Lamp 2" BI → Laporan Pembukaan Pemblokiran + Berita Acara Pembukaan Pemblokiran per nasabah. Sumber
+  datanya blokir `DICABUT` yang rujukan pencabutannya memuat nomor surat Densus pemberitahuan. Tembusan surat hanya
+  Kepala Kantor Perwakilan BI (seperti formulir); PPATK lewat surel. Perihal surat penghapusan mengikuti formulir.
+
 ## Sengaja belum
-- Berita Acara **Pembukaan** Pemblokiran (bila memang ada blokir yang harus dibuka) — formulir resmi hanya ada di
-  lampiran surel BI 15 Okt 2026; dibangun setelah berkasnya ada. Daftar DPPSPM (laporan ke PPATK) menyusul.
+- Daftar DPPSPM (laporan ke PPATK) menyusul dengan pola sama.

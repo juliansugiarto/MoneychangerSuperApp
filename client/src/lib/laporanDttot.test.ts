@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLaporanNihilHtml, buildLaporanPemblokiranHtml, buildLaporanPenghapusanNihilHtml, clockWib, longDayDate, placeFromAddress } from "./laporanDttot";
+import { buildLaporanNihilHtml, buildLaporanPembukaanHtml, buildLaporanPemblokiranHtml, buildLaporanPenghapusanNihilHtml, clockWib, longDayDate, placeFromAddress } from "./laporanDttot";
 
 const company = { legalName: "PT Contoh Valuta", address: "Jl. Contoh 1, Jakarta" };
 const signer = { name: "Direktur Uji", position: "Direktur" };
@@ -31,8 +31,20 @@ describe("laporan DTTOT ke Densus 88", () => {
 
   it("laporan penghapusan nihil merujuk perihal penghapusan", () => {
     const html = buildLaporanPenghapusanNihilHtml({ company, reportNumber: "1", place: "Cianjur", reportDate: at, screenedAt: at, signer, police: { ...police, kind: "PENGHAPUSAN" } });
-    expect(html).toContain("perihal Pemberitahuan Penghapusan Identitas Orang dan Entitas");
+    expect(html).toContain("perihal Penghapusan Identitas Orang dan Entitas dari Daftar Terduga Teroris dan Organisasi Teroris");
     expect(html).toContain("tidak ada pemblokiran yang perlu dibuka (NIHIL)");
+  });
+
+  it("laporan pembukaan pemblokiran mengikuti formulir Lamp 2 BI: satu berita acara per nasabah, tembusan hanya BI", () => {
+    const html = buildLaporanPembukaanHtml({
+      company, reportNumber: "4", place: "Cianjur", reportDate: at, signer, police: { ...police, kind: "PENGHAPUSAN" }, witness: { name: "Saksi Uji", position: "Petugas APU PPT" },
+      unblocked: [{ fullName: "Muasih Fiktif", unblockedAt: at }, { fullName: "Nama Dua", unblockedAt: at }],
+    });
+    expect(html).toContain("Laporan Pembukaan Pemblokiran");
+    expect(html).toContain("telah dilakukan\n  pembukaan pemblokiran seluruh aset/dana atas nama Muasih Fiktif, Nama Dua");
+    expect(html.match(/PEMBUKAAN PEMBLOKIRAN<\/h3>/g)).toHaveLength(2);
+    expect(html).toContain("Indonesia Nomor R/7/III/RES.6.1./2026/Densus di hadapan saksi");
+    expect(html).not.toContain("PPATK");
   });
 
   it("kota kepala surat diambil dari bagian terakhir alamat", () => {

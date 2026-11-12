@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { buildLaporanNihilHtml, buildLaporanPemblokiranHtml, buildLaporanPenghapusanNihilHtml, longDate, longDayDate, placeFromAddress, printDttotReport } from "@/lib/laporanDttot";
+import { buildLaporanNihilHtml, buildLaporanPembukaanHtml, buildLaporanPemblokiranHtml, buildLaporanPenghapusanNihilHtml, longDate, longDayDate, placeFromAddress, printDttotReport } from "@/lib/laporanDttot";
 import { MISSING_ADDRESS, printedCompany } from "@/lib/printedCompany";
 import { trpc } from "@/lib/trpc";
 import { calendarDay } from "@shared/ledger";
@@ -43,6 +43,9 @@ export function NoticeCard({ notice, lastPlace }: { notice: Notice; lastPlace?: 
   const removal = notice.noticeType === "PENGHAPUSAN";
   // Pada penghapusan, nasabah yang masih cocok tetap diblokir sah; yang dilaporkan adalah blokir yang harus dibuka.
   const matched = removal ? 0 : notice.matchedCustomerCount ?? 0;
+  const removalState = trpc.dttotNotices.report.useQuery({ noticeId: notice.id }, { enabled: removal && Boolean(notice.screenedAt) });
+  const unblocked = removalState.data?.unblocked.length ?? 0;
+  const needsWitness = matched > 0 || unblocked > 0;
   const screened = Boolean(notice.screenedAt);
   const reportReady = report.reportNumber.trim() && place.trim().length >= 2 && report.signerName.trim().length >= 3 && report.signerPosition.trim().length >= 2;
   const sentCount = DELIVERIES.filter(({ step }) => notice[step]).length;
@@ -55,8 +58,13 @@ export function NoticeCard({ notice, lastPlace }: { notice: Notice; lastPlace?: 
     const screenedAt = new Date(notice.screenedAt!);
     if (removal) {
       const data = await utils.dttotNotices.report.fetch({ noticeId: notice.id });
-      if (data.staleOpenBlocks) return toast.error(`${data.staleOpenBlocks} nasabah masih diblokir padahal namanya sudah tidak ada di daftar. Buka blokirnya dulu di halaman Pemblokiran.`);
-      return printDttotReport(`Laporan Penghapusan ${notice.policeLetterNumber}`, buildLaporanPenghapusanNihilHtml({ ...common, screenedAt }));
+      if (data.staleBlocks) return toast.error(`${data.staleBlocks} nasabah masih diblokir padahal namanya sudah tidak ada di daftar. Putuskan atau cabut blokirnya dulu di halaman Pemblokiran.`);
+      if (!data.unblocked.length) return printDttotReport(`Laporan Penghapusan ${notice.policeLetterNumber}`, buildLaporanPenghapusanNihilHtml({ ...common, screenedAt }));
+      if (witness.name.trim().length < 3 || witness.position.trim().length < 2) return toast.error("Isi nama dan jabatan saksi untuk berita acara.");
+      return printDttotReport(`Laporan Pembukaan Pemblokiran ${notice.policeLetterNumber}`, buildLaporanPembukaanHtml({
+        ...common, witness: { name: witness.name.trim(), position: witness.position.trim() },
+        unblocked: data.unblocked.map((row) => ({ ...row, unblockedAt: new Date(row.unblockedAt!) })),
+      }));
     }
     if (!matched) return printDttotReport(`Laporan Nihil ${notice.policeLetterNumber}`, buildLaporanNihilHtml({ ...common, screenedAt }));
     if (witness.name.trim().length < 3 || witness.position.trim().length < 2) return toast.error("Isi nama dan jabatan saksi untuk berita acara.");
@@ -85,14 +93,17 @@ export function NoticeCard({ notice, lastPlace }: { notice: Notice; lastPlace?: 
       </section>
 
       <section>
-        <h3 className="font-semibold">2. Cetak {removal ? "laporan penghapusan" : matched ? "Laporan Pemblokiran + Berita Acara" : "Laporan Nihil"}</h3>
-        {removal ? <p className="mt-1 text-slate-600">Kalau ada nasabah yang dulu diblokir dan kini namanya dihapus dari daftar, buka blokirnya dulu di halaman Pemblokiran.</p> : null}
+        <h3 className="font-semibold">2. Cetak {removal ? (unblocked ? "Laporan Pembukaan Pemblokiran + Berita Acara" : "laporan penghapusan") : matched ? "Laporan Pemblokiran + Berita Acara" : "Laporan Nihil"}</h3>
+        {removal ? <p className="mt-1 text-slate-600">
+          {removalState.data?.staleBlocks ? <b className="text-rose-700">{removalState.data.staleBlocks} nasabah masih diblokir padahal namanya sudah tidak ada di daftar. </b> : null}
+          Nasabah yang dulu diblokir dan kini dihapus dari daftar: cabut blokirnya di halaman Pemblokiran dengan rujukan nomor surat ini. {unblocked ? `${unblocked} blokir sudah dicabut dengan surat ini.` : ""}
+        </p> : null}
         <div className="mt-2 grid gap-3 md:grid-cols-4">
           <div><Label htmlFor={`no-${notice.id}`}>Nomor surat</Label><Input id={`no-${notice.id}`} className="mt-1" value={report.reportNumber} onChange={(e) => setReport({ ...report, reportNumber: e.target.value })} placeholder="Mis. 001/DTTOT/XI/2026" /></div>
           <div><Label htmlFor={`kota-${notice.id}`}>Kota</Label><Input id={`kota-${notice.id}`} className="mt-1" value={place} onChange={(e) => setReport({ ...report, reportPlace: e.target.value })} placeholder="Mis. Cianjur" /></div>
           <div><Label htmlFor={`ttd-${notice.id}`}>Ditandatangani</Label><Input id={`ttd-${notice.id}`} className="mt-1" value={report.signerName} onChange={(e) => setReport({ ...report, signerName: e.target.value })} placeholder="Nama pimpinan" /></div>
           <div><Label htmlFor={`jab-${notice.id}`}>Jabatan</Label><Input id={`jab-${notice.id}`} className="mt-1" value={report.signerPosition} onChange={(e) => setReport({ ...report, signerPosition: e.target.value })} placeholder="Mis. Direktur" /></div>
-          {matched ? <>
+          {needsWitness ? <>
             <div><Label htmlFor={`saksi-${notice.id}`}>Saksi</Label><Input id={`saksi-${notice.id}`} className="mt-1" value={witness.name} onChange={(e) => setWitness({ ...witness, name: e.target.value })} placeholder="Nama saksi" /></div>
             <div><Label htmlFor={`jsaksi-${notice.id}`}>Jabatan saksi</Label><Input id={`jsaksi-${notice.id}`} className="mt-1" value={witness.position} onChange={(e) => setWitness({ ...witness, position: e.target.value })} /></div>
           </> : null}

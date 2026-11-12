@@ -38,20 +38,21 @@ export type DttotNoticeKind = "PENCANTUMAN" | "PERPANJANGAN" | "PENGHAPUSAN";
 /** Surat Densus 88 yang dirujuk di kalimat pembuka. `date` = tanggal surat (bukan tanggal surel BI), boleh kosong. */
 export type DttotPoliceLetter = { number: string; date?: Date | null; kind: DttotNoticeKind };
 
-/** Perihal surat Densus menurut jenisnya, seperti tertulis di surat-surat yang pernah diterima. */
+/** Perihal surat Densus menurut jenisnya, seperti tertulis di formulir BI dan surat yang pernah diterima. */
 export function policeLetterSubject(kind: DttotNoticeKind): string {
   return kind === "PENGHAPUSAN"
-    ? "Pemberitahuan Penghapusan Identitas Orang dan Entitas dari Daftar Terduga Teroris dan Organisasi Teroris dan Permohonan Buka Blokir"
+    ? "Penghapusan Identitas Orang dan Entitas dari Daftar Terduga Teroris dan Organisasi Teroris"
     : "Bantuan untuk Melakukan Pemblokiran terhadap Dana yang Dimiliki oleh Terduga Teroris dan Organisasi Teroris";
 }
 
 const policeReference = (letter: DttotPoliceLetter) =>
   `Kepala Kepolisian Negara Republik Indonesia No. ${esc(letter.number)}${letter.date ? ` tanggal ${esc(longDate(letter.date))}` : ""} perihal ${esc(policeLetterSubject(letter.kind))}`;
 
-// Alamat dan tembusan mengikuti surat yang sudah pernah diterima Densus (Laporan Nihil 20 April 2026).
+// Alamat dan tembusan mengikuti formulir BI (Lampiran surel 15 Okt 2026) dan Laporan Nihil pemilik 20 April 2026.
+// PPATK menerima tembusan lewat surel (langkah pengiriman), bukan di daftar tembusan surat.
 const recipient = `<p>Kepada Yth.<br>Kepala Kepolisian Negara Republik Indonesia<br>c.q. Kepala Densus 88 Kepolisian Negara Republik Indonesia<br>Jalan Trunojoyo No. 3, Kebayoran Baru<br>Jakarta 12110</p><p>Dengan hormat,</p>`;
 
-const copies = `<div class="tembusan">Tembusan Yth.:<ol><li>Kepala Kantor Perwakilan Bank Indonesia yang mewilayahi</li><li>Kepala Pusat Pelaporan dan Analisis Transaksi Keuangan (PPATK)</li></ol></div>`;
+const copies = `<div class="tembusan">Tembusan Yth.<br>Kepala Kantor Perwakilan Bank Indonesia yang mewilayahi</div>`;
 
 type LetterInput = { company: DttotReportCompany; reportNumber: string; place: string; reportDate: Date; signer: DttotReportSigner; police: DttotPoliceLetter };
 
@@ -114,7 +115,37 @@ export function buildLaporanPemblokiranHtml(input: LetterInput & { blockedAt: Da
     <tr><td>Jenis dan identitas aset</td><td>: Seluruh transaksi penukaran valuta asing atas nama Pengguna Jasa ditolak</td></tr></table>
     <p>Demikian Berita Acara ini dibuat rangkap 1 (satu) dan dibuatkan 1 (satu) salinan.</p>
     <div class="dua"><div>Yang melakukan<br>Pemblokiran secara serta merta,<div class="ruang"></div><b>${esc(input.signer.name)}</b><br>${esc(input.signer.position)}</div>
-    <div>Saksi:<div class="ruang"></div><b>${esc(input.witness.name)}</b><br>${esc(input.witness.position)}</div></div></div>`).join("");
+    <div>Saksi:<br>&nbsp;<div class="ruang"></div><b>${esc(input.witness.name)}</b><br>${esc(input.witness.position)}</div></div></div>`).join("");
+  return cover + minutes;
+}
+
+/** Laporan Pembukaan Pemblokiran + Berita Acara Pembukaan Pemblokiran per nasabah (formulir "Lamp 2" BI, 15 Okt 2026). */
+export function buildLaporanPembukaanHtml(input: LetterInput & { witness: DttotReportSigner; unblocked: (DttotMatchedCustomer & { unblockedAt: Date })[] }): string {
+  const names = input.unblocked.map((row) => row.fullName).join(", ");
+  const latest = new Date(Math.max(...input.unblocked.map((row) => row.unblockedAt.getTime())));
+  const cover = `${letterHead(input, "Laporan Pembukaan Pemblokiran", `${input.unblocked.length} berkas berita acara`)}
+  <p>Merujuk Surat ${policeReference(input.police)}, dengan ini kami laporkan bahwa pada ${asOf(latest)} telah dilakukan
+  pembukaan pemblokiran seluruh aset/dana atas nama ${esc(names)}, nihil (KUPVA tidak menyimpan aset atau dana nasabah),
+  sebagaimana berita acara terlampir.</p>
+  <p>Demikian kami sampaikan, atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>
+  ${signature(input.company, input.signer)}${copies}`;
+  const minutes = input.unblocked.map((row) => `<div class="halaman">
+    <div class="kop"><b>${esc(input.company.legalName)}</b><br>${esc(input.company.address)}</div>
+    <h3>BERITA ACARA<br>PEMBUKAAN PEMBLOKIRAN</h3>
+    <p>Yang bertandatangan di bawah ini:</p>
+    <table class="isi"><tr><td>Nama</td><td>: ${esc(input.signer.name)}</td></tr><tr><td>Jabatan</td><td>: ${esc(input.signer.position)}</td></tr><tr><td>Alamat</td><td>: ${esc(input.company.address)}</td></tr></table>
+    <p>dalam hal ini bertindak untuk dan atas nama ${esc(input.company.legalName)}, dengan ini menyatakan bahwa pada hari ini
+    ${asOf(row.unblockedAt)} telah melakukan pembukaan pemblokiran berdasarkan Surat Kepala Kepolisian Negara Republik
+    Indonesia Nomor ${esc(input.police.number)} di hadapan saksi:</p>
+    <table class="isi"><tr><td>Nama</td><td>: ${esc(input.witness.name)}</td></tr><tr><td>Jabatan</td><td>: ${esc(input.witness.position)}</td></tr></table>
+    <p>terhadap aset/dana yang dimiliki atau dikuasai oleh Pengguna Jasa sebagai berikut:</p>
+    <table class="isi"><tr><td>Nama</td><td>: ${esc(row.fullName)}</td></tr><tr><td>Tempat, Tanggal Lahir</td><td>: ${esc(row.placeOfBirth)}, ${esc(birthDate(row.dateOfBirth))}</td></tr>
+    <tr><td>Pekerjaan</td><td>: ${esc(row.occupation)}</td></tr><tr><td>Alamat</td><td>: ${esc(row.address)}</td></tr>
+    <tr><td>Saldo Terakhir/Nilai Aset</td><td>: — (KUPVA tidak menyimpan aset atau dana nasabah)</td></tr>
+    <tr><td>Jenis dan identitas aset</td><td>: Penolakan transaksi penukaran valuta asing atas nama Pengguna Jasa dicabut</td></tr></table>
+    <p>Demikian Berita Acara ini dibuat rangkap 1 (satu) dan dibuatkan 1 (satu) salinan.</p>
+    <div class="dua"><div>Yang melakukan<br>Pembukaan Pemblokiran,<div class="ruang"></div><b>${esc(input.signer.name)}</b><br>${esc(input.signer.position)}</div>
+    <div>Saksi:<br>&nbsp;<div class="ruang"></div><b>${esc(input.witness.name)}</b><br>${esc(input.witness.position)}</div></div></div>`).join("");
   return cover + minutes;
 }
 
@@ -127,7 +158,7 @@ export function placeFromAddress(address: string): string {
 const STYLE = `@page { size: A4; margin: 20mm 22mm; } body { font-family: "Times New Roman", serif; font-size: 12pt; line-height: 1.5; max-width: 180mm; margin: 0 auto; }
   .kop { border-bottom: 2px solid #111; padding-bottom: 6px; margin-bottom: 18px; } table.kepala td { padding: 0 8px 0 0; vertical-align: top; } table.kepala td:first-child { white-space: nowrap; } p.r { text-align: right; }
   p { text-align: left; overflow-wrap: anywhere; } table.isi td { padding: 1px 6px 1px 0; vertical-align: top; } table.isi td:first-child { width: 180px; }
-  .ttd { margin: 28px 0 0 auto; width: 260px; text-align: center; } .ruang { height: 70px; } h3 { text-align: center; } .tembusan { margin-top: 28px; font-size: 11pt; } .tembusan ol { margin: 2px 0 0 18px; padding: 0; }
+  .ttd { margin: 28px 0 0 auto; width: 260px; text-align: center; } .ruang { height: 70px; } h3 { text-align: center; } .tembusan { margin-top: 28px; font-size: 11pt; } 
   .halaman { page-break-before: always; } .dua { display: flex; justify-content: space-between; margin-top: 28px; } .dua > div { width: 45%; }`;
 
 /** Membuka jendela cetak; `body` dibangun oleh salah satu pembangun di atas. */

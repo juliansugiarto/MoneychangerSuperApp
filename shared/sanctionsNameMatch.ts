@@ -28,7 +28,9 @@ export function nameTokens(name: string): string[] {
 /** Splits a DTTOT-style "X alias Y alias Z" name field into its constituent names. */
 export function splitAliasNames(rawName: string): string[] {
   return rawName
-    .split(/\balias\b/i)
+    // "alias" sebagai kata utuh (huruf apa pun), atau "alias" kecil yang menempel ke nama berhuruf besar
+    // sesudahnya — salah ketik di daftar resmi DTTOT Oktober 2026 (ELQ-069: "… (JAK-A) aliasJUND AL KHALIFA").
+    .split(/\b[Aa][Ll][Ii][Aa][Ss]\b|\balias(?=\p{Lu})/u)
     .map((part) => part.trim())
     .filter(Boolean);
 }

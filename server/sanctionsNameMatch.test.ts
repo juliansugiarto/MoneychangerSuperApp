@@ -17,6 +17,12 @@ describe("splitAliasNames", () => {
     expect(splitAliasNames("HAMIDAH NABAGALA alias NABAGGALA alias HAMIDA")).toEqual(["HAMIDAH NABAGALA", "NABAGGALA", "HAMIDA"]);
   });
 
+  it("also splits a lowercase 'alias' glued to the next uppercase name (typo in the October 2026 list)", () => {
+    expect(splitAliasNames("JUND AL-KHILAFAH IN ALGERIA (JAK-A) aliasJUND AL KHALIFA")).toEqual(["JUND AL-KHILAFAH IN ALGERIA (JAK-A)", "JUND AL KHALIFA"]);
+    // Nama yang memang mengandung huruf "alias" di tengah kata tidak terpotong.
+    expect(splitAliasNames("MALIASARI PUTRA")).toEqual(["MALIASARI PUTRA"]);
+  });
+
   it("returns the whole name unchanged when there is no alias marker", () => {
     expect(splitAliasNames("Budi Santoso")).toEqual(["Budi Santoso"]);
   });
