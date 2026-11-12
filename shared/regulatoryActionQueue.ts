@@ -4,10 +4,15 @@ export type RegulatoryActionItem = { id: number; packageNumber: string; status: 
 export const DEFAULT_OPERATIONAL_TIMEZONE = "Asia/Jakarta";
 
 export const OPERATIONAL_TIMEZONES = [
-  { value: "Asia/Jakarta", label: "WIB — Asia/Jakarta (GMT+7)" },
-  { value: "Asia/Makassar", label: "WITA — Asia/Makassar (GMT+8)" },
-  { value: "Asia/Jayapura", label: "WIT — Asia/Jayapura (GMT+9)" },
+  { value: "Asia/Jakarta", label: "WIB — Asia/Jakarta (GMT+7)", offset: "+07:00" },
+  { value: "Asia/Makassar", label: "WITA — Asia/Makassar (GMT+8)", offset: "+08:00" },
+  { value: "Asia/Jayapura", label: "WIT — Asia/Jayapura (GMT+9)", offset: "+09:00" },
 ] as const;
+
+/** Selisih UTC zona operasional (tanpa DST) untuk mengubah isian `datetime-local` menjadi instan. */
+export function operationalUtcOffset(timeZone: string): string {
+  return OPERATIONAL_TIMEZONES.find((zone) => zone.value === timeZone)?.offset ?? "+07:00";
+}
 
 export const OPERATIONAL_TIMEZONE_VALUES = OPERATIONAL_TIMEZONES.map((zone) => zone.value) as unknown as [string, ...string[]];
 

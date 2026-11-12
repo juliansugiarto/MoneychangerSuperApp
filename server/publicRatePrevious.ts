@@ -20,6 +20,7 @@ export async function readPreviousRetiredRates(db: { execute(query: SQL): Promis
         ROW_NUMBER() OVER (PARTITION BY currencyId, COALESCE(rateTierId, 0) ORDER BY effectiveAt DESC, id DESC) AS position
       FROM operational_rates
       WHERE status = 'RETIRED' AND isDemo = false AND isHistorical = false
+        AND (notes IS NULL OR notes NOT LIKE '[DEMO]%')
         AND currencyId IN (${sql.join(currencyIds.map((id) => sql`${id}`), sql`, `)})
     ) ranked WHERE position = 1`);
   const rows = (result as unknown as [Array<{ currencyId: number; rateTierId: number | null; quoteUnit: string; buyRate: string; sellRate: string }>])[0];

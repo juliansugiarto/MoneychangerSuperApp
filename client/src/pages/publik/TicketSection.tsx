@@ -1,5 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { zoneAbbreviation } from "@shared/openingStatus";
+import { operationalUtcOffset } from "@shared/regulatoryActionQueue";
 import { TRPCClientError } from "@trpc/client";
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { copyWithStamp, loud, loudRemaining, reducedMotion, shake, slamFrames, stampSvg, thud, wait } from "./motion";
@@ -8,7 +9,6 @@ import { Icon } from "./SvgDefs";
 import type { Calculation } from "./useCalculation";
 import { barcodeBars, dirName, rp, type Dir, type Identity } from "./viewModel";
 
-const ZONE_OFFSET: Record<string, string> = { "Asia/Jakarta": "+07:00", "Asia/Makassar": "+08:00", "Asia/Jayapura": "+09:00" };
 
 type Props = { identity: Identity; dir: Dir; result: Calculation | null; selectionGone: boolean; phone: string | null; timeZone: string; openSeq: number };
 type Errors = Partial<Record<"name" | "num" | "time" | "ok" | "req", string>>;
@@ -113,7 +113,7 @@ export function TicketSection({ identity, dir, result, selectionGone, phone, tim
     event.preventDefault();
     if (create.isPending || requestNumber) return;
     const digits = num.replace(/\D/g, "");
-    const at = time ? new Date(`${time}:00${ZONE_OFFSET[timeZone] ?? "+07:00"}`) : null;
+    const at = time ? new Date(`${time}:00${operationalUtcOffset(timeZone)}`) : null;
     const next: Errors = {
       name: !name.trim() ? "Nama belum diisi. Isi nama Anda agar petugas tahu siapa yang dihubungi." : name.trim().length < 3 || name.trim().length > 200 ? "Nama terlalu pendek atau panjang. Sesuaikan menjadi 3 sampai 200 karakter." : "",
       num: !num.trim() ? "Nomor belum diisi. Isi nomor yang bisa dihubungi." : !/^[+\d\s()-]+$/.test(num.trim()) || digits.length < 8 || digits.length > 15 ? "Nomor belum bisa dipakai. Periksa nomor dan kode negaranya." : "",

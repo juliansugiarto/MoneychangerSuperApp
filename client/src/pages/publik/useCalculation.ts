@@ -9,7 +9,7 @@ export type Calculation = {
   rate: number;
 };
 
-type Snapshot = { viewId: string; jual: number; beli: number };
+type Snapshot = { viewId: string; jual: number; beli: number; unit: number };
 
 /**
  * Keadaan kalkulator §2 yang juga dibaca tiket §3. Kurs yang dipakai dibekukan saat menghitung; bila kurs aktif
@@ -32,10 +32,10 @@ export function useCalculation(views: RateView[], dir: Dir) {
     const first = views.find((view) => view.code === "USD") ?? views[0];
     setCode(first.code);
     setViewId(first.id);
-    setSnapshot({ viewId: first.id, jual: first.jual, beli: first.beli });
+    setSnapshot({ viewId: first.id, jual: first.jual, beli: first.beli, unit: first.unit });
   }, [views, code]);
 
-  const freeze = (next: RateView | null) => setSnapshot(next ? { viewId: next.id, jual: next.jual, beli: next.beli } : null);
+  const freeze = (next: RateView | null) => setSnapshot(next ? { viewId: next.id, jual: next.jual, beli: next.beli, unit: next.unit } : null);
 
   const chooseCode = (next: string) => {
     setCode(next);
@@ -57,10 +57,11 @@ export function useCalculation(views: RateView[], dir: Dir) {
 
   let result: Calculation | null = null;
   if (current && snapshot?.viewId === current.id && "value" in parsed) {
-    const frozen = { ...current, jual: snapshot.jual, beli: snapshot.beli };
+    // Kurs dan satuan kutipan dibekukan bersama: kurs lama per 1 dengan satuan baru per 100 = 100× salah.
+    const frozen = { ...current, jual: snapshot.jual, beli: snapshot.beli, unit: snapshot.unit, unitText: `Per ${snapshot.unit} ${current.code}` };
     result = { view: frozen, amount: parsed.value, amountText: fmt(Number(parsed.value)), total: estimateTotal(frozen, dir, parsed.value), rate: frozen[dir] };
   }
-  const rateChanged = Boolean(current && snapshot?.viewId === current.id && (current.jual !== snapshot.jual || current.beli !== snapshot.beli));
+  const rateChanged = Boolean(current && snapshot?.viewId === current.id && (current.jual !== snapshot.jual || current.beli !== snapshot.beli || current.unit !== snapshot.unit));
   // Kurs pilihan hilang dari papan (dinonaktifkan staf) = tidak bisa diminta konfirmasinya.
   const selectionGone = Boolean(viewId) && !current;
 
