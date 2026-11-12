@@ -182,7 +182,8 @@ BI), lima pengiriman. Gerbang: `Tests 1840 passed | 6 skipped (1846)`, tsc 0, bu
 Lampiran surel BI 15 Okt 2026 diunduh lewat Chrome atas permintaan pemilik (~/Downloads): pengimpor terbukti pada
 daftar P-25 (530 entri, cocok persis dengan berkas), dan Laporan + Berita Acara Pembukaan Pemblokiran dibangun dari
 formulir "Lamp 2" (lihat rancangan DTTOT bagian "lampiran BI diunduh"). Daftar P-25 asli kini termuat di DB lokal
-`moneychanger` (menggantikan 7 entri DTTOT uji).
+`moneychanger` (menggantikan 7 entri DTTOT uji). Gerbang sesudah `ba7bdb1`: `Tests 1846 passed | 6 skipped (1852)`, tsc 0, build,
+Playwright `58 passed`.
 **Penyesuaian surat (12 Nov sore, migrasi `0065`):** bentuk surat disamakan dengan laporan nihil pemilik 20 April
 2026 dan surat penghapusan 2020 (Google Drive pemilik): rujukan surat Densus + tanggal + perihal, alamat Trunojoyo,
 tembusan BI + PPATK, kota dari isian. Laporan penghapusan nihil ditolak selama ada blokir OPEN yang namanya sudah
