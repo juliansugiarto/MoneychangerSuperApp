@@ -197,8 +197,13 @@ pemilik 22 April 2025). Berita acara DPPSPM belum punya contoh resmi PPATK (liha
 `Dockerfile`, `deploy/vps/` (compose MySQL 8.4 + `web` + cadangan terenkripsi harian + uji pulih), `scripts/migrate.mjs`
 (migrator drizzle-orm tanpa drizzle-kit), `TRUST_PROXY`, Vite dimuat malas. Gladi di Mac lulus (lihat
 `docs/deployment/vps.md` §Gladi). `deploy.sh` + `deploy.yml` (pm2, server mati) dihapus — push ke `main` tidak lagi deploy.
-**Menunggu pemilik:** domain + Cloudflare + sertifikat Origin CA, dua bucket R2 (dokumen, cadangan), lalu pemasangan
-di VPS dan blok Caddy di tokoemas (`deploy/vps/caddy-site.caddy`) — langkah di `docs/deployment/vps.md`.
+**LIVE 12 Nov 2026 (±15.10 WIB)** dari cabang `deploy/docker-vps` (`bd2cb4f`+) di VPS tokoemas, `~/moneychanger`:
+`https://ibukotavalasindo.online` (publik, kurs nasabah) dan `https://backoffice.ibukotavalasindo.online` (staf).
+Pemilik menyelesaikan wizard penyiapan sendiri (1 akun pemilik, perusahaan "Ibukota Valasindo"); 67 migrasi; belum ada
+kurs aktif, nasabah, maupun transaksi. Cloudflare & Caddy: lihat `docs/deployment/vps.md`.
+**Belum:** (a) Caddy tokoemas permanen (override `compose.mc-edge.yaml` + `--force-recreate caddy`, SESUDAH toko tutup;
+sampai itu restart Caddy biasa menghilangkan situs money changer); (b) MX lama ke server mati (tanya pemilik); (c) R2
+dokumen + cadangan (cadangan sementara hanya lokal 7 malam); (d) desain ulang halaman publik (solvinc-design).
 
 **Berikutnya (urut):**
 (1) pasang di VPS begitu domain/R2 siap; (2) uji coba berdampingan dengan staf; (3) penyederhanaan layar
