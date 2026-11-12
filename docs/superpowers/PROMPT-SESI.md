@@ -182,6 +182,10 @@ BI), lima pengiriman. Gerbang: `Tests 1840 passed | 6 skipped (1846)`, tsc 0, bu
 **Menunggu pemilik:** dua lampiran surel BI 15 Okt 2026 — `DTTOT OKTOBER.xlsx` (uji pengimpor P-25) dan
 `Lamp 2_Form Berita Acara Pembukaan Pemblokiran DTTOT.docx` (berita acara pembukaan); konektor Gmail tidak bisa
 mengunduh lampiran, halaman PPATK kosong bagi peramban otomatis.
+**Penyesuaian surat (12 Nov sore, migrasi `0065`):** bentuk surat disamakan dengan laporan nihil pemilik 20 April
+2026 dan surat penghapusan 2020 (Google Drive pemilik): rujukan surat Densus + tanggal + perihal, alamat Trunojoyo,
+tembusan BI + PPATK, kota dari isian. Laporan penghapusan nihil ditolak selama ada blokir OPEN yang namanya sudah
+tidak ada di daftar. `0065` hanya di moneychanger, mc_t_abcvalas, mc_t_visual. Gerbang: `Tests 1844 passed | 6 skipped (1850)` (+4 uji DTTOT baru), tsc 0, build; spec Playwright `laporanDttot` lolos.
 
 **Berikutnya (urut):** (1) uji pengimpor P-25 + berita acara pembukaan begitu berkasnya ada; DPPSPM ke PPATK;
 (2) paket Docker ala tokoemas + cadangan terenkripsi ke R2 + `deploy.yml` baru; (3) penyederhanaan layar
