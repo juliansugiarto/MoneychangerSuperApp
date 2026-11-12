@@ -1461,7 +1461,8 @@ export const appRouter = router({
   dttotNotices: router({
     list: controllerProcedure.query(() => listDttotNotices()),
     create: controllerProcedure.input(z.object({
-      noticeType: z.enum(["PENCANTUMAN", "PERPANJANGAN", "PENGHAPUSAN"]),
+      listType: z.enum(["DTTOT", "DPPSPM"]).optional(),
+      noticeType: z.enum(["PENCANTUMAN", "PERPANJANGAN", "PENGHAPUSAN", "PEMBARUAN"]),
       policeLetterNumber: z.string().trim().min(5).max(120),
       listNumber: z.string().trim().max(120).optional(),
       receivedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

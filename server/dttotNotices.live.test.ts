@@ -88,4 +88,23 @@ describe("pemberitahuan DTTOT", () => {
       expect(row.reportPlace).toBe("Cianjur");
     });
   }, 60_000);
+
+  it("DPPSPM: jenis sesuai daftar, ditolak bila daftar DPPSPM belum ada, kecocokan dihitung terpisah dari DTTOT, tanpa langkah tembusan PPATK", async () => {
+    await inTenant(async () => {
+      const db = await databaseOrThrow();
+      await expect(createDttotNotice({ listType: "DPPSPM", noticeType: "PENCANTUMAN", policeLetterNumber: "KEP-UJI/PPATK/2026", receivedOn: "2026-11-12" }, controller)).rejects.toThrow(/tidak berlaku/);
+      const { id } = await createDttotNotice({ listType: "DPPSPM", noticeType: "PEMBARUAN", policeLetterNumber: "KEP-UJI/PPATK/2026", receivedOn: "2026-11-12" }, controller);
+      await expect(screenDttotNotice(id, controller)).rejects.toThrow(/DPPSPM belum diimpor/);
+
+      await createCustomer({ ...v1Fixtures.customer, cifNumber: "UJI-DPPSPM-1", identityNumber: "3174000000000202", fullName: "Kim Song Fiktif" } as never, controller.id);
+      await db.insert(sanctionsWatchlistEntries).values({ listType: "DPPSPM", sourceLabel: "DPRK", entityType: "INDIVIDUAL", referenceCode: "DPRKi.901", fullName: "Kim Song Fiktif", sourceFileName: "uji-dppspm.xlsx", importedByUserId: controller.id });
+      expect(await screenDttotNotice(id, controller)).toMatchObject({ matchedCustomerCount: 1 });
+      expect((await getDttotNoticeReport(id)).matched.map((row) => row.fullName)).toEqual(["Kim Song Fiktif"]);
+
+      await expect(recordDttotDelivery({ noticeId: id, step: "ppatkCopySentAt", at: new Date() }, controller)).rejects.toThrow(/tidak berlaku/);
+      await recordDttotDelivery({ noticeId: id, step: "policePhysicalSentAt", at: new Date() }, controller);
+      const row = (await db.select().from(dttotNotices).where(eq(dttotNotices.id, id)).limit(1))[0]!;
+      expect(row.listType).toBe("DPPSPM");
+    });
+  }, 60_000);
 });

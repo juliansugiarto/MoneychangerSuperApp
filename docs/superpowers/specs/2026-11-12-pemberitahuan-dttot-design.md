@@ -36,5 +36,12 @@ OPEN yang namanya sudah tidak ada di daftar (`staleOpenBlockCount`).
   datanya blokir `DICABUT` yang rujukan pencabutannya memuat nomor surat Densus pemberitahuan. Tembusan surat hanya
   Kepala Kantor Perwakilan BI (seperti formulir); PPATK lewat surel. Perihal surat penghapusan mengikuti formulir.
 
-## Sengaja belum
-- Daftar DPPSPM (laporan ke PPATK) menyusul dengan pola sama.
+## DPPSPM (12 November 2026, migrasi `0066`)
+- Satu layar untuk dua daftar: `dttot_notices.listType`. Contoh nyata satu-satunya: laporan nihil pemilik ke PPATK 22 April
+  2025 ("PPSM PT IBV 2025-2.pdf", diunduh dari surel terkirim atas izin pemilik). Bentuknya sama dengan nihil DTTOT, beda
+  penerima (Kepala PPATK c.q. Direktur Strategi dan Kerja Sama Dalam Negeri, Jl. Ir. H. Juanda 35), rujukan (Keputusan
+  Kepala PPATK, perihal "Pembaruan Daftar Pendanaan Proliferasi Senjata Pemusnah Massal"), dan nama daftar.
+- BI tidak pernah meneruskan pemberitahuan DPPSPM lewat surel (dicari di kotak masuk pemilik); pemicu dicatat manual.
+- Pemblokiran/pembukaan DPPSPM memakai bentuk berita acara DTTOT dengan penerima PPATK dan tanpa rujukan UU 9/2013
+  (khusus terorisme). Belum ada contoh resmi PPATK untuk berita acara DPPSPM — **perlu dicek bila suatu saat ada
+  kecocokan**. Alamat surel PPATK untuk pindaian tidak dicantumkan: yang dipakai pemilik April 2025 menolak (kotak penuh).

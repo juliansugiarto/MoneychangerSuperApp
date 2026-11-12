@@ -1,0 +1,2 @@
+ALTER TABLE `dttot_notices` MODIFY COLUMN `noticeType` enum('PENCANTUMAN','PERPANJANGAN','PENGHAPUSAN','PEMBARUAN') NOT NULL;--> statement-breakpoint
+ALTER TABLE `dttot_notices` ADD `listType` enum('DTTOT','DPPSPM') DEFAULT 'DTTOT' NOT NULL;

@@ -15,15 +15,25 @@ import type { AppRouter } from "../../../../server/routers";
 type Notice = inferRouterOutputs<AppRouter>["dttotNotices"]["list"][number];
 type Step = "policePhysicalSentAt" | "policeEmailSentAt" | "ppatkCopySentAt" | "biCopySentAt" | "biFormUploadedAt";
 
-export const NOTICE_TYPE_LABEL: Record<Notice["noticeType"], string> = { PENCANTUMAN: "Pencantuman", PERPANJANGAN: "Perpanjangan", PENGHAPUSAN: "Penghapusan" };
+export const NOTICE_TYPE_LABEL: Record<Notice["noticeType"], string> = { PENCANTUMAN: "Pencantuman", PERPANJANGAN: "Perpanjangan", PENGHAPUSAN: "Penghapusan", PEMBARUAN: "Pembaruan daftar" };
 
-const DELIVERIES: { step: Step; label: string }[] = [
-  { step: "policePhysicalSentAt", label: "Surat asli dikirim ke Densus 88 (Jl. Trunojoyo No. 3, Kebayoran Baru, Jakarta Selatan 12110)" },
-  { step: "policeEmailSentAt", label: "Pindaian dikirim ke dttot.report.4@gmail.com" },
-  { step: "ppatkCopySentAt", label: "Tembusan ke PPATK (dttot.report@ppatk.go.id)" },
-  { step: "biCopySentAt", label: "Tembusan ke pengawas Bank Indonesia" },
-  { step: "biFormUploadedAt", label: "Diunggah ke formulir BI \"Laporan Hasil Screening DTTOT dan PPPSPM\"" },
-];
+// Tata cara DTTOT: surel BI 7 Juli 2026. DPPSPM: laporan pemilik ke PPATK 22 April 2025 (alamat surel penerimanya
+// waktu itu penuh/ditolak, jadi tidak dicantumkan di sini) + formulir BI yang sama untuk kedua daftar.
+const DELIVERIES: Record<Notice["listType"], { step: Step; label: string }[]> = {
+  DTTOT: [
+    { step: "policePhysicalSentAt", label: "Surat asli dikirim ke Densus 88 (Jl. Trunojoyo No. 3, Kebayoran Baru, Jakarta Selatan 12110)" },
+    { step: "policeEmailSentAt", label: "Pindaian dikirim ke dttot.report.4@gmail.com" },
+    { step: "ppatkCopySentAt", label: "Tembusan ke PPATK (dttot.report@ppatk.go.id)" },
+    { step: "biCopySentAt", label: "Tembusan ke pengawas Bank Indonesia" },
+    { step: "biFormUploadedAt", label: "Diunggah ke formulir BI \"Laporan Hasil Screening DTTOT dan PPPSPM\"" },
+  ],
+  DPPSPM: [
+    { step: "policePhysicalSentAt", label: "Surat asli dikirim ke PPATK (Jl. Ir. H. Juanda No. 35, Jakarta Pusat 10120)" },
+    { step: "policeEmailSentAt", label: "Pindaian dikirim lewat surel ke PPATK" },
+    { step: "biCopySentAt", label: "Tembusan ke pengawas Bank Indonesia" },
+    { step: "biFormUploadedAt", label: "Diunggah ke formulir BI \"Laporan Hasil Screening DTTOT dan PPPSPM\"" },
+  ],
+};
 
 const shortDate = (value: Date | string) => new Date(value).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
 
@@ -41,6 +51,8 @@ export function NoticeCard({ notice, lastPlace }: { notice: Notice; lastPlace?: 
   const delivery = trpc.dttotNotices.recordDelivery.useMutation({ onSuccess: refresh, onError: (error) => toast.error(error.message) });
 
   const removal = notice.noticeType === "PENGHAPUSAN";
+  const list = notice.listType;
+  const deliveries = DELIVERIES[list];
   // Pada penghapusan, nasabah yang masih cocok tetap diblokir sah; yang dilaporkan adalah blokir yang harus dibuka.
   const matched = removal ? 0 : notice.matchedCustomerCount ?? 0;
   const removalState = trpc.dttotNotices.report.useQuery({ noticeId: notice.id }, { enabled: removal && Boolean(notice.screenedAt) });
@@ -48,12 +60,12 @@ export function NoticeCard({ notice, lastPlace }: { notice: Notice; lastPlace?: 
   const needsWitness = matched > 0 || unblocked > 0;
   const screened = Boolean(notice.screenedAt);
   const reportReady = report.reportNumber.trim() && place.trim().length >= 2 && report.signerName.trim().length >= 3 && report.signerPosition.trim().length >= 2;
-  const sentCount = DELIVERIES.filter(({ step }) => notice[step]).length;
+  const sentCount = deliveries.filter(({ step }) => notice[step]).length;
 
   const print = async () => {
     await saveReport.mutateAsync({ noticeId: notice.id, ...report, reportPlace: place.trim() });
     const signer = { name: report.signerName.trim(), position: report.signerPosition.trim() };
-    const police = { number: notice.policeLetterNumber, date: notice.policeLetterDate ? noonOf(notice.policeLetterDate) : null, kind: notice.noticeType };
+    const police = { number: notice.policeLetterNumber, date: notice.policeLetterDate ? noonOf(notice.policeLetterDate) : null, kind: notice.noticeType, list };
     const common = { company: { legalName: company.legalName, address: company.address }, reportNumber: report.reportNumber.trim(), place: place.trim(), reportDate: new Date(), signer, police };
     const screenedAt = new Date(notice.screenedAt!);
     if (removal) {
@@ -77,17 +89,17 @@ export function NoticeCard({ notice, lastPlace }: { notice: Notice; lastPlace?: 
   return <Card>
     <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2">
       <div>
-        <CardTitle className="text-base">{NOTICE_TYPE_LABEL[notice.noticeType]} · {notice.policeLetterNumber}</CardTitle>
+        <CardTitle className="text-base">{list} · {NOTICE_TYPE_LABEL[notice.noticeType]} · {notice.policeLetterNumber}</CardTitle>
         <p className="text-xs text-slate-600">{notice.policeLetterDate ? `Surat ${longDate(noonOf(notice.policeLetterDate))} · ` : ""}Diterima {longDayDate(noonOf(notice.receivedOn))}{notice.listNumber ? ` · Lampiran ${notice.listNumber}` : ""}</p>
       </div>
-      <Badge variant="outline" className={sentCount === DELIVERIES.length ? "status-approved" : "status-pending"}>{sentCount === DELIVERIES.length ? "Selesai dikirim" : `${sentCount} dari ${DELIVERIES.length} terkirim`}</Badge>
+      <Badge variant="outline" className={sentCount === deliveries.length ? "status-approved" : "status-pending"}>{sentCount === deliveries.length ? "Selesai dikirim" : `${sentCount} dari ${deliveries.length} terkirim`}</Badge>
     </CardHeader>
     <CardContent className="space-y-5 text-sm">
       <section>
         <h3 className="font-semibold">1. Saring seluruh nasabah</h3>
         {screened
-          ? <p className="mt-1">{shortDate(notice.screenedAt!)} · {notice.screenedCustomerCount} nasabah disaring · {matched ? <b className="text-rose-700">{matched} cocok DTTOT</b> : removal ? <b>{notice.matchedCustomerCount ?? 0} masih cocok DTTOT</b> : <b className="text-emerald-700">nihil</b>}</p>
-          : <p className="mt-1 text-slate-600">Impor dulu daftar terbaru dari surel BI di halaman Cek Daftar DTTOT/DPPSPM, lalu saring.</p>}
+          ? <p className="mt-1">{shortDate(notice.screenedAt!)} · {notice.screenedCustomerCount} nasabah disaring · {matched ? <b className="text-rose-700">{matched} cocok {list}</b> : removal ? <b>{notice.matchedCustomerCount ?? 0} masih cocok {list}</b> : <b className="text-emerald-700">nihil</b>}</p>
+          : <p className="mt-1 text-slate-600">Impor dulu daftar {list} terbaru di halaman Cek Daftar DTTOT/DPPSPM, lalu saring.</p>}
         <Button size="sm" variant="outline" className="mt-2" disabled={screen.isPending} onClick={() => screen.mutate({ noticeId: notice.id })}>{screen.isPending ? "Menyaring…" : screened ? "Saring ulang" : "Saring sekarang"}</Button>
         {matched ? <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-rose-800">Nasabah yang cocok sudah diblokir otomatis. Putuskan di halaman Pemblokiran, dan kirim LTKM ke PPATK paling lama 3 hari kerja.</p> : null}
       </section>
@@ -96,7 +108,7 @@ export function NoticeCard({ notice, lastPlace }: { notice: Notice; lastPlace?: 
         <h3 className="font-semibold">2. Cetak {removal ? (unblocked ? "Laporan Pembukaan Pemblokiran + Berita Acara" : "laporan penghapusan") : matched ? "Laporan Pemblokiran + Berita Acara" : "Laporan Nihil"}</h3>
         {removal ? <p className="mt-1 text-slate-600">
           {removalState.data?.staleBlocks ? <b className="text-rose-700">{removalState.data.staleBlocks} nasabah masih diblokir padahal namanya sudah tidak ada di daftar. </b> : null}
-          Nasabah yang dulu diblokir dan kini dihapus dari daftar: cabut blokirnya di halaman Pemblokiran dengan rujukan nomor surat ini. {unblocked ? `${unblocked} blokir sudah dicabut dengan surat ini.` : ""}
+          Nasabah yang dulu diblokir dan kini dihapus dari daftar: cabut blokirnya di halaman Pemblokiran dengan rujukan nomor {list === "DPPSPM" ? "keputusan" : "surat"} ini. {unblocked ? `${unblocked} blokir sudah dicabut dengan surat ini.` : ""}
         </p> : null}
         <div className="mt-2 grid gap-3 md:grid-cols-4">
           <div><Label htmlFor={`no-${notice.id}`}>Nomor surat</Label><Input id={`no-${notice.id}`} className="mt-1" value={report.reportNumber} onChange={(e) => setReport({ ...report, reportNumber: e.target.value })} placeholder="Mis. 001/DTTOT/XI/2026" /></div>
@@ -115,7 +127,7 @@ export function NoticeCard({ notice, lastPlace }: { notice: Notice; lastPlace?: 
       <section>
         <h3 className="font-semibold">3. Kirim laporan yang sudah ditandatangani</h3>
         <ul className="mt-2 space-y-2">
-          {DELIVERIES.map(({ step, label }) => <li key={step} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2">
+          {deliveries.map(({ step, label }) => <li key={step} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2">
             <span>{label}</span>
             {notice[step]
               ? <span className="flex items-center gap-2 text-emerald-700">Terkirim {shortDate(notice[step]!)} <Button size="sm" variant="ghost" disabled={delivery.isPending} onClick={() => delivery.mutate({ noticeId: notice.id, step, at: null })}>Batalkan</Button></span>

@@ -4,19 +4,35 @@ import { matchWatchlistEntries, MIN_SCREENABLE_NAME_LENGTH, rescreenAllCustomers
 import { databaseOrThrow, writeAudit } from "./operations";
 
 /**
- * Pemberitahuan DTTOT dari BI: catat → saring seluruh nasabah → cetak Laporan Nihil atau Berita Acara + Laporan
- * Pemblokiran → catat lima pengiriman. Rancangan: docs/superpowers/specs/2026-11-12-pemberitahuan-dttot-design.md.
+ * Pemberitahuan daftar DTTOT (surat Densus 88 lewat BI) dan DPPSPM (keputusan PPATK): catat → saring seluruh
+ * nasabah → cetak Laporan Nihil atau Berita Acara + Laporan Pemblokiran → catat pengiriman.
+ * Rancangan: docs/superpowers/specs/2026-11-12-pemberitahuan-dttot-design.md.
+ *
+ * Kolom pengiriman bernama menurut DTTOT; pada DPPSPM "police*" berarti PPATK (surat asli & pindaian ke PPATK) dan
+ * tembusan PPATK tidak berlaku karena laporannya memang ditujukan ke PPATK.
  */
 export const DTTOT_DELIVERY_STEPS = ["policePhysicalSentAt", "policeEmailSentAt", "ppatkCopySentAt", "biCopySentAt", "biFormUploadedAt"] as const;
 export type DttotDeliveryStep = (typeof DTTOT_DELIVERY_STEPS)[number];
+export type NoticeListType = "DTTOT" | "DPPSPM";
+export type NoticeType = "PENCANTUMAN" | "PERPANJANGAN" | "PENGHAPUSAN" | "PEMBARUAN";
+
+export const NOTICE_TYPES_BY_LIST: Record<NoticeListType, NoticeType[]> = {
+  DTTOT: ["PENCANTUMAN", "PERPANJANGAN", "PENGHAPUSAN"],
+  DPPSPM: ["PEMBARUAN", "PENGHAPUSAN"],
+};
+
+export function deliveryStepsFor(listType: NoticeListType): DttotDeliveryStep[] {
+  return listType === "DPPSPM" ? DTTOT_DELIVERY_STEPS.filter((step) => step !== "ppatkCopySentAt") : [...DTTOT_DELIVERY_STEPS];
+}
 
 export type DttotNoticeInput = {
-  noticeType: "PENCANTUMAN" | "PERPANJANGAN" | "PENGHAPUSAN";
+  listType?: NoticeListType;
+  noticeType: NoticeType;
   policeLetterNumber: string;
   listNumber?: string;
   /** YYYY-MM-DD, hari surel BI diterima (WIB). */
   receivedOn: string;
-  /** YYYY-MM-DD, tanggal pada surat Densus 88. */
+  /** YYYY-MM-DD, tanggal surat Densus 88 / keputusan PPATK. */
   policeLetterDate?: string;
   notes?: string;
 };
@@ -27,24 +43,26 @@ export async function listDttotNotices() {
 }
 
 export async function createDttotNotice(input: DttotNoticeInput, actor: { id: number }) {
+  const listType = input.listType ?? "DTTOT";
+  if (!NOTICE_TYPES_BY_LIST[listType].includes(input.noticeType)) throw new Error(`Jenis pemberitahuan ini tidak berlaku untuk daftar ${listType}.`);
   const policeLetterNumber = input.policeLetterNumber.trim();
-  if (policeLetterNumber.length < 5) throw new Error("Isi nomor surat Densus 88 dari surel BI.");
+  if (policeLetterNumber.length < 5) throw new Error(listType === "DPPSPM" ? "Isi nomor keputusan PPATK." : "Isi nomor surat Densus 88 dari surel BI.");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.receivedOn)) throw new Error("Tanggal diterima harus berbentuk YYYY-MM-DD.");
   if (input.policeLetterDate && !/^\d{4}-\d{2}-\d{2}$/.test(input.policeLetterDate)) throw new Error("Tanggal surat harus berbentuk YYYY-MM-DD.");
-  if (input.policeLetterDate && input.policeLetterDate > input.receivedOn) throw new Error("Tanggal surat Densus tidak boleh sesudah tanggal surel BI diterima.");
+  if (input.policeLetterDate && input.policeLetterDate > input.receivedOn) throw new Error("Tanggal surat tidak boleh sesudah tanggal pemberitahuan diterima.");
   const db = await databaseOrThrow();
   const [created] = await db.insert(dttotNotices).values({
-    noticeType: input.noticeType, policeLetterNumber, listNumber: input.listNumber?.trim() || null,
+    listType, noticeType: input.noticeType, policeLetterNumber, listNumber: input.listNumber?.trim() || null,
     receivedOn: input.receivedOn as never, policeLetterDate: (input.policeLetterDate || null) as never, notes: input.notes?.trim() || null, createdByUserId: actor.id,
   }).$returningId();
-  await writeAudit({ actorUserId: actor.id, action: "DTTOT_NOTICE_RECORDED", entityType: "dttot_notice", entityId: String(created!.id), afterState: { ...input, policeLetterNumber } });
+  await writeAudit({ actorUserId: actor.id, action: "DTTOT_NOTICE_RECORDED", entityType: "dttot_notice", entityId: String(created!.id), afterState: { ...input, listType, policeLetterNumber } });
   return { id: created!.id };
 }
 
-/** Nasabah hidup yang namanya cocok dengan entri daftar **DTTOT** saat ini (bukan DPPSPM). */
-export async function dttotMatchedCustomers() {
+/** Nasabah hidup yang namanya cocok dengan entri daftar yang diminta saat ini (DTTOT atau DPPSPM, tidak dicampur). */
+export async function dttotMatchedCustomers(listType: NoticeListType = "DTTOT") {
   const db = await databaseOrThrow();
-  const entries = await db.select().from(sanctionsWatchlistEntries).where(eq(sanctionsWatchlistEntries.listType, "DTTOT"));
+  const entries = await db.select().from(sanctionsWatchlistEntries).where(eq(sanctionsWatchlistEntries.listType, listType));
   const live = await db.select().from(customers).where(and(eq(customers.isDemo, false), eq(customers.isHistorical, false)));
   const matched = live.flatMap((customer) => {
     const name = customer.fullName?.trim() ?? "";
@@ -52,7 +70,7 @@ export async function dttotMatchedCustomers() {
     const matches = matchWatchlistEntries(name, entries);
     return matches.length ? [{ customer, matchedNames: matches.map((match) => match.fullName) }] : [];
   });
-  return { liveCount: live.length, matched };
+  return { liveCount: live.length, entryCount: entries.length, matched };
 }
 
 /**
@@ -62,10 +80,10 @@ export async function dttotMatchedCustomers() {
 export async function screenDttotNotice(noticeId: number, actor: { id: number }) {
   const db = await databaseOrThrow();
   const notice = (await db.select().from(dttotNotices).where(eq(dttotNotices.id, noticeId)).limit(1))[0];
-  if (!notice) throw new Error("Pemberitahuan DTTOT tidak ditemukan.");
+  if (!notice) throw new Error("Pemberitahuan tidak ditemukan.");
   const { listSnapshotAt } = await rescreenAllCustomers();
-  if (!listSnapshotAt) throw new Error("Daftar DTTOT belum diimpor. Impor daftar terbaru dari surel BI dulu.");
-  const { liveCount, matched } = await dttotMatchedCustomers();
+  const { liveCount, entryCount, matched } = await dttotMatchedCustomers(notice.listType);
+  if (!listSnapshotAt || !entryCount) throw new Error(`Daftar ${notice.listType} belum diimpor. Impor daftar terbaru dulu di halaman Cek Daftar DTTOT/DPPSPM.`);
   const screenedAt = new Date();
   await db.update(dttotNotices).set({ screenedAt, screenedCustomerCount: liveCount, matchedCustomerCount: matched.length }).where(eq(dttotNotices.id, noticeId));
   await writeAudit({
@@ -90,7 +108,8 @@ export async function recordDttotDelivery(input: { noticeId: number; step: Dttot
   if (input.at && input.at.getTime() > Date.now() + 15 * 60_000) throw new Error("Waktu pengiriman tidak boleh di masa depan.");
   const db = await databaseOrThrow();
   const notice = (await db.select().from(dttotNotices).where(eq(dttotNotices.id, input.noticeId)).limit(1))[0];
-  if (!notice) throw new Error("Pemberitahuan DTTOT tidak ditemukan.");
+  if (!notice) throw new Error("Pemberitahuan tidak ditemukan.");
+  if (!deliveryStepsFor(notice.listType).includes(input.step)) throw new Error("Langkah pengiriman ini tidak berlaku untuk daftar ini.");
   if (input.at && !notice.screenedAt) throw new Error("Saring seluruh nasabah dulu sebelum mencatat pengiriman laporan.");
   await db.update(dttotNotices).set({ [input.step]: input.at }).where(eq(dttotNotices.id, input.noticeId));
   await writeAudit({ actorUserId: actor.id, action: "DTTOT_NOTICE_DELIVERY_RECORDED", entityType: "dttot_notice", entityId: String(input.noticeId), beforeState: { [input.step]: notice[input.step] }, afterState: { [input.step]: input.at } });
@@ -116,8 +135,8 @@ export async function staleBlockCount() {
 export async function getDttotNoticeReport(noticeId: number) {
   const db = await databaseOrThrow();
   const notice = (await db.select().from(dttotNotices).where(eq(dttotNotices.id, noticeId)).limit(1))[0];
-  if (!notice) throw new Error("Pemberitahuan DTTOT tidak ditemukan.");
-  const { matched } = await dttotMatchedCustomers();
+  if (!notice) throw new Error("Pemberitahuan tidak ditemukan.");
+  const { matched } = await dttotMatchedCustomers(notice.listType);
   const removal = notice.noticeType === "PENGHAPUSAN";
   return {
     notice,

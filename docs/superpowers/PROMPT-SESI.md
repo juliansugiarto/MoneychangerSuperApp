@@ -189,7 +189,10 @@ Playwright `58 passed`.
 tembusan BI + PPATK, kota dari isian. Laporan penghapusan nihil ditolak selama ada blokir OPEN yang namanya sudah
 tidak ada di daftar. `0065` hanya di moneychanger, mc_t_abcvalas, mc_t_visual. Gerbang: `Tests 1844 passed | 6 skipped (1850)` (+4 uji DTTOT baru), tsc 0, build; spec Playwright `laporanDttot` lolos.
 
-**Berikutnya (urut):** (1) laporan DPPSPM ke PPATK (pola sama);
+**Laporan DPPSPM ke PPATK SELESAI** (migrasi `0066`, layar yang sama "Laporan DTTOT & DPPSPM"; bentuk dari laporan nihil
+pemilik 22 April 2025). Berita acara DPPSPM belum punya contoh resmi PPATK (lihat rancangan).
+
+**Berikutnya (urut):**
 (2) paket Docker ala tokoemas + cadangan terenkripsi ke R2 + `deploy.yml` baru; (3) penyederhanaan layar
 Kasir & transaksi (sub-proyek 4); (4) CSP `script-src` sesudah jendela cetak berhenti memakai skrip sebaris.
 

@@ -328,18 +328,20 @@ aplikasi; yang dicatat hanya rujukan dan tanggalnya. Tenggat tembusan **3 hari k
 (4) huruf d) **belum dihitung** karena kalender hari kerja belum ada; Kesiapan Operasional menampilkan
 jumlah blokir yang menunggu keputusan dan yang dikonfirmasi tetapi belum ditembuskan.
 
-### 5.12 Laporan DTTOT ke Densus 88 — Controller ke atas
+### 5.12 Laporan DTTOT & DPPSPM — Controller ke atas
 
-Setiap 1–3 bulan Bank Indonesia meneruskan surat Densus 88 beserta daftar DTTOT terbaru. Buka **Kepatuhan → Laporan DTTOT**.
+Setiap 1–3 bulan Bank Indonesia meneruskan surat Densus 88 beserta daftar DTTOT terbaru; sesekali PPATK menerbitkan keputusan pembaruan Daftar Pendanaan Proliferasi Senjata Pemusnah Massal (DPPSPM). Buka **Kepatuhan → Laporan DTTOT & DPPSPM**.
 
-1. **Catat pemberitahuan**: jenis (pencantuman, perpanjangan, atau penghapusan), nomor surat Densus 88, tanggal surat Densus (dirujuk di kalimat pembuka laporan; boleh kosong), nomor lampiran DTTOT, dan tanggal surel BI diterima. Tanggal surat tidak boleh sesudah tanggal surel diterima.
+- **DTTOT** dilaporkan ke **Densus 88**; **DPPSPM** dilaporkan ke **PPATK** (Kepala PPATK c.q. Direktur Strategi dan Kerja Sama Dalam Negeri, Jl. Ir. H. Juanda No. 35, Jakarta Pusat 10120), mengikuti laporan nihil yang pernah dikirim pemilik (22 April 2025). Pilih daftarnya saat mencatat; jenis, label, penerima surat, dan langkah kirim menyesuaikan.
+
+1. **Catat pemberitahuan**: daftar; jenis (DTTOT: pencantuman, perpanjangan, atau penghapusan; DPPSPM: pembaruan daftar atau penghapusan), nomor surat Densus 88, tanggal surat Densus (dirujuk di kalimat pembuka laporan; boleh kosong), nomor lampiran DTTOT, dan tanggal surel BI diterima. Tanggal surat tidak boleh sesudah tanggal surel diterima.
 2. **Impor daftar terbaru** di §5.10 lebih dulu, lalu tekan **Saring sekarang**. Seluruh nasabah aktif disaring; yang cocok langsung diblokir (§5.11). Hasilnya (waktu, jumlah nasabah disaring, jumlah yang cocok DTTOT) disimpan pada pemberitahuan itu.
 3. **Cetak laporan** (isi nomor surat, kota, penanda tangan, dan jabatan; kota diingat untuk pemberitahuan berikutnya):
    - Pencantuman/perpanjangan tanpa kecocokan → **Laporan Nihil atas Pemblokiran/Penolakan Transaksi Secara Serta Merta**.
    - Ada kecocokan → **Laporan Pemblokiran** + satu **Berita Acara Pemblokiran** per nasabah (isi nama dan jabatan saksi), lalu kirim LTKM ke PPATK paling lama 3 hari kerja.
    - Penghapusan → cabut dulu di §5.11 setiap blokir nasabah yang namanya dihapus, dengan **rujukan berisi nomor surat Densus** pemberitahuan ini. Lalu cetak: bila ada blokir yang dicabut dengan surat itu → **Laporan Pembukaan Pemblokiran** + satu **Berita Acara Pembukaan Pemblokiran** per nasabah (isi saksi; formulir "Lamp 2" BI, surel 15 Okt 2026); bila tidak ada → **Laporan atas Penghapusan Identitas** (nihil). Cetak **ditolak** selama masih ada blokir terbuka/dikonfirmasi yang nama nasabahnya sudah tidak ada di daftar mana pun.
    Bentuk surat mengikuti formulir BI dan laporan yang pernah diterima Densus (20 April 2026): rujukan surat Densus beserta tanggal dan perihalnya, alamat Jalan Trunojoyo No. 3, tembusan Kepala Kantor Perwakilan BI (PPATK menerima tembusan lewat surel, langkah 4). Tanggal dan jam selalu WIB.
-4. **Tandai lima pengiriman** sesudah surat ditandatangani: surat asli ke Densus 88, pindaian ke dttot.report.4@gmail.com, tembusan PPATK (dttot.report@ppatk.go.id), tembusan pengawas BI, dan unggah ke formulir BI. Pengiriman tidak bisa dicatat sebelum penyaringan, dan waktunya tidak boleh di masa depan. Aplikasi tidak mengirim apa pun sendiri.
+4. **Tandai pengiriman** sesudah surat ditandatangani. DTTOT (lima langkah): surat asli ke Densus 88, pindaian ke dttot.report.4@gmail.com, tembusan PPATK (dttot.report@ppatk.go.id), tembusan pengawas BI, unggah ke formulir BI. DPPSPM (empat langkah): surat asli ke PPATK, pindaian lewat surel ke PPATK, tembusan pengawas BI, unggah ke formulir BI yang sama. Penyaringan DPPSPM hanya menghitung kecocokan dengan daftar DPPSPM (dan sebaliknya). Pengiriman tidak bisa dicatat sebelum penyaringan, dan waktunya tidak boleh di masa depan. Aplikasi tidak mengirim apa pun sendiri.
 
 ## 6. Pelaporan dan Pengawasan
 

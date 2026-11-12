@@ -43,8 +43,24 @@ describe("laporan DTTOT ke Densus 88", () => {
     expect(html).toContain("Laporan Pembukaan Pemblokiran");
     expect(html).toContain("telah dilakukan\n  pembukaan pemblokiran seluruh aset/dana atas nama Muasih Fiktif, Nama Dua");
     expect(html.match(/PEMBUKAAN PEMBLOKIRAN<\/h3>/g)).toHaveLength(2);
-    expect(html).toContain("Indonesia Nomor R/7/III/RES.6.1./2026/Densus di hadapan saksi");
+    expect(html).toContain("berdasarkan Surat Kepala Kepolisian Negara Republik Indonesia");
+    expect(html).toContain("Nomor R/7/III/RES.6.1./2026/Densus di hadapan saksi");
     expect(html).not.toContain("PPATK");
+  });
+
+  it("DPPSPM: ditujukan ke PPATK, merujuk keputusan Kepala PPATK, menyebut daftar proliferasi (Laporan Nihil pemilik 22 April 2025)", () => {
+    const ppatk = { number: "KEP-55/1.02/PPATK/03/2025", date: new Date("2025-03-26T12:00:00Z"), kind: "PEMBARUAN" as const, list: "DPPSPM" as const };
+    const html = buildLaporanNihilHtml({ company, reportNumber: "02/IBV/IV/2025", place: "Cianjur", reportDate: at, screenedAt: at, signer, police: ppatk });
+    expect(html).toContain("Kepala Pusat Pelaporan dan Analisis Transaksi Keuangan<br>c.q. Direktur Strategi dan Kerja Sama Dalam Negeri<br>Jl. Ir. H. Juanda No. 35");
+    expect(html).toContain("Merujuk Keputusan Kepala Pusat Pelaporan dan Analisis Transaksi Keuangan No. KEP-55/1.02/PPATK/03/2025 tanggal 26 Maret 2025 perihal Pembaruan Daftar Pendanaan Proliferasi Senjata Pemusnah Massal");
+    expect(html).toContain("tercantum dalam Daftar Pendanaan Proliferasi Senjata Pemusnah Massal di penyelenggara atau NIHIL");
+    expect(html).not.toContain("Densus");
+    expect(html).not.toContain("Kepolisian");
+
+    const blocked = buildLaporanPemblokiranHtml({ company, reportNumber: "3", place: "Cianjur", reportDate: at, blockedAt: at, signer, police: ppatk,
+      witness: { name: "Saksi Uji", position: "Petugas" }, listNumber: "—", matched: [{ fullName: "Nama Uji" }] });
+    expect(blocked).not.toContain("Undang-Undang Nomor 9 Tahun 2013");
+    expect(blocked).toContain("atas DPPSPM Nomor");
   });
 
   it("kota kepala surat diambil dari bagian terakhir alamat", () => {

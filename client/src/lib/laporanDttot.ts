@@ -34,23 +34,43 @@ export function longDate(at: Date): string {
 
 const birthDate = (value: DttotMatchedCustomer["dateOfBirth"]) => (value ? longDate(new Date(value)) : "—");
 
-export type DttotNoticeKind = "PENCANTUMAN" | "PERPANJANGAN" | "PENGHAPUSAN";
-/** Surat Densus 88 yang dirujuk di kalimat pembuka. `date` = tanggal surat (bukan tanggal surel BI), boleh kosong. */
-export type DttotPoliceLetter = { number: string; date?: Date | null; kind: DttotNoticeKind };
+export type DttotNoticeKind = "PENCANTUMAN" | "PERPANJANGAN" | "PENGHAPUSAN" | "PEMBARUAN";
+export type NoticeList = "DTTOT" | "DPPSPM";
+/**
+ * Surat yang dirujuk di kalimat pembuka: surat Densus 88 (DTTOT) atau keputusan Kepala PPATK (DPPSPM).
+ * `date` = tanggal surat/keputusan (bukan tanggal surel diterima), boleh kosong.
+ */
+export type DttotPoliceLetter = { number: string; date?: Date | null; kind: DttotNoticeKind; list?: NoticeList };
 
-/** Perihal surat Densus menurut jenisnya, seperti tertulis di formulir BI dan surat yang pernah diterima. */
-export function policeLetterSubject(kind: DttotNoticeKind): string {
+// DTTOT: formulir BI (lampiran surel 15 Okt 2026) dan Laporan Nihil pemilik 20 April 2026.
+// DPPSPM: Laporan Nihil pemilik ke PPATK 22 April 2025 ("PPSM PT IBV 2025-2.pdf").
+// Tembusan surat hanya Kepala Kantor Perwakilan BI; tembusan PPATK atas laporan DTTOT dikirim lewat surel.
+const AUTHORITY: Record<NoticeList, { issuer: string; listName: string; recipient: string }> = {
+  DTTOT: {
+    issuer: "Surat Kepala Kepolisian Negara Republik Indonesia",
+    listName: "Daftar Terduga Teroris dan Organisasi Teroris",
+    recipient: "Kepala Kepolisian Negara Republik Indonesia<br>c.q. Kepala Densus 88 Kepolisian Negara Republik Indonesia<br>Jalan Trunojoyo No. 3, Kebayoran Baru<br>Jakarta 12110",
+  },
+  DPPSPM: {
+    issuer: "Keputusan Kepala Pusat Pelaporan dan Analisis Transaksi Keuangan",
+    listName: "Daftar Pendanaan Proliferasi Senjata Pemusnah Massal",
+    recipient: "Kepala Pusat Pelaporan dan Analisis Transaksi Keuangan<br>c.q. Direktur Strategi dan Kerja Sama Dalam Negeri<br>Jl. Ir. H. Juanda No. 35<br>Jakarta Pusat 10120",
+  },
+};
+const authorityOf = (letter: DttotPoliceLetter) => AUTHORITY[letter.list ?? "DTTOT"];
+
+/** Perihal surat yang dirujuk menurut daftar dan jenisnya, seperti tertulis di formulir BI dan surat yang pernah diterima. */
+export function policeLetterSubject(kind: DttotNoticeKind, list: NoticeList = "DTTOT"): string {
+  if (list === "DPPSPM") return kind === "PENGHAPUSAN" ? `Penghapusan dari ${AUTHORITY.DPPSPM.listName}` : `Pembaruan ${AUTHORITY.DPPSPM.listName}`;
   return kind === "PENGHAPUSAN"
     ? "Penghapusan Identitas Orang dan Entitas dari Daftar Terduga Teroris dan Organisasi Teroris"
     : "Bantuan untuk Melakukan Pemblokiran terhadap Dana yang Dimiliki oleh Terduga Teroris dan Organisasi Teroris";
 }
 
 const policeReference = (letter: DttotPoliceLetter) =>
-  `Kepala Kepolisian Negara Republik Indonesia No. ${esc(letter.number)}${letter.date ? ` tanggal ${esc(longDate(letter.date))}` : ""} perihal ${esc(policeLetterSubject(letter.kind))}`;
+  `${authorityOf(letter).issuer} No. ${esc(letter.number)}${letter.date ? ` tanggal ${esc(longDate(letter.date))}` : ""} perihal ${esc(policeLetterSubject(letter.kind, letter.list))}`;
 
-// Alamat dan tembusan mengikuti formulir BI (Lampiran surel 15 Okt 2026) dan Laporan Nihil pemilik 20 April 2026.
-// PPATK menerima tembusan lewat surel (langkah pengiriman), bukan di daftar tembusan surat.
-const recipient = `<p>Kepada Yth.<br>Kepala Kepolisian Negara Republik Indonesia<br>c.q. Kepala Densus 88 Kepolisian Negara Republik Indonesia<br>Jalan Trunojoyo No. 3, Kebayoran Baru<br>Jakarta 12110</p><p>Dengan hormat,</p>`;
+const recipient = (letter: DttotPoliceLetter) => `<p>Kepada Yth.<br>${authorityOf(letter).recipient}</p><p>Dengan hormat,</p>`;
 
 const copies = `<div class="tembusan">Tembusan Yth.<br>Kepala Kantor Perwakilan Bank Indonesia yang mewilayahi</div>`;
 
@@ -62,7 +82,7 @@ const letterHead = (input: LetterInput, subject: string, attachment: string) => 
   <table class="kepala"><tr><td>Nomor</td><td>: ${esc(input.reportNumber)}</td></tr>
   <tr><td>Lamp</td><td>: ${esc(attachment)}</td></tr>
   <tr><td>Perihal</td><td>: <u>${esc(subject)}</u></td></tr></table>
-  ${recipient}`;
+  ${recipient(input.police)}`;
 
 const signature = (company: DttotReportCompany, signer: DttotReportSigner) =>
   `<div class="ttd"><div>Hormat kami,</div><div>${esc(company.legalName)}</div><div class="ruang"></div><div><b><u>${esc(signer.name)}</u></b></div><div>${esc(signer.position)}</div></div>`;
@@ -75,18 +95,19 @@ const asOf = (at: Date) => `${esc(longDayDate(at))} pukul ${esc(clockWib(at))}`;
 /** Lampiran III — Laporan Nihil atas Pemblokiran Secara Serta Merta (pencantuman/perpanjangan). */
 export function buildLaporanNihilHtml(input: LetterInput & { screenedAt: Date }): string {
   return `${letterHead(input, "Laporan Nihil atas Pemblokiran/Penolakan Transaksi Secara Serta Merta", "—")}
-  <p>Merujuk Surat ${policeReference(input.police)}, dengan ini kami laporkan bahwa sampai dengan ${asOf(input.screenedAt)} tidak
+  <p>Merujuk ${policeReference(input.police)}, dengan ini kami laporkan bahwa sampai dengan ${asOf(input.screenedAt)} tidak
   terdapat kesesuaian identitas orang atau korporasi yang terdapat dalam <i>database</i> dengan identitas orang atau korporasi
-  yang tercantum dalam Daftar Terduga Teroris dan Organisasi Teroris di penyelenggara atau NIHIL.</p>
+  yang tercantum dalam ${authorityOf(input.police).listName} di penyelenggara atau NIHIL.</p>
   ${closing(input)}`;
 }
 
 /** Laporan atas pemberitahuan penghapusan bila tidak ada blokir yang perlu dibuka. */
 export function buildLaporanPenghapusanNihilHtml(input: LetterInput & { screenedAt: Date }): string {
-  return `${letterHead(input, "Laporan atas Penghapusan Identitas dari Daftar Terduga Teroris dan Organisasi Teroris", "—")}
-  <p>Merujuk Surat ${policeReference(input.police)}, dengan ini kami laporkan bahwa sampai dengan ${asOf(input.screenedAt)} tidak
-  terdapat rekening, aset, atau dana yang kami blokir atas nama orang atau korporasi yang dihapus dari Daftar Terduga Teroris
-  dan Organisasi Teroris, sehingga tidak ada pemblokiran yang perlu dibuka (NIHIL).</p>
+  const { listName } = authorityOf(input.police);
+  return `${letterHead(input, `Laporan atas Penghapusan Identitas dari ${listName}`, "—")}
+  <p>Merujuk ${policeReference(input.police)}, dengan ini kami laporkan bahwa sampai dengan ${asOf(input.screenedAt)} tidak
+  terdapat rekening, aset, atau dana yang kami blokir atas nama orang atau korporasi yang dihapus dari ${listName},
+  sehingga tidak ada pemblokiran yang perlu dibuka (NIHIL).</p>
   ${closing(input)}`;
 }
 
@@ -94,8 +115,8 @@ export function buildLaporanPenghapusanNihilHtml(input: LetterInput & { screened
 export function buildLaporanPemblokiranHtml(input: LetterInput & { blockedAt: Date; witness: DttotReportSigner; listNumber: string; matched: DttotMatchedCustomer[] }): string {
   const names = input.matched.map((row) => row.fullName).join(", ");
   const cover = `${letterHead(input, "Laporan Pemblokiran Secara Serta Merta", `${input.matched.length} berkas berita acara`)}
-  <p>Merujuk Surat ${policeReference(input.police)}, dan menunjuk Pasal 28 ayat (3) Undang-Undang Nomor 9 Tahun 2013 tentang
-  Pencegahan dan Pemberantasan Tindak Pidana Pendanaan Terorisme, dengan ini kami laporkan bahwa pada hari ${asOf(input.blockedAt)}
+  <p>Merujuk ${policeReference(input.police)}${(input.police.list ?? "DTTOT") === "DTTOT" ? `, dan menunjuk Pasal 28 ayat (3) Undang-Undang Nomor 9 Tahun 2013 tentang
+  Pencegahan dan Pemberantasan Tindak Pidana Pendanaan Terorisme` : ""}, dengan ini kami laporkan bahwa pada hari ${asOf(input.blockedAt)}
   telah dilakukan pemblokiran secara serta merta seluruh rekening atau aset/dana atas nama ${esc(names)}, sebagaimana berita
   acara terlampir.</p>
   ${closing(input)}`;
@@ -105,8 +126,8 @@ export function buildLaporanPemblokiranHtml(input: LetterInput & { blockedAt: Da
     <p>Yang bertandatangan di bawah ini:</p>
     <table class="isi"><tr><td>Nama</td><td>: ${esc(input.signer.name)}</td></tr><tr><td>Jabatan</td><td>: ${esc(input.signer.position)}</td></tr><tr><td>Alamat</td><td>: ${esc(input.company.address)}</td></tr></table>
     <p>dalam hal ini bertindak untuk dan atas nama ${esc(input.company.legalName)}, dengan ini menyatakan bahwa pada hari ini
-    ${asOf(input.blockedAt)} telah melakukan pemblokiran secara serta merta berdasarkan Surat ${policeReference(input.police)}
-    atas DTTOT Nomor ${esc(input.listNumber)} di hadapan saksi:</p>
+    ${asOf(input.blockedAt)} telah melakukan pemblokiran secara serta merta berdasarkan ${policeReference(input.police)}
+    atas ${input.police.list ?? "DTTOT"} Nomor ${esc(input.listNumber)} di hadapan saksi:</p>
     <table class="isi"><tr><td>Nama</td><td>: ${esc(input.witness.name)}</td></tr><tr><td>Jabatan</td><td>: ${esc(input.witness.position)}</td></tr></table>
     <p>terhadap rekening/aset/Dana yang dimiliki atau dikuasai oleh Pengguna Jasa sebagai berikut:</p>
     <table class="isi"><tr><td>Nama</td><td>: ${esc(row.fullName)}</td></tr><tr><td>Tempat, Tanggal Lahir</td><td>: ${esc(row.placeOfBirth)}, ${esc(birthDate(row.dateOfBirth))}</td></tr>
@@ -124,7 +145,7 @@ export function buildLaporanPembukaanHtml(input: LetterInput & { witness: DttotR
   const names = input.unblocked.map((row) => row.fullName).join(", ");
   const latest = new Date(Math.max(...input.unblocked.map((row) => row.unblockedAt.getTime())));
   const cover = `${letterHead(input, "Laporan Pembukaan Pemblokiran", `${input.unblocked.length} berkas berita acara`)}
-  <p>Merujuk Surat ${policeReference(input.police)}, dengan ini kami laporkan bahwa pada ${asOf(latest)} telah dilakukan
+  <p>Merujuk ${policeReference(input.police)}, dengan ini kami laporkan bahwa pada ${asOf(latest)} telah dilakukan
   pembukaan pemblokiran seluruh aset/dana atas nama ${esc(names)}, nihil (KUPVA tidak menyimpan aset atau dana nasabah),
   sebagaimana berita acara terlampir.</p>
   <p>Demikian kami sampaikan, atas perhatian dan kerjasamanya kami ucapkan terima kasih.</p>
@@ -135,8 +156,8 @@ export function buildLaporanPembukaanHtml(input: LetterInput & { witness: DttotR
     <p>Yang bertandatangan di bawah ini:</p>
     <table class="isi"><tr><td>Nama</td><td>: ${esc(input.signer.name)}</td></tr><tr><td>Jabatan</td><td>: ${esc(input.signer.position)}</td></tr><tr><td>Alamat</td><td>: ${esc(input.company.address)}</td></tr></table>
     <p>dalam hal ini bertindak untuk dan atas nama ${esc(input.company.legalName)}, dengan ini menyatakan bahwa pada hari ini
-    ${asOf(row.unblockedAt)} telah melakukan pembukaan pemblokiran berdasarkan Surat Kepala Kepolisian Negara Republik
-    Indonesia Nomor ${esc(input.police.number)} di hadapan saksi:</p>
+    ${asOf(row.unblockedAt)} telah melakukan pembukaan pemblokiran berdasarkan ${authorityOf(input.police).issuer}
+    Nomor ${esc(input.police.number)} di hadapan saksi:</p>
     <table class="isi"><tr><td>Nama</td><td>: ${esc(input.witness.name)}</td></tr><tr><td>Jabatan</td><td>: ${esc(input.witness.position)}</td></tr></table>
     <p>terhadap aset/dana yang dimiliki atau dikuasai oleh Pengguna Jasa sebagai berikut:</p>
     <table class="isi"><tr><td>Nama</td><td>: ${esc(row.fullName)}</td></tr><tr><td>Tempat, Tanggal Lahir</td><td>: ${esc(row.placeOfBirth)}, ${esc(birthDate(row.dateOfBirth))}</td></tr>

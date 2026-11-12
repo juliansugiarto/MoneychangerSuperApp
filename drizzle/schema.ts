@@ -558,7 +558,10 @@ export const operationalExpenses = mysqlTable("operational_expenses", {
  */
 export const dttotNotices = mysqlTable("dttot_notices", {
   id: int("id").autoincrement().primaryKey(),
-  noticeType: mysqlEnum("noticeType", ["PENCANTUMAN", "PERPANJANGAN", "PENGHAPUSAN"]).notNull(),
+  /** Daftar yang diberitahukan: DTTOT (surat Densus 88, lapor ke Densus) atau DPPSPM (keputusan PPATK, lapor ke PPATK). Nama tabel tetap `dttot_notices`. */
+  listType: mysqlEnum("listType", ["DTTOT", "DPPSPM"]).default("DTTOT").notNull(),
+  /** PEMBARUAN = "Pembaruan Daftar" DPPSPM oleh PPATK. */
+  noticeType: mysqlEnum("noticeType", ["PENCANTUMAN", "PERPANJANGAN", "PENGHAPUSAN", "PEMBARUAN"]).notNull(),
   policeLetterNumber: varchar("policeLetterNumber", { length: 120 }).notNull(),
   listNumber: varchar("listNumber", { length: 120 }),
   receivedOn: date("receivedOn").notNull(),

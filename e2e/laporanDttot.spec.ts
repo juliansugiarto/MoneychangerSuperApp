@@ -4,7 +4,7 @@ import { expect, test } from "./fixtures";
 import { v1Fixtures } from "../server/v1Fixtures";
 
 /**
- * Laporan DTTOT ke Densus 88 lewat layar, sebagai Controller, di `mc_t_visual` (tidak pernah moneychanger/produksi).
+ * Laporan DTTOT (ke Densus 88) dan DPPSPM (ke PPATK) lewat layar, sebagai Controller, di `mc_t_visual` (tidak pernah moneychanger/produksi).
  * Daftar DTTOT sintetis disisipkan langsung bila belum ada, karena impor berkas BI bukan bagian alur yang diuji di sini.
  */
 test.beforeAll(async () => {
@@ -25,7 +25,7 @@ test("Controller mencatat pemberitahuan, menyaring, mencetak laporan nihil, dan 
   expect(created.ok()).toBe(true);
 
   await page.goto("/kepatuhan/laporan-dttot");
-  await expect(page.getByRole("heading", { name: "Laporan DTTOT ke Densus 88" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Laporan DTTOT & DPPSPM" })).toBeVisible();
   const card = page.locator("[data-slot=card]", { hasText: letter });
   await expect(card.getByText("Diterima Kamis, 15 Oktober 2026", { exact: false })).toBeVisible();
   await card.getByRole("button", { name: "Saring sekarang" }).click();
@@ -98,4 +98,44 @@ test("Penghapusan: blokir yang dicabut dengan surat Densus tercetak sebagai Beri
   await expect(report.getByText(name, { exact: false }).first()).toBeVisible();
   await report.screenshot({ path: "test-results/laporan-pembukaan.png", fullPage: true });
   await report.close();
+});
+
+test("DPPSPM: dicatat lewat formulir, disaring, laporan nihil ditujukan ke PPATK dengan empat langkah kirim", async ({ signedInPage: page }) => {
+  const connection = await createConnection({ uri: "mysql://root@127.0.0.1:3306/mc_t_visual" });
+  try {
+    const [rows] = await connection.query("SELECT COUNT(*) AS n FROM sanctions_watchlist_entries WHERE listType = 'DPPSPM'");
+    if (Number((rows as { n: number }[])[0]?.n ?? 0) === 0) {
+      await connection.query("INSERT INTO sanctions_watchlist_entries (listType, sourceLabel, entityType, referenceCode, fullName, sourceFileName, importedByUserId) VALUES ('DPPSPM', 'DPRK', 'INDIVIDUAL', 'DPRKi.E2E', 'Nama Fiktif Proliferasi Uji', 'e2e-dppspm.xlsx', 1)");
+    }
+  } finally {
+    await connection.end();
+  }
+  const decision = `KEP-E2E-${Date.now()}/PPATK/2026`;
+  await page.goto("/kepatuhan/laporan-dttot");
+  await page.getByLabel("Daftar", { exact: true }).selectOption("DPPSPM");
+  await expect(page.getByLabel("Jenis", { exact: true })).toHaveValue("PEMBARUAN");
+  await page.getByLabel("Nomor keputusan PPATK").fill(decision);
+  await page.getByLabel("Tanggal keputusan PPATK").fill("2026-09-10");
+  await page.getByLabel("Diterima", { exact: true }).fill("2026-09-12");
+  await page.getByRole("button", { name: "Catat pemberitahuan" }).click();
+
+  const card = page.locator("[data-slot=card]", { hasText: decision });
+  await expect(card.getByText(`DPPSPM · Pembaruan daftar · ${decision}`)).toBeVisible();
+  await card.getByRole("button", { name: "Saring sekarang" }).click();
+  await expect(card.getByText("nihil", { exact: true })).toBeVisible();
+  await expect(card.getByRole("button", { name: "Tandai terkirim" })).toHaveCount(4);
+  await expect(card.getByText("Surat asli dikirim ke PPATK", { exact: false })).toBeVisible();
+
+  await card.getByLabel("Nomor surat").fill("02/IBV/IX/2026");
+  await card.getByLabel("Kota").fill("Cianjur");
+  await card.getByLabel("Ditandatangani").fill("Direktur Uji");
+  await card.getByLabel("Jabatan", { exact: true }).fill("Direktur Utama");
+  const [report] = await Promise.all([page.waitForEvent("popup"), card.getByRole("button", { name: "Cetak laporan" }).click()]);
+  await expect(report.getByText("c.q. Direktur Strategi dan Kerja Sama Dalam Negeri", { exact: false })).toBeVisible();
+  await expect(report.getByText("Daftar Pendanaan Proliferasi Senjata Pemusnah Massal di penyelenggara atau NIHIL", { exact: false })).toBeVisible();
+  await report.screenshot({ path: "test-results/laporan-nihil-dppspm.png", fullPage: true });
+  await report.close();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await card.screenshot({ path: "test-results/laporan-dppspm-390.png" });
 });
