@@ -99,6 +99,10 @@ menyebutnya celah ke pemilik): ambang USD 10.000 hanya pembelian + `>` (`b0fd469
    `sh scripts/r2-cadangan-isi.sh` → tempel Access Key ID + Secret dari tab Cloudflare (tersembunyi) → harus muncul
    `[cadangan] terkirim ke r2:ibv-backup`. Claude tidak menyalin kunci rahasia sendiri (batas keamanan).
 3. **Kata sandi cadangan ke Keychain Mac** — ikut skrip yang sama (layanan "IBV cadangan").
+3b. **Salinan kedua di Mac** — `scripts/cadangan-tarik-mac.sh` menarik cadangan terenkripsi terbaru ke
+   `~/Backups/ibukotavalasindo/` dan memeriksa sha256 kedua sisi; dijalankan Claude 12 Nov (OK,
+   `moneychanger-20261112T105416Z`, sha256 sama). Jadwal harian ditolak pengklasifikasi untuk Claude ("persistence") →
+   pemilik sekali: `sh scripts/cadangan-tarik-pasang.sh` (launchd 02.30).
 4. **Isi Profil Perusahaan** (telepon, alamat, nomor izin + kode KUPVA, jadwal buka, WhatsApp, peta), **buat akun staf**,
    **Kurs → Atur urutan**, aktifkan kurs pertama, kas awal, satu-dua bon di mode **Latihan** sebelum nasabah sungguhan.
 
