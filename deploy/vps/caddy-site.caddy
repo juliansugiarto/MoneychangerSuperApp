@@ -1,18 +1,29 @@
-# Blok situs untuk Caddyfile.cloudflare TOKOEMAS (repo tokoemas-superapp, deploy/vps/). Bukan berkas Caddy tumpukan ini.
-# Ditempel oleh sesi/pemilik tokoemas, lalu: docker compose up -d --force-recreate caddy (di /opt/tokoemas/deploy/vps).
-# Butuh: domain di Cloudflare (awan oranye, SSL Full strict) + sertifikat Origin CA domain ini di certs/mc-origin.{pem,key}.
-# Ganti DOMAIN-MONEYCHANGER dengan domainnya saat menempel; perusahaan lain: moneychanger-web → <COMPOSE_PROJECT_NAME>-web. Daftar IP Cloudflare = daftar di blok tokoemas.
+# Blok situs money changer untuk Caddy TOKOEMAS (bukan berkas Caddy tumpukan ini). Dimuat lewat Caddyfile.mc
+# (lihat docs/deployment/vps.md: tokoemas tetap memakai Caddyfile.cloudflare-nya sendiri tanpa diubah).
+# Butuh: zona di Cloudflare (awan oranye, SSL Full strict) + sertifikat Origin CA untuk apex dan *.domain di
+# certs/mc-origin.{pem,key}. Daftar IP Cloudflare = daftar di Caddyfile.cloudflare tokoemas (perbarui bersama).
+# Perusahaan lain: ganti domain dan moneychanger-web → <COMPOSE_PROJECT_NAME>-web.
 
-DOMAIN-MONEYCHANGER {
-	tls /etc/caddy/certs/mc-origin.pem /etc/caddy/certs/mc-origin.key
+(mc_cloudflare_only) {
 	@not_cloudflare not remote_ip 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
 	abort @not_cloudflare
+}
+
+www.ibukotavalasindo.online {
+	tls /etc/caddy/certs/mc-origin.pem /etc/caddy/certs/mc-origin.key
+	import mc_cloudflare_only
+	redir https://ibukotavalasindo.online{uri} permanent
+}
+
+ibukotavalasindo.online, backoffice.ibukotavalasindo.online {
+	tls /etc/caddy/certs/mc-origin.pem /etc/caddy/certs/mc-origin.key
+	import mc_cloudflare_only
 	encode zstd gzip
 	header Strict-Transport-Security "max-age=31536000"
 	# Sinkron kurs BI hanya dipanggil dari dalam server, tidak dari internet.
 	@scheduled path /api/scheduled/*
 	respond @scheduled 404
-	# Satu nilai X-Forwarded-For (IP pengunjung asli); aplikasi mempercayai Caddy lewat TRUST_PROXY.
+	# Satu nilai X-Forwarded-For (IP pengunjung asli); aplikasi hanya mempercayai alamat Caddy (TRUST_PROXY).
 	reverse_proxy moneychanger-web:3000 {
 		header_up X-Forwarded-For {client_ip}
 		header_up X-Forwarded-Host {host}

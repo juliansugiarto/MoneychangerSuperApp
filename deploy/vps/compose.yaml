@@ -11,6 +11,9 @@ x-app-env: &app-env
   # Kata sandi hanya heksadesimal (init-env.sh), jadi aman di dalam URL.
   DATABASE_URL: mysql://moneychanger_app:${DB_APP_PASSWORD:?}@mysql:3306/moneychanger
   JWT_SECRET: ${JWT_SECRET:?}
+  # Alamat publik (halaman kurs nasabah) dan back office (staf); server/hostSplit.ts.
+  PUBLIC_HOST: ${PUBLIC_HOST:-}
+  BACKOFFICE_HOST: ${BACKOFFICE_HOST:-}
   CRON_SECRET: ${CRON_SECRET:?}
   # Hanya Caddy tokoemas (alamat tetap di jaringan mc_edge) yang dipercaya mengisi X-Forwarded-For; ia mengganti header
   # itu dengan satu nilai (IP pengunjung asli). Kontainer lain di mc_edge tidak bisa memalsukan IP.

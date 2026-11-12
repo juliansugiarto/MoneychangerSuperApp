@@ -18,6 +18,7 @@ import { resolveTenant } from "../tenantRegistry";
 import { serveStatic, setupVite } from "./vite";
 import { isRoleAllowed } from "../../shared/backOfficeNavigation";
 import { configureProxyTrust } from "../proxyTrust";
+import { hostSplitMiddleware } from "../hostSplit";
 import { getDb } from "../db";
 import { assertUtcSession } from "../utcSession";
 import { ENV } from "./env";
@@ -46,6 +47,8 @@ async function startServer() {
   const app = express();
   configureProxyTrust(app);
   app.use(securityHeaders({ isProduction: ENV.isProduction }));
+  // Alamat publik vs back office (PUBLIC_HOST/BACKOFFICE_HOST); tanpa keduanya tidak berbuat apa-apa.
+  app.use(hostSplitMiddleware());
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
