@@ -160,9 +160,15 @@ belakang Caddy tokoemas; `ibukotavalasindo.online` masih menunjuk IP lama. **Pus
 
 **Keputusan 12 November** (`docs/decisions/2026-11-12-pembalikan-bon-dan-pembulatan.md`): pembalikan bon
 COMPLETED oleh CONTROLLER ke atas; tanpa fitur kembalian, total sulit dibulatkan ke atas (bawaan Rp 100).
-**Celah regulasi baru (PADG 15/2025, SE 18/42 IV.L)**: laporan pemblokiran/nihil DTTOT ke Kepolisian dan
-DPPSPM ke PPATK; pernyataan tertulis nasabah "belum melebihi USD 25.000 bulan ini" untuk pembelian UKA di
-bawah ambang. Lihat memori `kupva-regulation-2026`.
+**Celah regulasi (diperiksa ulang 12 November, termasuk surel BI di kotak masuk pemilik):**
+(a) ambang underlying **sudah USD 10.000** di aplikasi (benar, PADG 15/2026 sejak 1 Jul 2026), TETAPI akumulasi
+bulanan di `createTransaction` menjumlah BELI dan JUAL — aturan hanya menghitung pembelian valas oleh nasabah
+(operasi SELL kita); juga "di atas" ambang = `>` bukan `>=`;
+(b) surat pernyataan nasabah "pembelian bulan ini belum melebihi ambang" untuk pembelian di bawah ambang belum ada;
+(c) alur DTTOT per surel BI (±tiap 1–3 bulan): buat Laporan Nihil / Berita Acara Pemblokiran / Berita Acara
+Pembukaan Pemblokiran dari formulir BI, LTKM ≤ 3 hari kerja bila cocok, dan catat 4 pengiriman (fisik + surel
+Densus 88, tembusan PPATK, tembusan pengawas BI, unggah MS Forms BI) — aplikasi baru punya saring + blokir;
+(d) uji pengimpor DTTOT terhadap daftar terbaru BI (P-25, Oktober 2026). Rincian: memori `kupva-regulation-2026`.
 
 **Berikutnya (urut):** (1a) pembalikan bon + pembulatan ke atas; (1b) dua celah regulasi di atas;
 (2) paket Docker ala tokoemas + cadangan terenkripsi ke R2 + `deploy.yml` baru; (3) penyederhanaan layar
