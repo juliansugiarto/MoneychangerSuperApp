@@ -70,6 +70,35 @@ Jangan mengerjakan tugas lain. Berhenti dan laporkan setelah commit.
 
 ---
 
+## MULAI DI SINI — keadaan per 12 November 2026 malam (WIB)
+
+**Tugas sesi berikutnya:** irisan 1 dari `docs/superpowers/plans/2026-11-12-halaman-publik-paspor.md` (jadwal buka
+terstruktur + ketentuan uang beserta penulisnya di Profil Perusahaan, `shared/openingStatus.ts`), lalu irisan 2–5.
+Desain yang harus ditiru persis: `DESIGN.md` (bagian Halaman publik) + `docs/design/halaman-publik/rujukan-paspor-v3.html`
+(buka di peramban; disetujui pemilik "oke greate job"). Teks: `docs/superpowers/specs/2026-11-12-halaman-publik-teks.md`.
+
+**Keadaan terukur:**
+- Cabang kerja `deploy/docker-vps` (`a939134`, sudah di-push) bertumpuk di atas `fix/siap-daring` (di-push). Keduanya
+  BELUM digabung ke `main` (`main` tidak lagi memicu deploy apa pun).
+- Migrasi terakhir `0066`. Lokal (moneychanger, mc_t_abcvalas, mc_t_visual) dan **produksi VPS** sama-sama 67 migrasi.
+- Gerbang penuh terakhir (pada `6fe6211`): `Tests 1849 passed | 6 skipped (1855)`, tsc 0, build, Playwright `59 passed`.
+  Sesudahnya hanya `server/hostSplit.ts` (+3 uji, lolos) dan dokumen; gerbang penuh **belum** dijalankan ulang.
+- **Produksi LIVE** sejak ±15.10 WIB: `https://ibukotavalasindo.online` (publik) dan `https://backoffice.ibukotavalasindo.online`
+  (staf), image `moneychanger-app:15eba25` di VPS 187.77.148.118 `~/moneychanger/deploy/vps`. Pemilik menyelesaikan wizard
+  sendiri (1 akun pemilik). Belum ada kurs aktif/nasabah/transaksi — **ini produksi: tidak ada data uji di sana.**
+- Rujukan hidup tiga arah + versi akhir: artifact https://claude.ai/artifact/MXhVNvDMD4MeLdq9dRnsuW; arsip putaran di
+  `~/Projects/ClaudeCode/solvinc-designer/explorations/2026-11-12-moneychanger-publik/` (BRIEF, VERDICT, varian, tangkapan).
+
+**Menunggu pemilik / risiko terbuka:**
+1. Caddy tokoemas belum permanen: situs money changer hidup lewat `docker network connect` + `caddy reload` dengan
+   `certs/Caddyfile.mc`. Restart kontainer Caddy biasa menghilangkan situs ini sampai reload diulang. Permanen = salin
+   `deploy/vps/tokoemas-caddy-override.yaml` → `/opt/tokoemas/deploy/vps/compose.mc-edge.yaml`, tambah ke `COMPOSE_FILE`,
+   `docker compose up -d --force-recreate caddy` **sesudah toko tutup** (pemilik yang menjalankan; pengklasifikasi menolak).
+2. MX lama ibukotavalasindo.online menunjuk server mati; hapus + SPF `-all` + DMARC hanya bila pemilik bilang "hapus MX".
+3. R2 (bucket dokumen + bucket cadangan, token terpisah) belum ada → cadangan hanya lokal 7 malam di VPS.
+4. Contoh kiriman kurs partner pagi (WA/foto/Excel/surel) untuk langkah "isi draf dari kurs partner + margin" — belum diterima.
+5. Profil Perusahaan produksi: pemilik diminta mengisi telepon (0263) 265-500, telepon kedua 0811-260-269, jam buka.
+
 ## Sesi berikutnya — keadaan per 12 November 2026 (arah desktop DICABUT; aplikasi tetap daring)
 
 **Keputusan pengguna 12 November 2026 — jangan ditanyakan ulang:** seluruh arah "aplikasi desktop
@@ -208,9 +237,9 @@ Rencana bangun: `docs/superpowers/plans/2026-11-12-halaman-publik-paspor.md` (ir
 sampai itu restart Caddy biasa menghilangkan situs money changer); (b) MX lama ke server mati (tanya pemilik); (c) R2
 dokumen + cadangan (cadangan sementara hanya lokal 7 malam); (d) desain ulang halaman publik (solvinc-design).
 
-**Berikutnya (urut):**
-(1) pasang di VPS begitu domain/R2 siap; (2) uji coba berdampingan dengan staf; (3) penyederhanaan layar
-Kasir & transaksi (sub-proyek 4); (4) CSP `script-src` sesudah jendela cetak berhenti memakai skrip sebaris.
+**Berikutnya (urut, diperbarui 12 Nov malam):** (1) halaman publik Paspor & cap ke aplikasi (rencana
+`2026-11-12-halaman-publik-paspor.md`, irisan 1–5); (2) langkah "kurs partner + margin" (draf saja, aktivasi tetap manual);
+(3) uji coba berdampingan dengan staf; (4) penyederhanaan layar Kasir & transaksi (sub-proyek 4); (5) CSP `script-src`.
 
 ---
 
@@ -500,6 +529,24 @@ Bila sesi berikutnya melihat satu kegagalan tunggal pada jalan penuh, **catat na
 bukti, dan itulah sebabnya kejadian pertama tidak pernah teridentifikasi.
 
 ### Yang tidak perlu ditemukan ulang
+
+- **DNS penyedia internet pemilik (202.158.3.6) menyadap port 53 dan menyimpan NXDOMAIN 30 menit** (SOA min 1800). Jangan
+  mencari nama host sebelum rekamannya dibuat; periksa lewat DoH: `curl -H 'accept: application/dns-json'
+  'https://cloudflare-dns.com/dns-query?name=<host>&type=A'`, lalu `curl --resolve <host>:443:<ip-cloudflare>`.
+- **Pengklasifikasi mode otomatis menolak** reload Caddy tokoemas produksi dan penghapusan rekaman DNS yang tidak diminta
+  eksplisit. Jangan mencari jalan memutar: berikan perintah `!` kepada pemilik, atau tunggu kalimat pemilik yang memintanya.
+- **Gmail MCP tidak bisa mengunduh lampiran.** Pemilik mengizinkan unduh lewat Claude in Chrome (lampiran surel BI, laporan
+  lama di folder Terkirim). Surat-surat lama pemilik (DTTOT nihil, penghapusan 2020) ada di Google Drive (cari judul "DTTOT").
+- **Daftar KUPVA berizin BI:** `https://www.bi.go.id/id/fungsi-utama/sistem-pembayaran/ritel/kupva-bb-ptd/default.aspx`
+  (WebFetch ke bi.go.id gagal jabat tangan TLS; pakai pencarian dengan `allowed_domains`).
+- **Rute SVG mengikuti gulir:** jangan `getPointAtLength` berulang (apalagi dari ResizeObserver body) — dulu membekukan
+  kirim formulir 850 ms (CPU 4x). Hitung titik dari segmen. Juga tanpa `filter` pada pembungkus elemen beranimasi; cap
+  ber-filter SVG di lapisan sendiri. Ukur dengan rAF + `long-animation-frame` (skrip contoh di arsip solvinc-designer).
+- **Berkas HTML pendukung artifact** (bukan halaman utama) wajib `<!doctype html>` + charset + viewport sendiri; tanpa itu
+  mode quirks dan tata letak ponsel rusak. Server lokal `python3 -m http.server` tidak mengirim charset → teks rusak "Â·"
+  kecuali ada `<meta charset>`.
+- **Gladi Docker di Mac:** VM Docker 2 GB → mysqld dibunuh OOM bila dua MySQL + Postgres proyek lain jalan; pakai
+  `MYSQL_BUFFER_POOL=256M`/`MYSQL_MEM_LIMIT=768m`. Uji pulih menunggu MySQL lewat TCP (`-h 127.0.0.1`), bukan soket.
 
 - **Playwright yang "macet" 15–17 menit adalah Mac yang tidur**, bukan kode — jalankan
   `caffeinate -dimsu ./node_modules/.bin/playwright test`. Bila Playwright gagal seketika dengan
